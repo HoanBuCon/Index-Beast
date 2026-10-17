@@ -26,3 +26,6 @@ Thumbs.db
 
 # Trello API key/token cho script import
 planning/.trello.env
+
+# Elden Ring data (tải/sinh lại được)
+elden-ring-data/
