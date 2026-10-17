@@ -2,6 +2,8 @@
 
 Áp dụng cho dự án **IndexBeast**, bao gồm mã nguồn, cấu hình và tài liệu. Mọi thay đổi phải đi qua nhánh riêng và Pull Request (PR). Không commit hoặc push trực tiếp lên `main` / `master` hoặc `develop`.
 
+Mentor review của nhóm: [@HoanBuCon](https://github.com/HoanBuCon). Khi mở PR, gửi yêu cầu review tới tài khoản này và chờ approve trước khi merge. Nếu tác giả PR chính là Mentor, cần phân công reviewer khác được nhóm chấp thuận; tác giả không tự approve PR của mình.
+
 ## 1. Vai trò và vòng đời các nhánh
 
 | Nhánh | Mục đích | Tách từ | Đích PR |
