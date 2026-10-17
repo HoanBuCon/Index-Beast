@@ -1,0 +1,20 @@
+# Chỉ chứa cấu hình công cụ. Thư viện khai báo trong requirements*.txt (cài bằng pip).
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
+ignore = ["B008"]  # FastAPI dùng Depends() làm giá trị mặc định
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "core", "ingest", "eval"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = ["integration: cần PostgreSQL, Redis, Qdrant đang chạy"]
+addopts = "-m 'not integration'"

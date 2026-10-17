@@ -1,0 +1,44 @@
+# Cấu hình nguồn dữ liệu & quy tắc lọc cho pipeline ingest.
+# Thêm nguồn: thêm một bảng [sources.<tên>] + một plugin trong ingest/sources/<tên>.py
+# Phụ trách: TV2 · [S1] Khảo sát nguồn dữ liệu lore
+
+[crawl]
+user_agent = "IndexBeast/0.1 (Elden Ring lore chatbot; fan project; https://github.com/HoanBuCon/Index-Beast)"
+min_interval_seconds = 1.0   # ≤ 1 request/giây
+max_retries = 4
+timeout_seconds = 30
+
+[sources.wikigg]
+enabled = true
+plugin = "wikigg"
+api_url = "https://eldenring.wiki.gg/api.php"
+page_url = "https://eldenring.wiki.gg/wiki/{title}"
+license = "CC BY-SA 4.0"
+namespace = 0                # chỉ bài viết, bỏ redirect
+
+[sources.wikipedia]
+enabled = false              # bật ở Sprint 3
+plugin = "wikipedia"
+api_url = "https://en.wikipedia.org/w/api.php"
+page_url = "https://en.wikipedia.org/wiki/{title}"
+license = "CC BY-SA 4.0"
+pages = ["Elden Ring", "Elden Ring: Shadow of the Erdtree"]
+
+[sources.fanapis]
+enabled = false              # bật ở Sprint 2 — chỉ dùng cho bảng entities, không index
+plugin = "fanapis"
+base_url = "https://eldenring.fanapis.com/api"
+resources = ["bosses", "npcs", "locations", "items", "weapons", "talismans", "spirits"]
+
+[filter]
+skip_categories = ["Disambiguation_pages", "Guides", "Builds", "Patch_Notes", "Templates"]
+skip_title_prefixes = ["List of ", "Elden Ring Wiki", "Patch "]
+skip_sections = ["Gallery", "References", "External links", "See also", "Navigation"]
+min_chars_after_clean = 200
+
+[transform]
+sote_markers = ["Shadow of the Erdtree", "Land of Shadow", "Realm of Shadow"]
+
+[chunk]
+max_tokens = 450
+overlap_tokens = 50
