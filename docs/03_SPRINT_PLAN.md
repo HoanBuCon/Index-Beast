@@ -25,7 +25,7 @@ Nguyên tắc: mỗi thẻ có **một** người chịu trách nhiệm chính; 
 | Sprint | Thời gian | Chủ đề | Mục tiêu |
 |---|---|---|---|
 | S1 | 19/10/2026 – 25/10/2026 | **Nền móng & Spike kỹ thuật** | Mọi người chạy được môi trường dev bằng Docker; có dữ liệu mẫu; notebook RAG baseline trả lời được 10 câu; chốt các quyết định kỹ thuật (ADR) chính. |
-| S2 | 26/10/2026 – 01/11/2026 | **Pipeline dữ liệu & khung API** | Toàn bộ lore base game + SotE được làm sạch, chia đoạn và index vào Qdrant; API contract v1 cố định; web và bot gọi được API (mock). |
+| S2 | 26/10/2026 – 01/11/2026 | **Pipeline dữ liệu & khung API** | Toàn bộ lore base game (không DLC/Nightreign) được làm sạch, chia đoạn và index vào Qdrant; API contract v1 cố định; web và bot gọi được API (mock). |
 | S3 | 02/11/2026 – 08/11/2026 | **RAG end-to-end → MVP nội bộ** | Hỏi trên web hoặc Discord nhận được câu trả lời thật, có trích dẫn, streaming trên web. Có số đo retrieval đầu tiên. Staging chạy trên VPS. |
 | S4 | 09/11/2026 – 15/11/2026 | **Chất lượng & hoàn thiện tính năng** | Đạt mục tiêu chất lượng (Recall@5 ≥ 0.80, correctness ≥ 70%) trên golden set 120 câu; bổ sung feedback, lịch sử, thread Discord, bảo mật cơ bản. |
 | S5 | 16/11/2026 – 22/11/2026 | **Production & hardening** | Hệ thống chạy production trên VPS qua HTTPS với CI/CD, backup, giám sát; đáp ứng mục tiêu độ trễ với 10–20 người dùng đồng thời; bot có mặt trên server cộng đồng. |
@@ -108,7 +108,7 @@ Cả team đọc tài liệu, thống nhất cách làm việc và chốt phạm
 - [ ] Đọc 01_TECHSTACK.md và 02_SRS.md, ghi câu hỏi
 - [ ] Workshop RAG 60 phút (TV3 trình bày)
 - [ ] Thống nhất Definition of Done & quy ước Git
-- [ ] Thảo luận ADR-004 (phạm vi Nightreign) & ADR-005 (đăng nhập)
+- [ ] Ghi nhận ADR-004: chỉ base game, loại mọi DLC/Nightreign; thảo luận ADR-005 (đăng nhập)
 - [ ] Gán tên thật cho TV1..TV4, mời thành viên vào board
 
 #### 1.2 [TV1] Khởi tạo monorepo & quy ước code
@@ -119,7 +119,7 @@ Cấu trúc repo thống nhất cho cả 4 người.
 - [ ] pre-commit: ruff (lint+format) cho Python, prettier cho web/bot
 - [ ] .editorconfig, .gitignore, .env.example (không commit secret)
 - [ ] PR template, CODEOWNERS
-- [ ] Bật branch protection cho main (bắt buộc PR + 1 review)
+- [ ] Bật branch protection cho main và develop (cấm push trực tiếp, bắt buộc PR, CI và Mentor approve); main chỉ nhận release/hotfix
 
 #### 1.3 [TV1] Docker Compose môi trường dev
 
@@ -156,7 +156,7 @@ Chạy kiểm tra tự động cho mọi PR.
 
 Biết chính xác lấy gì, ở đâu, bao nhiêu, giấy phép ra sao.
 
-- [ ] Liệt kê category lore trên eldenring.wiki.gg (NPC, Bosses, Locations, Lore, Items, Characters, SotE…) và đếm số trang
+- [ ] Liệt kê category lore trên eldenring.wiki.gg (NPC, Bosses, Locations, Lore, Items, Characters thuộc base game; loại trang/section DLC và Nightreign) và đếm số trang
 - [ ] Thử MediaWiki API: action=query (list=categorymembers), action=parse; kiểm tra có dump không
 - [ ] Thử fanapis REST: các resource, phân trang (limit/page), các trường description
 - [ ] So sánh nội dung Fandom vs wiki.gg trên 10 trang
@@ -261,7 +261,7 @@ Demo + rút kinh nghiệm.
 
 ## Sprint 2 — Pipeline dữ liệu & khung API (26/10/2026 – 01/11/2026)
 
-**Mục tiêu:** Toàn bộ lore base game + SotE được làm sạch, chia đoạn và index vào Qdrant; API contract v1 cố định; web và bot gọi được API (mock).
+**Mục tiêu:** Toàn bộ lore base game (không DLC/Nightreign) được làm sạch, chia đoạn và index vào Qdrant; API contract v1 cố định; web và bot gọi được API (mock).
 
 **Sản phẩm bàn giao cuối sprint:**
 
@@ -320,7 +320,7 @@ Lỗi có định dạng thống nhất, dễ debug.
 
 Thu thập đầy đủ các trang lore.
 
-- [ ] Danh sách category cuối cùng (base + SotE)
+- [ ] Danh sách category cuối cùng (chỉ base game, loại DLC/Nightreign)
 - [ ] Crawl có resume (bỏ qua trang đã có cùng revision)
 - [ ] Ghi ingestion_jobs (số trang ok/lỗi)
 - [ ] Báo cáo: số trang, dung lượng, thời gian
@@ -340,7 +340,7 @@ Chia đoạn theo ADR-003 và gắn metadata.
 
 - [ ] Chunk theo heading, kích thước/overlap cấu hình được
 - [ ] Metadata: doc_id, title, section, url, source, game_scope, source_type, lang, updated_at
-- [ ] Nhận diện game_scope=sote qua category
+- [ ] Gán game_scope=base; loại trang/section DLC và Nightreign, kiểm tra thủ công phần chưa xác định
 - [ ] Heuristic source_type (in-game text / wiki prose / speculation)
 - [ ] Ghi chunks vào PostgreSQL
 
@@ -377,7 +377,7 @@ Hàm retrieve() dùng Query API của Qdrant.
 Mở rộng bộ đánh giá, có review chéo.
 
 - [ ] Thêm 30 câu (giữ ≥ 50% tiếng Việt)
-- [ ] Thêm câu SotE và câu ngoài phạm vi
+- [ ] Thêm câu base game; thêm câu DLC/Nightreign với kết quả mong đợi là từ chối ngoài phạm vi
 - [ ] TV2 review chéo nguồn & đáp án
 - [ ] Đánh dấu độ khó
 
@@ -477,7 +477,7 @@ Phát hiện sớm vấn đề tài nguyên trên máy thật.
 
 Mở rộng nguồn nhưng tránh chunk trùng.
 
-- [ ] Crawl trang Wikipedia Elden Ring + SotE
+- [ ] Crawl trang Wikipedia Elden Ring, chỉ giữ section về base game; loại nội dung DLC/Nightreign
 - [ ] Khử trùng lặp gần đúng (MinHash/hash đoạn chuẩn hoá)
 - [ ] Báo cáo tỉ lệ trùng
 
@@ -655,12 +655,12 @@ Bảo vệ khỏi hồi quy khi tuning.
 Chỉ chạy khi điểm rerank cao nhất thấp hơn ngưỡng (không đủ ngữ cảnh). TV3 review phần ghép vào pipeline.
 
 - [ ] ddgs 9.16.0, backend=duckduckgo, query_en, tối đa 5 kết quả, chạy trong threadpool
-- [ ] Lọc theo allowlist domain (eldenring.wiki.gg, en.wikipedia.org)
+- [ ] Lọc theo allowlist domain (eldenring.wiki.gg, en.wikipedia.org) và phạm vi base game ở cấp trang/section; loại DLC/Nightreign
 - [ ] Tải 2 trang đầu bằng httpx (timeout 4s), làm sạch bằng BeautifulSoup, chunk, rerank chung với kết quả cũ
 - [ ] Cache Redis 7 ngày; giới hạn toàn hệ thống 1 lượt tìm/giây
 - [ ] Gắn nhãn "nguồn web"; lỗi hoặc CAPTCHA thì trả lời "không tìm thấy"; cờ WEB_FALLBACK_ENABLED
 - [ ] Ghi URL tìm được vào log để lần ingest sau bổ sung vào kho
-- [ ] Test với 10 câu hỏi về lore chưa có trong kho
+- [ ] Test với 10 câu hỏi lore base game chưa có trong kho; câu DLC/Nightreign không kích hoạt fallback
 
 #### 4.8 [TV2] Sửa dữ liệu theo phân tích lỗi eval
 
@@ -685,7 +685,7 @@ Lỗi do dữ liệu phải sửa ở dữ liệu.
 
 - [ ] Thí nghiệm: kích thước chunk, top-N, top-K, trọng số fusion
 - [ ] Mở rộng truy vấn bằng alias
-- [ ] Filter game_scope khi câu hỏi nói rõ DLC
+- [ ] Luôn filter game_scope=base; câu DLC/Nightreign trả lời ngoài phạm vi
 - [ ] Bảng thí nghiệm + chọn cấu hình mặc định
 
 #### 4.11 [TV3] Guardrails: ngoài phạm vi, prompt injection, giả thuyết
@@ -966,7 +966,6 @@ Mọi người đóng góp phần của mình.
 | Thẻ | Phụ trách đề xuất | Điểm | Ghi chú |
 |---|---|---|---|
 | Đăng nhập web bằng Discord OAuth (FR-WEB-09) | TV4 | 5 | Chờ ADR-005. Đồng bộ lịch sử chat giữa web và Discord. |
-| Hỗ trợ lore Elden Ring Nightreign | TV2 | 5 | Chờ ADR-004. Thêm game_scope=nightreign và crawl các trang Nightreign trên wiki.gg. |
 | Tách câu hỏi phức hợp thành truy vấn con (FR-RET-07) | TV3 | 3 | Cho câu hỏi đa bước. Chỉ làm nếu eval cho thấy lỗi ở nhóm câu hỏi đa bước. |
 | Ẩn spoiler theo cài đặt người dùng/guild (FR-GEN-08) | TV3 | 3 | Dùng spoiler_level của chunk + cài đặt; Discord dùng ||spoiler||. |
 | Mẫu thẻ yêu cầu thay đổi (CHANGE-REQ) | TV1 | 0 | Sao chép thẻ này khi muốn đổi yêu cầu. |
