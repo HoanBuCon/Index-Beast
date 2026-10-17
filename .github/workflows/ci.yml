@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+      - run: python -m pip install pip==26.2.1
+      # constraints.txt sinh ở Sprint 1 (pip freeze); chưa có thì cài không ràng buộc
+      - run: |
+          if [ -f constraints.txt ]; then pip install -r requirements-dev.txt -c constraints.txt
+          else pip install -r requirements-dev.txt; fi
+      - run: ruff check .
+      - run: ruff format --check .
+      # exit code 5 = chưa có test nào (giai đoạn khung xương)
+      - run: pytest || [ $? -eq 5 ]
+
+  web:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.0"
+      - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm run format:check
+      - run: npm run build
+
+  bot:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: bot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.0"
+      - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - run: npm run format:check
+      - run: npm run typecheck
