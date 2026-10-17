@@ -10,18 +10,21 @@ Mentor review của nhóm: [@HoanBuCon](https://github.com/HoanBuCon). Khi mở 
 |---|---|---|---|
 | `main` / `master` | Mã nguồn ổn định trên Production; repo này dùng `main` | Nhánh gốc | Chỉ nhận từ `release/*` hoặc `hotfix/*` |
 | `develop` | Tích hợp tính năng hoàn thành, dùng cho Staging/QC | Thiết lập ban đầu từ `main` | Nhận feature và các PR đồng bộ release/hotfix |
-| `feature/<mã-tác-vụ>-<tên-ngắn-gọn>` | Phát triển một tính năng hoặc thay đổi riêng, kể cả docs | `develop` | `develop` |
+| `feature/<mã-tác-vụ>-<tên-ngắn-gọn>` | Phát triển một tính năng hoặc thay đổi riêng | `develop` | `develop` |
+| `docs/<mã-tác-vụ>-<tên-ngắn-gọn>` | Cập nhật hoặc sửa đổi tài liệu | `develop` | `develop` |
+| `refactor/<mã-tác-vụ>-<tên-ngắn-gọn>` | Refactor mã nguồn nhưng giữ nguyên hành vi | `develop` | `develop` |
+| `fix/<mã-tác-vụ>-<tên-ngắn-gọn>` | Sửa lỗi không khẩn cấp | `develop` | `develop` |
 | `release/<phiên-bản>` | QA cuối đợt phát hành, chỉ sửa lỗi nhỏ phục vụ release | `develop` | `main` và `develop` |
 | `hotfix/<mã-tác-vụ>-<tên-ngắn-gọn>` | Sửa lỗi khẩn cấp trên Production | `main` | `main` và `develop` |
 
-Tên nhánh dùng chữ không dấu, số và dấu gạch nối. Ví dụ: `feature/task-1-rag-baseline`, `feature/docs-01-base-game-scope`, `release/v1.0.0`, `hotfix/bug-12-chat-timeout`. Không dùng các tiền tố `feat/`, `fix/`, `docs/`, `chore/` thay cho các loại nhánh trên; những tên này có thể là loại commit.
+Tên nhánh dùng chữ không dấu, số và dấu gạch nối sau tiền tố. Ví dụ: `feature/task-1-rag-baseline`, `docs/docs-01-base-game-scope`, `refactor/task-2-chat-service`, `fix/bug-12-chat-timeout`, `release/v1.0.0`, `hotfix/bug-13-chat-timeout`. Không dùng các tiền tố `feat/` hoặc `chore/` làm loại nhánh; những tên này có thể là loại commit. Mọi nhánh công việc đều phải được tạo từ nhánh nền phù hợp và được push lên nhánh riêng, không push trực tiếp lên `main`, `master` hoặc `develop`.
 
 ## 2. Quy trình cho một tác vụ
 
-1. Đồng bộ remote và tạo feature từ `origin/develop` mới nhất.
+1. Đồng bộ remote và tạo nhánh công việc phù hợp (`feature/*`, `docs/*`, `refactor/*` hoặc `fix/*`) từ `origin/develop` mới nhất.
 2. Thực hiện thay đổi, kiểm tra và commit theo Conventional Commits.
 3. Fetch rồi rebase nhánh cá nhân lên `origin/develop`; giải quyết conflict, kiểm tra lại.
-4. Push nhánh feature và mở PR có **base là `develop`**.
+4. Push nhánh công việc và mở PR có **base là `develop`**.
 5. Gắn mã/link tác vụ, mô tả thay đổi, cách kiểm tra và hạn chế còn lại. Yêu cầu Mentor review; chỉ merge sau khi Mentor approve, CI bắt buộc đạt và mọi conflict đã được giải quyết.
 6. Sau merge, cập nhật trạng thái tác vụ. Chỉ xóa nhánh khi đã tích hợp xong và không còn người phụ thuộc.
 
@@ -42,6 +45,8 @@ git push -u origin feature/task-1-rag-baseline
 Nếu rebase gặp conflict: sửa từng file, `git add <file>` rồi `git rebase --continue`; dùng `git rebase --abort` để hủy lần rebase nếu cần. Nếu nhánh cá nhân đã push trước khi rebase, dùng `git push --force-with-lease` sau khi kiểm tra; không dùng `--force`. Không tự rebase/ghi đè lịch sử nhánh chung mà chưa thống nhất với các thành viên đang dùng nhánh đó.
 
 Không tạo commit "Dev Start" trực tiếp trên `develop`. Các commit trong ví dụ minh họa vòng đời đều phải tuân theo quy trình PR này.
+
+Tác vụ chỉ cập nhật tài liệu dùng `docs/*`; tác vụ refactor dùng `refactor/*`; tác vụ sửa lỗi thông thường dùng `fix/*`. Các nhánh này vẫn phải mở PR về `develop`, tuân thủ review và không được dùng để bypass quy trình.
 
 ## 3. Nhiều thành viên làm chung một tính năng
 
