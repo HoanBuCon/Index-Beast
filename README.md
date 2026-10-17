@@ -1,5 +1,7 @@
 # Index Beast
 
+![Index Beast Banner](assets/onion_ring.jpg)
+
 Dự án **IndexBeast** của nhóm **4 Hollows**: chatbot hỏi đáp lore **Elden Ring base game** trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
 
 Trello: https://trello.com/b/mZEBMPGV/elden-ring

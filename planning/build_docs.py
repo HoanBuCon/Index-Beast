@@ -1,7 +1,7 @@
 """Sinh docs/03_SPRINT_PLAN.md từ sprint_plan.json và xuất các tài liệu docs/*.md sang .docx.
 
 Cách dùng:
-    pip install python-docx
+    pip install -r planning/requirements.txt
     python planning/build_docs.py
 """
 
