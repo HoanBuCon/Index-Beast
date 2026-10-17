@@ -2,6 +2,7 @@
 """Chuyển đổi tất cả file Markdown (.md) trong thư mục docs/ thành file Word (.docx) trong docs/export/.
 
 Cách dùng:
+    pip install -r docs/requirements.txt
     python docs/export_docx.py
     # Hoặc khi đang ở trong thư mục docs/:
     python export_docx.py
@@ -35,7 +36,7 @@ try:
 except ImportError:
     print(
         "Lỗi: Thư viện 'python-docx' chưa được cài đặt.\n"
-        "Vui lòng chạy: pip install python-docx",
+        "Vui lòng chạy: pip install -r docs/requirements.txt",
         file=sys.stderr,
     )
     sys.exit(1)
