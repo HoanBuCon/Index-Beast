@@ -22,7 +22,7 @@ plugin = "wikipedia"
 api_url = "https://en.wikipedia.org/w/api.php"
 page_url = "https://en.wikipedia.org/wiki/{title}"
 license = "CC BY-SA 4.0"
-pages = ["Elden Ring", "Elden Ring: Shadow of the Erdtree"]
+pages = ["Elden Ring"]
 
 [sources.fanapis]
 enabled = false              # bật ở Sprint 2 — chỉ dùng cho bảng entities, không index
@@ -36,8 +36,6 @@ skip_title_prefixes = ["List of ", "Elden Ring Wiki", "Patch "]
 skip_sections = ["Gallery", "References", "External links", "See also", "Navigation"]
 min_chars_after_clean = 200
 
-[transform]
-sote_markers = ["Shadow of the Erdtree", "Land of Shadow", "Realm of Shadow"]
 
 [chunk]
 max_tokens = 450
