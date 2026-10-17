@@ -6,7 +6,7 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 
 > Repo đang ở giai đoạn **khung xương**: mỗi file mới chỉ ghi nhiệm vụ và người/thẻ phụ trách, chưa có code xử lý.
 
-**Phạm vi:** chỉ Elden Ring base game; không bao gồm bất kỳ DLC nào (kể cả Shadow of the Erdtree) hoặc Elden Ring Nightreign.
+**Phạm vi:** lore Elden Ring base game.
 
 ## Tài liệu
 
