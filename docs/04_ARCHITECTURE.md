@@ -5,6 +5,10 @@
 | Trạng thái | Khung xương — 2026-10-17 |
 | Mục tiêu | Dễ mở rộng, dễ debug; crawl → lọc → xử lý → index tách rời từng bước |
 
+**Phạm vi:** lore Elden Ring base game. `game_scope=base` áp dụng cho ingestion, retrieval và web fallback.
+
+Quy trình Git áp dụng theo [quy_uoc.md](quy_uoc.md): feature tách từ develop, PR về develop và Mentor review trước khi merge.
+
 ## 1. Cây thư mục
 
 ```
@@ -116,6 +120,8 @@ Tính chất bắt buộc của mỗi bước:
 | Thêm bước RAG | Module mới trong `app/rag/`, gọi từ `pipeline.py`, ghi thời gian vào trace |
 | Thêm kênh (Telegram, Messenger…) | Client mới gọi `/api/v1/chat` với `channel` và `external_ref` riêng |
 | Tăng tải | API stateless (state ở PG/Redis/Qdrant): tăng worker hoặc instance; tách ingest sang máy khác vì chỉ dùng chung `core/` |
+
+Nguồn dữ liệu mới phải cung cấp lore Elden Ring base game.
 
 ## 6. Thứ tự dựng (Sprint 1–2)
 

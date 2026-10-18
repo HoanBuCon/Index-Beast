@@ -1,10 +1,14 @@
 # Index Beast
 
-Chatbot hỏi đáp lore Elden Ring trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
+![Index Beast Banner](assets/onion_ring.jpg)
+
+Dự án **IndexBeast** của nhóm **4 Hollows**: chatbot hỏi đáp lore **Elden Ring base game** trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
 
 Trello: https://trello.com/b/mZEBMPGV/elden-ring
 
 > Repo đang ở giai đoạn **khung xương**: mỗi file mới chỉ ghi nhiệm vụ và người/thẻ phụ trách, chưa có code xử lý.
+
+**Phạm vi:** lore Elden Ring base game.
 
 ## Tài liệu
 
@@ -14,6 +18,7 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 | [docs/02_SRS.md](docs/02_SRS.md) | Yêu cầu (living SRS) |
 | [docs/03_SPRINT_PLAN.md](docs/03_SPRINT_PLAN.md) | Kế hoạch 6 sprint |
 | [docs/04_ARCHITECTURE.md](docs/04_ARCHITECTURE.md) | Kiến trúc thư mục, pipeline dữ liệu, debug, mở rộng |
+| [docs/quy_uoc.md](docs/quy_uoc.md) | Quy ước nhánh Git, Conventional Commits, PR và Mentor review |
 
 ## Cấu trúc
 

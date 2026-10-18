@@ -1,8 +1,9 @@
-# Index Beast — Techstack (v1.2)
+# Index Beast — Techstack (v1.3)
 
 | | |
 |---|---|
 | Trạng thái | Đã chốt — 2026-10-17 |
+| Phạm vi | Lore Elden Ring base game |
 | Quy mô mục tiêu | Vài trăm người dùng, ~50 đồng thời lúc cao điểm |
 | Hạ tầng | 1 VPS 4 vCPU / 8 GB, Ubuntu 24.04 LTS, Docker Compose |
 | Nguyên tắc | Tối giản, pin cứng phiên bản, nâng cấp qua PR nhãn `deps` |
@@ -134,9 +135,11 @@ Giá `deepseek-flash` (mỗi 1M token, giờ thấp điểm / cao điểm): inpu
 
 | Nguồn | Vai trò | Giấy phép |
 |---|---|---|
-| eldenring.wiki.gg (MediaWiki API) | Nguồn chính: base game + SotE | CC BY-SA 4.0, bắt buộc ghi nguồn |
+| eldenring.wiki.gg (MediaWiki API) | Nguồn chính: chỉ lore Elden Ring base game | CC BY-SA 4.0, bắt buộc ghi nguồn |
 | eldenring.fanapis.com | Danh sách thực thể | Dùng có chừng mực |
 | Wikipedia | Thông tin tổng quan | CC BY-SA 4.0 |
+
+Thu thập và index lore base game (`game_scope=base`); áp dụng phạm vi này cho cả web fallback.
 
 Không crawl Fandom và Fextralife. Giới hạn crawl ≤ 1 request/giây, User-Agent có email liên hệ.
 
@@ -156,7 +159,7 @@ Không crawl Fandom và Fextralife. Giới hạn crawl ≤ 1 request/giây, User
 | 001 | LLM `deepseek-flash`, eval bằng `deepseek-v4-pro` | Chốt |
 | 002 | Reranker `bge-reranker-base`, dự phòng MiniLM | Chốt, benchmark ở S1 |
 | 003 | Chunk 350–450 token theo heading, overlap 50 | Đề xuất |
-| 004 | Phạm vi lore: base game + SotE | Đề xuất |
+| 004 | Phạm vi lore: Elden Ring base game | Chấp nhận |
 | 005 | Web ẩn danh ở v1 | Đề xuất |
 | 006 | Trả lời theo ngôn ngữ người hỏi, giữ tên riêng tiếng Anh | Chốt |
 | 007 | Tìm web dự phòng bằng DuckDuckGo, giới hạn theo allowlist domain | Chốt |
