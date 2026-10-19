@@ -53,7 +53,10 @@ async def example():
         print(result.prompt_tokens, result.completion_tokens)
 ```
 
-- `complete(messages)` trả `LLMResponse`: content, model, prompt_tokens, completion_tokens, finish_reason.
+- `complete(messages)` trả `LLMResponse`: content, model, prompt_tokens, completion_tokens, finish_reason,
+  reasoning_content và reasoning_tokens (hai trường sau có thể là `None` khi provider không cung cấp).
+- `complete(..., thinking=True, reasoning_effort="low")` bật thinking, effort hỗ trợ `low`, `high`, `max`.
+  Khi bật thinking, adapter không gửi temperature vì DeepSeek không hỗ trợ tham số đó trong chế độ này.
 - `complete_json(messages)` bật JSON output, thêm chỉ dẫn JSON, parse và yêu cầu kết quả là object. Service gọi phải
   kiểm tra tiếp schema của tác vụ, ví dụ `query_en`, `lang`, `entities`. Chưa tự viết lại truy vấn.
 - `stream(messages)` trả async iterator chứa các đoạn text của câu trả lời, không phát reasoning.
@@ -88,6 +91,45 @@ cũ với output mới. Usage hiện có trên kết quả gọi thường; `com
 Service `api` trong `docker-compose.yml` nhận các biến DeepSeek/LLM từ `.env`. Bot và web không nhận API key này.
 Sau khi thay `.env`, recreate container API để áp dụng. Không dùng `docker compose config` rồi chia sẻ output công khai,
 vì Compose có thể render cả giá trị secret.
+
+## API thử thinking và non-thinking
+
+Từ thư mục `backend`, chạy trên cổng 8001:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn --factory app.main:create_app --host 0.0.0.0 --port 8001 --reload
+```
+
+Mở [Swagger](http://127.0.0.1:8001/api/docs), chọn `POST /api/v1/dev/llm/test`, bấm **Try it out**.
+Hoặc dùng các request có sẵn trong `backend/scripts/deepseek_test.http` với REST Client của VS Code.
+
+Body mẫu để thử non-thinking:
+
+```json
+{
+  "message": "Godrick the Grafted là ai? Trả lời ngắn bằng tiếng Việt.",
+  "thinking": false,
+  "max_tokens": 2048,
+  "temperature": 0.2
+}
+```
+
+Giữ câu hỏi đó và đổi `thinking` thành `true`, thêm `"reasoning_effort": "low"` để thử thinking.
+`temperature` không gửi tới provider trong chế độ thinking. Model luôn lấy từ `LLM_MODEL` trên server.
+Giới hạn `max_tokens` gồm cả reasoning và câu trả lời, nên tăng giới hạn nếu bị báo `finish_reason=length`.
+
+Phản hồi gồm `answer`, `reasoning_content` (nếu provider trả về), mode, model, `latency_ms` và `usage`.
+`reasoning_content` là dữ liệu provider cho việc debug, không phải nguồn kiểm chứng đáp án.
+`reasoning_tokens` là phần nằm trong `completion_tokens`, không cộng lần nữa vào `total_tokens`.
+Khi provider không cung cấp thống kê reasoning, trường này là `null`.
+
+Endpoint chỉ mount ở dev/test, không tồn tại khi `ENVIRONMENT=prod`. API tạm chưa dùng retrieval/RAG và chưa lưu
+hội thoại. Mỗi lần Execute là một lượt gọi thật có dùng credits. Key chỉ đọc ở server, không gửi trong request từ Swagger.
+503 nghĩa là client chưa có key, 502 là lỗi provider hoặc output chưa hoàn tất, 422 là body không hợp lệ.
+
+Đã thử qua endpoint bằng key `.env` ngày 19/10/2026: cả hai mode trả HTTP 200. Với câu thử `2 + 2`, non-thinking
+dùng 1 completion token, thinking dùng 43 completion token (41 reasoning token). Đây là một lượt kiểm tra kết nối,
+không phải benchmark chất lượng hoặc tốc độ.
 
 ## Kiểm tra và phạm vi bàn giao
 

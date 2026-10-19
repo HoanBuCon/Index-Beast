@@ -13,7 +13,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api.router import HEALTH_PATH, api_router
+from app.api.router import API_PREFIX, HEALTH_PATH, api_router
+from app.api.routes import llm_test
 from app.context import AppContext, build_context
 from app.middleware import install_middleware
 from core.config import Settings, ensure_safe_for_environment, get_settings
@@ -52,4 +53,6 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
     )
     install_middleware(app, settings, quiet_paths=[HEALTH_PATH])
     app.include_router(api_router)
+    if not settings.is_prod:
+        app.include_router(llm_test.router, prefix=API_PREFIX)
     return app
