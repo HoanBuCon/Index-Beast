@@ -73,7 +73,8 @@ pre-commit install
 | Việc | Với make | Lệnh gốc |
 |---|---|---|
 | Bật PostgreSQL, Qdrant, Redis | `make up` | `docker compose up -d --wait postgres qdrant redis` |
-| Xem trạng thái / log | `make ps` · `make logs` | `docker compose ps` · `docker compose logs -f` |
+| Xem trạng thái | `make ps` | `docker compose ps` |
+| Xem log container (mặc định **không** ghi log xuống đĩa) | `make debug-up` rồi `make logs` | `DOCKER_LOG_DRIVER=local docker compose up -d --force-recreate` rồi `docker compose logs -f` |
 | Tắt (giữ dữ liệu) | `make down` | `docker compose down` |
 | Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload` |
 | Chạy web | | `cd web && npm run dev` → http://localhost:5173 |

@@ -5,7 +5,7 @@
 COMPOSE := docker compose
 INFRA   := postgres qdrant redis
 
-.PHONY: help up down logs ps migrate test lint format api
+.PHONY: help up debug-up down logs ps migrate test lint format api
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -16,8 +16,11 @@ up:              ## Bật PostgreSQL, Qdrant, Redis và chờ healthy
 down:            ## Tắt hạ tầng (giữ dữ liệu trong volume)
 	$(COMPOSE) down
 
-logs:            ## Xem log hạ tầng
-	$(COMPOSE) logs -f --tail=100 $(INFRA)
+logs:            ## Xem log (chỉ có khi chạy với DOCKER_LOG_DRIVER=local)
+	$(COMPOSE) logs -f --tail=100
+
+debug-up:        ## Bật hạ tầng KÈM ghi log (driver local, xoay vòng 5×20MB)
+	DOCKER_LOG_DRIVER=local $(COMPOSE) up -d --wait --force-recreate $(INFRA)
 
 ps:              ## Trạng thái container
 	$(COMPOSE) ps

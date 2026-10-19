@@ -4,12 +4,16 @@
 
 name: index-beast
 
-x-restart: &restart
+# Mặc định KHÔNG ghi log container xuống đĩa (driver none). Cần xem log để debug:
+#   DOCKER_LOG_DRIVER=local docker compose up -d   → `docker compose logs` dùng được, xoay vòng 5×20MB
+x-common: &common
   restart: unless-stopped
+  logging:
+    driver: ${DOCKER_LOG_DRIVER:-none}
 
 services:
   postgres:
-    <<: *restart
+    <<: *common
     image: postgres:18.6-bookworm
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-indexbeast}
@@ -26,7 +30,7 @@ services:
     mem_limit: 1g
 
   qdrant:
-    <<: *restart
+    <<: *common
     image: qdrant/qdrant:v1.19.2
     volumes:
       - qdrant:/qdrant/storage
@@ -38,7 +42,7 @@ services:
     mem_limit: 1g
 
   redis:
-    <<: *restart
+    <<: *common
     image: redis:8.10.2-alpine
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
     ports: ["127.0.0.1:6379:6379"]
@@ -49,7 +53,7 @@ services:
     mem_limit: 192m
 
   api:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build: ./backend
     env_file: .env
@@ -71,7 +75,7 @@ services:
     mem_limit: 3g
 
   bot:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build: ./bot
     env_file: .env
@@ -82,7 +86,7 @@ services:
     mem_limit: 192m
 
   caddy:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build:
       context: .
