@@ -56,7 +56,9 @@ services:
     <<: *common
     profiles: ["app"]
     build: ./backend
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false    # dev chạy được khi chưa có .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-indexbeast}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-indexbeast}
       QDRANT_URL: http://qdrant:6333
@@ -78,7 +80,9 @@ services:
     <<: *common
     profiles: ["app"]
     build: ./bot
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false    # dev chạy được khi chưa có .env
     environment:
       BOT_API_URL: http://api:8000
     depends_on:

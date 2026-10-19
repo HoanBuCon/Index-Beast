@@ -58,7 +58,7 @@ cd backend
 python -m venv .venv
 source .venv/Scripts/activate             # macOS/Linux: source .venv/bin/activate · PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install pip==26.2.1
-pip install -r requirements-dev.txt
+pip install -r requirements-dev.txt -c constraints.txt
 cd ..
 
 # Web và bot
@@ -76,13 +76,27 @@ pre-commit install
 | Xem trạng thái | `make ps` | `docker compose ps` |
 | Xem log container (mặc định **không** ghi log xuống đĩa) | `make debug-up` rồi `make logs` | `DOCKER_LOG_DRIVER=local docker compose up -d --force-recreate` rồi `docker compose logs -f` |
 | Tắt (giữ dữ liệu) | `make down` | `docker compose down` |
-| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload` |
+| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload --no-access-log` → http://localhost:8000/api/docs |
 | Chạy web | | `cd web && npm run dev` → http://localhost:5173 |
 | Migration DB | `make migrate` | `cd backend && alembic upgrade head` |
-| Test backend | `make test` | `cd backend && pytest` |
+| Test backend | `make test` | `cd backend && pytest` (thêm `-m integration` khi đã `make up`) |
 | Lint toàn repo | `make lint` | `pre-commit run --all-files` |
 
 Cổng chỉ mở trên `127.0.0.1`: PostgreSQL `5432`, Qdrant `6333` (dashboard: http://localhost:6333/dashboard), Redis `6379`.
+
+### Thêm / nâng cấp thư viện Python
+
+Sửa `backend/requirements*.txt`, rồi khoá lại toàn bộ phụ thuộc. Phải freeze **trên Linux** (image Docker và CI chạy Linux;
+freeze trên Windows sẽ thiếu gói chỉ có ở Linux như `uvloop`):
+
+```bash
+make constraints > /tmp/linux.txt   # pip freeze trong container python:3.11.9-slim-bookworm
+```
+
+Thay nội dung `backend/constraints.txt` bằng kết quả đó, giữ phần chú thích đầu file và các dòng chỉ dành cho Windows
+(`colorama`, `pywin32`, `win32-setctime`). Sau đó cài lại venv để kiểm tra trên máy mình.
+
+Commit cả `requirements*.txt` và `constraints.txt` trong cùng PR.
 
 ### Lỗi hay gặp
 
@@ -91,4 +105,5 @@ Cổng chỉ mở trên `127.0.0.1`: PostgreSQL `5432`, Qdrant `6333` (dashboard
 | `port is already allocated` | Máy đang chạy PostgreSQL/Redis khác: tắt dịch vụ đó hoặc đổi cổng bên trái trong `docker-compose.yml` |
 | `read-only file system` / `input/output error` khi pull image | Docker Desktop bị lỗi đĩa ảo: Quit Docker Desktop rồi mở lại (hoặc Troubleshoot → Restart) |
 | Muốn xoá sạch dữ liệu dev | `docker compose down -v` (xoá volume, **mất toàn bộ dữ liệu**) |
+| API báo `postgres: false` / timeout trên Windows | Dùng `127.0.0.1` thay vì `localhost` trong `.env` (Docker chỉ mở cổng IPv4) |
 | VS Code báo thiếu type (`vite/client`, `node`) | Chạy `npm ci` trong `web/` hoặc `bot/`, rồi "TypeScript: Restart TS Server" |

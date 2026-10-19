@@ -117,6 +117,10 @@ Tính chất bắt buộc của mỗi bước:
 | Thêm metadata (spoiler, nhân vật…) | `ingest/transform/metadata.py` + payload index trong `core/vector/schema.py` |
 | Đổi chiến lược chunk | Sửa `[chunk]` → `ingest chunk` + `ingest index` (không cần crawl lại) |
 | Đổi LLM / search engine | `app/adapters/llm.py` / `app/adapters/web_search.py` |
+| Thêm tài nguyên dùng chung (LLM, encoder, client mới) | Thuộc tính + khởi tạo trong `app/context.py`, gọi `ctx.register(name, close=…, check=…)` → tự có trong `/health` và tự đóng khi tắt app |
+| Thêm endpoint | File mới trong `app/api/routes/` (một `APIRouter`) + schema trong `app/api/schemas/` + 1 dòng `include_router` trong `app/api/router.py` |
+| Thêm middleware | `app/middleware.py` → `install_middleware()` |
+| Thêm tham số cấu hình | Trường mới trong `core/config.py` (đúng nhóm) + dòng mẫu trong `.env.example` |
 | Thêm bước RAG | Module mới trong `app/rag/`, gọi từ `pipeline.py`, ghi thời gian vào trace |
 | Thêm kênh (Telegram, Messenger…) | Client mới gọi `/api/v1/chat` với `channel` và `external_ref` riêng |
 | Tăng tải | API stateless (state ở PG/Redis/Qdrant): tăng worker hoặc instance; tách ingest sang máy khác vì chỉ dùng chung `core/` |
