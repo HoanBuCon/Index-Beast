@@ -86,12 +86,15 @@ Cổng chỉ mở trên `127.0.0.1`: PostgreSQL `5432`, Qdrant `6333` (dashboard
 
 ### Thêm / nâng cấp thư viện Python
 
-Sửa `backend/requirements*.txt`, cài vào một venv **mới**, rồi khoá lại toàn bộ phụ thuộc:
+Sửa `backend/requirements*.txt`, rồi khoá lại toàn bộ phụ thuộc. Phải freeze **trên Linux** (image Docker và CI chạy Linux;
+freeze trên Windows sẽ thiếu gói chỉ có ở Linux như `uvloop`):
 
 ```bash
-pip install -r requirements-dev.txt
-pip freeze > constraints.txt      # giữ 2 dòng chú thích ở đầu file
+make constraints > /tmp/linux.txt   # pip freeze trong container python:3.11.9-slim-bookworm
 ```
+
+Thay nội dung `backend/constraints.txt` bằng kết quả đó, giữ phần chú thích đầu file và các dòng chỉ dành cho Windows
+(`colorama`, `pywin32`, `win32-setctime`). Sau đó cài lại venv để kiểm tra trên máy mình.
 
 Commit cả `requirements*.txt` và `constraints.txt` trong cùng PR.
 
