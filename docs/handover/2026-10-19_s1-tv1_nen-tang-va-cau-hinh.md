@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Người thực hiện | TV1 (Trần Trọng Hoàn) — Tech Lead · Backend & DevOps |
+| Người thực hiện | TV1 (Hoanbucon) — Tech Lead · Backend & DevOps |
 | Ngày | 2026-10-19 (Sprint 1, ngày 1) |
 | Trạng thái | 4 thẻ đã merge vào `develop`; bản sửa lỗi + tài liệu này nằm ở `fix/s1-tv1-env-config-cleanup` |
 | Đọc kèm | [`README.md`](../../README.md) (chạy local, cấu hình) · [`04_ARCHITECTURE.md`](../04_ARCHITECTURE.md) · [`quy_uoc.md`](../quy_uoc.md) |

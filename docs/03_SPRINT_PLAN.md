@@ -11,12 +11,12 @@
 
 ## 1. Phân vai
 
-| Mã | Vai trò | Trọng tâm |
-|---|---|---|
-| TV1 | Tech Lead · Backend & DevOps | FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code |
-| TV2 | Data Engineer | Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu |
-| TV3 | AI / RAG Engineer | Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng |
-| TV4 | Frontend & Discord Bot | React web, discord.js bot, UI/UX, UAT |
+| Mã | Thành viên | Vai trò | Trọng tâm |
+|---|---|---|---|
+| TV1 | Hoanbucon | Tech Lead · Backend & DevOps | FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code |
+| TV2 | UncleThing | Data Engineer | Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu |
+| TV3 | MinhMuc | AI / RAG Engineer | Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng |
+| TV4 | QuyVuiVe | Frontend & Discord Bot | React web, discord.js bot, UI/UX, UAT |
 
 Nguyên tắc: mỗi thẻ có **một** người chịu trách nhiệm chính; thẻ `ALL` là hoạt động chung của team. Người chịu trách nhiệm có thể nhờ người khác hỗ trợ nhưng là người kéo thẻ sang Hoàn thành.
 

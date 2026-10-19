@@ -125,19 +125,19 @@ Nguồn: https://github.com/ggml-org/llama.cpp/tree/master/tools/server, D:/Inde
 
 | Thành viên | Phụ trách chính | Đầu ra chịu trách nhiệm |
 | --- | --- | --- |
-| TV1 | Lead, backend, DevOps | API, DB, Docker, tích hợp và deploy |
-| TV2 | Dữ liệu | Khảo sát nguồn, crawler, corpus sạch |
-| TV3 | RAG và đánh giá | Retrieval, generation, thí nghiệm |
-| TV4 | Web và Discord | Giao diện, /ask, phản hồi người dùng |
+| TV1 (Hoanbucon) | Lead, backend, DevOps | API, DB, Docker, tích hợp và deploy |
+| TV2 (UncleThing) | Dữ liệu | Khảo sát nguồn, crawler, corpus sạch |
+| TV3 (MinhMuc) | RAG và đánh giá | Retrieval, generation, thí nghiệm |
+| TV4 (QuyVuiVe) | Web và Discord | Giao diện, /ask, phản hồi người dùng |
 
 **Gợi ý lời nói:** Điền tên và MSSV trước khi nộp. Mỗi hạng mục có một người chịu trách nhiệm chính và một người review. TV2 và TV3 thống nhất schema chunk; TV1 và TV4 thống nhất API sớm. Cả nhóm cùng đóng góp câu hỏi và review đáp án. Quy trình Git theo docs/quy_uoc.md: feature từ develop, PR và Mentor review trước khi merge.
 
 ## Slide 13 Đầu ra cần hoàn tất tuần này
 
-- TV1: phiếu đăng ký, đề cương bài toán, repo và bảng phân công.
-- TV2: bảng nguồn dữ liệu, 20–30 trang mẫu, báo cáo truy cập và giấy phép.
-- TV3: bảng survey, 30 câu hỏi mẫu, thiết kế baseline và metric.
-- TV4: wireframe web, luồng /ask, tổng hợp slide và kịch bản demo.
+- Hoanbucon (TV1): phiếu đăng ký, đề cương bài toán, repo và bảng phân công.
+- UncleThing (TV2): bảng nguồn dữ liệu, 20–30 trang mẫu, báo cáo truy cập và giấy phép.
+- MinhMuc (TV3): bảng survey, 30 câu hỏi mẫu, thiết kế baseline và metric.
+- QuyVuiVe (TV4): wireframe web, luồng /ask, tổng hợp slide và kịch bản demo.
 
 **Gợi ý lời nói:** Tuần 1 không cần tuyên bố hệ thống đã chạy. Đến ngày 25/10, mỗi đầu ra phải có link hoặc file minh chứng. Các số lượng 20–30 trang và 30 câu là mục tiêu tuần 1. Cả nhóm review chéo cuối tuần để chốt phạm vi, dữ liệu, câu hỏi nghiên cứu và kế hoạch. Họp giữa tuần ngắn để gỡ vướng.
 

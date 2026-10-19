@@ -2,6 +2,13 @@
 
 Thư mục này chứa toàn bộ tài liệu đặc tả, kiến trúc, kế hoạch sprint, quyết định kỹ thuật và quy ước phát triển của dự án **IndexBeast** (nhóm **4 Hollows**).
 
+| Mã | Thành viên |
+|---|---|
+| TV1 | Hoanbucon |
+| TV2 | UncleThing |
+| TV3 | MinhMuc |
+| TV4 | QuyVuiVe |
+
 ---
 
 ## 1. Danh mục tài liệu
