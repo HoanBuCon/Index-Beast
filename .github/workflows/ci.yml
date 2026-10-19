@@ -3,7 +3,11 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -16,6 +20,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11.9"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
       - run: python -m pip install pip==26.2.1
       # constraints.txt sinh ở Sprint 1 (pip freeze); chưa có thì cài không ràng buộc
       - run: |
@@ -36,7 +42,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24.22.0"
-      - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
       - run: npm run format:check
       - run: npm run build
 
@@ -50,6 +58,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "24.22.0"
-      - run: if [ -f package-lock.json ]; then npm ci; else npm install; fi
+          cache: npm
+          cache-dependency-path: bot/package-lock.json
+      - run: npm ci
       - run: npm run format:check
       - run: npm run typecheck
