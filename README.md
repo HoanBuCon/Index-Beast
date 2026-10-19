@@ -1,5 +1,7 @@
 # Index Beast
 
+[![CI](https://github.com/HoanBuCon/Index-Beast/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/HoanBuCon/Index-Beast/actions/workflows/ci.yml)
+
 ![Index Beast Banner](assets/onion_ring.jpg)
 
 Dự án **IndexBeast** của nhóm **4 Hollows**: chatbot hỏi đáp lore **Elden Ring base game** trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
