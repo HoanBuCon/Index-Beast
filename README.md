@@ -51,7 +51,7 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 ```bash
 git clone https://github.com/HoanBuCon/Index-Beast.git && cd Index-Beast
 git switch develop
-cp .env.example .env                      # điền DEEPSEEK_API_KEY, DISCORD_TOKEN… khi cần
+cp .env.example .env                      # điền giá trị thật khi cần (xem mục Cấu hình)
 
 # Backend
 cd backend
@@ -83,6 +83,29 @@ pre-commit install
 | Lint toàn repo | `make lint` | `pre-commit run --all-files` |
 
 Cổng chỉ mở trên `127.0.0.1`: PostgreSQL `5432`, Qdrant `6333` (dashboard: http://localhost:6333/dashboard), Redis `6379`.
+
+### Cấu hình (`.env`)
+
+Chỉ có **một** file `.env` ở gốc repo (sao chép từ `.env.example`); backend, bot và docker compose cùng đọc file này.
+
+| Thành phần | Đọc cấu hình thế nào |
+|---|---|
+| Backend | `core/config.py` (pydantic-settings) đọc `<gốc repo>/.env` theo đường dẫn tuyệt đối; biến môi trường thật luôn được ưu tiên |
+| Bot (dev) | `node --env-file=../.env` |
+| Docker Compose | Lấy `${...}` từ `.env`, rồi truyền cho mỗi container **chỉ** các biến liệt kê trong `environment:` của nó (bot không biết mật khẩu DB) |
+| Test | Không đọc `.env` (`Settings(_env_file=None)`) để chạy giống nhau trên mọi máy |
+| CI | `env:` trong workflow; secret thật đặt ở GitHub Secrets |
+| Production | `.env` trên VPS (`chmod 600`), `ENVIRONMENT=prod` — API từ chối khởi động nếu còn giá trị `change-me` |
+
+Quy ước khi sửa `.env.example`: chú thích đặt trên **dòng riêng** (docker compose hiểu `KEY=  # chú thích` thành giá trị),
+dev dùng `127.0.0.1` thay cho `localhost`.
+
+**Thêm một biến mới:**
+
+1. Thêm trường vào `backend/core/config.py` (đúng nhóm) hoặc `bot/src/config.ts`.
+2. Thêm dòng mẫu kèm chú thích vào `.env.example` — test `tests/unit/test_env_example.py` sẽ báo nếu quên.
+3. Nếu container cần biến đó: thêm vào `environment:` của service tương ứng trong `docker-compose.yml`.
+4. Ghi trong mô tả PR để mọi người cập nhật `.env` của mình.
 
 ### Thêm / nâng cấp thư viện Python
 

@@ -1,0 +1,12 @@
+# Build context của infra/caddy.Dockerfile là gốc repo: chỉ cần web/ và infra/
+.git
+.env
+.env.*
+!.env.example
+**/node_modules
+**/__pycache__
+backend
+bot
+docs
+planning
+web/dist
