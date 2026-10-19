@@ -1,11 +1,12 @@
 # Dev:  docker compose up -d postgres qdrant redis      (api/web/bot chạy local, xem README)
 # Prod: docker compose --profile app up -d --build
 # Cổng chỉ mở trên 127.0.0.1 — ra Internet duy nhất qua Caddy (80/443).
+# Biến ${...} lấy từ file .env ở gốc repo; mỗi service chỉ nhận đúng biến liệt kê trong `environment:`.
 
 name: index-beast
 
 # Mặc định KHÔNG ghi log container xuống đĩa (driver none). Cần xem log để debug:
-#   DOCKER_LOG_DRIVER=local docker compose up -d   → `docker compose logs` dùng được, xoay vòng 5×20MB
+#   DOCKER_LOG_DRIVER=local docker compose up -d   -> `docker compose logs` dùng được, xoay vòng 5×20MB
 x-common: &common
   restart: unless-stopped
   logging:
@@ -16,9 +17,9 @@ services:
     <<: *common
     image: postgres:18.6-bookworm
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-indexbeast}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-      POSTGRES_DB: ${POSTGRES_DB:-indexbeast}
+      POSTGRES_USER: &pg_user ${POSTGRES_USER:-indexbeast}
+      POSTGRES_PASSWORD: &pg_password ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: &pg_db ${POSTGRES_DB:-indexbeast}
     command: ["postgres", "-c", "shared_buffers=256MB"]
     volumes:
       - pgdata:/var/lib/postgresql   # PG 18: mount thư mục cha, không phải .../data
@@ -56,13 +57,18 @@ services:
     <<: *common
     profiles: ["app"]
     build: ./backend
-    env_file:
-      - path: .env
-        required: false    # dev chạy được khi chưa có .env
+    # Chỉ truyền biến api cần (không nạp nguyên .env). Địa chỉ hạ tầng là tên service trong mạng Docker.
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-indexbeast}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-indexbeast}
+      ENVIRONMENT: ${ENVIRONMENT:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: *pg_user
+      POSTGRES_PASSWORD: *pg_password
+      POSTGRES_DB: *pg_db
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      WEB_CONCURRENCY: ${API_WORKERS:-2}
     volumes:
       - ./backend/data:/app/data      # dữ liệu crawl thô
     depends_on:
@@ -80,11 +86,14 @@ services:
     <<: *common
     profiles: ["app"]
     build: ./bot
-    env_file:
-      - path: .env
-        required: false    # dev chạy được khi chưa có .env
+    # Bot không nhận mật khẩu DB hay key LLM: chỉ token Discord và cách gọi API
     environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
       BOT_API_URL: http://api:8000
+      WEB_URL: ${WEB_URL:-http://localhost:5173}
     depends_on:
       api: { condition: service_healthy }
     mem_limit: 192m

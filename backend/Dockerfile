@@ -21,5 +21,6 @@ USER app
 
 # S2 (TV3): tải sẵn model ONNX vào /models ở bước build — `RUN python -m core.encoders.onnx`
 # S2 (TV1): chạy migration trước khi khởi động — `alembic upgrade head && uvicorn ...`
+# Số worker: biến WEB_CONCURRENCY (compose đặt từ API_WORKERS trong .env)
 EXPOSE 8000
-CMD ["uvicorn", "--factory", "app.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
+CMD ["uvicorn", "--factory", "app.main:create_app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
