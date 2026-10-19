@@ -1,4 +1,4 @@
-"""Async DeepSeek Platform adapter: text, JSON và streaming, tắt thinking cho RAG.
+"""Async DeepSeek Platform adapter: text, JSON và streaming, mặc định tắt thinking cho RAG.
 
 Phụ trách: TV3 · [S1] Xác nhận DeepSeek · [S3] Generation và query rewriting
 """
@@ -6,13 +6,15 @@ Phụ trách: TV3 · [S1] Xác nhận DeepSeek · [S3] Generation và query rewr
 import json
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from openai import APIError, AsyncOpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
 from core.config import Settings, get_settings
+
+ReasoningEffort = Literal["low", "high", "max"]
 
 
 class LLMError(RuntimeError):
@@ -30,6 +32,8 @@ class LLMResponse:
     prompt_tokens: int
     completion_tokens: int
     finish_reason: str
+    reasoning_content: str | None = None
+    reasoning_tokens: int | None = None
 
 
 class DeepSeekLLM:
@@ -60,6 +64,8 @@ class DeepSeekLLM:
         messages: Sequence[ChatCompletionMessageParam],
         max_tokens: int | None,
         temperature: float | None,
+        thinking: bool = False,
+        reasoning_effort: ReasoningEffort = "low",
     ) -> dict[str, Any]:
         if not messages:
             raise ValueError("messages must not be empty")
@@ -69,13 +75,20 @@ class DeepSeekLLM:
             raise ValueError("max_tokens must be between 1 and 8192")
         if not 0 <= sampling <= 2:
             raise ValueError("temperature must be between 0 and 2")
-        return {
+        if reasoning_effort not in ("low", "high", "max"):
+            raise ValueError("reasoning_effort must be low, high or max")
+        parameters = {
             "model": self.settings.llm_model,
             "messages": list(messages),
             "max_tokens": token_limit,
-            "temperature": sampling,
-            "extra_body": {"thinking": {"type": "disabled"}},
+            "extra_body": {"thinking": {"type": "enabled" if thinking else "disabled"}},
         }
+        if thinking:
+            parameters["reasoning_effort"] = reasoning_effort
+        else:
+            # Thinking mode không hỗ trợ temperature theo tài liệu DeepSeek.
+            parameters["temperature"] = sampling
+        return parameters
 
     @staticmethod
     def _response(completion: ChatCompletion) -> LLMResponse:
@@ -88,12 +101,15 @@ class DeepSeekLLM:
         if not content or not content.strip():
             raise LLMError("DeepSeek returned empty content.")
         usage = completion.usage
+        token_details = usage.completion_tokens_details if usage else None
         return LLMResponse(
             content=content,
             model=completion.model,
             prompt_tokens=usage.prompt_tokens if usage else 0,
             completion_tokens=usage.completion_tokens if usage else 0,
             finish_reason=choice.finish_reason,
+            reasoning_content=getattr(choice.message, "reasoning_content", None) or None,
+            reasoning_tokens=token_details.reasoning_tokens if token_details else None,
         )
 
     async def _complete(self, parameters: dict[str, Any]) -> LLMResponse:
@@ -111,9 +127,11 @@ class DeepSeekLLM:
         *,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        thinking: bool = False,
+        reasoning_effort: ReasoningEffort = "low",
     ) -> LLMResponse:
         """Trả lời đầy đủ, kèm token usage để service ghi trace/chi phí."""
-        return await self._complete(self._parameters(messages, max_tokens, temperature))
+        return await self._complete(self._parameters(messages, max_tokens, temperature, thinking, reasoning_effort))
 
     async def complete_json(
         self,

@@ -73,6 +73,24 @@ async def test_json_mode_adds_instruction_without_mutating_messages():
     assert messages == MESSAGES
 
 
+async def test_thinking_mode_omits_temperature_and_preserves_provider_reasoning():
+    def handler(request):
+        body = json.loads(request.content)
+        assert body["thinking"] == {"type": "enabled"}
+        assert body["reasoning_effort"] == "low"
+        assert "temperature" not in body
+        result = completion("Final answer")
+        result["choices"][0]["message"]["reasoning_content"] = "Provider reasoning"
+        result["usage"]["completion_tokens_details"] = {"reasoning_tokens": 3}
+        return httpx.Response(200, json=result)
+
+    async with fake_llm(handler) as llm:
+        result = await llm.complete(MESSAGES, thinking=True, reasoning_effort="low")
+    assert result.content == "Final answer"
+    assert result.reasoning_content == "Provider reasoning"
+    assert result.reasoning_tokens == 3
+
+
 @pytest.mark.parametrize("content", ["not-json", "[]", '"string"', "null"])
 async def test_invalid_json_is_rejected(content):
     async with fake_llm(lambda _: httpx.Response(200, json=completion(content))) as llm:

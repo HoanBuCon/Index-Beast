@@ -1,0 +1,23 @@
+@baseUrl = http://127.0.0.1:8001
+
+### Non-thinking (uses API credits; key is read by the backend)
+POST {{baseUrl}}/api/v1/dev/llm/test
+Content-Type: application/json
+
+{
+  "message": "Godrick the Grafted là ai? Trả lời ngắn bằng tiếng Việt.",
+  "thinking": false,
+  "max_tokens": 2048,
+  "temperature": 0.2
+}
+
+### Thinking: same question for comparison
+POST {{baseUrl}}/api/v1/dev/llm/test
+Content-Type: application/json
+
+{
+  "message": "Godrick the Grafted là ai? Trả lời ngắn bằng tiếng Việt.",
+  "thinking": true,
+  "reasoning_effort": "low",
+  "max_tokens": 2048
+}
