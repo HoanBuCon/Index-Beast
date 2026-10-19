@@ -18,6 +18,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
+from app.adapters.llm import DeepSeekLLM
 from core.config import Settings
 from core.db.session import create_engine, create_sessionmaker
 
@@ -34,6 +35,7 @@ class AppContext:
     sessionmaker: async_sessionmaker
     qdrant: AsyncQdrantClient
     redis: Redis
+    llm: DeepSeekLLM | None = None
     health_checks: dict[str, HealthCheck] = field(default_factory=dict)
     _closers: list[tuple[str, Closer]] = field(default_factory=list, repr=False)
 
@@ -88,4 +90,8 @@ def build_context(settings: Settings) -> AppContext:
         ),
     )
     register_infra(ctx)
+    if settings.deepseek_api_key and settings.deepseek_api_key.get_secret_value().strip():
+        ctx.llm = DeepSeekLLM(settings)
+        # Health check thường xuyên không gọi LLM để tránh tiêu hao API credits.
+        ctx.register("llm", close=ctx.llm.aclose)
     return ctx

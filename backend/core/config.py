@@ -48,6 +48,15 @@ class Settings(BaseSettings):
     client_timeout_seconds: float = Field(default=5.0, gt=0)  # kết nối/đọc tới PostgreSQL, Qdrant, Redis
     health_timeout_seconds: float = Field(default=2.0, gt=0)  # tối đa cho mỗi health check
 
+    # --- DeepSeek Platform (TV3): dùng chung cho generation và query rewriting ---
+    deepseek_api_key: SecretStr | None = None
+    deepseek_base_url: str = "https://api.deepseek.com"
+    llm_model: str = Field(default="deepseek-flash", min_length=1)
+    llm_temperature: float = Field(default=0.2, ge=0, le=2)
+    llm_max_tokens: int = Field(default=2048, ge=1, le=8192)
+    llm_timeout_seconds: float = Field(default=60, gt=0)
+    llm_max_retries: int = Field(default=2, ge=0, le=5)
+
     # --- HTTP ---
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]  # .env: phân cách bằng dấu phẩy
 

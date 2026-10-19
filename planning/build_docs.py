@@ -70,10 +70,10 @@ def build_sprint_plan_md(plan: dict) -> str:
 
     w("## 1. Phân vai")
     w("")
-    w("| Mã | Vai trò | Trọng tâm |")
-    w("|---|---|---|")
+    w("| Mã | Thành viên | Vai trò | Trọng tâm |")
+    w("|---|---|---|---|")
     for m in plan["members"]:
-        w(f"| {m['id']} | {m['role']} | {m['focus']} |")
+        w(f"| {m['id']} | {m.get('name', m['id'])} | {m['role']} | {m['focus']} |")
     w("")
     w("Nguyên tắc: mỗi thẻ có **một** người chịu trách nhiệm chính; thẻ `ALL` là hoạt động chung của team. "
       "Người chịu trách nhiệm có thể nhờ người khác hỗ trợ nhưng là người kéo thẻ sang Hoàn thành.")

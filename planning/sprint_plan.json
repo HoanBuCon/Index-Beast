@@ -4,10 +4,10 @@
   "start_date": "2026-10-19",
   "sprint_length_days": 7,
   "members": [
-    {"id": "TV1", "role": "Tech Lead · Backend & DevOps", "focus": "FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code", "trello_username": ""},
-    {"id": "TV2", "role": "Data Engineer", "focus": "Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu", "trello_username": ""},
-    {"id": "TV3", "role": "AI / RAG Engineer", "focus": "Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng", "trello_username": ""},
-    {"id": "TV4", "role": "Frontend & Discord Bot", "focus": "React web, discord.js bot, UI/UX, UAT", "trello_username": ""}
+    {"id": "TV1", "name": "Hoanbucon", "role": "Tech Lead · Backend & DevOps", "focus": "FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code", "trello_username": ""},
+    {"id": "TV2", "name": "UncleThing", "role": "Data Engineer", "focus": "Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu", "trello_username": ""},
+    {"id": "TV3", "name": "MinhMuc", "role": "AI / RAG Engineer", "focus": "Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng", "trello_username": ""},
+    {"id": "TV4", "name": "QuyVuiVe", "role": "Frontend & Discord Bot", "focus": "React web, discord.js bot, UI/UX, UAT", "trello_username": ""}
   ],
   "lists": ["📌 Thông tin dự án", "🧊 Backlog", "Sprint 1", "Sprint 2", "Sprint 3", "Sprint 4", "Sprint 5", "Sprint 6", "🔨 Đang làm", "👀 Review / QA", "✅ Hoàn thành"],
   "labels": [
@@ -46,7 +46,7 @@
     },
     {
       "title": "👥 Phân vai thành viên",
-      "desc": "- TV1 — Tech Lead · Backend & DevOps\n- TV2 — Data Engineer\n- TV3 — AI / RAG Engineer\n- TV4 — Frontend & Discord Bot\n\nĐổi TV1..TV4 thành tên thật khi phân công. Mỗi thẻ có nhãn người phụ trách.",
+      "desc": "- TV1 — Hoanbucon — Tech Lead · Backend & DevOps\n- TV2 — UncleThing — Data Engineer\n- TV3 — MinhMuc — AI / RAG Engineer\n- TV4 — QuyVuiVe — Frontend & Discord Bot\n\nGiữ mã TV1..TV4 để truy vết công việc. Mỗi thẻ có nhãn người phụ trách.",
       "checklist": []
     }
   ],

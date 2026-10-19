@@ -30,4 +30,5 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 | Ngày | Người | Chủ đề |
 |---|---|---|
-| 2026-10-19 | TV1 | [Nền tảng backend, hạ tầng dev và cấu hình](2026-10-19_s1-tv1_nen-tang-va-cau-hinh.md) |
+| 2026-10-19 | TV1 (Hoanbucon) | [Nền tảng backend, hạ tầng dev và cấu hình](2026-10-19_s1-tv1_nen-tang-va-cau-hinh.md) |
+| 2026-10-19 | TV3 (MinhMuc) | [DeepSeek LLM](2026-10-19_s1-tv3_deepseek-llm.md) |
