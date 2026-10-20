@@ -4,8 +4,9 @@
 
 COMPOSE := docker compose
 INFRA   := postgres qdrant redis
-# Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 8001. Ghi đè: `make api API_PORT=8002`
-API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),8001)
+# Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 18000 — không dùng cổng mặc định 8000
+# của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
+API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),18000)
 
 .PHONY: help up debug-up down logs ps migrate test lint format api constraints
 

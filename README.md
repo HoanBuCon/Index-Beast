@@ -87,21 +87,22 @@ pre-commit install
 | Xem trạng thái | `make ps` | `docker compose ps` |
 | Xem log container (mặc định **không** ghi log xuống đĩa) | `make debug-up` rồi `make logs` | `DOCKER_LOG_DRIVER=local docker compose up -d --force-recreate` rồi `docker compose logs -f` |
 | Tắt (giữ dữ liệu) | `make down` | `docker compose down` |
-| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port 8001 --no-access-log` → http://127.0.0.1:8001/api/docs |
-| Chạy web | | `cd web && npm run dev` → http://localhost:5173 (proxy `/api` sang API ở cổng `API_PORT`) |
+| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port 18000 --no-access-log` → http://127.0.0.1:18000/api/docs |
+| Chạy web | | `cd web && npm run dev` → http://localhost:15173 (proxy `/api` sang API ở cổng `API_PORT`) |
 | Migration DB | `make migrate` | `cd backend && alembic upgrade head` |
 | Test backend | `make test` | `cd backend && pytest` (thêm `-m integration` khi đã `make up`) |
 | Lint toàn repo | `make lint` | `pre-commit run --all-files` |
 
 Cổng khi dev — tất cả chỉ mở trên máy mình (`127.0.0.1`):
 
-| Dịch vụ | Cổng | Đổi ở đâu |
+| Dịch vụ | Cổng | Biến trong `.env` |
 |---|---|---|
-| API (FastAPI) | `8001` | `API_PORT` trong `.env` — `make api`, proxy của web và bot dev cùng đọc biến này |
-| Web (Vite) | `5173` | `web/vite.config.ts` |
-| PostgreSQL / Qdrant / Redis | `5432` / `6333` / `6379` | `docker-compose.yml` (Qdrant dashboard: http://localhost:6333/dashboard) |
+| API (FastAPI) | `18000` | `API_PORT` — `make api`, proxy của web và bot dev cùng đọc biến này |
+| Web (Vite) | `15173` | `WEB_PORT` (nhớ sửa cả `CORS_ORIGINS`, `WEB_URL`) |
+| PostgreSQL / Qdrant / Redis | `15432` / `16333` / `16379` | `POSTGRES_PORT` / `QDRANT_PORT` / `REDIS_PORT` (Qdrant dashboard: http://localhost:16333/dashboard) |
 
-Trong Docker, API luôn nghe cổng `8000` **bên trong** container (Caddy và bot gọi `api:8000`); `API_PORT` chỉ dành cho chạy local.
+Dự án **không dùng cổng mặc định** của công cụ: cổng dự án = cổng gốc + 10000 ([`docs/quy_uoc.md`](docs/quy_uoc.md) → "Quy ước cổng"). Mọi cổng đổi trong `.env`, không sửa code.
+Trong Docker, container `api` nghe `18000` (Caddy và bot gọi `api:18000`); PostgreSQL/Qdrant/Redis giữ cổng gốc **bên trong** mạng Docker.
 
 > ⚠️ **Không chạy API với `--host 0.0.0.0` khi dev.** Mặc định uvicorn chỉ nghe `127.0.0.1` (chỉ máy mình gọi được).
 > `0.0.0.0` mở API cho mọi máy cùng mạng Wi-Fi/LAN — kể cả endpoint dev `/api/v1/dev/llm/test` gọi DeepSeek
@@ -148,10 +149,11 @@ Commit cả `requirements*.txt` và `constraints.txt` trong cùng PR.
 
 | Triệu chứng | Cách xử lý |
 |---|---|
-| `port is already allocated` | Máy đang chạy PostgreSQL/Redis khác: tắt dịch vụ đó hoặc đổi cổng bên trái trong `docker-compose.yml` |
-| `make api` báo cổng đã dùng (`[Errno 10048]` / `address already in use`) | Đặt `API_PORT` khác trong `.env` (vd. `8002`), không sửa Makefile hay code |
+| `port is already allocated` | Cổng đã có chương trình khác dùng: đổi `POSTGRES_PORT` / `QDRANT_PORT` / `REDIS_PORT` trong `.env` |
+| `make api` báo cổng đã dùng (`[Errno 10048]` / `address already in use`) | Đặt `API_PORT` khác trong `.env` (vd. `18001`), không sửa Makefile hay code |
 | Web báo `502` / `http proxy error … ECONNREFUSED` khi gọi `/api` | API chưa chạy, hoặc chạy ở cổng khác `API_PORT`. Khởi động lại `npm run dev` sau khi đổi `.env` |
 | `read-only file system` / `input/output error` khi pull image | Docker Desktop bị lỗi đĩa ảo: Quit Docker Desktop rồi mở lại (hoặc Troubleshoot → Restart) |
 | Muốn xoá sạch dữ liệu dev | `docker compose down -v` (xoá volume, **mất toàn bộ dữ liệu**) |
 | API báo `postgres: false` / timeout trên Windows | Dùng `127.0.0.1` thay vì `localhost` trong `.env` (Docker chỉ mở cổng IPv4) |
+| Sau khi pull, API/web không kết nối được dịch vụ | `.env` còn cổng cũ (5432, 6333, 6379, 8001…): tạo lại từ `.env.example` rồi `docker compose up -d --force-recreate postgres qdrant redis` |
 | VS Code báo thiếu type (`vite/client`, `node`) | Chạy `npm ci` trong `web/` hoặc `bot/`, rồi "TypeScript: Restart TS Server" |

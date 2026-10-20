@@ -94,16 +94,16 @@ vì Compose có thể render cả giá trị secret.
 
 ## API thử thinking và non-thinking
 
-Từ thư mục `backend`, chạy trên cổng 8001:
+Từ thư mục `backend`, chạy trên cổng `API_PORT` (mặc định 18000 — dự án không dùng cổng mặc định, xem [`quy_uoc.md`](../quy_uoc.md) §8):
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn --factory app.main:create_app --host 0.0.0.0 --port 8001 --reload
+.\.venv\Scripts\python.exe -m uvicorn --factory app.main:create_app --host 0.0.0.0 --port 18000 --reload
 ```
 
 > ⚠️ Cách thường dùng là `make api` (chỉ nghe `127.0.0.1`, cổng lấy từ `API_PORT`). Chỉ thêm `--host 0.0.0.0` khi cần gọi từ
 > thiết bị khác: nó mở API, kể cả endpoint gọi DeepSeek bằng key của bạn, cho mọi máy cùng mạng.
 
-Mở [Swagger](http://127.0.0.1:8001/api/docs), chọn `POST /api/v1/dev/llm/test`, bấm **Try it out**.
+Mở [Swagger](http://127.0.0.1:18000/api/docs), chọn `POST /api/v1/dev/llm/test`, bấm **Try it out**.
 Hoặc dùng các request có sẵn trong `backend/scripts/deepseek_test.http` với REST Client của VS Code.
 
 Body mẫu để thử non-thinking:
