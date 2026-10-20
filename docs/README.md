@@ -19,6 +19,7 @@ Thư mục này chứa toàn bộ tài liệu đặc tả, kiến trúc, kế ho
 | [`02_SRS.md`](02_SRS.md) | Đặc tả yêu cầu phần mềm dạng Living SRS (ID yêu cầu cố định, độ ưu tiên MoSCoW, trạng thái vòng đời). | Cập nhật cuối mỗi Sprint Review |
 | [`03_SPRINT_PLAN.md`](03_SPRINT_PLAN.md) | Kế hoạch chi tiết 6 Sprint (19/10/2026 – 29/11/2026), phân vai TV1–TV4 và bảng phân bổ công việc. | **Sinh tự động** từ `planning/sprint_plan.json` (Không sửa tay) |
 | [`04_ARCHITECTURE.md`](04_ARCHITECTURE.md) | Kiến trúc thư mục, quy tắc phụ thuộc và luồng pipeline dữ liệu (offline & online). | Soạn thảo thủ công |
+| [`rag-diagram.md`](rag-diagram.md) | Sơ đồ RAG online bằng Mermaid `flowchart TD`, bắt đầu từ kho tri thức đã có. | Soạn thảo thủ công |
 | [`quy_uoc.md`](quy_uoc.md) | Quy ước Git flow (nhánh `feature/`, `release/`, `hotfix/`), Conventional Commits và quy định Mentor review (`@HoanBuCon`). | Soạn thảo thủ công |
 | [`handover/`](handover/) | Tài liệu bàn giao sau mỗi nhóm task: quy tắc, quy ước, cách dùng, sự cố và việc còn lại. Đặt tên `<YYYY-MM-DD>_s<sprint>-tv<n>_<chu-de>.md`. | Người làm task viết, review cùng PR |
 | [`adr/`](adr/) | Các bản ghi quyết định kiến trúc (Architecture Decision Records) của nhóm (ví dụ: `004-base-game-scope.md`). | Thêm mới khi có quyết định quan trọng |
