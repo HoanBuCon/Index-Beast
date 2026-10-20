@@ -33,7 +33,7 @@ def test_real_env_var_overrides_env_file(tmp_path, monkeypatch):
 def test_database_url_escapes_special_characters():
     url = make(postgres_password="p@ss:/word", postgres_host="postgres").database_url
 
-    assert url == "postgresql+asyncpg://indexbeast:p%40ss%3A%2Fword@postgres:5432/indexbeast"
+    assert url == "postgresql+asyncpg://indexbeast:p%40ss%3A%2Fword@postgres:15432/indexbeast"
 
 
 def test_cors_origins_accept_comma_separated_string(monkeypatch):
@@ -54,7 +54,7 @@ def test_timeouts_must_be_positive():
 
 
 def test_prod_refuses_placeholder_secrets_without_leaking_values():
-    settings = make(environment="prod", qdrant_url="http://real-host:6333")
+    settings = make(environment="prod", qdrant_host="real-host")
 
     with pytest.raises(UnsafeConfigError, match="POSTGRES_PASSWORD") as err:
         ensure_safe_for_environment(settings)
@@ -73,3 +73,10 @@ def test_secret_is_hidden_in_repr():
 def test_create_app_refuses_unsafe_prod_config(ctx):
     with pytest.raises(UnsafeConfigError):
         create_app(make(environment="prod"), context=ctx)
+
+
+def test_service_urls_are_built_from_host_and_port():
+    settings = make(qdrant_host="qdrant", qdrant_port=6333, redis_host="redis", redis_port=6379, redis_db=2)
+
+    assert settings.qdrant_url == "http://qdrant:6333"
+    assert settings.redis_url == "redis://redis:6379/2"

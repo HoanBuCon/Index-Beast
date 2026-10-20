@@ -1,6 +1,8 @@
 # Dev:  docker compose up -d postgres qdrant redis      (api/web/bot chạy local, xem README)
 # Prod: docker compose --profile app up -d --build
 # Cổng chỉ mở trên 127.0.0.1 — ra Internet duy nhất qua Caddy (80/443).
+# Cổng phía máy = cổng gốc + 10000, lấy từ *_PORT trong .env. Bên trong mạng Docker, PostgreSQL/Qdrant/Redis
+# giữ cổng gốc (không ai bên ngoài chạm tới); api nghe 18000 (docs/quy_uoc.md → "Quy ước cổng").
 # Biến ${...} lấy từ file .env ở gốc repo; mỗi service chỉ nhận đúng biến liệt kê trong `environment:`.
 
 name: index-beast
@@ -23,7 +25,7 @@ services:
     command: ["postgres", "-c", "shared_buffers=256MB"]
     volumes:
       - pgdata:/var/lib/postgresql   # PG 18: mount thư mục cha, không phải .../data
-    ports: ["127.0.0.1:5432:5432"]
+    ports: ["127.0.0.1:${POSTGRES_PORT:-15432}:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -35,7 +37,7 @@ services:
     image: qdrant/qdrant:v1.19.2
     volumes:
       - qdrant:/qdrant/storage
-    ports: ["127.0.0.1:6333:6333"]
+    ports: ["127.0.0.1:${QDRANT_PORT:-16333}:6333"]
     healthcheck:
       test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 5s
@@ -46,7 +48,7 @@ services:
     <<: *common
     image: redis:8.10.2-alpine
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
-    ports: ["127.0.0.1:6379:6379"]
+    ports: ["127.0.0.1:${REDIS_PORT:-16379}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -62,12 +64,15 @@ services:
       ENVIRONMENT: ${ENVIRONMENT:-dev}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
       POSTGRES_USER: *pg_user
       POSTGRES_PASSWORD: *pg_password
       POSTGRES_DB: *pg_db
-      QDRANT_URL: http://qdrant:6333
-      REDIS_URL: redis://redis:6379/0
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:15173}
       WEB_CONCURRENCY: ${API_WORKERS:-2}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
@@ -83,7 +88,7 @@ services:
       qdrant: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18000/api/v1/health')"]
       interval: 15s
       start_period: 60s
       retries: 5
@@ -99,8 +104,8 @@ services:
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
-      BOT_API_URL: http://api:8000
-      WEB_URL: ${WEB_URL:-http://localhost:5173}
+      BOT_API_URL: http://api:18000
+      WEB_URL: ${WEB_URL:-http://localhost:15173}
     depends_on:
       api: { condition: service_healthy }
     mem_limit: 192m

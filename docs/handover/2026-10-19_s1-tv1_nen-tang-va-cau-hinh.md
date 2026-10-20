@@ -53,12 +53,12 @@ Lệnh hằng ngày: `make up`, `make api`, `make test`, `make lint` — bảng 
 
 Quy tắc hạ tầng dev:
 
-- **API dev chạy cổng `API_PORT` (mặc định 8001)** — một biến trong `.env` cho `make api`, proxy Vite và bot dev; trong Docker API vẫn là `8000` nội bộ. Không dùng `--host 0.0.0.0` khi dev (mở API, kể cả endpoint gọi DeepSeek, cho cả mạng LAN).
-- **Cổng chỉ mở trên `127.0.0.1`** (5432, 6333, 6379): chỉ máy mình truy cập được; mỗi người có dữ liệu dev riêng. Không đổi thành `0.0.0.0` — Redis/Qdrant chưa có mật khẩu.
+- **Không dùng cổng mặc định của công cụ** (cập nhật 2026-10-20): cổng dự án = cổng gốc + 10000 — API `18000`, web `15173`, PostgreSQL `15432`, Qdrant `16333`, Redis `16379`; mỗi cổng là một biến `*_PORT` trong `.env` ([`quy_uoc.md`](../quy_uoc.md) §8). Trong Docker, container api nghe `18000`. Không dùng `--host 0.0.0.0` khi dev (mở API, kể cả endpoint gọi DeepSeek, cho cả mạng LAN).
+- **Cổng chỉ mở trên `127.0.0.1`** (15432, 16333, 16379): chỉ máy mình truy cập được; mỗi người có dữ liệu dev riêng. Không đổi thành `0.0.0.0` — Redis/Qdrant chưa có mật khẩu.
 - **Dùng `127.0.0.1`, không dùng `localhost`** cho địa chỉ dịch vụ: Windows phân giải `localhost` sang IPv6 (`::1`) trước, Docker chỉ mở IPv4 → kết nối timeout ~2 s.
 - **Container không ghi log xuống đĩa** (`logging.driver: none`). Muốn xem log: `make debug-up` rồi `make logs` (driver `local`, xoay vòng 5×20 MB). Đổi lại, mặc định `docker compose logs` trống.
 - PostgreSQL 18: volume mount vào `/var/lib/postgresql` (không phải `.../data` như bản ≤ 17).
-- Qdrant dashboard: http://localhost:6333/dashboard.
+- Qdrant dashboard: http://localhost:16333/dashboard.
 
 ## 4. Cấu hình (`.env`)
 
@@ -142,7 +142,7 @@ CI chạy khi mở/cập nhật PR và khi push `main`/`develop` — **push lên
 | Triệu chứng | Nguyên nhân | Xử lý |
 |---|---|---|
 | CI đỏ ở mọi PR (`ruff check`) | Docstring khung xương > 120 ký tự | Ngắt dòng docstring; hook pre-commit giờ bắt lỗi này trước khi push |
-| `input/output error`, `read-only file system`, container tự dừng, cổng 5432/6379 timeout | **Ổ đĩa chứa disk image của Docker Desktop hết dung lượng** | Giải phóng ổ đó, khởi động lại Docker Desktop. Kiểm tra vị trí: Docker Desktop → Settings → Resources → Disk image location. Xem dung lượng: `docker system df`; dọn build cache: `docker builder prune` (kiểm tra kỹ trước khi xoá image của dự án khác) |
+| `input/output error`, `read-only file system`, container tự dừng, cổng PostgreSQL/Redis timeout | **Ổ đĩa chứa disk image của Docker Desktop hết dung lượng** | Giải phóng ổ đó, khởi động lại Docker Desktop. Kiểm tra vị trí: Docker Desktop → Settings → Resources → Disk image location. Xem dung lượng: `docker system df`; dọn build cache: `docker builder prune` (kiểm tra kỹ trước khi xoá image của dự án khác) |
 | `/health` báo postgres/redis `false` trên Windows | `localhost` → IPv6 | Dùng `127.0.0.1` |
 | Bot nhận `DISCORD_GUILD_ID = "# server test…"` | Chú thích cuối dòng trong `.env` | Chú thích lên dòng riêng |
 | VS Code báo `Cannot find type definition file for 'vite/client'` | Chưa cài `node_modules` | `npm ci` trong `web/` (hoặc `bot/`), rồi "TypeScript: Restart TS Server" |

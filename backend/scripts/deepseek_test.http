@@ -1,4 +1,5 @@
-@baseUrl = http://127.0.0.1:8001
+# Cổng = API_PORT trong .env (mặc định 18000)
+@baseUrl = http://127.0.0.1:18000
 
 ### Non-thinking (uses API credits; key is read by the backend)
 POST {{baseUrl}}/api/v1/dev/llm/test

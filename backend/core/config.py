@@ -33,16 +33,22 @@ class Settings(BaseSettings):
     environment: Literal["dev", "test", "prod"] = "dev"
     log_level: LogLevel = "INFO"
 
+    # Địa chỉ dùng IP: Windows phân giải "localhost" sang IPv6 trước. Cổng mặc định là cổng dev trên máy
+    # (cổng gốc + 10000, xem docs/quy_uoc.md); trong Docker, compose đặt tên service và cổng nội bộ.
+
     # --- PostgreSQL: ghép thành database_url, không khai báo mật khẩu ở hai nơi ---
-    postgres_host: str = "127.0.0.1"  # dùng IP: Windows phân giải "localhost" sang IPv6 trước
-    postgres_port: int = 5432
+    postgres_host: str = "127.0.0.1"
+    postgres_port: int = Field(default=15432, gt=0, lt=65536)
     postgres_user: str = "indexbeast"
     postgres_password: SecretStr = SecretStr(PLACEHOLDER)
     postgres_db: str = "indexbeast"
 
     # --- Qdrant, Redis ---
-    qdrant_url: str = "http://127.0.0.1:6333"
-    redis_url: str = "redis://127.0.0.1:6379/0"
+    qdrant_host: str = "127.0.0.1"
+    qdrant_port: int = Field(default=16333, gt=0, lt=65536)
+    redis_host: str = "127.0.0.1"
+    redis_port: int = Field(default=16379, gt=0, lt=65536)
+    redis_db: int = Field(default=0, ge=0)
 
     # --- Timeout ---
     client_timeout_seconds: float = Field(default=5.0, gt=0)  # kết nối/đọc tới PostgreSQL, Qdrant, Redis
@@ -58,7 +64,7 @@ class Settings(BaseSettings):
     llm_max_retries: int = Field(default=2, ge=0, le=5)
 
     # --- HTTP ---
-    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]  # .env: phân cách bằng dấu phẩy
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:15173"]  # .env: phân cách bằng dấu phẩy
 
     @field_validator("log_level", mode="before")
     @classmethod
@@ -80,6 +86,14 @@ class Settings(BaseSettings):
             port=self.postgres_port,
             database=self.postgres_db,
         ).render_as_string(hide_password=False)
+
+    @property
+    def qdrant_url(self) -> str:
+        return f"http://{self.qdrant_host}:{self.qdrant_port}"
+
+    @property
+    def redis_url(self) -> str:
+        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     @property
     def is_prod(self) -> bool:
