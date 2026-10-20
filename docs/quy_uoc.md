@@ -119,3 +119,27 @@ Thiết lập branch protection/ruleset cho `main` và `develop`: yêu cầu PR,
 ## 7. Nguồn tài liệu và kế hoạch
 
 `planning/sprint_plan.json` là nguồn của kế hoạch sprint. Khi đổi phạm vi hoặc quy trình, sửa JSON trước rồi chạy `python planning/build_docs.py` để đồng bộ `docs/03_SPRINT_PLAN.md` và các bản Word trong `docs/export/`. Không sửa riêng bản sprint được sinh tự động. Cập nhật Trello là thao tác riêng; sinh tài liệu không đồng nghĩa board đã được cập nhật.
+
+## 8. Quy ước cổng
+
+**Mọi tiến trình của dự án không chạy trên cổng mặc định của công cụ.** Cổng dự án = **cổng gốc + 10000**: dễ nhớ, không đụng PostgreSQL/Redis/dev server khác đang chạy trên máy, và tránh các lượt quét tự động nhắm vào cổng mặc định.
+
+| Tiến trình | Cổng mặc định | Cổng dự án | Biến trong `.env` |
+|---|---|---|---|
+| API (uvicorn) — local và trong container | 8000 | **18000** | `API_PORT` (local) |
+| Web (Vite dev server) | 5173 | **15173** | `WEB_PORT` |
+| PostgreSQL (cổng mở trên máy) | 5432 | **15432** | `POSTGRES_PORT` |
+| Qdrant HTTP (cổng mở trên máy) | 6333 | **16333** | `QDRANT_PORT` |
+| Redis (cổng mở trên máy) | 6379 | **16379** | `REDIS_PORT` |
+
+Ngoại lệ (chỉ hai trường hợp, phải ghi chú tại chỗ):
+
+1. **Caddy trên VPS dùng 80/443**: trình duyệt và Let's Encrypt (cấp HTTPS) bắt buộc dùng cổng chuẩn.
+2. **PostgreSQL, Redis, Qdrant giữ cổng gốc bên trong mạng Docker riêng** (`postgres:5432`, `redis:6379`, `qdrant:6333`): không mở ra ngoài, không ai chạm tới ngoài các container của dự án; service container của GitHub Actions cũng không cho đổi cổng này. Cổng phía máy vẫn theo bảng trên.
+
+Quy tắc khi làm việc:
+
+- Mỗi cổng khai báo ở **một biến `*_PORT` duy nhất** trong `.env`; docker compose, backend, Makefile, Vite, bot cùng đọc biến đó. Không ghi cứng số cổng trong code, script, tài liệu hướng dẫn chạy.
+- Cổng bị chiếm trên máy mình: đổi biến trong `.env` của mình (vd. `API_PORT=18001`), **không** sửa file của dự án.
+- Thêm tiến trình mới: chọn cổng gốc + 10000, thêm vào bảng trên, `.env.example`, và test `backend/tests/unit/test_ports.py`.
+- Dev chỉ bind `127.0.0.1`. Không chạy với `--host 0.0.0.0` (mở cho cả mạng LAN).
