@@ -87,13 +87,25 @@ pre-commit install
 | Xem trạng thái | `make ps` | `docker compose ps` |
 | Xem log container (mặc định **không** ghi log xuống đĩa) | `make debug-up` rồi `make logs` | `DOCKER_LOG_DRIVER=local docker compose up -d --force-recreate` rồi `docker compose logs -f` |
 | Tắt (giữ dữ liệu) | `make down` | `docker compose down` |
-| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload --no-access-log` → http://localhost:8000/api/docs |
-| Chạy web | | `cd web && npm run dev` → http://localhost:5173 |
+| Chạy API (auto-reload) | `make api` | `cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port 8001 --no-access-log` → http://127.0.0.1:8001/api/docs |
+| Chạy web | | `cd web && npm run dev` → http://localhost:5173 (proxy `/api` sang API ở cổng `API_PORT`) |
 | Migration DB | `make migrate` | `cd backend && alembic upgrade head` |
 | Test backend | `make test` | `cd backend && pytest` (thêm `-m integration` khi đã `make up`) |
 | Lint toàn repo | `make lint` | `pre-commit run --all-files` |
 
-Cổng chỉ mở trên `127.0.0.1`: PostgreSQL `5432`, Qdrant `6333` (dashboard: http://localhost:6333/dashboard), Redis `6379`.
+Cổng khi dev — tất cả chỉ mở trên máy mình (`127.0.0.1`):
+
+| Dịch vụ | Cổng | Đổi ở đâu |
+|---|---|---|
+| API (FastAPI) | `8001` | `API_PORT` trong `.env` — `make api`, proxy của web và bot dev cùng đọc biến này |
+| Web (Vite) | `5173` | `web/vite.config.ts` |
+| PostgreSQL / Qdrant / Redis | `5432` / `6333` / `6379` | `docker-compose.yml` (Qdrant dashboard: http://localhost:6333/dashboard) |
+
+Trong Docker, API luôn nghe cổng `8000` **bên trong** container (Caddy và bot gọi `api:8000`); `API_PORT` chỉ dành cho chạy local.
+
+> ⚠️ **Không chạy API với `--host 0.0.0.0` khi dev.** Mặc định uvicorn chỉ nghe `127.0.0.1` (chỉ máy mình gọi được).
+> `0.0.0.0` mở API cho mọi máy cùng mạng Wi-Fi/LAN — kể cả endpoint dev `/api/v1/dev/llm/test` gọi DeepSeek
+> bằng key của bạn (tốn credit). Chỉ dùng khi thật sự cần thử từ thiết bị khác, và tắt ngay sau đó.
 
 ### Cấu hình (`.env`)
 
@@ -102,7 +114,7 @@ Chỉ có **một** file `.env` ở gốc repo (sao chép từ `.env.example`); 
 | Thành phần | Đọc cấu hình thế nào |
 |---|---|
 | Backend | `core/config.py` (pydantic-settings) đọc `<gốc repo>/.env` theo đường dẫn tuyệt đối; biến môi trường thật luôn được ưu tiên |
-| Bot (dev) | `node --env-file=../.env` |
+| Bot (dev) | `node --env-file=../.env`; `BOT_API_URL` để trống thì gọi `http://127.0.0.1:<API_PORT>` |
 | Docker Compose | Lấy `${...}` từ `.env`, rồi truyền cho mỗi container **chỉ** các biến liệt kê trong `environment:` của nó (bot không biết mật khẩu DB) |
 | Test | Không đọc `.env` (`Settings(_env_file=None)`) để chạy giống nhau trên mọi máy |
 | CI | `env:` trong workflow; secret thật đặt ở GitHub Secrets |
@@ -137,6 +149,8 @@ Commit cả `requirements*.txt` và `constraints.txt` trong cùng PR.
 | Triệu chứng | Cách xử lý |
 |---|---|
 | `port is already allocated` | Máy đang chạy PostgreSQL/Redis khác: tắt dịch vụ đó hoặc đổi cổng bên trái trong `docker-compose.yml` |
+| `make api` báo cổng đã dùng (`[Errno 10048]` / `address already in use`) | Đặt `API_PORT` khác trong `.env` (vd. `8002`), không sửa Makefile hay code |
+| Web báo `502` / `http proxy error … ECONNREFUSED` khi gọi `/api` | API chưa chạy, hoặc chạy ở cổng khác `API_PORT`. Khởi động lại `npm run dev` sau khi đổi `.env` |
 | `read-only file system` / `input/output error` khi pull image | Docker Desktop bị lỗi đĩa ảo: Quit Docker Desktop rồi mở lại (hoặc Troubleshoot → Restart) |
 | Muốn xoá sạch dữ liệu dev | `docker compose down -v` (xoá volume, **mất toàn bộ dữ liệu**) |
 | API báo `postgres: false` / timeout trên Windows | Dùng `127.0.0.1` thay vì `localhost` trong `.env` (Docker chỉ mở cổng IPv4) |

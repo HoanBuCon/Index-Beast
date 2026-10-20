@@ -4,6 +4,8 @@
 
 COMPOSE := docker compose
 INFRA   := postgres qdrant redis
+# Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 8001. Ghi đè: `make api API_PORT=8002`
+API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),8001)
 
 .PHONY: help up debug-up down logs ps migrate test lint format api constraints
 
@@ -41,8 +43,8 @@ format:          ## Tự format code
 	cd web && npm run format
 	cd bot && npm run format
 
-api:             ## Chạy API local (auto-reload)
-	cd backend && uvicorn --factory app.main:create_app --reload --port 8001 --no-access-log
+api:             ## Chạy API local (auto-reload) tại http://127.0.0.1:$(API_PORT)
+	cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port $(API_PORT) --no-access-log
 
 constraints:     ## In pip freeze trên Linux (Docker) để cập nhật backend/constraints.txt
 	docker run --rm -v "$(CURDIR)/backend:/src:ro" python:3.11.9-slim-bookworm sh -c "\
