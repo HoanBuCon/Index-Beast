@@ -42,7 +42,7 @@ format:          ## Tự format code
 	cd bot && npm run format
 
 api:             ## Chạy API local (auto-reload)
-	cd backend && uvicorn --factory app.main:create_app --reload --port 8000 --no-access-log
+	cd backend && uvicorn --factory app.main:create_app --reload --port 8001 --no-access-log
 
 constraints:     ## In pip freeze trên Linux (Docker) để cập nhật backend/constraints.txt
 	docker run --rm -v "$(CURDIR)/backend:/src:ro" python:3.11.9-slim-bookworm sh -c "\
