@@ -53,6 +53,7 @@ Lệnh hằng ngày: `make up`, `make api`, `make test`, `make lint` — bảng 
 
 Quy tắc hạ tầng dev:
 
+- **API dev chạy cổng `API_PORT` (mặc định 8001)** — một biến trong `.env` cho `make api`, proxy Vite và bot dev; trong Docker API vẫn là `8000` nội bộ. Không dùng `--host 0.0.0.0` khi dev (mở API, kể cả endpoint gọi DeepSeek, cho cả mạng LAN).
 - **Cổng chỉ mở trên `127.0.0.1`** (5432, 6333, 6379): chỉ máy mình truy cập được; mỗi người có dữ liệu dev riêng. Không đổi thành `0.0.0.0` — Redis/Qdrant chưa có mật khẩu.
 - **Dùng `127.0.0.1`, không dùng `localhost`** cho địa chỉ dịch vụ: Windows phân giải `localhost` sang IPv6 (`::1`) trước, Docker chỉ mở IPv4 → kết nối timeout ~2 s.
 - **Container không ghi log xuống đĩa** (`logging.driver: none`). Muốn xem log: `make debug-up` rồi `make logs` (driver `local`, xoay vòng 5×20 MB). Đổi lại, mặc định `docker compose logs` trống.
