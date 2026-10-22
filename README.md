@@ -108,6 +108,26 @@ Trong Docker, container `api` nghe `18000` (Caddy và bot gọi `api:18000`); Po
 > `0.0.0.0` mở API cho mọi máy cùng mạng Wi-Fi/LAN — kể cả endpoint dev `/api/v1/dev/llm/test` gọi DeepSeek
 > bằng key của bạn (tốn credit). Chỉ dùng khi thật sự cần thử từ thiết bị khác, và tắt ngay sau đó.
 
+### Thử Discord bot (Sprint 1)
+
+Điền `DISCORD_TOKEN`, `DISCORD_CLIENT_ID` (Application ID), `DISCORD_GUILD_ID` (Server ID) trong `.env`
+ở gốc repo; mời bot vào server đó với scopes `bot`, `applications.commands` và quyền xem kênh, gửi tin nhắn,
+nhúng liên kết. Nếu token bị lộ, đặt lại trong Developer Portal trước khi chạy.
+
+```bash
+cd bot
+npm ci
+npm run deploy-commands
+npm run dev
+```
+
+Trong server thử nghiệm, chọn lệnh `/ping` của bot → nhận `Pong!`. S1 không cần API hay Docker để thử `/ping`.
+Giữ terminal mở để bot online; nhấn Ctrl+C để dừng. PowerShell chặn `npm.ps1` thì dùng `npm.cmd` thay `npm`.
+Đăng ký lại lệnh khi thay đổi định nghĩa lệnh, không cần đăng ký mỗi lần khởi động bot.
+Dev đăng ký vào `DISCORD_GUILD_ID`; `ENVIRONMENT=prod` đăng ký global. Lệnh deploy thay thế toàn bộ danh sách
+slash command của ứng dụng trong phạm vi đó bằng registry hiện tại (S1 chỉ có `/ping`).
+`npm start` dùng biến môi trường đã được nạp (ví dụ Docker Compose); chạy local dùng `npm run dev`.
+
 ### Cấu hình (`.env`)
 
 Chỉ có **một** file `.env` ở gốc repo (sao chép từ `.env.example`); backend, bot và docker compose cùng đọc file này.

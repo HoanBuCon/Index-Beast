@@ -11,6 +11,7 @@
     "dev": "node --env-file=../.env --watch src/index.ts",
     "deploy-commands": "node --env-file=../.env src/deploy-commands.ts",
     "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
