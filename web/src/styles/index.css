@@ -1,1 +1,1016 @@
 /* Tailwind + theme Elden Ring (màu erdtree, ash, parchment). Phụ trách: TV4 · [S5] Theme */
+
+@import "tailwindcss";
+
+/* Thu gọn thanh lịch sử không xóa hội thoại hoặc ngắt stream đang chạy. */
+.workspace.sidebar-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sidebar[hidden] {
+  display: none;
+}
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: -12px;
+}
+.sidebar-top .archive-label {
+  color: #b0a17b;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+.sidebar-top .status-dot {
+  margin-right: 5px;
+}
+.toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border: 0;
+  border-radius: 8px;
+  color: #b9bdaf;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .toolbar-start .archive-label {
+    display: none;
+  }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.language-switch {
+  display: flex;
+  border: 1px solid #746540;
+  border-radius: 5px;
+  overflow: hidden;
+}
+.language-switch button {
+  border: 0;
+  border-radius: 0;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.language-switch button[aria-pressed="true"] {
+  background: #d9bc78;
+  color: #1e2318;
+}
+@media (max-width: 700px) {
+  .header-actions {
+    margin-left: auto;
+  }
+  .header {
+    column-gap: 8px;
+  }
+  .header nav {
+    order: 3;
+  }
+}
+
+@theme {
+  --color-erdtree: #d9bc78;
+  --color-ash: #141614;
+  --color-parchment: #eee8db;
+}
+:root {
+  font-family: "Segoe UI", sans-serif;
+  color: #eee8db;
+  background: #101210;
+  font-synthesis: none;
+  color-scheme: dark;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: #101210;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+select {
+  cursor: pointer;
+}
+button {
+  color: inherit;
+  background: transparent;
+  border: 1px solid #46483c;
+  padding: 0.65rem 1rem;
+  border-radius: 5px;
+  transition:
+    background 0.16s,
+    border-color 0.16s;
+}
+button:hover:not(:disabled) {
+  background: #292d24;
+  border-color: #a98d57;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+a {
+  color: #e0c58c;
+  text-underline-offset: 4px;
+}
+:focus-visible {
+  outline: 2px solid #edcf92;
+  outline-offset: 4px;
+}
+::selection {
+  background: #6e5933;
+  color: white;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 1rem;
+  z-index: 20;
+  background: #d9bc78;
+  color: #151811;
+  padding: 1rem;
+}
+.skip-link:focus {
+  top: 1rem;
+}
+.header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 0 3%;
+  border-bottom: 1px solid #303328;
+  background: #141613;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  color: #eee8db;
+  text-decoration: none;
+  letter-spacing: 0.18em;
+  font-family: "Segoe UI", Arial, sans-serif;
+  font-size: 20px;
+}
+.brand strong {
+  color: #d9bc78;
+  font-weight: 400;
+}
+.brand small {
+  display: block;
+  margin-top: 5px;
+  font:
+    9px "Segoe UI",
+    sans-serif;
+  letter-spacing: 0.22em;
+  color: #a4a794;
+}
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 44px;
+  color: #d9bc78;
+  border: 1px solid #746540;
+  font-size: 32px;
+}
+.header nav {
+  display: flex;
+  align-self: stretch;
+  gap: 2rem;
+}
+.header nav a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #b1b4a5;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+}
+.header nav a.active {
+  color: #edcf92;
+  border-bottom-color: #d9bc78;
+}
+.header-note,
+.eyebrow {
+  color: #b0a17b;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: calc(100dvh - 60px);
+  min-height: 620px;
+}
+.sidebar {
+  padding: 28px 20px;
+  background: #141613;
+  border-right: 1px solid #303328;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  overflow-y: auto;
+}
+.new-chat {
+  border-color: #77613c;
+  color: #ebcf98;
+  text-align: left;
+  padding: 14px;
+}
+.sidebar > .eyebrow {
+  font-size: 9px;
+  padding-left: 3px;
+}
+.history {
+  display: grid;
+  gap: 8px;
+}
+.history > .muted {
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 0 6px;
+}
+.history-row {
+  display: flex;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  min-width: 0;
+}
+.history-row.selected {
+  background: #22261d;
+  border-color: #414936;
+}
+.history-row > button:first-child {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  border: 0;
+  padding: 10px;
+}
+.history-row button span {
+  display: block;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 12px;
+}
+.history-row small {
+  display: block;
+  margin-top: 7px;
+  font-size: 10px;
+  color: #a0a48f;
+}
+.history-row .delete {
+  padding: 4px 8px;
+  border: 0;
+  color: #b6b7a8;
+}
+.sidebar-foot {
+  margin-top: auto;
+  border-top: 1px solid #34392c;
+  padding: 24px 8px 0;
+}
+.archive-seal {
+  font-size: 36px;
+  color: #a89056;
+}
+.sidebar-foot p {
+  font:
+    italic 17px/1.6 "Segoe UI",
+    Arial,
+    sans-serif;
+  letter-spacing: normal;
+  color: #b9b69f;
+}
+.sidebar-foot small {
+  display: block;
+  font-size: 10px;
+  line-height: 1.8;
+  color: #989e8c;
+  margin-top: 20px;
+}
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* Ảnh nền được đóng gói trong web để bản build và Docker cùng sử dụng được. */
+  /* Nền chỉ nằm trong Main Content, tự co theo vùng chat khi đóng/mở sidebar. */
+  background-image: linear-gradient(180deg, #101210b8, #101210e6), url("../assets/onion_ring.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.chat-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  gap: 12px;
+  border-bottom: 1px solid #2d3326;
+  color: #a9ad99;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+.status-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d4bd7b;
+  margin-right: 8px;
+}
+select {
+  padding: 6px;
+  border: 1px solid #404734;
+  background: #181d14;
+  border-radius: 4px;
+  color: #e0cfac;
+  margin-left: 8px;
+  font-size: 11px;
+}
+.mode-note {
+  margin: 0;
+  padding: 9px 25px;
+  color: #c3b99c;
+  background: #a18b4f0d;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.7;
+}
+.chat-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: #4d513e transparent;
+}
+.welcome {
+  max-width: 900px;
+  margin: auto;
+  padding: 30px 40px 20px;
+  text-align: center;
+}
+.rune {
+  margin: 2px auto 26px;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #776b424d;
+  border-radius: 50%;
+  outline: 1px solid #776b4229;
+  outline-offset: 9px;
+  display: grid;
+  place-items: center;
+  color: #d9bc78;
+  background: radial-gradient(circle, #ba9b351a, transparent);
+}
+.rune span {
+  font-size: 46px;
+}
+.welcome .eyebrow {
+  font-size: 9px;
+}
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+.welcome h1 {
+  font:
+    44px/1.18 "Segoe UI",
+    "Times New Roman",
+    serif;
+  letter-spacing: -0.025em;
+  margin: 20px 0;
+}
+em {
+  /* Georgia italic có thể fallback từng glyph tiếng Việt, làm tách dấu và lệch khoảng cách. */
+  font-family: "Segoe UI", Arial, sans-serif;
+  letter-spacing: normal;
+  color: #dfbf78;
+  font-weight: normal;
+}
+.intro {
+  font-size: 13px;
+  line-height: 1.9;
+  color: #acb09e;
+}
+.suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 30px;
+}
+.suggestions button {
+  text-align: left;
+  padding: 17px;
+  background: linear-gradient(130deg, #24291c88, #171b14);
+  border-color: #3b4330;
+}
+.suggestion-top {
+  display: flex;
+  justify-content: space-between;
+  color: #bda675;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  margin-bottom: 18px;
+}
+.suggestions strong {
+  font:
+    normal 16px/1.5 "Segoe UI",
+    serif;
+}
+.scope-note {
+  color: #9fa58e;
+  font-size: 10px;
+  margin-top: 24px;
+}
+.input-area {
+  width: min(850px, 100%);
+  margin: 0 auto;
+  padding: 12px 30px 16px;
+}
+.composer {
+  background: #1b2017;
+  border: 1px solid #5a5d43;
+  border-radius: 7px;
+  box-shadow: 0 8px 32px #0003;
+  padding: 15px;
+}
+.composer textarea {
+  width: 100%;
+  resize: vertical;
+  max-height: 180px;
+  min-height: 54px;
+  background: transparent;
+  border: 0;
+  color: #eee8db;
+  font-size: 13px;
+  line-height: 1.7;
+}
+textarea::placeholder {
+  color: #a0a68f;
+}
+.composer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.composer-bottom small {
+  color: #a7ac98;
+  font-size: 9px;
+}
+.primary {
+  background: #d9bc78;
+  color: #1e2318;
+  border-color: #d9bc78;
+  font-size: 12px;
+  font-weight: 600;
+}
+.primary:hover:not(:disabled) {
+  background: #eed49c;
+  color: #10150c;
+}
+.primary span {
+  margin-left: 12px;
+}
+.input-note {
+  color: #a0a68f;
+  font-size: 9px;
+  text-align: center;
+  margin: 12px 0 0;
+}
+.messages {
+  max-width: 850px;
+  margin: auto;
+  padding: 20px 30px 35px;
+}
+.message {
+  padding: 24px 0;
+  border-bottom: 1px solid #313828;
+}
+.message-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  color: #d9bc78;
+  margin-bottom: 15px;
+}
+.message-label > span {
+  font-size: 22px;
+}
+.message-label small {
+  margin-left: auto;
+  color: #b7bf9f;
+  font-size: 9px;
+}
+.message.user .prose {
+  background: #242a1e;
+  border-left: 2px solid #726441;
+  padding: 12px 16px;
+}
+.prose {
+  font-size: 14px;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.prose p:last-child {
+  margin-bottom: 0;
+}
+.prose p {
+  margin-bottom: 12px;
+}
+.prose ul,
+.document ul {
+  padding-left: 22px;
+  list-style: disc;
+}
+.prose ol {
+  padding-left: 22px;
+  list-style: decimal;
+}
+.prose h2,
+.prose h3 {
+  font:
+    23px "Segoe UI",
+    serif;
+  margin: 16px 0;
+}
+.prose pre,
+pre {
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #434936;
+  border-radius: 5px;
+  background: #0f130c;
+  max-height: 400px;
+  font-size: 12px;
+}
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow: auto;
+}
+.prose td,
+.prose th {
+  border: 1px solid #434936;
+  padding: 6px 10px;
+}
+.prose blockquote {
+  border-left: 2px solid #bda675;
+  padding-left: 16px;
+  color: #bcc1ab;
+}
+.citation-link {
+  display: inline;
+  padding: 1px 5px;
+  color: #e3c77f;
+  font-size: 11px;
+  vertical-align: super;
+  border: 0;
+  background: #80704433;
+}
+.source-list {
+  margin-top: 24px;
+}
+.source-list .eyebrow {
+  font-size: 9px;
+}
+.source-list > div {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.source-list button {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 12px;
+}
+.source-number {
+  color: #d9bc78;
+  font:
+    22px "Segoe UI",
+    serif;
+}
+.source-list button > span:last-child {
+  margin-left: auto;
+}
+.source-list small {
+  display: block;
+  color: #a8af98;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.citation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #000a;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.citation-card {
+  margin: auto;
+  color: #eee8db;
+  background: #1d2318;
+  border: 1px solid #b19b64;
+  border-radius: 8px;
+  padding: 35px;
+  width: min(520px, 100%);
+  position: relative;
+  box-shadow: 0 15px 90px #0009;
+}
+.citation-card::backdrop {
+  background: #000a;
+}
+.citation-card h3 {
+  font:
+    26px "Segoe UI",
+    serif;
+  margin: 20px 0;
+}
+.citation-card blockquote {
+  border-left: 2px solid #bda675;
+  padding-left: 18px;
+  line-height: 1.8;
+  margin: 20px 0;
+  color: #ccd0bb;
+}
+.close {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border: 0;
+  font-size: 22px;
+}
+.feedback {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+  font-size: 11px;
+  color: #adb49d;
+}
+.feedback button {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.feedback button[aria-pressed="true"] {
+  background: #393f2c;
+  border-color: #d9bc78;
+}
+.feedback form {
+  flex-basis: 100%;
+  display: flex;
+  gap: 8px;
+}
+input {
+  min-width: 0;
+  background: #151a11;
+  color: #eee8db;
+  border: 1px solid #596047;
+  border-radius: 4px;
+  padding: 10px;
+}
+.feedback input {
+  flex: 1;
+}
+.muted {
+  color: #aeb49f;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.searching {
+  color: #d9bc78;
+  font-size: 13px;
+}
+.error-box {
+  border: 1px solid #aa7e5d;
+  padding: 12px;
+  color: #f0c6aa;
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.error-box button {
+  white-space: nowrap;
+}
+.document {
+  width: min(940px, 100%);
+  margin: auto;
+  padding: 60px 30px 80px;
+}
+.document h1 {
+  font:
+    46px/1.2 "Segoe UI",
+    serif;
+  margin: 25px 0;
+}
+.document .lead {
+  color: #bdc3af;
+  font-size: 17px;
+  line-height: 1.8;
+  max-width: 720px;
+}
+.document section {
+  margin: 35px 0;
+  padding-top: 28px;
+  border-top: 1px solid #394030;
+}
+.document h2 {
+  font:
+    27px "Segoe UI",
+    serif;
+  color: #dfcc9f;
+  margin-bottom: 18px;
+}
+.document h3 {
+  font:
+    20px "Segoe UI",
+    serif;
+  margin: 10px 0;
+}
+.document p,
+.document li {
+  line-height: 1.9;
+  font-size: 14px;
+  color: #c1c6b4;
+}
+.document li {
+  margin-bottom: 8px;
+}
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.team-grid > div {
+  padding: 18px;
+  background: #1d2318;
+  border: 1px solid #3f4733;
+}
+.team-grid p {
+  font-size: 11px;
+  margin: 0;
+}
+.disclaimer {
+  padding: 20px;
+  border: 1px solid #5a553b;
+  border-radius: 4px;
+}
+.inline {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 4px;
+  text-decoration: none;
+}
+.admin-auth {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 25px;
+}
+.admin-auth input {
+  flex: 1;
+}
+.admin-list li {
+  padding: 12px;
+  border-bottom: 1px solid #394030;
+  list-style: none;
+  overflow-wrap: anywhere;
+}
+.admin-list small {
+  display: block;
+  color: #adb49d;
+}
+.trace-form {
+  display: flex;
+  gap: 10px;
+}
+.trace-form input {
+  flex: 1;
+}
+.admin-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+}
+@media (min-height: 900px) and (min-width: 1000px) {
+  .welcome {
+    padding-top: 65px;
+  }
+  .welcome h1 {
+    font-size: 52px;
+  }
+  .suggestions {
+    margin-top: 45px;
+  }
+}
+@media (max-width: 1050px) {
+  .header-note {
+    display: none;
+  }
+  .workspace {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .welcome {
+    padding: 25px;
+  }
+  .welcome h1 {
+    font-size: 38px;
+  }
+  .suggestions {
+    gap: 8px;
+  }
+  .suggestions button {
+    padding: 12px;
+  }
+}
+@media (max-width: 700px) {
+  .header {
+    height: auto;
+    min-height: 100px;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 18px 20px 0;
+  }
+  .brand {
+    font-size: 18px;
+  }
+  .brand-mark {
+    width: 32px;
+    height: 36px;
+    font-size: 27px;
+  }
+  .header nav {
+    width: 100%;
+    gap: 25px;
+    height: 38px;
+  }
+  .header nav a {
+    font-size: 12px;
+  }
+  .workspace {
+    height: auto;
+    min-height: calc(100dvh - 120px);
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar {
+    padding: 12px 16px;
+    gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid #303328;
+    max-height: 210px;
+  }
+  .sidebar > .eyebrow,
+  .sidebar-foot {
+    display: none;
+  }
+  .new-chat {
+    padding: 9px 12px;
+  }
+  .history {
+    display: flex;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .history-row {
+    min-width: 180px;
+    max-width: 200px;
+  }
+  .history > .muted {
+    display: none;
+  }
+  .chat-panel {
+    min-height: calc(100dvh - 195px);
+  }
+  .chat-toolbar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    font-size: 9px;
+  }
+  .chat-content {
+    overflow: visible;
+  }
+  .mode-note {
+    padding: 8px 16px;
+    font-size: 10px;
+  }
+  .welcome {
+    padding: 30px 20px 15px;
+  }
+  .welcome h1 {
+    font-size: 34px;
+  }
+  .rune {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 24px;
+  }
+  .rune span {
+    font-size: 36px;
+  }
+  .suggestions {
+    grid-template-columns: 1fr;
+    margin-top: 24px;
+  }
+  .suggestion-top {
+    margin-bottom: 7px;
+  }
+  .suggestions button {
+    padding: 13px 16px;
+  }
+  .suggestions strong {
+    font-size: 16px;
+  }
+  .input-area {
+    padding: 12px 16px 20px;
+  }
+  .composer-bottom small {
+    max-width: 135px;
+    line-height: 1.6;
+  }
+  .messages {
+    padding: 12px 20px;
+  }
+  .document {
+    padding: 35px 20px;
+  }
+  .document h1 {
+    font-size: 35px;
+  }
+  .team-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .admin-auth {
+    align-items: stretch;
+  }
+  .admin-auth label {
+    width: 100%;
+  }
+  .admin-auth input {
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
