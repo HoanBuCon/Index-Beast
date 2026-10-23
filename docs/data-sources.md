@@ -1,6 +1,6 @@
 # Nguồn dữ liệu Sprint 1 của TV2
 
-Ngày khảo sát: 23/10/2026. Phạm vi theo ADR-004 là lore Elden Ring base game. Đây là khảo sát/prototype, chưa phải corpus đã làm sạch hoặc index. API dữ liệu công khai và thu thập ảnh đã được TV2 duyệt; không dùng API AI.
+Ngày khảo sát: 23–24/10/2026. Phạm vi theo ADR-004 là lore Elden Ring base game. Đây là khảo sát/prototype, chưa phải corpus đã làm sạch hoặc index. API dữ liệu công khai và thu thập ảnh đã được TV2 duyệt; không dùng API AI.
 
 ## Nguồn và kết quả kiểm chứng
 
@@ -67,7 +67,7 @@ Mỗi resource thử `limit=2&page=0` và `limit=2&page=1`. Total là số provi
 
 ## Dump
 
-Special:Statistics không có liên kết dump trong lần kiểm tra. Special:Version liệt kê extension DumpsOnDemand. Theo tài liệu extension, trang cần kiểm tra tiếp là Special:RequestDump; việc có extension không chứng minh hiện có file dump công khai. Không yêu cầu server tạo dump mới trong lượt này.
+Special:Statistics không có liên kết dump trong lần kiểm tra. Special:Version liệt kê extension DumpsOnDemand. Đã đọc Special:RequestDump: cả bản current revisions và full history đều báo “This dump has not yet been created”. Không có URL tải dump ở thời điểm kiểm tra; không gửi yêu cầu tạo dump mới.
 
 ## Giấy phép và attribution
 
@@ -79,7 +79,7 @@ fanapis cung cấp dữ liệu không cần key theo tài liệu chính thức; 
 
 Một CLI tuần tự, tối thiểu 1 giây giữa mọi request, gồm API/robots/ảnh, không chỉ request bài viết. Retry tối đa 2 lần cho lỗi mạng/429/5xx; backoff 2/4 giây, tôn trọng Retry-After số giây hoặc HTTP-date. Nếu phải chờ quá 60 giây thì dừng request và ghi lỗi. robots crawl-delay lớn hơn được ưu tiên. Không vượt challenge hoặc robots. Chỉ cho HTTPS, host allowlist và kiểm tra lại redirect. Email đọc từ `.env`, không ghi vào report.
 
-Response bài/API tối đa 8 MB; ảnh tối đa 20 MB và 40 triệu pixel. PNG/JPEG/WebP/GIF được kiểm tra bằng Pillow; định dạng khác ghi lỗi để review, không đổi tên giả. Không chạy đồng thời nhiều CLI dùng chung data directory.
+Response bài/API tối đa 8 MB; ảnh tối đa 20 MB và 40 triệu pixel. PNG/JPEG/WebP/GIF được kiểm tra bằng Pillow. Nếu header MIME khác định dạng ảnh đã decode hợp lệ, ghi declared_mime/mime_mismatch và lưu đuôi theo bytes thực tế; định dạng không được phép hoặc bytes lỗi bị từ chối. Không chạy đồng thời nhiều CLI dùng chung data directory.
 
 ## Tài liệu nguồn
 
