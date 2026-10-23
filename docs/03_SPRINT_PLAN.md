@@ -164,13 +164,17 @@ Biết chính xác lấy gì, ở đâu, bao nhiêu, giấy phép ra sao.
 
 #### 1.7 [TV2] Prototype crawler wiki.gg
 
-Client MediaWiki lịch sự, chịu lỗi, lưu bản thô.
+Client MediaWiki lịch sự, chịu lỗi, lưu bản thô. Phần mở rộng được TV2 duyệt ngày 23/10/2026: thu thập ảnh nội dung phục vụ RAG ảnh; không triển khai image embedding/retrieval của TV3. Ước lượng bổ sung cần review trong Sprint Review; 5 điểm gốc chưa bao gồm phần ảnh.
 
 - [ ] HTTP client có User-Agent kèm email, ≤1 req/s, retry + backoff
 - [ ] Lấy danh sách trang theo category (có phân trang continue)
 - [ ] Tải nội dung (wikitext hoặc HTML parse) + revision id
 - [ ] Lưu raw vào thư mục data/raw/ (JSON) để không phải crawl lại
 - [ ] Crawl thử 200 trang đa dạng, ghi số liệu thời gian/lỗi
+- [ ] Thu thập ảnh bài viết/infobox/gallery, loại icon giao diện và ghi lỗi riêng
+- [ ] Lưu ảnh theo SHA-256 trong data/media/blobs/ và manifest theo trang trong data/media/manifests/wikigg/
+- [ ] Metadata ảnh: URL nguồn, trang file, caption, alt, section, tác giả/giấy phép nếu có; đánh dấu khi chưa rõ
+- [ ] Kiểm tra MIME, kích thước, checksum; dùng lại ảnh trùng; kiểm tra ảnh-caption-section trên 20 trang mẫu
 
 #### 1.8 [TV2] Đề xuất chiến lược chunk (ADR-003)
 

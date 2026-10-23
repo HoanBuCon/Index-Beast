@@ -11,3 +11,9 @@ redis==8.1.0
 ddgs==9.16.0
 httpx==0.28.1
 beautifulsoup4==4.15.0
+
+# Ingest media validation (already locked transitively in constraints.txt)
+pillow==12.3.0
+
+# Offline S1 token-count experiment (already locked by fastembed)
+tokenizers==0.23.3
