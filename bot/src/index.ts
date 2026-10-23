@@ -48,7 +48,7 @@ try {
   const config = loadConfig();
   await client.login(config.token);
 } catch (error) {
-  log("error", "Không khởi động được bot. Kiểm tra DISCORD_TOKEN, CLIENT_ID và GUILD_ID.", { error: errorName(error) });
+  log("error", "Không khởi động được bot. Kiểm tra DISCORD_TOKEN và DISCORD_CLIENT_ID.", { error: errorName(error) });
   client.destroy();
   process.exitCode = 1;
 }
