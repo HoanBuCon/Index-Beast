@@ -20,6 +20,9 @@ def image_occurrences(raw):
     for element in body.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "img"]):
         if any(set(parent.get("class", [])) & UI for parent in [element, *element.parents] if parent.name):
             continue
+        infobox = element.find_parent(class_="portable-infobox")
+        if element.name.startswith("h") and infobox:
+            continue
         if element.name.startswith("h"):
             level = int(element.name[1])
             headings = [(n, t) for n, t in headings if n < level]
@@ -41,17 +44,19 @@ def image_occurrences(raw):
         small = bool(
             width and height and str(width).isdigit() and str(height).isdigit() and max(int(width), int(height)) <= 40
         )
+        interface_rating = "menu_icon_message_rating" in unquote(src).lower()
+        small = small or interface_rating
         result.append(
             {
                 "occurrence_id": len(result),
-                "section": " > ".join(t for _, t in headings) or "Introduction",
+                "section": "Infobox" if infobox else (" > ".join(t for _, t in headings) or "Introduction"),
                 "alt": element.get("alt", ""),
                 "caption": caption.get_text(" ", strip=True) if caption else "",
                 "file_title": title,
                 "description_url": href if title else None,
                 "display_url": urljoin(raw["url"], src),
                 "status": "excluded" if small else "pending",
-                "reason": "small_interface_icon" if small else None,
+                "reason": "interface_rating_icon" if interface_rating else ("small_interface_icon" if small else None),
                 "scope_status": "requires_section_review",
             }
         )
@@ -68,8 +73,8 @@ def verify_image(data, mime, settings):
                 if image.width * image.height > settings["max_pixels"]:
                     raise CrawlError("Image exceeds pixel limit")
                 detected = Image.MIME.get(image.format)
-                if detected != mime:
-                    raise CrawlError("Image format does not match MIME")
+                if detected not in settings["allowed_mimes"]:
+                    raise CrawlError("Decoded image format is not allowed")
                 dimensions = (image.width, image.height)
                 image.verify()
     except (
@@ -80,7 +85,7 @@ def verify_image(data, mime, settings):
         Image.DecompressionBombWarning,
     ) as exc:
         raise CrawlError("Invalid or unsafe image file") from exc
-    extension = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}[mime]
+    extension = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}[detected]
     return extension, dimensions
 
 
@@ -113,7 +118,12 @@ class MediaStore:
             "sha256": digest,
             "source_sha1": source_sha1,
             "path": path.relative_to(self.root).as_posix(),
-            "mime": mime,
+            "mime": {".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif"}[extension],
+            "declared_mime": mime,
+            "mime_mismatch": {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif"}[
+                mime
+            ]
+            != extension,
             "width": dimensions[0],
             "height": dimensions[1],
             "bytes": len(response.content),

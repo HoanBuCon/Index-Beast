@@ -45,7 +45,15 @@ def analyze(data_dir, tokenizer_path, sample_size=20):
     tokenizer = Tokenizer.from_file(str(tokenizer_path))
     tokenizer.no_truncation()
     tokenizer.no_padding()
-    files = [p for p in (data_dir / "raw" / "wikigg").glob("*.json") if not sample_scope_reason(read(p))]
+    jobs = [read(p) for p in sorted((data_dir / "reports").glob("crawl-*.json"), key=lambda p: p.stat().st_mtime)]
+    jobs = [r for r in jobs if r.get("target") == 200 and r.get("counts", {}).get("successful") == 200]
+    job = jobs[-1] if jobs else None
+    accepted = {x["id"] for x in job["pages"]} if job else None
+    files = [
+        p
+        for p in (data_dir / "raw" / "wikigg").glob("*.json")
+        if (accepted is None or p.stem in accepted) and not sample_scope_reason(read(p))
+    ]
     discovery = read(data_dir / "reports" / "categories.json")
     rank = {str(p["pageid"]): i for i, p in enumerate(discovery["pages"])}
     files.sort(key=lambda p: rank.get(p.stem, 10**9))
@@ -57,6 +65,7 @@ def analyze(data_dir, tokenizer_path, sample_size=20):
         "tokenizer": "intfloat/multilingual-e5-small",
         "tokenizer_sha256": sha256(tokenizer_path.read_bytes()),
         "sample_size": sample_size,
+        "source_job_id": job["job_id"] if job else None,
         "pages": [],
         "experiments": {},
         "scope": "exploratory; manual scope review still required",

@@ -128,8 +128,7 @@ def test_image_validation(config):
     assert verify_image(png(), "image/png", config["media"])[1] == (80, 90)
     with pytest.raises(CrawlError):
         verify_image(b"<html>challenge</html>", "image/png", config["media"])
-    with pytest.raises(CrawlError):
-        verify_image(png(), "image/jpeg", config["media"])
+    assert verify_image(png(), "image/webp", config["media"])[0] == ".png"
     with pytest.raises(CrawlError):
         verify_image(png(), "image/png", dict(config["media"], max_pixels=10))
 
@@ -228,3 +227,17 @@ def test_empty_category_batch_with_continue_is_not_end(config):
     )
     source.api = lambda **kw: next(responses)
     assert source.list_category("NPC")[0]["pageid"] == 9
+
+
+def test_image_context_skips_infobox_headings_and_rating_icons():
+    raw = {
+        "url": "https://example.org/wiki/A",
+        "content": """<div class="mw-parser-output">
+    <aside class="portable-infobox"><h2>A</h2><img src="/portrait.png"></aside>
+    <p>Intro</p><img src="/intro.png"><h2>Lore</h2>
+    <img src="/ER_Menu_Icon_Message_Rating_5.png" width="45" height="45"></div>""",
+    }
+    images = image_occurrences(raw)
+    assert images[0]["section"] == "Infobox"
+    assert images[1]["section"] == "Introduction"
+    assert images[2]["status"] == "excluded" and images[2]["reason"] == "interface_rating_icon"
