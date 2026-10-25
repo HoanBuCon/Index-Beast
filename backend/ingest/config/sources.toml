@@ -5,7 +5,8 @@
 [crawl]
 user_agent = "IndexBeast/0.1 (Elden Ring lore chatbot; fan project; https://github.com/HoanBuCon/Index-Beast)"
 min_interval_seconds = 1.0   # ≤ 1 request/giây
-max_retries = 4
+max_retries = 2
+allowed_hosts = ["eldenring.wiki.gg", "eldenring.fandom.com", "eldenring.fanapis.com", "docs.eldenring.fanapis.com", "wiki.gg", "www.wiki.gg"]
 timeout_seconds = 30
 
 [sources.wikigg]
@@ -14,6 +15,8 @@ plugin = "wikigg"
 api_url = "https://eldenring.wiki.gg/api.php"
 page_url = "https://eldenring.wiki.gg/wiki/{title}"
 license = "CC BY-SA 4.0"
+categories = ["NPC", "Bosses", "Locations", "Lore", "Items", "Characters"]
+category_depth = 1
 namespace = 0                # chỉ bài viết, bỏ redirect
 
 [sources.wikipedia]
@@ -40,3 +43,9 @@ min_chars_after_clean = 200
 [chunk]
 max_tokens = 450
 overlap_tokens = 50
+
+[media]
+enabled = true
+max_bytes = 20000000
+max_pixels = 40000000
+allowed_mimes = ["image/png", "image/jpeg", "image/webp", "image/gif"]

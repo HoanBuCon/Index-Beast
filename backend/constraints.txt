@@ -1,3 +1,4 @@
+# Pillow is also a direct ingest dependency; locked version unchanged.
 # Khoá phiên bản mọi phụ thuộc (kể cả gián tiếp) cho cả Linux (Docker/CI) lẫn Windows/macOS (dev).
 # Sinh lại bằng `make constraints` (chạy pip freeze trong container Linux) rồi gộp các gói chỉ có trên Windows
 # (colorama, pywin32, win32-setctime) — xem README mục "Thêm / nâng cấp thư viện Python".
