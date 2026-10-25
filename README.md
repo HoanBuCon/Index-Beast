@@ -24,6 +24,9 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 
 ## Tài liệu
 
+Notebook baseline: [E5 ONNX + BM25 + Qdrant RRF](backend/notebooks/01_rag_baseline_e5_bm25.ipynb).
+Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa được thực thi khi bàn giao.
+
 | Tài liệu | Nội dung |
 |---|---|
 | [docs/01_TECHSTACK.md](docs/01_TECHSTACK.md) | Công nghệ & phiên bản |
