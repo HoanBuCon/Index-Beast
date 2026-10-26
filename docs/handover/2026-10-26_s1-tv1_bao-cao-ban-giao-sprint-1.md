@@ -78,9 +78,9 @@ Trello ghi mọi thẻ S1 là Hoàn thành. Đối chiếu với handover và re
 |---|---|
 | Backend: `ruff check`, `ruff format --check` | Đạt (117 file) |
 | Backend: `pytest` (unit) | **79 passed**; 1 integration test bị loại theo cấu hình mặc định |
-| Web: `format:check`, `build` | Đạt |
-| Web: `npm test` | **2/2 fail trên máy lập báo cáo** (Node 22.14: `ERR_UNKNOWN_FILE_EXTENSION .ts`). Dự án yêu cầu Node 24.22, nên đây là lỗi môi trường; **chưa chạy được trên Node 24** để xác nhận test đạt |
-| Bot: `typecheck`, `format:check` | Đạt |
+| Web: `format:check`, `build` | Đạt (Node 22.14 và 24.22.0) |
+| Web: `npm test` | Trên **Node 24.22.0: 8/8 đạt** (SSE, UTF-8/CRLF, stream bị ngắt, HTTP 429, nguồn lỗi, ngôn ngữ). Trên Node 22.14 báo lỗi `ERR_UNKNOWN_FILE_EXTENSION .ts`, tức lỗi môi trường chứ không phải lỗi test |
+| Bot: `typecheck`, `format:check` | Đạt (`typecheck` chạy lại trên Node 24.22.0) |
 | Golden set | 30 dòng; 20 vi / 10 en; 6 × 5 category; 12/12/6 độ khó |
 | CI GitHub Actions trên `develop` | 4 lần chạy gần nhất đều **success** (mới nhất ứng với `bf71d68`) |
 | Không chạy | Notebook, embedding/indexing, gọi DeepSeek, integration test, `crawl` — theo ràng buộc [`AGENTS.md`](../AGENTS.md) và vì không cần cho báo cáo |
