@@ -16,7 +16,7 @@ Lịch sử được đối chiếu bằng Git local sau fetch ngày 26/10/2026:
 | Đưa lại JSONL qua nhánh riêng | `c54825b`, [PR #22](https://github.com/HoanBuCon/Index-Beast/pull/22), merge `dd7f033` | Golden set đã trở lại `develop` |
 | Chỉnh sửa JSONL tiếp theo | `f5be460`, `dbd9221` | Sau hai commit này, file hiện có đủ 30 câu |
 
-Nhánh bổ sung bàn giao: `docs/s1-tv3-handover-rag-va-golden-set`, tách từ `origin/develop` tại `dbd9221`. Chưa tạo commit/PR cho nhánh tài liệu tại thời điểm viết. Không suy ra CI hoặc Mentor đã approve chỉ từ việc có merge commit.
+Nhánh bổ sung bàn giao: `docs/s1-tv3-handover-rag-va-golden-set`, tách từ `origin/develop` tại `dbd9221`. Khi viết chưa có commit/PR cho nhánh tài liệu; **sau đó đã merge vào `develop` qua PR #23** (cập nhật 26/10/2026 theo lịch sử Git). Không suy ra CI hoặc Mentor đã approve chỉ từ việc có merge commit.
 
 ## 2. File và điểm tiếp nhận
 
@@ -25,7 +25,7 @@ Nhánh bổ sung bàn giao: `docs/s1-tv3-handover-rag-va-golden-set`, tách từ
 - [Bảng nhận xét lượt chạy 25/10](../evaluation/2026-10-25-armor-baseline-review.md): bằng chứng đánh giá được lưu trong Git.
 - [Golden set](../../backend/eval/golden_set.jsonl): đầu vào bộ đánh giá toàn dự án.
 - [Khung retrieval eval](../../backend/eval/retrieval.py) và [khung answer eval](../../backend/eval/answer.py): hiện còn là skeleton, chưa phải runner hoàn chỉnh.
-- [`AGENTS.md`](../../AGENTS.md) và [README handover](README.md): ghi yêu cầu luôn bàn giao trước khi báo hoàn tất.
+- [`AGENTS.md`](../AGENTS.md) (đã chuyển vào `docs/` ở PR #24) và [README handover](README.md): ghi yêu cầu luôn bàn giao trước khi báo hoàn tất.
 
 `backend/eval/README.md` của bản golden set ban đầu đã bị revert và **chưa được khôi phục** trong phiên bản đang bàn giao. Quy tắc sử dụng hiện được ghi ở mục 5 dưới đây. Đường dẫn `eval/golden_set.jsonl` trong checklist được hiểu từ thư mục `backend/`, tương ứng `backend/eval/golden_set.jsonl` tại gốc repo.
 

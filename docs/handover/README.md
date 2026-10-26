@@ -2,7 +2,7 @@
 
 Mỗi khi hoàn thành một nhóm task, người thực hiện ghi lại **quy tắc, quy ước, quyết định và bài học** mà người khác cần biết để tiếp tục — đặt cùng mã nguồn, review trong cùng PR.
 
-Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước khi báo hoàn tất cho mọi nhóm task có thay đổi file, bao gồm tài liệu, notebook, bộ đánh giá và xử lý sự cố Git. Hướng dẫn cho trợ lý được lưu tại [`AGENTS.md`](../../AGENTS.md). Với câu hỏi giải thích không làm thay đổi file, không cần tạo handover mới.
+Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước khi báo hoàn tất cho mọi nhóm task có thay đổi file, bao gồm tài liệu, notebook, bộ đánh giá và xử lý sự cố Git. Hướng dẫn cho trợ lý được lưu tại [`AGENTS.md`](../AGENTS.md). Với câu hỏi giải thích không làm thay đổi file, không cần tạo handover mới.
 
 ## Quy ước đặt tên
 
@@ -38,3 +38,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-19 | TV3 (MinhMuc) | [DeepSeek LLM](2026-10-19_s1-tv3_deepseek-llm.md) |
 | 2026-10-24 | TV2 (UncleThing) | [Crawler, mẫu raw và dữ liệu ảnh](2026-10-24_s1-tv2_crawler-va-du-lieu-anh.md) |
 | 2026-10-26 | TV3 (MinhMuc) | [RAG baseline armor, golden set v0 và xử lý Git](2026-10-26_s1-tv3_rag-baseline-va-golden-set.md) |
+| 2026-10-26 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 1](2026-10-26_s1-tv1_bao-cao-ban-giao-sprint-1.md) |
