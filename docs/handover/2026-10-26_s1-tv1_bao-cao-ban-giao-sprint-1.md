@@ -106,7 +106,6 @@ Trello ghi mọi thẻ S1 là Hoàn thành. Đối chiếu với handover và re
 | Bot: `/ask`, `/help`, `/config` còn là khung; chưa có handover của TV4 trong `docs/handover/` | TV4 | Theo `AGENTS.md`, mỗi nhóm task cần handover |
 | Redis và Qdrant chưa có mật khẩu (an toàn nhờ chỉ bind `127.0.0.1`) | TV1 | Xử lý trước khi deploy, S5 |
 | Image `api` ≈ 750 MB | TV1 | Xem lại khi thêm model |
-| Handover TV3 (`2026-10-26_s1-tv3_rag-baseline-va-golden-set.md`) còn trỏ `../../AGENTS.md`, file đã chuyển sang `docs/AGENTS.md` ở PR #24 | TV3 | Sửa thành `../AGENTS.md` |
 | Tài liệu Word trong `docs/export/` có thể lệch so với Markdown | Cả nhóm | Tái sinh bằng `docs/export_docx.py` khi xuất tài liệu |
 
 ## 8. Hành động đề xuất cho cả nhóm
@@ -144,4 +143,4 @@ Trello ghi mọi thẻ S1 là Hoàn thành. Đối chiếu với handover và re
 
 ## 11. Phạm vi của tài liệu này
 
-Báo cáo chỉ tổng hợp từ handover, lịch sử Git, trạng thái Trello và các lệnh kiểm tra tĩnh/unit nêu ở mục 5. Không có điểm đánh giá, kết quả review hay trạng thái merge nào được suy ra ngoài các nguồn đó. Thay đổi trong lần này: thêm file này, thêm một dòng vào [README handover](README.md) và sửa liên kết `AGENTS.md` đã hỏng trong chính README đó.
+Báo cáo chỉ tổng hợp từ handover, lịch sử Git, trạng thái Trello và các lệnh kiểm tra tĩnh/unit nêu ở mục 5. Không có điểm đánh giá, kết quả review hay trạng thái merge nào được suy ra ngoài các nguồn đó. Thay đổi trong lần này: thêm file này, thêm một dòng vào [README handover](README.md), và **cập nhật các chỗ sai lệch kiểm chứng được trong handover TV1, TV2, TV3** (liên kết `AGENTS.md` đã chuyển vào `docs/`, trạng thái merge của PR #19 và #23, số test, trạng thái PR của TV1). Không sửa nội dung đánh giá, kết quả chạy hay nhận định của từng thành viên.

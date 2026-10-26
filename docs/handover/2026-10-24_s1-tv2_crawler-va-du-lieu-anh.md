@@ -1,6 +1,6 @@
 # Bàn giao Sprint 1 TV2 crawler và dữ liệu ảnh
 
-Ngày bàn giao: 24/10/2026. Người thực hiện: TV2 (UncleThing). Nhánh: `feature/s1-tv2-crawler-va-du-lieu-anh`. Commit crawler gốc `4da2e35` được chuyển sang nhánh mới thành `9487bbf`, tách từ origin/develop; phần sửa và tài liệu bàn giao được commit riêng trên cùng nhánh. Chưa merge vào develop; Mentor review và CI là điều kiện tích hợp theo quy ước nhóm.
+Ngày bàn giao: 24/10/2026. Người thực hiện: TV2 (UncleThing). Nhánh: `feature/s1-tv2-crawler-va-du-lieu-anh`. Commit crawler gốc `4da2e35` được chuyển sang nhánh mới thành `9487bbf`, tách từ origin/develop; phần sửa và tài liệu bàn giao được commit riêng trên cùng nhánh. Khi viết tài liệu này nhánh chưa merge; **sau đó đã merge vào `develop` qua PR #19** (cập nhật 26/10/2026 theo lịch sử Git). Việc review và CI vẫn theo quy ước nhóm.
 
 ## Phạm vi và kết quả
 

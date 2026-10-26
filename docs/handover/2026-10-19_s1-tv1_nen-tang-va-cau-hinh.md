@@ -4,7 +4,7 @@
 |---|---|
 | Người thực hiện | TV1 (Hoanbucon) — Tech Lead · Backend & DevOps |
 | Ngày | 2026-10-19 (Sprint 1, ngày 1) |
-| Trạng thái | 4 thẻ đã merge vào `develop`; bản sửa lỗi + tài liệu này nằm ở `fix/s1-tv1-env-config-cleanup` |
+| Trạng thái | Cả 4 thẻ và các bản sửa/cập nhật liên quan đã merge vào `develop` (PR #8–#11, #16, #17); xem trạng thái Trello ở bảng dưới |
 | Đọc kèm | [`README.md`](../../README.md) (chạy local, cấu hình) · [`04_ARCHITECTURE.md`](../04_ARCHITECTURE.md) · [`quy_uoc.md`](../quy_uoc.md) |
 
 ## 1. Phạm vi
@@ -12,10 +12,11 @@
 | Thẻ Trello | Nhánh | PR | Checklist |
 |---|---|---|---|
 | [S1][TV1] CI GitHub Actions cơ bản | `feature/s1-tv1-ci` | gộp trong #8 | 4/4 |
-| [S1][TV1] Khởi tạo monorepo & quy ước code | `feature/s1-tv1-repo-conventions` | #8 | 4/5 — còn branch protection |
-| [S1][TV1] Docker Compose môi trường dev | `feature/s1-tv1-docker-compose` | #9 | 5/6 — còn "cả 4 thành viên chạy được" |
+| [S1][TV1] Khởi tạo monorepo & quy ước code | `feature/s1-tv1-repo-conventions` | #8 | 5/5 trên Trello; việc bật branch protection nằm trên GitHub, chưa xác minh được từ repo |
+| [S1][TV1] Docker Compose môi trường dev | `feature/s1-tv1-docker-compose` | #9 | 6/6 trên Trello; chưa có bằng chứng từng thành viên chạy được |
 | [S1][TV1] Skeleton FastAPI | `feature/s1-tv1-fastapi-skeleton` | #10 | 6/6 |
-| Rà soát & sửa lỗi cấu hình (ngoài kế hoạch) | `fix/s1-tv1-env-config-cleanup` | chưa mở | — |
+| Rà soát & sửa lỗi cấu hình (ngoài kế hoạch) | `fix/s1-tv1-env-config-cleanup` | #11 | — |
+| Cổng API dev dùng một biến, rồi quy ước không dùng cổng mặc định | `fix/s1-tv1-dev-api-port`, `feature/s1-tv1-non-default-ports` | #16, #17 | — |
 
 CI trên GitHub xanh ở #8, #9, #10 và trên `develop` (gồm cả integration test với PostgreSQL/Redis/Qdrant thật).
 
@@ -124,7 +125,7 @@ Hành vi đã chốt:
 
 | Loại | Chạy | Ghi chú |
 |---|---|---|
-| Unit | `pytest` | 25 test, không cần service ngoài; mặc định bỏ qua marker `integration` |
+| Unit | `pytest` | Không cần service ngoài; mặc định bỏ qua marker `integration`. Tại `develop` `bf71d68`: 79 passed |
 | Integration | `make up && pytest -m integration` | Gọi `/health` với PostgreSQL/Redis/Qdrant thật |
 | CI backend | ruff check + format, unit, integration (service containers) | |
 | CI web / bot | prettier, `npm run build` / `tsc --noEmit` | Node 24.22.0, `npm ci` theo lockfile |
@@ -153,7 +154,6 @@ CI chạy khi mở/cập nhật PR và khi push `main`/`develop` — **push lên
 
 | Việc | Ai | Khi nào |
 |---|---|---|
-| Mở PR `fix/s1-tv1-env-config-cleanup`, thành viên khác review, merge | TV1 + 1 reviewer | S1 |
 | **Sau khi merge: mọi người tạo lại `.env` từ `.env.example`** (đổi `DATABASE_URL` → `POSTGRES_HOST`, thêm biến timeout, `API_WORKERS`) | Cả nhóm | S1 |
 | Bật branch protection cho `main`, `develop` (PR + 1 approval + Code Owner review + CI `backend`, `web`, `bot`) | TV1 (thiết lập GitHub) | S1 |
 | Cả 4 thành viên chạy được môi trường dev, gửi kết quả `/health` | Cả nhóm | S1 |
