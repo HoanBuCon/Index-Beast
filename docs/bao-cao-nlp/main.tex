@@ -1,0 +1,104 @@
+% !TeX program = xelatex
+% Báo cáo môn Xử lý ngôn ngữ tự nhiên. Biên dịch bằng XeLaTeX; không dùng pdfLaTeX.
+\documentclass[a4paper,12pt]{report}
+\usepackage[top=2cm,bottom=3cm,left=2cm,right=2cm]{geometry}
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{\setmainfont{Times New Roman}}{\setmainfont{TeX Gyre Termes}}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\usepackage{amsmath,amssymb}
+\usepackage{setspace}
+\usepackage{indentfirst,needspace}
+\usepackage{graphicx,float,caption}
+\usepackage{array,longtable}
+\usepackage{ltcaption}
+\usepackage[table]{xcolor}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{xurl}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,shapes.geometric}
+\usepackage[unicode,hidelinks,bookmarksnumbered]{hyperref}
+\hypersetup{pdftitle={Index Beast: hệ thống hỏi đáp lore Elden Ring dựa trên truy xuất lai và mô hình ngôn ngữ lớn},pdfauthor={Nhóm 4 Hollows}}
+\newcommand{\bodyfont}{\fontsize{13}{15.6}\selectfont}
+\AtBeginDocument{\bodyfont}
+\setstretch{1.5}
+\setlength{\parindent}{1cm}
+\setlength{\parskip}{6pt}
+\setlength{\emergencystretch}{2em}
+\widowpenalty=10000
+\clubpenalty=10000
+\displaywidowpenalty=10000
+\raggedbottom
+\titleformat{\chapter}[block]{\normalfont\centering\fontsize{14}{17}\bfseries}{}{0pt}{}
+\titlespacing*{\chapter}{0pt}{0pt}{12pt}
+\titleformat{\section}{\normalfont\fontsize{14}{17}\bfseries}{}{0pt}{}
+\titleformat{\subsection}{\normalfont\fontsize{13}{16}\bfseries\itshape}{}{0pt}{}
+\titlespacing*{\section}{0pt}{10pt}{6pt}
+\titlespacing*{\subsection}{0pt}{8pt}{6pt}
+\setcounter{secnumdepth}{0}
+\setcounter{tocdepth}{2}
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\listfigurename}{DANH MỤC HÌNH ẢNH}
+\renewcommand{\listtablename}{DANH MỤC BẢNG}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\cfttoctitlefont}{\hfill\fontsize{14}{17}\bfseries}
+\renewcommand{\cftaftertoctitle}{\hfill}
+\renewcommand{\cftloftitlefont}{\hfill\fontsize{14}{17}\bfseries}
+\renewcommand{\cftafterloftitle}{\hfill}
+\renewcommand{\cftlottitlefont}{\hfill\fontsize{14}{17}\bfseries}
+\renewcommand{\cftafterlottitle}{\hfill}
+\setlength{\cftbeforesecskip}{4pt}
+\setlength{\cftbeforechapskip}{6pt}
+\setlength{\cftsecindent}{0pt}
+\setlength{\cftsubsecindent}{0.5cm}
+\setlength{\cftsecnumwidth}{0pt}
+\setlength{\cftsubsecnumwidth}{0pt}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\captionsetup{font={small,it},labelfont=it,labelsep=period,skip=8pt}
+\setlength{\LTpre}{5pt}
+\setlength{\LTpost}{5pt}
+\setlength{\LTleft}{0pt plus 1fill}
+\setlength{\LTright}{0pt plus 1fill}
+\setlength{\tabcolsep}{5pt}
+\arrayrulecolor{gray!60}
+\newcommand{\majorheading}[1]{%
+  \chapter*{#1}\phantomsection\addcontentsline{toc}{chapter}{#1}}
+\newcommand{\emptyspace}{\vspace{0.6cm}}
+% Cột bảng theo tỉ lệ chiều rộng dòng, căn trái: C{0.3} = 30\% bề rộng
+\newcolumntype{C}[1]{>{\raggedright\arraybackslash}p{\dimexpr #1\linewidth-2\tabcolsep-1.5\arrayrulewidth\relax}}
+% Mở đầu một bảng có chú thích; đóng bằng \tabend
+\newcommand{\tabbegin}[2]{\begingroup\Needspace{6\baselineskip}\captionof{table}{#1}\label{#2}\addtocounter{table}{-1}%
+  \fontsize{11.5}{13.5}\selectfont\setstretch{1.1}\renewcommand{\arraystretch}{1.15}}
+\newcommand{\tabend}{\endgroup\par}
+% Kiểu khối cho sơ đồ TikZ
+\tikzset{
+  blk/.style={draw,rounded corners=2pt,align=center,font=\small,minimum height=0.9cm,fill=gray!8,inner sep=3pt},
+  store/.style={blk,fill=green!12},
+  model/.style={blk,fill=blue!10},
+  outp/.style={blk,fill=violet!10},
+  opt/.style={blk,fill=yellow!20,dashed},
+  arr/.style={-{Stealth[length=2.2mm]},thick},
+  darr/.style={-{Stealth[length=2.2mm]},thick,dashed}
+}
+\begin{document}
+\renewcommand{\contentsname}{MỤC LỤC}
+\renewcommand{\listfigurename}{DANH MỤC HÌNH ẢNH}
+\renewcommand{\listtablename}{DANH MỤC BẢNG}
+\renewcommand{\figurename}{Hình}
+\renewcommand{\tablename}{Bảng}
+\input{bia}
+\clearpage
+\begingroup\fontsize{12}{14.4}\selectfont\setstretch{1.1}
+\chapter*{MỤC LỤC}
+\makeatletter\@starttoc{toc}\makeatother
+\endgroup
+\clearpage
+\phantomsection\addcontentsline{toc}{chapter}{DANH MỤC HÌNH ẢNH}
+\listoffigures
+\clearpage
+\phantomsection\addcontentsline{toc}{chapter}{DANH MỤC BẢNG}
+\listoftables
+\input{noi_dung}
+\end{document}
