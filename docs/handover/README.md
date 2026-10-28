@@ -32,6 +32,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 full crawl — đang kiểm chứng](2026-10-28_s2-tv2_full-crawl.md)
+
 | Ngày | Người | Chủ đề |
 |---|---|---|
 | 2026-10-19 | TV1 (Hoanbucon) | [Nền tảng backend, hạ tầng dev và cấu hình](2026-10-19_s1-tv1_nen-tang-va-cau-hinh.md) |
