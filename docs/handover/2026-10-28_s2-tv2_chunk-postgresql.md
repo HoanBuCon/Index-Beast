@@ -1,5 +1,18 @@
 # TV2 — chunk metadata và PostgreSQL (chưa nghiệm thu DB)
 
+## Cập nhật: đã kiểm chứng PostgreSQL local
+
+Docker Engine 29.9.2 và postgres:18.6-bookworm hoạt động sau khi người dùng cài lại.
+11 integration tests đạt (schema/repositories và loader trên database tạm), bao gồm
+rerun không đổi chunk/timestamp, quarantine không ghi đè, rollback sau replace lỗi.
+Test mới: tests/integration/test_chunk_load.py; không đổi mã/schema TV1.
+Đã chạy migration 0001 cho database local của dự án. Đã load artifact 200 trang hai lần:
+51 documents, 199 chunks, không tăng số lượng ở lượt hai. Cả hai ingestion_jobs partial
+(51 OK/103 review). Những document có metadata chưa rõ được giữ ngoài DB, không ép nhãn.
+Artifact postgres-report.json lưu tại data/chunk_runs/s2-card-chunk-200.
+Chưa nghiệm thu full corpus, chưa có đánh giá retrieval hoặc review contract text TV3.
+Các phần dưới mô tả lịch sử trước khi có PostgreSQL; trạng thái DB hiện tại theo mục này.
+
 Nhánh feature/s2-tv2-chunking-metadata từ origin/develop 02c4abf.
 Document/chunk ID dùng core.ids; ordinal theo toàn document. ID nội dung prototype giữ
 ở artifact_content_id; provenance section/unit/ảnh vẫn giữ. Không đổi namespace chung.
