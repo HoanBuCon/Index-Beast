@@ -11,9 +11,7 @@ export function safeUrl(value: string): string | undefined {
     return undefined;
   }
 }
-import { useLanguage } from "../../lib/i18n";
 export default function CitationPopover({ source, onClose }: { source: Source; onClose: () => void }) {
-  const { t } = useLanguage();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const element = dialog.current;
@@ -23,7 +21,7 @@ export default function CitationPopover({ source, onClose }: { source: Source; o
   return (
     <dialog
       ref={dialog}
-      aria-label={`${t("Nguồn")} ${source.index}`}
+      aria-label={`${"Nguồn"} ${source.index}`}
       className="citation-card"
       onCancel={(e) => {
         e.preventDefault();
@@ -33,18 +31,18 @@ export default function CitationPopover({ source, onClose }: { source: Source; o
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <button autoFocus className="close" onClick={onClose} aria-label={t("Đóng nguồn")}>
+      <button autoFocus className="close" onClick={onClose} aria-label={"Đóng nguồn"}>
         ×
       </button>
       <span className="eyebrow">
-        {t("NGUỒN")} [{source.index}]
+        {"NGUỒN"} [{source.index}]
       </span>
       <h3>{source.title}</h3>
       <p>{source.section}</p>
-      <blockquote>{source.text || t("API chưa cung cấp trích đoạn cho nguồn này.")}</blockquote>
+      <blockquote>{source.text || "API chưa cung cấp trích đoạn cho nguồn này."}</blockquote>
       {safeUrl(source.url) && (
         <a href={safeUrl(source.url)} target="_blank" rel="noreferrer">
-          {t("Mở trang nguồn ↗")}
+          {"Mở trang nguồn ↗"}
         </a>
       )}
     </dialog>

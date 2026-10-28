@@ -8,9 +8,7 @@ import type { Message, Source } from "../../api/types";
 import SourceList from "./SourceList";
 import CitationPopover from "./CitationPopover";
 import FeedbackButtons from "./FeedbackButtons";
-import { useLanguage } from "../../lib/i18n";
 export default function MessageList({ messages, busy, demo }: { messages: Message[]; busy: boolean; demo: boolean }) {
-  const { t } = useLanguage();
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -22,8 +20,8 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
         <article key={message.id} className={`message ${message.role}`}>
           <div className="message-label">
             <span aria-hidden="true">{message.role === "user" ? "◈" : "✦"}</span>
-            {message.role === "user" ? t("BẠN") : "INDEX BEAST"}
-            {message.role === "assistant" && demo && <small>{t("MINH HỌA")}</small>}
+            {message.role === "user" ? "BẠN" : "INDEX BEAST"}
+            {message.role === "assistant" && demo && <small>{"MINH HỌA"}</small>}
           </div>
           <div className="prose">
             <Markdown
@@ -55,15 +53,15 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
             <>
               {!message.content && busy && (
                 <p role="status" className="searching">
-                  {t("Đang tìm trong lore")}
+                  {"Đang tìm trong lore"}
                   <span>…</span>
                 </p>
               )}
               {message.incomplete && !(busy && message === messages.at(-1)) && (
-                <p className="muted">{t("Câu trả lời chưa hoàn tất.")}</p>
+                <p className="muted">{"Câu trả lời chưa hoàn tất."}</p>
               )}
               {message.grounded === false && !demo && (
-                <p className="muted">{t("Chưa tìm được đủ bằng chứng trong kho nguồn.")}</p>
+                <p className="muted">{"Chưa tìm được đủ bằng chứng trong kho nguồn."}</p>
               )}
               <SourceList sources={message.sources} onSelect={setSelected} />
               {!message.incomplete && message.serverId && <FeedbackButtons messageId={message.serverId} demo={demo} />}
