@@ -49,3 +49,8 @@ enabled = true
 max_bytes = 20000000
 max_pixels = 40000000
 allowed_mimes = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+
+[clean]
+skip_sections = ["Gallery", "References", "External links", "See also", "See Also", "Navigation"]
+dlc_markers = ["Shadow of the Erdtree", "Nightreign", "Tarnished Edition", "Realm of Shadow", "Gravesite Plain", "Scadu Altus", "Scadutree", "Jagged Peak", "Cerulean Coast", "Rauh Ruins", "Enir-Ilim", "Messmer", "Rellana", "Romina", "Midra", "Bayle", "Shadow Keep"]
+base_places = ["Limgrave", "Liurnia", "Caelid", "Altus Plateau", "Mountaintops of the Giants", "Roundtable Hold", "Crumbling Farum Azula", "Weeping Peninsula", "Siofra River", "Ainsel River", "Stormveil Castle", "Leyndell", "Nokron", "Nokstella", "Miquella's Haligtree", "Deeproot Depths", "Mohgwyn Palace", "Mt. Gelmir", "Raya Lucaria", "Mistwood Ruins", "Consecrated Snowfield"]
