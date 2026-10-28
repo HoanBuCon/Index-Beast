@@ -43,3 +43,6 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-28 | TV1 (Hoanbucon) | [Schema PostgreSQL và migrations](2026-10-28_s2-tv1_schema-postgresql-va-migrations.md) |
 | 2026-10-28 | TV1 (Hoanbucon) | [Hợp đồng API v1, mock và lỗi chuẩn](2026-10-28_s2-tv1_api-contract-v1-va-loi-chuan.md) |
 | 2026-10-28 | TV1 (Hoanbucon) | [Audit mã API và DB sau PR #28, #29](2026-10-28_s2-tv1_audit-api-va-db.md) |
+| 2026-10-28 | TV2 (UncleThing) | [Làm sạch dữ liệu và xuất CSV](2026-10-28_s2-tv2_lam-sach-va-xuat-csv.md) |
+| 2026-10-28 | TV2 (UncleThing) | [Nghiên cứu chunking trên 200 trang](2026-10-28_s2-tv2_nghien-cuu-chunking-200-trang.md) |
+| 2026-10-28 | TV2 (UncleThing) | [Prototype chunking có cấu trúc](2026-10-28_s2-tv2_chunking-co-cau-truc.md) |

@@ -84,3 +84,8 @@ TV2 bàn giao raw, manifest, báo cáo 20 trang và đề xuất này. S1 chưa 
 - `docs/01_TECHSTACK.md`, `docs/02_SRS.md`, `docs/04_ARCHITECTURE.md`
 - `docs/adr/004-base-game-scope.md`
 - https://huggingface.co/intfloat/multilingual-e5-small
+
+
+## Ghi nhận triển khai prototype ngày 28 tháng 10
+
+TV2 đã triển khai clean v2 và chunker offline theo cap tổng 450/overlap 50. Xem [bàn giao](../handover/2026-10-28_s2-tv2_chunking-co-cau-truc.md). Đây là bản thử nghiệm có kiểm token/coverage, chưa đánh giá retrieval hoặc đổi trạng thái Proposed của ADR.
