@@ -40,4 +40,5 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-26 | TV3 (MinhMuc) | [RAG baseline armor, golden set v0 và xử lý Git](2026-10-26_s1-tv3_rag-baseline-va-golden-set.md) |
 | 2026-10-26 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 1](2026-10-26_s1-tv1_bao-cao-ban-giao-sprint-1.md) |
 | 2026-10-26 | TV1 (Hoanbucon) | [Báo cáo môn NLP (LaTeX)](2026-10-26_s1-tv1_bao-cao-nlp-latex.md) |
+| 2026-10-28 | TV1 (Hoanbucon) | [Schema PostgreSQL và migrations](2026-10-28_s2-tv1_schema-postgresql-va-migrations.md) |
 | 2026-10-28 | TV1 (Hoanbucon) | [Hợp đồng API v1, mock và lỗi chuẩn](2026-10-28_s2-tv1_api-contract-v1-va-loi-chuan.md) |
