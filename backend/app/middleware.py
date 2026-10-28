@@ -17,7 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.api.errors import error_response
 from core.config import Settings
+from core.errors import AppError
 from core.logging import request_id_var
 
 log = logging.getLogger("app.http")
@@ -47,10 +49,12 @@ class RequestContextMiddleware:
         token = request_id_var.set(rid)
         start = time.perf_counter()
         status = 500
+        started = False
 
         async def send_with_request_id(message: Message) -> None:
-            nonlocal status
+            nonlocal status, started
             if message["type"] == "http.response.start":
+                started = True
                 status = message["status"]
                 MutableHeaders(scope=message).append(REQUEST_ID_HEADER, rid)
             await send(message)
@@ -60,7 +64,13 @@ class RequestContextMiddleware:
             await self.app(scope, receive, send_with_request_id)
         except Exception:
             log.exception("unhandled error", extra={"data": data})
-            raise
+            if started:  # đã trả một phần body (vd. SSE giữa chừng): chỉ còn cách ngắt kết nối
+                raise
+            # Tự trả JSON 500 tại đây vì ServerErrorMiddleware nằm ngoài, lúc đó request id đã bị reset
+            await error_response(500, AppError.code, AppError.message)(scope, receive, send_with_request_id)
+            status = 500
+            data |= {"status": status, "ms": round((time.perf_counter() - start) * 1000, 1)}
+            log.info("request", extra={"data": data})
         else:
             if not (scope["path"] in self.quiet_paths and status == 200):
                 data |= {"status": status, "ms": round((time.perf_counter() - start) * 1000, 1)}

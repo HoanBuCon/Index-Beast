@@ -8,7 +8,12 @@ Phụ trách: TV1 · [S1] Skeleton FastAPI · [S4] Xác thực client, CORS, b�
 from fastapi import Request
 
 from app.context import AppContext
+from app.services.mock_chat import MockChatService
 
 
 def get_ctx(request: Request) -> AppContext:
     return request.app.state.ctx
+
+
+def get_chat_service(request: Request) -> MockChatService:
+    return request.app.state.chat_service

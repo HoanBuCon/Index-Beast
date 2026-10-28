@@ -5,12 +5,13 @@ Phụ trách: TV3 (MinhMuc) · [S1] Xác nhận DeepSeek
 
 from time import perf_counter
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from app.adapters.llm import LLMError
 from app.api.deps import get_ctx
 from app.api.schemas.llm_test import LLMTestIn, LLMTestOut, LLMTestUsage
 from app.context import AppContext
+from core.errors import UnavailableError, UpstreamError
 
 router = APIRouter(tags=["dev: DeepSeek test"])
 
@@ -23,7 +24,7 @@ router = APIRouter(tags=["dev: DeepSeek test"])
 )
 async def test_llm(body: LLMTestIn, ctx: AppContext = Depends(get_ctx)) -> LLMTestOut:
     if ctx.llm is None:
-        raise HTTPException(503, "Chưa có DEEPSEEK_API_KEY. Cập nhật .env rồi khởi động lại API.")
+        raise UnavailableError("Chưa có DEEPSEEK_API_KEY. Cập nhật .env rồi khởi động lại API.")
     start = perf_counter()
     try:
         result = await ctx.llm.complete(
@@ -41,7 +42,7 @@ async def test_llm(body: LLMTestIn, ctx: AppContext = Depends(get_ctx)) -> LLMTe
         )
     except LLMError as exc:
         # LLMError đã bỏ thông tin nhạy cảm tại adapter, không forward raw SDK errors.
-        raise HTTPException(502, str(exc)) from None
+        raise UpstreamError(str(exc)) from None
     return LLMTestOut(
         model=result.model,
         thinking=body.thinking,

@@ -49,6 +49,8 @@ jobs:
       - run: pip install -r requirements-dev.txt -c constraints.txt
       - run: ruff check .
       - run: ruff format --check .
+      - name: Hợp đồng OpenAPI khớp code
+        run: python -m scripts.export_openapi --check
       - name: Unit tests
         run: pytest
       - name: Integration tests
