@@ -15,11 +15,12 @@ const request = {
   options: { lang: "auto" as const, spoilers: true },
 };
 const response = {
-  conversation_id: "conversation-1",
-  message_id: "answer-1",
+  conversation_id: "11111111-1111-4111-8111-111111111111",
+  message_id: "22222222-2222-4222-8222-222222222222",
   answer: "**Câu trả lời mock** [1]",
   sources: [{ index: 1, title: "Nguồn mock", url: "https://example.org" }],
   grounded: true,
+  latency_ms: 1,
 };
 
 test("JSON sends POST /chat, body and request ID, then maps answer and sources into UI events", async (t) => {
@@ -35,7 +36,15 @@ test("JSON sends POST /chat, body and request ID, then maps answer and sources i
   assert.deepEqual(events, [
     { type: "token", token: response.answer },
     { type: "sources", sources: response.sources },
-    { type: "done", data: { conversation_id: "conversation-1", message_id: "answer-1", grounded: true } },
+    {
+      type: "done",
+      data: {
+        conversation_id: "11111111-1111-4111-8111-111111111111",
+        message_id: "22222222-2222-4222-8222-222222222222",
+        grounded: true,
+        latency_ms: 1,
+      },
+    },
   ]);
 });
 
@@ -46,6 +55,8 @@ test("JSON validates data before render", async (t) => {
     { ...response, answer: " " },
     { ...response, sources: [null] },
     { ...response, latency_ms: -1 },
+    { ...response, latency_ms: undefined },
+    { ...response, conversation_id: "not-a-uuid" },
   ]) {
     const mock = t.mock.method(globalThis, "fetch", async () => Response.json(invalid));
     await assert.rejects(chat(request), /Dữ liệu câu trả lời không hợp lệ/);
@@ -87,7 +98,7 @@ test("retry retains earlier history and sends the failed question once", async (
     id: "local",
     title: "Question",
     mode: "api",
-    serverId: "conversation-1",
+    serverId: "11111111-1111-4111-8111-111111111111",
     updatedAt: "2026-10-28",
     messages: [
       { id: "u1", role: "user", content: "Earlier", sources: [] },
@@ -102,7 +113,7 @@ test("retry retains earlier history and sends the failed question once", async (
     input.base.messages.map((m) => m.id),
     ["u1", "a1"],
   );
-  assert.equal(input.base.serverId, "conversation-1");
+  assert.equal(input.base.serverId, "11111111-1111-4111-8111-111111111111");
   assert.equal(conversation.messages.length, 4);
   let calls = 0;
   t.mock.method(globalThis, "fetch", async () =>

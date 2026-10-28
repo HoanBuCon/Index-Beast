@@ -1,8 +1,8 @@
 // fetch tới /api/v1; chatStream đọc SSE qua fetch + ReadableStream; sendFeedback; xử lý lỗi 429.
 // Phụ trách: TV4 · [S2] File api.ts viết tay · [S3] Web streaming SSE
 
-import type { AdminStats, ChatRequest, ChatResponse, StreamEvent } from "./types";
-import { isSource } from "./types.ts";
+import type { AdminStats, ChatRequest, ChatResponse, ConversationOut, FeedbackRequest, StreamEvent } from "./types";
+import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -23,15 +23,20 @@ async function request(path: string, init: RequestInit = {}) {
       response.status === 429
         ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
         : response.status === 404
-          ? "Chức năng API này chưa sẵn sàng. Bạn có thể chuyển sang Xem thử giao diện."
-          : response.status === 401 || response.status === 403
-            ? "Không có quyền truy cập. Kiểm tra token quản trị."
-            : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+          ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
+          : response.status === 422
+            ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
+            : response.status === 401 || response.status === 403
+              ? "Không có quyền truy cập. Kiểm tra token quản trị."
+              : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
     throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
   }
   return response;
 }
 export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
+  if (!body.message.trim() || [...body.message.trim()].length > MAX_MESSAGE_CHARS) {
+    throw new Error(`Câu hỏi cần có từ 1 đến ${MAX_MESSAGE_CHARS} ký tự.`);
+  }
   // S2: JSON /chat độc lập với SSE. Timeout áp dụng cả khi đọc body phản hồi.
   const timeout = AbortSignal.timeout(30_000);
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -46,17 +51,16 @@ export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<Cha
   if (!data || typeof data !== "object") throw new Error("Dữ liệu câu trả lời không hợp lệ.");
   const result = data as Record<string, unknown>;
   if (
-    typeof result.conversation_id !== "string" ||
-    !result.conversation_id.trim() ||
-    typeof result.message_id !== "string" ||
-    !result.message_id.trim() ||
+    !isUuid(result.conversation_id) ||
+    !isUuid(result.message_id) ||
     typeof result.answer !== "string" ||
     !result.answer.trim() ||
     typeof result.grounded !== "boolean" ||
     !Array.isArray(result.sources) ||
     !result.sources.every(isSource) ||
-    (result.latency_ms !== undefined &&
-      (typeof result.latency_ms !== "number" || !Number.isFinite(result.latency_ms) || result.latency_ms < 0))
+    typeof result.latency_ms !== "number" ||
+    !Number.isFinite(result.latency_ms) ||
+    result.latency_ms < 0
   ) {
     throw new Error("Dữ liệu câu trả lời không hợp lệ.");
   }
@@ -115,13 +119,25 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
       yield { type, sources: data.sources };
     } else if (type === "error") throw new Error("Dịch vụ gặp lỗi khi sinh câu trả lời. Vui lòng thử lại.");
     else if (type === "done") {
-      if (typeof data.conversation_id !== "string" || typeof data.message_id !== "string") {
+      if (
+        !isUuid(data.conversation_id) ||
+        !isUuid(data.message_id) ||
+        typeof data.grounded !== "boolean" ||
+        typeof data.latency_ms !== "number" ||
+        !Number.isFinite(data.latency_ms) ||
+        data.latency_ms < 0
+      ) {
         throw new Error("Thiếu thông tin hoàn tất câu trả lời.");
       }
       complete = true;
       yield {
         type,
-        data: { conversation_id: data.conversation_id, message_id: data.message_id, grounded: data.grounded === true },
+        data: {
+          conversation_id: data.conversation_id,
+          message_id: data.message_id,
+          grounded: data.grounded,
+          latency_ms: data.latency_ms,
+        },
       };
       break;
     }
@@ -129,7 +145,34 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
   if (!complete) throw new Error("Kết nối bị ngắt trước khi câu trả lời hoàn tất.");
 }
 export async function sendFeedback(messageId: string, rating: number, reason: string) {
-  await request("/feedback", { method: "POST", body: JSON.stringify({ message_id: messageId, rating, reason }) });
+  if (!isUuid(messageId) || (rating !== 1 && rating !== -1) || [...reason].length > MAX_FEEDBACK_CHARS) {
+    throw new Error("Phản hồi không hợp lệ: kiểm tra mã câu trả lời, đánh giá và độ dài lý do.");
+  }
+  const body: FeedbackRequest = { message_id: messageId, rating, reason };
+  await request("/feedback", { method: "POST", body: JSON.stringify(body) });
+}
+export async function getConversation(id: string, signal?: AbortSignal): Promise<ConversationOut> {
+  if (!isUuid(id)) throw new Error("Mã hội thoại không hợp lệ.");
+  const data = await (await request(`/conversations/${encodeURIComponent(id)}`, { signal })).json();
+  if (
+    !isUuid(data?.id) ||
+    !["web", "discord"].includes(data.channel) ||
+    typeof data.created_at !== "string" ||
+    !Array.isArray(data.messages) ||
+    !data.messages.every(
+      (m: ConversationOut["messages"][number]) =>
+        m &&
+        isUuid(m.id) &&
+        ["user", "assistant"].includes(m.role) &&
+        typeof m.content === "string" &&
+        Array.isArray(m.sources) &&
+        m.sources.every(isSource) &&
+        (m.grounded == null || typeof m.grounded === "boolean") &&
+        typeof m.created_at === "string",
+    )
+  )
+    throw new Error("Dữ liệu hội thoại không hợp lệ.");
+  return data;
 }
 // Token admin chỉ giữ trong state của trang, không ghi vào localStorage hay bundle.
 export async function getAdminStats(token: string, signal?: AbortSignal): Promise<AdminStats> {

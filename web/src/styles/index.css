@@ -49,7 +49,7 @@
   align-items: center;
   justify-content: center;
   width: 30px;
-  height: 34px;
+  height: 30px;
   padding: 3px;
   border: 1px solid #746540;
   border-radius: 0;
@@ -83,8 +83,9 @@
   opacity: 1;
 }
 .sidebar-toggle:hover:not(:disabled) {
-  border-color: #d9bc78;
+  border-color: transparent;
   background: #d9bc7818;
+  box-shadow: 0 2px 12px #d9bc7814;
 }
 @media (max-width: 900px) {
   .toolbar-start .archive-label {
@@ -301,7 +302,8 @@ a {
 }
 .history-row.selected {
   background: #22261d;
-  border-color: #414936;
+  border-color: transparent;
+  box-shadow: 0 3px 14px #0003;
 }
 .history-row > button:first-child {
   flex: 1;
@@ -359,8 +361,10 @@ a {
   min-height: 0;
   /* Ảnh nền được đóng gói trong web để bản build và Docker cùng sử dụng được. */
   /* Nền chỉ nằm trong Main Content, tự co theo vùng chat khi đóng/mở sidebar. */
-  background-image: linear-gradient(180deg, #101210b8, #101210e6), url("../assets/onion_ring.jpg");
-  background-size: cover;
+  background-image:
+    radial-gradient(ellipse at 50% 50%, #101410d9 0%, #101410ad 35%, #10141000 78%),
+    linear-gradient(180deg, #10121033, #10121066), url("../assets/patches.png");
+  background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -490,7 +494,7 @@ em {
   margin-top: 24px;
 }
 .input-area {
-  width: min(850px, 100%);
+  width: min(800px, 100%);
   margin: 0 auto;
   padding: 12px 30px 16px;
 }
@@ -503,7 +507,7 @@ em {
 }
 .composer textarea {
   width: 100%;
-  resize: vertical;
+  resize: none;
   max-height: 180px;
   min-height: 54px;
   background: transparent;
@@ -546,13 +550,30 @@ textarea::placeholder {
   margin: 12px 0 0;
 }
 .messages {
-  max-width: 850px;
+  max-width: 800px;
   margin: auto;
-  padding: 20px 30px 35px;
+  padding: 32px 30px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  background: transparent;
+  color: #eee8db;
+  text-shadow:
+    0 1px 3px #000,
+    0 2px 10px #0008;
 }
 .message {
-  padding: 24px 0;
-  border-bottom: 1px solid #313828;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+}
+/* Câu hỏi gọn bên phải; câu trả lời dùng toàn chiều rộng cột hội thoại. */
+.message.user {
+  display: flex;
+  justify-content: flex-end;
+}
+.message.assistant {
+  width: 100%;
 }
 .message-label {
   display: flex;
@@ -572,13 +593,16 @@ textarea::placeholder {
   font-size: 9px;
 }
 .message.user .prose {
+  width: fit-content;
+  max-width: 85%;
   background: #242a1e;
-  border-left: 2px solid #726441;
-  padding: 12px 16px;
+  border: 1px solid #d9bc7815;
+  padding: 14px 20px;
+  white-space: pre-wrap;
 }
 .prose {
-  font-size: 14px;
-  line-height: 1.9;
+  font-size: 15px;
+  line-height: 1.8;
   overflow-wrap: anywhere;
 }
 .prose p:last-child {
@@ -1125,31 +1149,51 @@ input {
   margin-top: 12px;
 }
 .chat-panel {
-  background-image: linear-gradient(180deg, #141613ed, #141613f2), url("../assets/onion_ring.jpg");
+  /* Ảnh rõ màu; độ tương phản được bảo vệ riêng tại vùng chữ và ô nhập. */
+  background-color: #141613;
 }
 .chat-toolbar {
   min-height: 60px;
   padding: 12px 24px;
 }
 .mode-note {
-  background: transparent;
-  color: #aeb29e;
+  background: #101410ed;
+  color: #ddd2b7;
   font-size: 10px;
 }
 .chat-empty .chat-content {
   display: flex;
+  align-items: flex-start;
 }
 .chat-empty .welcome {
   width: 100%;
   max-width: 900px;
+  /* Trước đây neo logo theo đầu vùng chat; sau khi bỏ logo, căn giữa cụm lời chào và ô nhập. */
   padding: 45px 30px;
   margin: auto;
+  background: transparent;
+  box-shadow: none;
+  text-shadow:
+    0 1px 3px #000,
+    0 2px 10px #0008;
 }
 .welcome-mark {
   display: block;
   font-size: 32px;
   color: #d9bc78;
   margin-bottom: 18px;
+}
+/* PNG nền trong suốt: logo ở giữa phía trên ô chat, co theo chiều rộng màn hình. */
+.welcome-logo {
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+  display: block;
+  width: min(100%, 600px);
+  height: auto;
+  margin: 0 auto 12px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 10px #0009);
 }
 .chat-empty .welcome h1 {
   font:
@@ -1162,6 +1206,7 @@ input {
 .chat-empty .welcome .intro {
   font-size: 13px;
   margin-bottom: 32px;
+  color: #e0d4b8;
 }
 .chat-empty .welcome-input {
   width: 100%;
@@ -1179,15 +1224,42 @@ input {
   box-shadow: none;
   background: #191d17;
 }
+/* Chữ nhỏ luôn có nền tối riêng, không phụ thuộc vùng sáng của ảnh phía sau.
+   Nay dùng lớp tối loang chung và bóng chữ để tránh tạo dải nền hình chữ nhật. */
+.chat-panel .input-note,
+.chat-panel .scope-note {
+  background: transparent;
+  color: #eee5d0;
+  text-shadow:
+    0 1px 3px #000,
+    0 0 6px #000;
+  padding: 8px 10px;
+}
 .composer textarea {
   grid-column: 1;
+  height: 36px;
   min-height: 36px;
   padding: 6px 0;
-  resize: vertical;
+  resize: none;
+  overflow-y: hidden;
   font-size: 14px;
+}
+/* Ô nhập không có khung sáng riêng khi gõ; giữ nguyên nền và viền của composer. */
+.composer textarea:focus,
+.composer textarea:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+@supports (field-sizing: content) {
+  .composer textarea {
+    field-sizing: content;
+    height: auto;
+    overflow-y: auto;
+  }
 }
 .composer-bottom {
   grid-column: 2;
+  align-self: end;
   display: flex;
   justify-content: center;
 }
@@ -1217,7 +1289,7 @@ input {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: #14161380;
+  background: #191d17;
   border-color: #51543f;
 }
 .chat-empty .suggestions strong {
@@ -1292,49 +1364,129 @@ input {
 }
 .sidebar-toggle-space {
   width: 30px;
-  height: 34px;
+  height: 30px;
   flex-shrink: 0;
 }
 /* Giữ logo tại chỗ; khi đóng chỉ thu phần nội dung thành cột điều hướng. */
-.workspace.sidebar-collapsed .sidebar > :not(.sidebar-rail) {
+.workspace.sidebar-collapsed .sidebar > :not(.sidebar-rail):not(.sidebar-admin) {
   display: none;
 }
+.workspace .sidebar,
 .workspace.sidebar-collapsed .sidebar {
   padding: 76px 16px 20px;
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
   border-right: 1px solid #303328;
 }
 .sidebar-rail {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
-  flex: 1;
+  flex-shrink: 0;
   min-height: 0;
 }
 .sidebar-rail a,
-.sidebar-rail button {
-  display: grid;
-  place-items: center;
-  width: 30px;
+.sidebar-rail button,
+.sidebar-admin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   height: 34px;
-  padding: 4px;
+  padding: 0;
   flex-shrink: 0;
   border: 1px solid transparent;
   color: #b9bcae;
   background: transparent;
   text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.rail-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.workspace.sidebar-collapsed .rail-label {
+  display: none;
 }
 .sidebar-rail a:hover,
 .sidebar-rail button:hover:not(:disabled),
-.sidebar-rail a.active {
+.sidebar-rail a.active,
+.sidebar-admin:hover,
+.sidebar-admin.active {
   color: #e0c58c;
-  background: #d9bc7812;
-  border-color: #74654066;
+  background: linear-gradient(100deg, #d9bc781a, #d9bc780a);
+  border-color: transparent;
+  box-shadow: 0 3px 12px #0003;
 }
-.sidebar-rail .rail-admin {
+/* Nền sáng và bóng thay viền khi chọn; bàn phím vẫn có chỉ báo focus rõ ràng. */
+.sidebar-rail a:focus-visible,
+.sidebar-rail button:focus-visible,
+.sidebar-admin:focus-visible,
+.sidebar-toggle:focus-visible,
+.history-row button:focus-visible,
+.sidebar .brand:focus-visible,
+.sidebar-controls select:focus-visible {
+  outline: none;
+  border-color: transparent;
+  background: #d9bc7826;
+  box-shadow:
+    0 0 14px #d9bc7830,
+    0 4px 12px #0004;
+}
+.sidebar-admin {
   margin-top: auto;
+}
+/* Thanh thu gọn không có khối chế độ, nên nút Quản trị tự đẩy xuống cuối. */
+.workspace.sidebar-collapsed .sidebar-admin {
+  margin-top: auto;
+}
+/* Hai trạng thái dùng chung hàng và vị trí icon; chỉ ẩn chữ khi thu gọn. */
+.sidebar .header {
+  position: absolute;
+  top: 20px;
+  left: 16px;
+  width: 228px;
+  padding: 4px 0 0;
+  border-bottom: 0;
+}
+.sidebar .sidebar-top {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0;
+}
+.sidebar .history {
+  min-height: 0;
+  overflow-y: auto;
+}
+.conversation-history {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  gap: 12px;
+  min-height: 0;
+}
+.conversation-history .history-heading {
+  flex-shrink: 0;
+}
+.history-heading {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #b0a17b;
+}
+.sidebar-ai-note {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #b0a17b;
 }
 .workspace.sidebar-collapsed {
   display: grid;
@@ -1345,7 +1497,7 @@ input {
 }
 .sidebar .brand-mark {
   width: 30px;
-  height: 34px;
+  height: 30px;
   font-size: 26px;
   flex-shrink: 0;
 }
@@ -1374,9 +1526,6 @@ input {
   overflow-y: auto;
 }
 @media (max-width: 700px) {
-  .workspace > .sidebar-toggle {
-    top: 16px;
-  }
   .workspace {
     height: auto;
     min-height: 100dvh;

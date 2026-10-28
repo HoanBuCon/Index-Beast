@@ -18,36 +18,40 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
     <div className="messages" aria-busy={busy}>
       {messages.map((message) => (
         <article key={message.id} className={`message ${message.role}`}>
-          <div className="message-label">
+          <div className={message.role === "user" ? "sr-only" : "message-label"}>
             <span aria-hidden="true">{message.role === "user" ? "◈" : "✦"}</span>
             {message.role === "user" ? "BẠN" : "INDEX BEAST"}
             {message.role === "assistant" && demo && <small>{"MINH HỌA"}</small>}
           </div>
           <div className="prose">
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              skipHtml
-              components={{
-                img: () => null,
-                a: ({ href, children }) => {
-                  const match = /^#source-(\d+)$/.exec(href ?? "");
-                  const source = match ? message.sources.find((s) => s.index === Number(match[1])) : undefined;
-                  return source ? (
-                    <button className="citation-link" onClick={() => setSelected(source)}>
-                      {children}
-                    </button>
-                  ) : (
-                    <a href={href} target="_blank" rel="noreferrer">
-                      {children}
-                    </a>
-                  );
-                },
-              }}
-            >
-              {message.content.replace(/\[(\d+)\](?!\()/g, (full, index: string) =>
-                message.sources.some((s) => s.index === Number(index)) ? `[${index}](#source-${index})` : full,
-              )}
-            </Markdown>
+            {message.role === "user" ? (
+              message.content
+            ) : (
+              <Markdown
+                remarkPlugins={[remarkGfm]}
+                skipHtml
+                components={{
+                  img: () => null,
+                  a: ({ href, children }) => {
+                    const match = /^#source-(\d+)$/.exec(href ?? "");
+                    const source = match ? message.sources.find((s) => s.index === Number(match[1])) : undefined;
+                    return source ? (
+                      <button className="citation-link" onClick={() => setSelected(source)}>
+                        {children}
+                      </button>
+                    ) : (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    );
+                  },
+                }}
+              >
+                {message.content.replace(/\[(\d+)\](?!\()/g, (full, index: string) =>
+                  message.sources.some((s) => s.index === Number(index)) ? `[${index}](#source-${index})` : full,
+                )}
+              </Markdown>
+            )}
           </div>
           {message.role === "assistant" && (
             <>

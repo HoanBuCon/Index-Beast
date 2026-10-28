@@ -39,7 +39,7 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         conversation_id: base.serverId,
         message: text,
         channel: "web" as const,
-        options: { lang: "auto" as const, spoilers: true },
+        options: { lang: "vi" as const, spoilers: true },
       };
       const stream = replyEvents(request, base.mode, abort.signal, options);
       let content = "";

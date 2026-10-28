@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { sendFeedback } from "../../api/client";
+import { MAX_FEEDBACK_CHARS } from "../../api/types";
 export default function FeedbackButtons({ messageId, demo }: { messageId: string; demo: boolean }) {
   const [rating, setRating] = useState(0);
   const [reason, setReason] = useState("");
@@ -47,7 +48,7 @@ export default function FeedbackButtons({ messageId, demo }: { messageId: string
             aria-label={"Lý do phản hồi (không bắt buộc)"}
             placeholder={"Chia sẻ thêm (không bắt buộc)"}
             value={reason}
-            maxLength={1000}
+            maxLength={MAX_FEEDBACK_CHARS}
             onChange={(e) => setReason(e.target.value)}
           />
           <button disabled={busy} type="submit">

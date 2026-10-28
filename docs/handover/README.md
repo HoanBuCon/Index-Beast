@@ -47,3 +47,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-28 | TV2 (UncleThing) | [Nghiên cứu chunking trên 200 trang](2026-10-28_s2-tv2_nghien-cuu-chunking-200-trang.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Prototype chunking có cấu trúc](2026-10-28_s2-tv2_chunking-co-cau-truc.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Đẩy mã nguồn làm sạch và chunking lên GitHub](2026-10-28_s2-tv2_day-ma-nguon-github.md) |
+| 2026-10-28 | TV4 (QuyVuiVe) | [Web: đối chiếu OpenAPI v1 và tích hợp API mock Sprint 2](2026-10-28_s2-tv4_web-api-mock.md) |
