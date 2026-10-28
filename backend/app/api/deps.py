@@ -11,6 +11,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import AppContext
+from app.services.mock_chat import MockChatService
 
 
 def get_ctx(request: Request) -> AppContext:
@@ -21,3 +22,7 @@ async def get_session(ctx: AppContext = Depends(get_ctx)) -> AsyncIterator[Async
     """Một transaction cho mỗi request: commit khi handler xong, rollback khi có exception."""
     async with ctx.sessionmaker() as session, session.begin():
         yield session
+
+
+def get_chat_service(request: Request) -> MockChatService:
+    return request.app.state.chat_service

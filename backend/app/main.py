@@ -13,10 +13,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.errors import install_error_handlers
 from app.api.router import API_PREFIX, HEALTH_PATH, api_router
 from app.api.routes import llm_test
 from app.context import AppContext, build_context
 from app.middleware import install_middleware
+from app.services.mock_chat import MockChatService
 from core.config import Settings, ensure_safe_for_environment, get_settings
 from core.logging import setup_logging
 
@@ -51,6 +53,8 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
         openapi_url="/api/openapi.json" if public_docs else None,
         redoc_url=None,
     )
+    app.state.chat_service = MockChatService()  # S3: thay bằng service RAG thật
+    install_error_handlers(app)
     install_middleware(app, settings, quiet_paths=[HEALTH_PATH])
     app.include_router(api_router)
     if not settings.is_prod:
