@@ -1,4 +1,13 @@
-"""Chuẩn hoá khoảng trắng, unicode, ký tự đặc biệt; đếm token gần đúng.
+"""Unicode/whitespace normalization without translating or rewriting source text."""
 
-Phụ trách: TV2 · [S2] Làm sạch & chuẩn hoá nội dung
-"""
+import re
+import unicodedata
+
+
+def normalize_text(value: str) -> str:
+    value = unicodedata.normalize("NFC", value).replace("\xa0", " ").replace("\u200b", "")
+    return "\n".join(line for row in value.splitlines() if (line := re.sub(r"[^\S\n]+", " ", row).strip()))
+
+
+def normalized_key(value: str) -> str:
+    return re.sub(r"\s+", " ", normalize_text(value)).strip(" “”—|")

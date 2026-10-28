@@ -1,4 +1,4 @@
-"""S1 CLI. Later pipeline stages are deliberately not exposed yet."""
+"""Offline crawl, cleaning and chunk CLI owned by TV2; no encoder or indexing."""
 
 import argparse
 import json
@@ -11,8 +11,14 @@ from ingest.sources.wikigg import WikiGG
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="IndexBeast offline data prototype (TV2 S1)")
-    p.add_argument("command", choices=["crawl", "survey", "report"])
+    p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean and chunk (TV2 S1/S2)")
+    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk"])
+    p.add_argument("--input-dir", type=Path)
+    p.add_argument("--tokenizer", type=Path)
+    p.add_argument("--max-tokens", type=int)
+    p.add_argument("--overlap-tokens", type=int)
+    p.add_argument("--output-dir", type=Path)
+    p.add_argument("--crawl-report", type=Path)
     p.add_argument("--source", choices=["wikigg"], default="wikigg")
     p.add_argument("--limit", type=int, default=200)
     p.add_argument("--page")
@@ -43,6 +49,28 @@ def main(argv=None):
         for path in sorted((config["data_dir"] / "reports").glob("*.json")):
             print(path)
         return 0
+    if args.command == "clean":
+        from ingest.transform.document import run_clean
+
+        if not args.output_dir:
+            p.error("clean requires --output-dir pointing to a new or empty directory")
+        result = run_clean(config, args.output_dir, crawl_report=args.crawl_report, limit=args.limit)
+        print(json.dumps(result["counts"], ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "chunk":
+        from ingest.chunk.runner import run_chunk
+
+        if not args.input_dir or not args.tokenizer or not args.output_dir:
+            p.error("chunk requires --input-dir, --tokenizer and --output-dir")
+        result = run_chunk(
+            args.input_dir,
+            args.tokenizer,
+            args.output_dir,
+            cap=args.max_tokens if args.max_tokens is not None else config["chunk"]["max_tokens"],
+            overlap=args.overlap_tokens if args.overlap_tokens is not None else config["chunk"]["overlap_tokens"],
+        )
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result["status"] == "completed" else 2
     client = HttpClient(config)
     try:
         source = WikiGG(client, config)
