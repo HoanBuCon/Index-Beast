@@ -1,5 +1,22 @@
 # TV2 — full crawl (chưa nghiệm thu toàn bộ)
 
+## Trạng thái mới nhất: đã resume ở tiến trình nền riêng
+
+Người dùng đã bật Docker; PostgreSQL hoạt động. Hai integration tests lifecycle/recovery
+đạt trên database tạm. Đã archive report gốc trong history và kết thúc orphan job
+crawl-full-a6fd33301ba04b68b51b610095d4bc3b với partial (1134 OK, 3 lỗi ảnh).
+
+Đã resume cùng run-id s2-full-20261028. Job mới:
+crawl-full-e31c9c0f6403440fa8fece7be1713af5. Launcher PID lúc khởi chạy: 8132,
+process.json trong run directory ghi PID/log; cần xác minh lại command line và report
+khi theo dõi, không chỉ dựa vào PID vì PID có thể tái sử dụng. Start-Process dùng
+WindowStyle Hidden và redirect stdout/stderr vào run directory; không phụ thuộc phiên
+exec tương tác. OS run.lock chống duplicate. Không chạy hai crawler song song.
+
+Report lượt mới sẽ đếm lại các trang được xác minh ở lượt này: cache_hits/media_cache_hits
+là tái sử dụng dữ liệu đã kiểm checksum, không phải tải lại. Chưa nghiệm thu full corpus,
+chưa chạy full cleaning/chunking, chưa tạo nhánh hệ thống thứ tư. Các mục dưới là lịch sử.
+
 ## Cập nhật resume sau gián đoạn
 
 Phát hiện report còn running nhưng không có tiến trình crawler. Checkpoint ghi nhận
