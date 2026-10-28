@@ -2,12 +2,18 @@
 // Phụ trách: TV4 · [S2] File api.ts viết tay
 
 // Hợp đồng frontend tạm theo SRS §5; chờ TV1 chốt OpenAPI v1.
+// S2: đã đối chiếu docs/api/openapi.json v0.1.0; ghi chú trên mô tả bản nháp ban đầu.
+export const MAX_MESSAGE_CHARS = 2000;
+export const MAX_FEEDBACK_CHARS = 500;
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
 export interface Source {
   index: number;
   title: string;
-  section?: string;
+  section?: string | null;
   url: string;
-  text?: string;
+  text?: string | null;
   origin?: "web" | "corpus";
 }
 
@@ -19,16 +25,17 @@ export function isSource(value: unknown): value is Source {
     Number(source.index) > 0 &&
     typeof source.title === "string" &&
     typeof source.url === "string" &&
-    (source.section === undefined || typeof source.section === "string") &&
-    (source.text === undefined || typeof source.text === "string") &&
+    (source.section == null || typeof source.section === "string") &&
+    (source.text == null || typeof source.text === "string") &&
     (source.origin === undefined || source.origin === "web" || source.origin === "corpus")
   );
 }
 export interface ChatRequest {
-  conversation_id: string | null;
+  conversation_id?: string | null;
   message: string;
-  channel: "web";
-  options: { lang: "auto"; spoilers: boolean };
+  channel: "web" | "discord";
+  external_ref?: string | null;
+  options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean };
 }
 export interface ChatResponse {
   conversation_id: string;
@@ -36,7 +43,25 @@ export interface ChatResponse {
   answer: string;
   sources: Source[];
   grounded: boolean;
-  latency_ms?: number;
+  latency_ms: number;
+}
+export interface FeedbackRequest {
+  message_id: string;
+  rating: 1 | -1;
+  reason?: string | null;
+}
+export interface ConversationOut {
+  id: string;
+  channel: "web" | "discord";
+  created_at: string;
+  messages: {
+    id: string;
+    role: "user" | "assistant";
+    content: string;
+    sources: Source[];
+    grounded?: boolean | null;
+    created_at: string;
+  }[];
 }
 export type StreamEvent =
   | { type: "status"; status: string }

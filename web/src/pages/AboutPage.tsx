@@ -12,7 +12,9 @@ export default function AboutPage() {
         <em>{"Câu chuyện có dấu vết."}</em>
       </h1>
       <p className="lead">
-        {"Index Beast là dự án của nhóm 4 Hollows, tìm hiểu lore Elden Ring base game bằng tiếng Việt và tiếng Anh."}
+        {
+          "Index Beast là dự án của nhóm 4 Hollows, giúp tìm hiểu cốt truyện Elden Ring bản gốc qua giao diện tiếng Việt."
+        }
       </p>
       <section>
         <h2>{"Từ câu hỏi đến bằng chứng"}</h2>

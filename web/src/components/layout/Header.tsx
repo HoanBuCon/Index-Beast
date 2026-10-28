@@ -20,9 +20,6 @@ export default function Header({ sidebarToggle }: { sidebarToggle?: ReactNode })
           </span>
         </Link>
       </div>
-      <div className="header-actions">
-        <span className="header-note">4 HOLLOWS / BASE GAME</span>
-      </div>
     </header>
   );
 }

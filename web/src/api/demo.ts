@@ -30,6 +30,7 @@ export async function demoChat(
     conversation_id: body.conversation_id ?? crypto.randomUUID(),
     message_id: crypto.randomUUID(),
     grounded: false,
+    latency_ms: 0,
     answer:
       "Đây là **phản hồi JSON minh họa của frontend**, không phải kết quả RAG hay API của TV1.\n\nBạn vừa gửi một câu hỏi. Giao diện đã đi qua trạng thái chờ và nhận một câu trả lời hoàn chỉnh. Nguồn [1] chỉ dùng để thử hiển thị.\n\n- Chọn **Kết nối API (JSON)** để gửi tới `/api/v1/chat`.\n- Chọn tình huống **Lỗi** hoặc **Phản hồi chậm** để kiểm tra lỗi, thử lại và hủy.",
     sources: [
@@ -80,6 +81,7 @@ export async function* demoStream(body: ChatRequest, signal: AbortSignal): Async
       conversation_id: body.conversation_id ?? crypto.randomUUID(),
       message_id: crypto.randomUUID(),
       grounded: false,
+      latency_ms: 0,
     },
   };
 }

@@ -8,11 +8,24 @@ database, bot hay hạ tầng. Các ghi chú đầu tệp được giữ nguyên
 Tại thư mục `web`, chạy `npm.cmd ci` lần đầu, rồi `npm.cmd run dev`. Cổng đọc từ `WEB_PORT` ở `.env` gốc
 (mặc định 15173); proxy `/api` sang `API_PORT` theo cấu hình Vite đã có. Không đưa secret `.env` vào web.
 
+Từ thư mục gốc dự án, có thể chạy `make web` trong Git Bash/WSL để khởi động frontend thay cho việc cd vào web.
+Lệnh không tự chạy backend; mở terminal khác chạy `make api` nếu muốn gửi câu hỏi tới API mock.
+
 - `npm.cmd run build`: TypeScript và build tĩnh vào `dist/`.
 - `npm.cmd test`: kiểm tra JSON `/chat`, response sai, hủy request, thử lại, mock cục bộ, SSE và HTTP 429 bằng fetch giả.
+- `npm.cmd run test:integration`: chạy HTTP thật qua proxy Vite tới API mock nguyên bản của TV1.
+  Cần Python có các dependency backend; ưu tiên `backend/.venv`, hoặc chỉ định executable bằng `WEB_TEST_PYTHON`.
+  Test tự tạo và dọn server riêng ở cổng do hệ điều hành cấp, chỉ bind `127.0.0.1`; không cần DB, LLM hay secret.
 - `npm.cmd run format:check`: kiểm tra định dạng.
 
 ## Chức năng
+
+- Logo ELDEN RING PNG nền trong suốt đã được bỏ khỏi màn hình chat theo yêu cầu người dùng.
+  Ba nút gợi ý Nhân vật / Sự kiện / Thế giới cũng đã được bỏ; giữ lời chào và ô nhập.
+  Tệp `src/assets/elden-ring-logo.png` được đóng gói cùng web, lấy từ
+  [trang Elden Ring của Bandai Namco](https://en.bandainamcoent.eu/elden-ring/elden-ring)
+  ([ảnh nguồn](https://static.bandainamcoent.eu/high/elden-ring/elden-ring/00-page-setup/eldenring_new.png)).
+  Logo thuộc thương hiệu gốc, không phải logo do nhóm tạo.
 
 - Font Mantinia Regular từ thư mục người dùng cung cấp `web/Mantinia Regular/` được dùng cho logo.
   File OTF không có glyph trong khối tiếng Việt U+1EA0–U+1EF9, vì vậy tiêu đề và nội dung
@@ -23,70 +36,73 @@ Tại thư mục `web`, chạy `npm.cmd ci` lần đầu, rồi `npm.cmd run dev
   Giữ theme tối/vàng Erdtree, viền vuông và ảnh nền chỉ ở Main Content. Không thêm Shop, Library,
   upload hay voice từ ứng dụng tham khảo vì không thuộc nhiệm vụ UI chat Sprint 2 của TV4.
 
-- Giao diện, câu hỏi gợi ý và phản hồi minh họa dùng tiếng Việt; ngày hiển thị theo `vi-VN`.
+- Giao diện và phản hồi minh họa dùng tiếng Việt; ngày hiển thị theo `vi-VN`.
   Đã bỏ nút VI/EN và bộ bản dịch tiếng Anh. Lựa chọn ngôn ngữ cũ trong localStorage được bỏ qua.
   Không tự dịch nội dung hội thoại hoặc dữ liệu API; tên riêng và thương hiệu giữ nguyên.
 
-- `/`: chat, gợi ý, Enter/Shift+Enter, dừng sinh, thử lại, Markdown không render HTML thô, nguồn và hộp trích dẫn.
+- `/`: chat, Enter/Shift+Enter, dừng sinh, thử lại, Markdown không render HTML thô, nguồn và hộp trích dẫn.
 - Lịch sử khách: localStorage, tối đa 30 cuộc trò chuyện, xóa từng cuộc; lỗi lưu trữ không làm hỏng trang.
-- Chế độ mặc định **Xem thử giao diện**: mock JSON cục bộ, có nhãn minh họa, không gọi LLM hoặc backend.
-  Feedback ở đây chỉ hiển thị xác nhận thử, không gửi hoặc lưu vào server.
-- **Kết nối API (JSON)**: gửi POST `/api/v1/chat` theo luồng Sprint 2, chờ JSON hoàn chỉnh và kiểm tra schema trước khi render.
+- Cuộc trò chuyện mới mặc định gọi POST `/api/v1/chat` theo luồng Sprint 2: dùng dịch vụ mock của TV1,
+  chờ JSON hoàn chỉnh và kiểm tra schema trước khi render. Không còn bộ chọn chế độ hoặc tình huống thử trên sidebar.
   Timeout 30 giây, có nút Dừng, báo lỗi và Thử lại. Không tự gửi lại request hoặc chuyển sang dữ liệu giả.
-- **Kết nối API (SSE)**: giữ luồng `/api/v1/chat/stream` cho Sprint 3. Câu trả lời bị ngắt được đánh dấu chưa hoàn tất.
+- Các cuộc trò chuyện demo cũ vẫn mở được và giữ nhãn minh họa; tạo mới luôn dùng API.
+  Demo cục bộ giữ trong `src/api/demo.ts` để kiểm thử; feedback demo không gửi server.
+- Client SSE `/api/v1/chat/stream` giữ cho Sprint 3, chưa bật cho cuộc trò chuyện mới. Câu trả lời bị ngắt được đánh dấu chưa hoàn tất.
+- Ô nhập tự giãn, tối đa 2.000 ký tự theo OpenAPI; lý do phản hồi tối đa 500 ký tự. Gửi `options.lang=vi` cho giao diện tiếng Việt.
 - `/about`: phạm vi, nguồn, CC BY-SA, nhóm, lưu trữ trên trình duyệt và disclaimer.
 - `/admin`: form token, danh sách hội thoại, tra cứu trace, feedback xấu, ingestion, eval. Token chỉ nằm trong memory.
   Quyền truy cập phải do backend kiểm tra; frontend không thay thế xác thực.
 - Theme tối/vàng Erdtree, responsive từ 360px, trạng thái focus và dialog dùng bàn phím.
 
-## Hợp đồng chờ TV1 xác nhận
+## Kết nối và thử API mock Sprint 2
 
-### Tự kiểm tra UI Sprint 2 khi chưa có backend
+1. Khởi động API theo hướng dẫn của TV1 ở README gốc (`make api` dùng `API_PORT` trong `.env`).
+2. Tại `web`, chạy `npm.cmd run dev`, mở địa chỉ Vite in trong terminal.
+3. Bấm **Cuộc trò chuyện mới**, nhập câu hỏi và Enter. Trong Network phải có POST `/api/v1/chat`,
+   header `X-Request-ID`, response JSON có câu trả lời, nguồn, UUID và `latency_ms`.
+4. Hỏi tiếp: request gửi lại `conversation_id` nhận được; nguồn bấm được để xem trích đoạn.
+5. Dùng các câu hỏi đặc biệt của mock để thử:
 
-1. Chọn **Xem thử giao diện**, tình huống **Thành công**: gửi câu hỏi, quan sát trạng thái chờ rồi câu trả lời JSON mẫu, Markdown và nguồn.
-2. Chọn **Lỗi** rồi gửi: phải thấy thông báo lỗi. Chuyển tình huống sang **Thành công**, bấm **Thử lại**:
-   câu hỏi lỗi được gửi lại mà không nhân đôi lượt trong lịch sử frontend.
-3. Chọn **Phản hồi chậm**, gửi rồi bấm **Dừng** trước khi hết 6 giây: request mẫu bị hủy, không xuất hiện câu trả lời muộn.
-4. Trong lúc chờ, không gửi trùng hoặc chuyển cuộc trò chuyện; vẫn có thể đóng/mở sidebar.
-5. Khi TV1 có API, chọn **Kết nối API (JSON)**, gửi rồi kiểm tra Network có POST `/api/v1/chat` và response đúng contract.
+| Câu hỏi            | Kết quả mong đợi                                                             |
+| ------------------ | ---------------------------------------------------------------------------- |
+| `/mock-ungrounded` | Không đủ bằng chứng, `grounded=false`, danh sách nguồn rỗng                  |
+| `/mock-error`      | Báo lỗi 502 thân thiện, có Thử lại; không chuyển sang demo                   |
+| `/mock-429`        | Báo gửi quá nhanh, hiển thị thời gian chờ theo `Retry-After`                 |
+| `/mock-slow`       | Hiện đang tìm khoảng 5 giây; Dừng hủy request và không nhận câu trả lời muộn |
 
-Mock cục bộ chỉ chứng minh hành vi frontend, **không hoàn thành checklist “Gọi /chat mock của backend”**.
-Các ghi chú cũ và cấu trúc `pages → hooks → api` được giữ; `src/api/chat.ts` gom JSON/SSE về sự kiện cho UI hiện có.
+`/mock-error` luôn trả lỗi; bấm Thử lại với chính câu này vẫn lỗi là đúng. Để thử phục hồi, gửi câu hỏi bình thường.
+Cuộc trò chuyện mock lưu trong RAM backend: sau khi backend khởi động lại, hãy tạo cuộc trò chuyện mới nếu nhận 404.
+Nếu API chưa chạy, web hiển thị lỗi kết nối; không tự tạo câu trả lời giả.
 
-Backend hiện mới có health và dev LLM; schema chat/admin còn là khung. Type trong `src/api/types.ts` là giao kèo
-frontend dự kiến theo SRS, **chưa phải OpenAPI đã được backend xác nhận**. Điểm thay đổi khi tích hợp gom ở `src/api/`.
+## Hợp đồng API đã đối chiếu
 
-| Request                                | Nội dung dự kiến                                               |
-| -------------------------------------- | -------------------------------------------------------------- |
-| POST `/api/v1/chat`                    | ChatRequest → ChatResponse JSON                                |
-| POST `/api/v1/chat/stream`             | ChatRequest → `text/event-stream`                              |
-| POST `/api/v1/feedback`                | `{ message_id, rating: 1 hoặc -1, reason }`                    |
-| GET `/api/v1/admin/stats`              | AdminStats: conversations, feedback, ingestion_jobs, eval_runs |
-| GET `/api/v1/admin/trace/{message_id}` | JSON trace; header `X-Admin-Token` như stats                   |
+Nguồn: [OpenAPI v1](../docs/api/openapi.json) và [bàn giao TV1](../docs/handover/2026-10-28_s2-tv1_api-contract-v1-va-loi-chuan.md).
+Type trong `src/api/types.ts` được viết tay, không sửa OpenAPI hoặc schema backend.
 
-SSE: mỗi event kết thúc bằng một dòng trống, `data` là JSON:
+| Request                                       | Client web                                                                   |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| POST `/api/v1/chat`                           | `chat`: JSON, timeout 30 giây, hủy qua AbortSignal                           |
+| POST `/api/v1/chat/stream`                    | `chatStream`: đọc status/token/sources/done/error, phát hiện ngắt trước done |
+| POST `/api/v1/feedback`                       | `sendFeedback`: rating 1 hoặc -1, lý do tối đa 500 ký tự, response 204       |
+| GET `/api/v1/conversations/{conversation_id}` | `getConversation`: kiểm tra UUID và cấu trúc lịch sử                         |
 
-```text
-event: status
-data: {"status":"retrieving"}
+- Câu hỏi có 1–2.000 ký tự sau khi bỏ khoảng trắng đầu/cuối; request hỗ trợ `external_ref` tùy chọn.
+- Response bắt buộc UUID `conversation_id`/`message_id`, answer, sources, grounded và latency_ms.
+- Source cho phép `section`/`text` là null; `origin` là corpus hoặc web.
+- SSE done cũng có UUID, grounded và latency_ms. Lỗi HTTP không hiển thị nội dung nội bộ của provider.
+- Giao diện admin và client `/admin/*` hiện là khung S5; các endpoint này chưa nằm trong OpenAPI v1.
+  Không coi admin đã được tích hợp, không sửa API để khớp khung frontend.
 
-event: token
-data: {"token":"Nội dung"}
+## Kiểm tra thực tế và giới hạn
 
-event: sources
-data: {"sources":[{"index":1,"title":"Nguồn","url":"https://example.org","text":"Trích đoạn"}]}
-
-event: done
-data: {"conversation_id":"uuid","message_id":"uuid","grounded":true}
-
-```
-
-Event `error` báo lỗi và giữ phần trả lời dở dang. HTTP 429 đọc `Retry-After`. API có thể bổ sung dữ liệu nhưng
-cần đồng bộ tên trường và kiểu trước khi kiểm thử tích hợp. Nguồn được gửi trước `done`.
-
-## Việc cần phối hợp
-
-TV1 xác nhận contract và header auth, triển khai API; TV3 cung cấp pipeline RAG/trace; TV2 cung cấp dữ liệu.
-Sau đó mới có thể xác nhận end-to-end, chất lượng câu trả lời và chính sách lưu server. S6 UAT, Lighthouse ≥85,
-review thiết kế của nhóm, slide/video và phát hành cần thực hiện với dữ liệu và người dùng thật; không coi build đạt
-là bằng chứng những đầu việc này đã hoàn thành. OAuth vẫn thuộc backlog chờ ADR-005.
+- `npm.cmd run build`: TypeScript và build tĩnh đạt.
+- `npm.cmd test`: 17 test đạt, gồm giới hạn OpenAPI, null source, JSON/SSE, retry và hủy request.
+- `npm.cmd run test:integration`: 9 test đạt (1 bài tổng và 8 bài con), dùng fetch HTTP thật qua Vite
+  tới factory/route/MockChatService nguyên bản của backend trong bộ gá `web/tests/integration/mock_backend.py`.
+  Bao phủ hỏi tiếp, lịch sử, feedback, JSON→UI events, SSE, không bằng chứng, 422/429/502/404, chậm, hủy và timeout.
+  Timeout ngắn 50 ms trong test kiểm tra đường xử lý timeout; mặc định ứng dụng vẫn là 30 giây.
+- Bộ gá chỉ truyền context thử nghiệm để không tạo kết nối DB/Redis/Qdrant/LLM; không thay nội dung response của TV1.
+- Chưa kiểm thử thao tác trình duyệt tự động hoặc xác nhận trực quan trên mọi màn hình; không coi kiểm thử HTTP
+  là bằng chứng hoàn thành UAT, Lighthouse, production hoặc chất lượng RAG.
+- Phạm vi lần này chỉ web S1–S2 của TV4. Bot `/ask` chưa được triển khai; review nhóm được bỏ qua theo yêu cầu.
+- [Bàn giao TV4](../docs/handover/2026-10-28_s2-tv4_web-api-mock.md) ghi phạm vi và kết quả kiểm tra.

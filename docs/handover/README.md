@@ -43,3 +43,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-28 | TV1 (Hoanbucon) | [Schema PostgreSQL và migrations](2026-10-28_s2-tv1_schema-postgresql-va-migrations.md) |
 | 2026-10-28 | TV1 (Hoanbucon) | [Hợp đồng API v1, mock và lỗi chuẩn](2026-10-28_s2-tv1_api-contract-v1-va-loi-chuan.md) |
 | 2026-10-28 | TV1 (Hoanbucon) | [Audit mã API và DB sau PR #28, #29](2026-10-28_s2-tv1_audit-api-va-db.md) |
+| 2026-10-28 | TV4 (QuyVuiVe) | [Web: đối chiếu OpenAPI v1 và tích hợp API mock Sprint 2](2026-10-28_s2-tv4_web-api-mock.md) |

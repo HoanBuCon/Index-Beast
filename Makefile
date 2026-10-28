@@ -8,7 +8,7 @@ INFRA   := postgres qdrant redis
 # của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
 API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),18000)
 
-.PHONY: help up debug-up down logs ps migrate openapi test lint format api constraints
+.PHONY: help up debug-up down logs ps migrate openapi test lint format api web constraints
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -49,6 +49,10 @@ format:          ## Tự format code
 
 api:             ## Chạy API local (auto-reload) tại http://127.0.0.1:$(API_PORT)
 	cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port $(API_PORT) --no-access-log
+
+# Frontend TV4: Vite đọc WEB_PORT và proxy API_PORT từ .env gốc, không ghi cứng cổng ở đây.
+web:             ## Chạy frontend Vite (cần npm ci trong web ở lần đầu)
+	cd web && npm run dev
 
 constraints:     ## In pip freeze trên Linux (Docker) để cập nhật backend/constraints.txt
 	docker run --rm -v "$(CURDIR)/backend:/src:ro" python:3.11.9-slim-bookworm sh -c "\

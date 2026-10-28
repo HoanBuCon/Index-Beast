@@ -56,13 +56,28 @@ test("done validates message and conversation IDs", async (t) => {
     globalThis,
     "fetch",
     async () =>
-      new Response(body('event: done\ndata: {"conversation_id":"c","message_id":"m","grounded":true}\n\n'), {
-        headers: { "Content-Type": "text/event-stream" },
-      }),
+      new Response(
+        body(
+          'event: done\ndata: {"conversation_id":"11111111-1111-4111-8111-111111111111","message_id":"22222222-2222-4222-8222-222222222222","grounded":true,"latency_ms":1}\n\n',
+        ),
+        {
+          headers: { "Content-Type": "text/event-stream" },
+        },
+      ),
   );
   const events = [];
   for await (const event of chatStream(request, new AbortController().signal)) events.push(event);
-  assert.deepEqual(events, [{ type: "done", data: { conversation_id: "c", message_id: "m", grounded: true } }]);
+  assert.deepEqual(events, [
+    {
+      type: "done",
+      data: {
+        conversation_id: "11111111-1111-4111-8111-111111111111",
+        message_id: "22222222-2222-4222-8222-222222222222",
+        grounded: true,
+        latency_ms: 1,
+      },
+    },
+  ]);
 });
 test("429 preserves Retry-After without exposing provider body", async (t) => {
   t.mock.method(
@@ -71,7 +86,7 @@ test("429 preserves Retry-After without exposing provider body", async (t) => {
     async () => new Response("private-provider-error", { status: 429, headers: { "Retry-After": "30" } }),
   );
   await assert.rejects(
-    sendFeedback("message", -1, "reason"),
+    sendFeedback("22222222-2222-4222-8222-222222222222", -1, "reason"),
     (error: unknown) =>
       error instanceof ApiError &&
       error.status === 429 &&

@@ -24,6 +24,11 @@ export async function* replyEvents(
   yield { type: "sources", sources: reply.sources };
   yield {
     type: "done",
-    data: { conversation_id: reply.conversation_id, message_id: reply.message_id, grounded: reply.grounded },
+    data: {
+      conversation_id: reply.conversation_id,
+      message_id: reply.message_id,
+      grounded: reply.grounded,
+      latency_ms: reply.latency_ms,
+    },
   };
 }
