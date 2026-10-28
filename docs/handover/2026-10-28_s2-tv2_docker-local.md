@@ -1,5 +1,21 @@
 # TV2 — cài Docker local phục vụ kiểm chứng ingestion
 
+## Trạng thái mới nhất: đã gỡ Docker theo yêu cầu người dùng
+
+Ngày 28/10/2026, sau reboot hypervisor hoạt động nhưng Docker lỗi khởi động khi ghi
+settings-store.json. AppData/Roaming/Docker có thuộc tính Encrypted; chưa chứng minh
+được nguyên nhân gốc. Thử cipher trên riêng thư mục Docker bị Access denied, chưa
+xác nhận giải mã thành công. Không thay đổi mã hóa toàn AppData.
+
+Người dùng yêu cầu gỡ để tự cài lại. Đã chạy uninstaller chính thức per-user,
+exit 0, log Uninstalled finished. Registry uninstall Docker Desktop và thư mục
+Programs/DockerDesktop đã được gỡ; không còn process Docker được phát hiện.
+Thư mục AppData/Roaming/Docker và AppData/Local/Docker còn tồn dư. Giữ WSL,
+VirtualMachinePlatform và mã nguồn/raw/media dự án. Không khởi động lại dự án hoặc
+cài lại Docker sau yêu cầu này. PostgreSQL/ingestion vẫn chưa nghiệm thu.
+
+Các mục dưới ghi lịch sử cài đặt trước khi gỡ, không phải trạng thái hiện tại.
+
 Nhánh: feature/s2-tv2-chunking-metadata. Người dùng yêu cầu cài Docker và tiếp tục ba
 thẻ TV2; đây là chuẩn bị môi trường local, không thay đổi hạ tầng hoặc schema TV1.
 
