@@ -34,3 +34,8 @@ Ruff check/format đạt cho script. Đã xác nhận counts, checksum CSV đún
 ## Việc kế tiếp
 
 TV2 bổ sung typed dialogue/anchor/variant context rồi thử chunker với kiểm token coverage và trigger coverage. Chưa sửa các phần đó trong lượt nghiên cứu này; chưa cập nhật trạng thái ADR-003 hoặc SRS. TV3 review metadata và đo retrieval theo vai trò; không sửa embedding/indexing/LLM/entities/DB của các thành viên khác. Các file làm sạch và CSV của lượt trước được giữ nguyên.
+
+
+## Cập nhật trạng thái Git
+
+Sau lượt triển khai/nghiên cứu này, mã đã được rebase và push lên nhánh riêng theo yêu cầu người dùng. Xem [bàn giao Git](2026-10-28_s2-tv2_day-ma-nguon-github.md) để biết commit, kiểm tra sau rebase và trạng thái review.

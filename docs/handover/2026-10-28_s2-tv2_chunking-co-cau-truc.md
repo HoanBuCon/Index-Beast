@@ -57,3 +57,8 @@ Scope base là heuristic, chưa xác minh ngữ nghĩa toàn bộ. 564 review/6 
 Nhiều chunk ngắn được giữ vì nguyên vẹn nghĩa/điều kiện; chưa có retrieval benchmark để gọi 450/50 tối ưu. Cần TV3 đánh giá retrieval và phối hợp TV2 review chunk boundaries trước production. ADR-003 vẫn Proposed chờ review chính thức; không đổi trạng thái SRS/planning hoặc tự đánh dấu toàn bộ S2 Done. Timestamp artifact làm file hash thay đổi giữa lượt; logical hash/IDs/text vẫn ổn định.
 
 Sự cố đã xử lý: Windows console CP1252 không in được một số đoạn Unicode khi preview; dùng UTF-8 cho stdout preview, các artifact luôn ghi UTF-8. Không phải lỗi dữ liệu. Các invariant budget/coverage không được thay bằng việc nhìn số chunk hoặc model truncation.
+
+
+## Cập nhật trạng thái Git
+
+Sau lượt triển khai/nghiên cứu này, mã đã được rebase và push lên nhánh riêng theo yêu cầu người dùng. Xem [bàn giao Git](2026-10-28_s2-tv2_day-ma-nguon-github.md) để biết commit, kiểm tra sau rebase và trạng thái review.

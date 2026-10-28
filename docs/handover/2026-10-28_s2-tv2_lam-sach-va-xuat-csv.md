@@ -55,3 +55,8 @@ Không đủ evidence thì giữ review; 217 section clean có source_type unkno
 Image IDs trong lore là JSON array, chỉ nối scope base theo cùng source_id/revision/section khớp duy nhất. Infobox giữ ngữ cảnh riêng; gallery hoặc section trùng tên/mơ hồ không được gắn hàng loạt. Metadata ảnh có dấu hiệu DLC được review. Không sinh caption, không thay quyền ảnh unknown. local_path/source_snapshot là absolute path trên máy này; chuyển dữ liệu sang máy khác cần relocate prefix và mang theo raw/media.
 
 Các artifact CSV/processed/report nằm trong backend/data nên bị Git ignore; bản giao cho người dùng được sao chép ra outputs của chat, không đẩy dữ liệu crawl vào repo. Chưa thay đổi trạng thái SRS/planning hoặc đánh dấu task Done trước review. Tài liệu này và mã cần review qua PR về develop theo quy ước; chưa tự merge.
+
+
+## Cập nhật trạng thái Git
+
+Sau lượt triển khai/nghiên cứu này, mã đã được rebase và push lên nhánh riêng theo yêu cầu người dùng. Xem [bàn giao Git](2026-10-28_s2-tv2_day-ma-nguon-github.md) để biết commit, kiểm tra sau rebase và trạng thái review.
