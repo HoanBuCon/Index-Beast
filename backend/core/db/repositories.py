@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core.db.models import Chunk, Conversation, Document, Feedback, IngestionJob, Message
+from core.ids import document_id
 
 
 async def create_conversation(
@@ -74,8 +75,11 @@ async def add_feedback(session: AsyncSession, message_id: uuid.UUID, rating: int
 
 
 async def upsert_document(session: AsyncSession, **fields: Any) -> uuid.UUID:
-    """Theo (source, source_id); trả id. Trang đã có thì cập nhật revision, hash, trạng thái…"""
-    values = {"id": uuid.uuid4(), **fields}
+    """Theo (source, source_id); trả id. Trang đã có thì cập nhật revision, hash, trạng thái…
+
+    id mặc định là core.ids.document_id(source, source_id): dựng lại DB vẫn ra cùng id, chunk_id không đổi.
+    """
+    values = {"id": document_id(fields["source"], fields["source_id"]), **fields}
     update = {k: v for k, v in fields.items() if k not in ("source", "source_id")}
     update["updated_at"] = datetime.now(UTC)
     statement = (

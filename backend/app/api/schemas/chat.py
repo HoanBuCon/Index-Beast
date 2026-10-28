@@ -9,7 +9,7 @@ Phụ trách: TV1 · [S2] API contract v1
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 MAX_MESSAGE_CHARS = 2000
 
@@ -21,7 +21,8 @@ class ChatOptions(BaseModel):
 
 class ChatRequest(BaseModel):
     conversation_id: UUID | None = Field(None, description="Bỏ trống để tạo hội thoại mới.")
-    message: Annotated[str, Field(min_length=1, max_length=MAX_MESSAGE_CHARS)]
+    # strip trước khi kiểm tra độ dài: câu hỏi toàn khoảng trắng bị từ chối, không tới LLM
+    message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_CHARS)]
     channel: Literal["web", "discord"]
     external_ref: Annotated[str, Field(max_length=128)] | None = Field(
         None, description="Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô."

@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from core.config import Settings
 from core.db import repositories as repo
 from core.db.models import Base
+from core.ids import document_id
 
 pytestmark = pytest.mark.integration
 
@@ -138,7 +139,7 @@ async def test_upsert_document_is_idempotent_and_replace_chunks(session: AsyncSe
     first = await repo.upsert_document(session, **fields)
     second = await repo.upsert_document(session, **{**fields, "revision_id": 2, "raw_hash": "h2"})
 
-    assert first == second
+    assert first == second == document_id("wikigg", "123")
 
     def chunk(ordinal: int) -> dict:
         return {"id": uuid.uuid4(), "ordinal": ordinal, "text": f"t{ordinal}", "token_count": 3, "game_scope": "base"}
