@@ -32,7 +32,35 @@ async function request(path: string, init: RequestInit = {}) {
   return response;
 }
 export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<ChatResponse> {
-  return (await request("/chat", { method: "POST", body: JSON.stringify(body), signal })).json();
+  // S2: JSON /chat độc lập với SSE. Timeout áp dụng cả khi đọc body phản hồi.
+  const timeout = AbortSignal.timeout(30_000);
+  const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
+  const response = await request("/chat", { method: "POST", body: JSON.stringify(body), signal: combined });
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch (error) {
+    if (combined.aborted) throw combined.reason;
+    throw new Error("API trả về JSON không hợp lệ.");
+  }
+  if (!data || typeof data !== "object") throw new Error("Dữ liệu câu trả lời không hợp lệ.");
+  const result = data as Record<string, unknown>;
+  if (
+    typeof result.conversation_id !== "string" ||
+    !result.conversation_id.trim() ||
+    typeof result.message_id !== "string" ||
+    !result.message_id.trim() ||
+    typeof result.answer !== "string" ||
+    !result.answer.trim() ||
+    typeof result.grounded !== "boolean" ||
+    !Array.isArray(result.sources) ||
+    !result.sources.every(isSource) ||
+    (result.latency_ms !== undefined &&
+      (typeof result.latency_ms !== "number" || !Number.isFinite(result.latency_ms) || result.latency_ms < 0))
+  ) {
+    throw new Error("Dữ liệu câu trả lời không hợp lệ.");
+  }
+  return data as ChatResponse;
 }
 
 // SSE có thể tách giữa ký tự UTF-8, giữa CR/LF hoặc nhiều dòng data; không parse theo từng network chunk.

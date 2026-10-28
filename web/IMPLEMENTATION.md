@@ -9,27 +9,49 @@ Tại thư mục `web`, chạy `npm.cmd ci` lần đầu, rồi `npm.cmd run dev
 (mặc định 15173); proxy `/api` sang `API_PORT` theo cấu hình Vite đã có. Không đưa secret `.env` vào web.
 
 - `npm.cmd run build`: TypeScript và build tĩnh vào `dist/`.
-- `npm.cmd test`: kiểm tra SSE, packet UTF-8/CRLF, stream bị ngắt và HTTP 429 bằng fetch giả.
+- `npm.cmd test`: kiểm tra JSON `/chat`, response sai, hủy request, thử lại, mock cục bộ, SSE và HTTP 429 bằng fetch giả.
 - `npm.cmd run format:check`: kiểm tra định dạng.
 
 ## Chức năng
 
-- Nút **VI / EN** trên thanh điều hướng đổi ngôn ngữ giao diện, câu hỏi gợi ý và định dạng ngày.
-  Lựa chọn được lưu trong localStorage (`indexbeast.language`); nếu lưu trữ bị chặn vẫn đổi được trong phiên.
-  Không tự dịch nội dung hội thoại hoặc dữ liệu API, không gọi dịch vụ dịch thuật. Thêm bản dịch tại
-  `src/lib/translations.json`; các ghi chú mã nguồn giữ nguyên tiếng Việt.
+- Font Mantinia Regular từ thư mục người dùng cung cấp `web/Mantinia Regular/` được dùng cho logo.
+  File OTF không có glyph trong khối tiếng Việt U+1EA0–U+1EF9, vì vậy tiêu đề và nội dung
+  tiếp tục dùng Segoe UI để giữ dấu chính xác. Font được Vite đóng gói cùng bản build, không tải từ CDN.
+
+- Bố cục tham khảo ảnh chat do người dùng cung cấp: thanh bên có cuộc trò chuyện mới, liên kết About/Admin
+  và lịch sử; màn hình trống đặt lời chào, ô nhập và gợi ý ở giữa. Khi có tin nhắn, ô nhập nằm cuối vùng chat.
+  Giữ theme tối/vàng Erdtree, viền vuông và ảnh nền chỉ ở Main Content. Không thêm Shop, Library,
+  upload hay voice từ ứng dụng tham khảo vì không thuộc nhiệm vụ UI chat Sprint 2 của TV4.
+
+- Giao diện, câu hỏi gợi ý và phản hồi minh họa dùng tiếng Việt; ngày hiển thị theo `vi-VN`.
+  Đã bỏ nút VI/EN và bộ bản dịch tiếng Anh. Lựa chọn ngôn ngữ cũ trong localStorage được bỏ qua.
+  Không tự dịch nội dung hội thoại hoặc dữ liệu API; tên riêng và thương hiệu giữ nguyên.
 
 - `/`: chat, gợi ý, Enter/Shift+Enter, dừng sinh, thử lại, Markdown không render HTML thô, nguồn và hộp trích dẫn.
 - Lịch sử khách: localStorage, tối đa 30 cuộc trò chuyện, xóa từng cuộc; lỗi lưu trữ không làm hỏng trang.
-- Chế độ mặc định **Xem thử giao diện**: dữ liệu cố định, có nhãn minh họa, không gọi LLM hoặc backend.
+- Chế độ mặc định **Xem thử giao diện**: mock JSON cục bộ, có nhãn minh họa, không gọi LLM hoặc backend.
   Feedback ở đây chỉ hiển thị xác nhận thử, không gửi hoặc lưu vào server.
-- **Kết nối API**: fetch SSE thật; lỗi không tự chuyển sang dữ liệu giả. Câu trả lời bị ngắt được đánh dấu chưa hoàn tất.
+- **Kết nối API (JSON)**: gửi POST `/api/v1/chat` theo luồng Sprint 2, chờ JSON hoàn chỉnh và kiểm tra schema trước khi render.
+  Timeout 30 giây, có nút Dừng, báo lỗi và Thử lại. Không tự gửi lại request hoặc chuyển sang dữ liệu giả.
+- **Kết nối API (SSE)**: giữ luồng `/api/v1/chat/stream` cho Sprint 3. Câu trả lời bị ngắt được đánh dấu chưa hoàn tất.
 - `/about`: phạm vi, nguồn, CC BY-SA, nhóm, lưu trữ trên trình duyệt và disclaimer.
 - `/admin`: form token, danh sách hội thoại, tra cứu trace, feedback xấu, ingestion, eval. Token chỉ nằm trong memory.
   Quyền truy cập phải do backend kiểm tra; frontend không thay thế xác thực.
 - Theme tối/vàng Erdtree, responsive từ 360px, trạng thái focus và dialog dùng bàn phím.
 
 ## Hợp đồng chờ TV1 xác nhận
+
+### Tự kiểm tra UI Sprint 2 khi chưa có backend
+
+1. Chọn **Xem thử giao diện**, tình huống **Thành công**: gửi câu hỏi, quan sát trạng thái chờ rồi câu trả lời JSON mẫu, Markdown và nguồn.
+2. Chọn **Lỗi** rồi gửi: phải thấy thông báo lỗi. Chuyển tình huống sang **Thành công**, bấm **Thử lại**:
+   câu hỏi lỗi được gửi lại mà không nhân đôi lượt trong lịch sử frontend.
+3. Chọn **Phản hồi chậm**, gửi rồi bấm **Dừng** trước khi hết 6 giây: request mẫu bị hủy, không xuất hiện câu trả lời muộn.
+4. Trong lúc chờ, không gửi trùng hoặc chuyển cuộc trò chuyện; vẫn có thể đóng/mở sidebar.
+5. Khi TV1 có API, chọn **Kết nối API (JSON)**, gửi rồi kiểm tra Network có POST `/api/v1/chat` và response đúng contract.
+
+Mock cục bộ chỉ chứng minh hành vi frontend, **không hoàn thành checklist “Gọi /chat mock của backend”**.
+Các ghi chú cũ và cấu trúc `pages → hooks → api` được giữ; `src/api/chat.ts` gom JSON/SSE về sự kiện cho UI hiện có.
 
 Backend hiện mới có health và dev LLM; schema chat/admin còn là khung. Type trong `src/api/types.ts` là giao kèo
 frontend dự kiến theo SRS, **chưa phải OpenAPI đã được backend xác nhận**. Điểm thay đổi khi tích hợp gom ở `src/api/`.

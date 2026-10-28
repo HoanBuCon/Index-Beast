@@ -2,7 +2,6 @@
 // Phụ trách: TV4 · [S2] UI chat cơ bản
 
 import { useState } from "react";
-import { useLanguage } from "../../lib/i18n";
 export default function MessageInput({
   busy,
   onSend,
@@ -12,7 +11,6 @@ export default function MessageInput({
   onSend: (text: string) => void;
   onStop: () => void;
 }) {
-  const { t } = useLanguage();
   const [text, setText] = useState("");
   function submit() {
     if (!busy && text.trim()) {
@@ -29,14 +27,14 @@ export default function MessageInput({
       }}
     >
       <label className="sr-only" htmlFor="question">
-        {t("Câu hỏi về lore Elden Ring")}
+        {"Câu hỏi về lore Elden Ring"}
       </label>
       <textarea
         id="question"
-        placeholder={t("Hỏi về một nhân vật, một bí ẩn, một thời đại…")}
+        placeholder={"Hỏi về một nhân vật, một bí ẩn, một thời đại…"}
         value={text}
         maxLength={8000}
-        rows={2}
+        rows={text.includes("\n") ? Math.min(text.split("\n").length, 5) : 1}
         disabled={busy}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
@@ -47,14 +45,21 @@ export default function MessageInput({
         }}
       />
       <div className="composer-bottom">
-        <small>{t("Enter để gửi · Shift + Enter xuống dòng")}</small>
+        <small>{"Enter để gửi · Shift + Enter xuống dòng"}</small>
         {busy ? (
           <button type="button" className="primary" onClick={onStop}>
-            {t("■ Dừng")}
+            <span aria-hidden="true">■</span>
+            <span className="sr-only">{"■ Dừng"}</span>
           </button>
         ) : (
-          <button className="primary" disabled={!text.trim()} type="submit">
-            {t("Gửi câu hỏi")}
+          <button
+            className="primary"
+            disabled={!text.trim()}
+            type="submit"
+            aria-label={"Gửi câu hỏi"}
+            title={"Gửi câu hỏi"}
+          >
+            <span className="sr-only">{"Gửi câu hỏi"}</span>
             <span aria-hidden="true">↑</span>
           </button>
         )}

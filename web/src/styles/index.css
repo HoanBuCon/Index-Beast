@@ -2,9 +2,18 @@
 
 @import "tailwindcss";
 
+/* Font do người dùng cung cấp; chỉ dùng cho chữ Latin vì không có glyph tiếng Việt có dấu. */
+@font-face {
+  font-family: "Mantinia";
+  src: url("../../Mantinia Regular/Mantinia Regular.otf") format("opentype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* Thu gọn thanh lịch sử không xóa hội thoại hoặc ngắt stream đang chạy. */
 .workspace.sidebar-collapsed {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: 62px minmax(0, 1fr);
 }
 .sidebar[hidden] {
   display: none;
@@ -32,16 +41,50 @@
   min-width: 0;
 }
 .sidebar-toggle {
+  position: absolute;
+  top: 24px;
+  left: 16px;
+  z-index: 10;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  color: #b9bdaf;
+  width: 30px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid #746540;
+  border-radius: 0;
+  color: #d9bc78;
+  background: #141613;
   flex-shrink: 0;
+}
+/* Logo và mũi tên dùng chung một nút, không đổi kích thước khi hover hoặc focus. */
+.sidebar-toggle .toggle-emblem,
+.sidebar-toggle .toggle-arrow {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  transition: opacity 160ms ease;
+}
+.sidebar-toggle .toggle-emblem {
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  line-height: 1;
+}
+.sidebar-toggle .toggle-arrow {
+  opacity: 0;
+}
+.sidebar-toggle:hover .toggle-emblem,
+.sidebar-toggle:focus-visible .toggle-emblem {
+  opacity: 0;
+}
+.sidebar-toggle:hover .toggle-arrow,
+.sidebar-toggle:focus-visible .toggle-arrow {
+  opacity: 1;
+}
+.sidebar-toggle:hover:not(:disabled) {
+  border-color: #d9bc78;
+  background: #d9bc7818;
 }
 @media (max-width: 900px) {
   .toolbar-start .archive-label {
@@ -53,22 +96,6 @@
   display: flex;
   align-items: center;
   gap: 18px;
-}
-.language-switch {
-  display: flex;
-  border: 1px solid #746540;
-  border-radius: 5px;
-  overflow: hidden;
-}
-.language-switch button {
-  border: 0;
-  border-radius: 0;
-  padding: 8px 10px;
-  font-size: 11px;
-}
-.language-switch button[aria-pressed="true"] {
-  background: #d9bc78;
-  color: #1e2318;
 }
 @media (max-width: 700px) {
   .header-actions {
@@ -117,7 +144,7 @@ button {
   background: transparent;
   border: 1px solid #46483c;
   padding: 0.65rem 1rem;
-  border-radius: 5px;
+  border-radius: 0;
   transition:
     background 0.16s,
     border-color 0.16s;
@@ -182,7 +209,7 @@ a {
   color: #eee8db;
   text-decoration: none;
   letter-spacing: 0.18em;
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: "Mantinia", "Segoe UI", serif;
   font-size: 20px;
 }
 .brand strong {
@@ -232,6 +259,7 @@ a {
   font-weight: 600;
 }
 .workspace {
+  position: relative;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   height: calc(100dvh - 60px);
@@ -268,7 +296,7 @@ a {
 .history-row {
   display: flex;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: 0;
   min-width: 0;
 }
 .history-row.selected {
@@ -337,6 +365,7 @@ a {
   background-repeat: no-repeat;
 }
 .chat-toolbar {
+  flex-wrap: wrap;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -351,7 +380,7 @@ a {
   display: inline-block;
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: 0;
   background: #d4bd7b;
   margin-right: 8px;
 }
@@ -359,7 +388,7 @@ select {
   padding: 6px;
   border: 1px solid #404734;
   background: #181d14;
-  border-radius: 4px;
+  border-radius: 0;
   color: #e0cfac;
   margin-left: 8px;
   font-size: 11px;
@@ -390,7 +419,7 @@ select {
   width: 72px;
   height: 72px;
   border: 1px solid #776b424d;
-  border-radius: 50%;
+  border-radius: 0;
   outline: 1px solid #776b4229;
   outline-offset: 9px;
   display: grid;
@@ -468,7 +497,7 @@ em {
 .composer {
   background: #1b2017;
   border: 1px solid #5a5d43;
-  border-radius: 7px;
+  border-radius: 0;
   box-shadow: 0 8px 32px #0003;
   padding: 15px;
 }
@@ -579,7 +608,7 @@ pre {
   overflow: auto;
   padding: 16px;
   border: 1px solid #434936;
-  border-radius: 5px;
+  border-radius: 0;
   background: #0f130c;
   max-height: 400px;
   font-size: 12px;
@@ -657,7 +686,7 @@ pre {
   color: #eee8db;
   background: #1d2318;
   border: 1px solid #b19b64;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 35px;
   width: min(520px, 100%);
   position: relative;
@@ -713,7 +742,7 @@ input {
   background: #151a11;
   color: #eee8db;
   border: 1px solid #596047;
-  border-radius: 4px;
+  border-radius: 0;
   padding: 10px;
 }
 .feedback input {
@@ -732,7 +761,7 @@ input {
   border: 1px solid #aa7e5d;
   padding: 12px;
   color: #f0c6aa;
-  border-radius: 5px;
+  border-radius: 0;
   font-size: 12px;
   line-height: 1.7;
   margin-bottom: 12px;
@@ -805,12 +834,12 @@ input {
 .disclaimer {
   padding: 20px;
   border: 1px solid #5a553b;
-  border-radius: 4px;
+  border-radius: 0;
 }
 .inline {
   display: inline-block;
   padding: 12px 20px;
-  border-radius: 4px;
+  border-radius: 0;
   text-decoration: none;
 }
 .admin-auth {
@@ -1008,6 +1037,358 @@ input {
     flex-basis: 100%;
   }
 }
+/* Bố cục chat tham khảo ảnh người dùng: sidebar gọn, ô nhập nằm giữa ở trạng thái rỗng.
+   Giữ theme Erdtree, viền vuông và các trạng thái chức năng của TV4. */
+.workspace .sidebar {
+  gap: 18px;
+  padding: 20px 16px;
+}
+.sidebar .new-chat {
+  padding: 11px 12px;
+  background: #d9bc7812;
+  border-color: #d9bc7833;
+  font-size: 13px;
+}
+.sidebar-nav {
+  display: grid;
+  gap: 3px;
+}
+.sidebar-nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  font-size: 12px;
+  color: #b9bcae;
+  text-decoration: none;
+}
+.sidebar-nav a:hover {
+  color: #e0c58c;
+  background: #d9bc780d;
+}
+.sidebar-nav a > span {
+  width: 18px;
+  font-size: 19px;
+  text-align: center;
+}
+.sidebar .sidebar-foot {
+  padding: 18px 8px 0;
+  flex-shrink: 0;
+}
+.sidebar-controls {
+  display: grid;
+  gap: 14px;
+  padding: 0 4px 14px;
+}
+.sidebar-controls label {
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  color: #b0a17b;
+}
+.sidebar-controls select {
+  width: 100%;
+  min-width: 0;
+  margin-left: 0;
+  padding: 8px;
+  font-size: 11px;
+}
+.sidebar-foot .sidebar-nav {
+  display: grid;
+  margin: 0 -4px;
+}
+.sidebar-foot .sidebar-nav a {
+  padding: 10px 8px;
+}
+.sidebar-reopen {
+  border-bottom: 0;
+  min-height: 52px;
+  padding: 8px 24px;
+}
+@media (max-width: 700px) {
+  .workspace .sidebar {
+    max-height: 55dvh;
+  }
+  .sidebar .sidebar-foot {
+    display: block;
+  }
+}
+.sidebar .sidebar-foot .archive-seal {
+  font-size: 24px;
+}
+.sidebar .sidebar-foot p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 8px 0;
+}
+.sidebar .sidebar-foot small {
+  margin-top: 12px;
+}
+.chat-panel {
+  background-image: linear-gradient(180deg, #141613ed, #141613f2), url("../assets/onion_ring.jpg");
+}
+.chat-toolbar {
+  min-height: 60px;
+  padding: 12px 24px;
+}
+.mode-note {
+  background: transparent;
+  color: #aeb29e;
+  font-size: 10px;
+}
+.chat-empty .chat-content {
+  display: flex;
+}
+.chat-empty .welcome {
+  width: 100%;
+  max-width: 900px;
+  padding: 45px 30px;
+  margin: auto;
+}
+.welcome-mark {
+  display: block;
+  font-size: 32px;
+  color: #d9bc78;
+  margin-bottom: 18px;
+}
+.chat-empty .welcome h1 {
+  font:
+    400 30px/1.4 "Segoe UI",
+    Arial,
+    sans-serif;
+  letter-spacing: normal;
+  margin: 0 0 12px;
+}
+.chat-empty .welcome .intro {
+  font-size: 13px;
+  margin-bottom: 32px;
+}
+.chat-empty .welcome-input {
+  width: 100%;
+  max-width: 760px;
+  padding: 0;
+}
+.composer {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-color: #62634c;
+  box-shadow: none;
+  background: #191d17;
+}
+.composer textarea {
+  grid-column: 1;
+  min-height: 36px;
+  padding: 6px 0;
+  resize: vertical;
+  font-size: 14px;
+}
+.composer-bottom {
+  grid-column: 2;
+  display: flex;
+  justify-content: center;
+}
+.composer-bottom small {
+  display: none;
+}
+.composer .primary {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 20px;
+}
+.composer .primary span {
+  margin: 0;
+}
+.chat-empty .suggestions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 25px 0 0;
+}
+.chat-empty .suggestions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #14161380;
+  border-color: #51543f;
+}
+.chat-empty .suggestions strong {
+  font:
+    500 11px/1.5 "Segoe UI",
+    Arial,
+    sans-serif;
+  letter-spacing: 0.05em;
+}
+.suggestion-icon {
+  color: #c6b27f;
+  font-size: 17px;
+}
+.chat-empty .scope-note {
+  margin: 20px 0 0;
+}
+@media (max-width: 700px) {
+  .workspace .sidebar {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+  .sidebar-nav {
+    display: flex;
+  }
+  .sidebar-nav a {
+    padding: 5px 10px;
+  }
+  .chat-empty .welcome {
+    padding: 35px 18px;
+  }
+  .chat-empty .welcome h1 {
+    font-size: 24px;
+  }
+  .chat-empty .welcome .intro {
+    margin-bottom: 24px;
+  }
+  .chat-empty .suggestions button {
+    padding: 8px 12px;
+  }
+  .composer {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .chat-toolbar {
+    padding: 10px 16px;
+  }
+}
+/* Logo, ngôn ngữ và điều hướng nằm trong sidebar dùng chung, không còn header phía trên. */
+.workspace {
+  height: 100dvh;
+}
+.sidebar .header {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid #34392c;
+}
+.sidebar .brand {
+  font-size: 16px;
+  gap: 8px;
+  letter-spacing: 0.05em;
+}
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sidebar-toggle-space {
+  width: 30px;
+  height: 34px;
+  flex-shrink: 0;
+}
+/* Giữ logo tại chỗ; khi đóng chỉ thu phần nội dung thành cột điều hướng. */
+.workspace.sidebar-collapsed .sidebar > :not(.sidebar-rail) {
+  display: none;
+}
+.workspace.sidebar-collapsed .sidebar {
+  padding: 76px 16px 20px;
+  max-height: none;
+  overflow: visible;
+  border-right: 1px solid #303328;
+}
+.sidebar-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.sidebar-rail a,
+.sidebar-rail button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 34px;
+  padding: 4px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  color: #b9bcae;
+  background: transparent;
+  text-decoration: none;
+}
+.sidebar-rail a:hover,
+.sidebar-rail button:hover:not(:disabled),
+.sidebar-rail a.active {
+  color: #e0c58c;
+  background: #d9bc7812;
+  border-color: #74654066;
+}
+.sidebar-rail .rail-admin {
+  margin-top: auto;
+}
+.workspace.sidebar-collapsed {
+  display: grid;
+  flex-direction: initial;
+}
+.sidebar-brand-row .brand {
+  min-width: 0;
+}
+.sidebar .brand-mark {
+  width: 30px;
+  height: 34px;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+.sidebar .brand small {
+  font-size: 7px;
+  letter-spacing: 0.14em;
+}
+.sidebar .header-actions {
+  width: 100%;
+  margin: 0;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sidebar .header-note {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+.sidebar-nav a.active {
+  color: #e0c58c;
+  background: #d9bc7812;
+}
+.document-panel {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+@media (max-width: 700px) {
+  .workspace > .sidebar-toggle {
+    top: 16px;
+  }
+  .workspace {
+    height: auto;
+    min-height: 100dvh;
+  }
+  .workspace .chat-panel {
+    min-height: 75dvh;
+  }
+  .sidebar .header {
+    flex-shrink: 0;
+  }
+}
+/* Giữ nguyên font toàn dòng tiếng Việt, tránh fallback từng ký tự làm lệch dấu. */
 @media (prefers-reduced-motion: reduce) {
   * {
     scroll-behavior: auto !important;

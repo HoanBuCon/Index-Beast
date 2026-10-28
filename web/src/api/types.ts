@@ -56,7 +56,7 @@ export interface Message {
 export interface Conversation {
   id: string;
   title: string;
-  mode: "demo" | "api";
+  mode: "demo" | "api" | "api-stream";
   serverId: string | null;
   messages: Message[];
   updatedAt: string;

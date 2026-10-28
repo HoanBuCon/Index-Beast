@@ -6,14 +6,11 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App";
 import "./styles/index.css";
-import { LanguageProvider } from "./lib/i18n";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
-      <LanguageProvider>
-        <App />
-      </LanguageProvider>
+      <App />
     </BrowserRouter>
   </StrictMode>,
 );
