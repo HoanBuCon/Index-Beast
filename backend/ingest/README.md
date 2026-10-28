@@ -1,5 +1,8 @@
 # Prototype ingest Sprint 1
 
+S2: `python -m ingest clean --all --crawl-report <completed-report.json> --output-dir <new-dir>`
+đọc inventory số trang bất kỳ, giữ nguyên chế độ mẫu mặc định. Xem handover clean-inventory.
+
 Phụ trách TV2. Lưu raw và ảnh phục vụ IndexBeast; không tạo embedding, không ghi entities/PG/Qdrant. Dùng Python 3.11 và môi trường backend hiện có.
 
 Chạy từ `backend/`, dùng `.venv/Scripts/python.exe` trên Windows hoặc `.venv/bin/python` trên Linux:
