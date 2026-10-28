@@ -32,6 +32,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 cài Docker local — chờ reboot](2026-10-28_s2-tv2_docker-local.md)
+
 - [TV2 chunk và PostgreSQL — chờ nghiệm thu DB](2026-10-28_s2-tv2_chunk-postgresql.md)
 
 | Ngày | Người | Chủ đề |
