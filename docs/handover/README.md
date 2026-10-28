@@ -32,6 +32,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 đồng bộ các nhánh GitHub](2026-10-28_s2-tv2_dong-bo-cac-nhanh.md)
+
 - [TV2 full crawl — đang kiểm chứng](2026-10-28_s2-tv2_full-crawl.md)
 
 | Ngày | Người | Chủ đề |
