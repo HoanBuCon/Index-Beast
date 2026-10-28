@@ -43,7 +43,7 @@ def test_api_returns_answer_usage_and_passes_thinking_mode(client, ctx, thinking
 def test_no_configured_key_returns_503(client):
     response = client.post(PATH, json={"message": "Hello"})
     assert response.status_code == 503
-    assert "DEEPSEEK_API_KEY" in response.json()["detail"]
+    assert "DEEPSEEK_API_KEY" in response.json()["message"]
 
 
 def test_provider_error_returns_502(client, ctx):
@@ -51,7 +51,7 @@ def test_provider_error_returns_502(client, ctx):
     ctx.llm.complete.side_effect = LLMError("DeepSeek request failed (AuthenticationError, status=401).")
     response = client.post(PATH, json={"message": "Hello"})
     assert response.status_code == 502
-    assert "401" in response.json()["detail"]
+    assert "401" in response.json()["message"]
 
 
 @pytest.mark.parametrize(

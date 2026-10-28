@@ -8,7 +8,7 @@ INFRA   := postgres qdrant redis
 # của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
 API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),18000)
 
-.PHONY: help up debug-up down logs ps migrate test lint format api constraints
+.PHONY: help up debug-up down logs ps migrate openapi test lint format api constraints
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -30,6 +30,9 @@ ps:              ## Trạng thái container
 
 migrate:         ## Chạy migration database
 	cd backend && alembic upgrade head
+
+openapi:         ## Xuất hợp đồng API v1 ra docs/api/openapi.json
+	cd backend && python -m scripts.export_openapi
 
 test:            ## Chạy test backend
 	cd backend && pytest
