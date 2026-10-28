@@ -1,14 +1,23 @@
 """Dependency FastAPI: lấy AppContext, xác định caller (service token / IP), kiểm tra admin token, rate-limit.
 
-S1 chỉ có get_ctx; xác thực và rate-limit thêm ở S4.
+get_ctx, get_session; xác thực và rate-limit thêm ở S4.
 
 Phụ trách: TV1 · [S1] Skeleton FastAPI · [S4] Xác thực client, CORS, bảo vệ admin
 """
 
-from fastapi import Request
+from collections.abc import AsyncIterator
+
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import AppContext
 
 
 def get_ctx(request: Request) -> AppContext:
     return request.app.state.ctx
+
+
+async def get_session(ctx: AppContext = Depends(get_ctx)) -> AsyncIterator[AsyncSession]:
+    """Một transaction cho mỗi request: commit khi handler xong, rollback khi có exception."""
+    async with ctx.sessionmaker() as session, session.begin():
+        yield session
