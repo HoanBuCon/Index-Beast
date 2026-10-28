@@ -8,6 +8,7 @@ from urllib.parse import quote
 
 from tokenizers import Tokenizer
 
+from core.ids import chunk_id, document_id
 from core.text.chunking import chunk_section
 from ingest.artifacts import now, read, save, sha256
 from ingest.transform.document import stable_id
@@ -54,6 +55,7 @@ def run_chunk(input_dir, tokenizer_path, output_dir, *, cap=450, overlap=50):
     for page in report["input_pages"]:
         path = input_dir / "processed/wikigg" / (page["id"] + ".json")
         doc = read(path)
+        doc["doc_id"] = str(document_id(doc["source"], doc["source_id"]))
         source_hashes[str(path)] = sha256(path.read_bytes())
         per_doc = []
         for section in doc["sections"]:
@@ -71,7 +73,9 @@ def run_chunk(input_dir, tokenizer_path, output_dir, *, cap=450, overlap=50):
                 anchor = section.get("anchor") or ""
                 record = dict(
                     item,
-                    chunk_id=identity,
+                    chunk_id=str(chunk_id(document_id(doc["source"], doc["source_id"]), len(per_doc))),
+                    artifact_content_id=identity,
+                    ordinal=len(per_doc),
                     unit_id=unit_id,
                     section_record_id=section["record_id"],
                     doc_id=doc["doc_id"],
