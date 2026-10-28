@@ -87,6 +87,13 @@ def test_validation_error_does_not_echo_input(client):
     assert body["request_id"] == res.headers["X-Request-ID"]
 
 
+def test_whitespace_only_message_is_rejected(client):
+    res = client.post("/api/v1/chat", json={**BODY, "message": " " * 3 + chr(10) + chr(9)})
+
+    assert res.status_code == 422
+    assert res.json()["code"] == "validation_error"
+
+
 def test_rate_limited_sets_retry_after(client):
     res = client.post("/api/v1/chat", json={**BODY, "message": "/mock-429"})
 
