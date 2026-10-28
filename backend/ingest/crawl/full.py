@@ -2,9 +2,11 @@
 
 import argparse
 import asyncio
+import os
 import time
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 
 from core.config import Settings
 from core.db.repositories import finish_job, start_job
@@ -14,6 +16,93 @@ from ingest.crawl.http import HttpClient
 from ingest.crawl.media import MediaStore
 from ingest.settings import load_settings
 from ingest.sources.wikigg import WikiGG
+
+
+@contextmanager
+def run_lock(directory):
+    """OS releases this lock even after an unclean process exit."""
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / "run.lock").open("a+b") as stream:
+        stream.write(b"0")
+        stream.flush()
+        stream.seek(0)
+        if os.name == "nt":
+            import msvcrt
+
+            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                fcntl.flock(stream, fcntl.LOCK_UN)
+
+
+def valid_media(entry, raw, root):
+    """Reuse only complete matching manifests and locally verified image blobs."""
+    try:
+        path = (root / entry["media_manifest"]).resolve()
+        if not path.is_relative_to(root.resolve()):
+            return False
+        manifest = read(path)
+        if (
+            manifest["status"] != "completed"
+            or manifest["source_id"] != raw["source_id"]
+            or manifest["revision_id"] != raw["revision_id"]
+        ):
+            return False
+        for image in manifest["images"]:
+            if image["status"] == "excluded":
+                continue
+            blob = (root / image["path"]).resolve()
+            if (
+                image["status"] not in {"downloaded", "cached"}
+                or not blob.is_relative_to(root.resolve())
+                or sha256(blob.read_bytes()) != image["sha256"]
+            ):
+                return False
+        return True
+    except (KeyError, ValueError, OSError):
+        return False
+
+
+async def recover_job(directory):
+    """Called while holding the run lock; retain original report as history."""
+    path = directory / "report.json"
+    if not path.exists():
+        return
+    report = read(path)
+    save(directory / "history" / (report["job_id"] + ".json"), report)
+    if report["status"] != "running":
+        return
+    from sqlalchemy import select
+
+    from core.db.models import IngestionJob
+
+    engine = create_engine(Settings())
+    try:
+        async with create_sessionmaker(engine)() as session, session.begin():
+            job = (
+                await session.execute(select(IngestionJob).where(IngestionJob.external_id == report["job_id"]))
+            ).scalar_one_or_none()
+            if job is not None and job.status == "running":
+                report.update(status="interrupted", termination_observed_at=now())
+                await finish_job(
+                    session,
+                    job,
+                    pages_ok=report["counts"].get("successful", 0),
+                    pages_failed=report["counts"].get("failed", 0),
+                    log=report,
+                )
+                job.status = "partial" if job.pages_ok else "failed"
+    finally:
+        await engine.dispose()
 
 
 async def job_event(job_id, report=None):
@@ -135,8 +224,16 @@ def run(source, config, run_dir, *, media=True, job_id=None):
                         "revision_id": raw["revision_id"],
                         "path": snapshot.relative_to(config["data_dir"]).as_posix(),
                     }
+                    cached[key] = entry
+                    if old and valid_media(old, raw, config["data_dir"]):
+                        entry["media_manifest"] = old["media_manifest"]
+                    save(cache_path, cached)
                     if store:
-                        manifest = store.page(source, raw)
+                        if valid_media(entry, raw, config["data_dir"]):
+                            manifest = read(config["data_dir"] / entry["media_manifest"])
+                            counts["media_cache_hits"] += 1
+                        else:
+                            manifest = store.page(source, raw)
                         manifest_path = run_dir / "media" / (key + ".json")
                         save(manifest_path, manifest)
                         entry["media_manifest"] = str(manifest_path.relative_to(config["data_dir"]))
@@ -171,15 +268,21 @@ def main():
         parser.error("run-id must contain only letters, digits, hyphen or underscore")
     config = load_settings()
     directory = config["data_dir"] / "crawl_runs" / args.run_id
-    external_id = "crawl-full-" + uuid.uuid4().hex
-    db_job = asyncio.run(job_event(external_id))
-    client = HttpClient(config)
-    try:
-        run(WikiGG(client, config), config, directory, media=not args.no_media, job_id=external_id)
-    finally:
-        client.close()
-        if (directory / "report.json").exists():
-            asyncio.run(job_event(db_job, read(directory / "report.json")))
+    with run_lock(directory):
+        asyncio.run(recover_job(directory))
+        external_id = "crawl-full-" + uuid.uuid4().hex
+        client = HttpClient(config)
+        try:
+            db_job = asyncio.run(job_event(external_id))
+            try:
+                run(WikiGG(client, config), config, directory, media=not args.no_media, job_id=external_id)
+            finally:
+                if (directory / "report.json").exists():
+                    report = read(directory / "report.json")
+                    if report["job_id"] == external_id:
+                        asyncio.run(job_event(db_job, report))
+        finally:
+            client.close()
     return 0 if read(directory / "report.json")["status"] == "completed" else 2
 
 

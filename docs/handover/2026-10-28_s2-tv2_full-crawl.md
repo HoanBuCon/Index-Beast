@@ -1,5 +1,28 @@
 # TV2 — full crawl (chưa nghiệm thu toàn bộ)
 
+## Cập nhật resume sau gián đoạn
+
+Phát hiện report còn running nhưng không có tiến trình crawler. Checkpoint ghi nhận
+1134 trang thành công, 2 excluded, 3 lỗi ảnh; inventory 4179 ứng viên. Chưa xác định
+nguyên nhân tiến trình dừng. Không coi trạng thái running trong report là liveness.
+
+Đã bổ sung OS file lock theo run directory; cache media chỉ dùng lại khi manifest
+completed khớp ID/revision và mọi blob tải về khớp checksum. Checkpoint raw trước bước
+media để retry ảnh không tải lại HTML. Khi resume giữ report cũ trong history, đối
+chiếu external_id để kết thúc orphan job với termination_observed_at (không suy đoán
+thời điểm tiến trình thực sự dừng). CLI chưa được chạy lại ở lượt này nên lịch sử và
+trạng thái job DB hiện vẫn giữ nguyên.
+
+Kiểm chứng mới: 153 unit tests passed, 13 integration tests deselected. Thêm integration
+case recovery nhưng CHƯA chạy vì Docker/PG đang tắt. Log Docker Desktop mới báo thiếu
+registry SOFTWARE/Docker Inc./Docker Desktop; đã hỏi người dùng đường dẫn bản cài đang
+dùng. Không sửa Registry, cài lại Docker hoặc bỏ ghi ingestion_jobs để lách lỗi DB.
+
+Sau khi Docker Engine sẵn sàng: bật postgres, chạy integration test_crawl_jobs.py,
+rồi resume cùng run-id s2-full-20261028. Có thể chạy process detached với WindowStyle
+Hidden, stdout/stderr và PID lưu dưới thư mục run; kiểm tra PID/report trước khi
+khởi chạy để tránh trùng. Đây là hướng dẫn tiếp tục, chưa khởi chạy detached lần này.
+
 ## Cập nhật vận hành 28/10/2026
 
 PostgreSQL đã hoạt động. Integration test mới test_crawl_jobs.py chạy trên database tạm
