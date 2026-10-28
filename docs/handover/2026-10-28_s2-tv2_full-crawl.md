@@ -1,5 +1,22 @@
 # TV2 — full crawl (chưa nghiệm thu toàn bộ)
 
+## Cập nhật vận hành 28/10/2026
+
+PostgreSQL đã hoạt động. Integration test mới test_crawl_jobs.py chạy trên database tạm
+đạt: ghi trạng thái partial, bộ đếm thành công/lỗi, kết thúc job bị gián đoạn. Unit suite
+nhánh crawl: 149 passed, 12 deselected. Không thay đổi schema hay mã TV1.
+
+Đã khởi chạy thật `python -m ingest.crawl.full --run-id s2-full-20261028` có tải ảnh.
+Job external_id: crawl-full-a6fd33301ba04b68b51b610095d4bc3b, đã ghi PostgreSQL.
+Inventory/report/checkpoint ở backend/data/crawl_runs/s2-full-20261028.
+Ở thời điểm kiểm tra: job running, đang discovery, chưa nghiệm thu full corpus.
+Không chạy một crawler thứ hai vào cùng data directory. Chỉ resume cùng run-id khi
+tiến trình cũ đã dừng. Những mục mô tả thiếu DB bên dưới là lịch sử trước cập nhật này.
+
+Sau khi crawl completed: chuyển sang nhánh clean-chuan-hoa để clean --all với report
+chỉ định rõ; sau đó dùng nhánh chunking-metadata để chunk và load đã kiểm chứng. Không
+gộp nhánh, không đóng thẻ hoặc tạo nhánh mở rộng thứ tư trước nghiệm thu các bước này.
+
 Nhánh: feature/s2-tv2-crawl-toan-bo-wikigg, từ origin/develop 02c4abf.
 
 Thêm ingest/crawl/full.py: inventory category đệ quy chống cycle, resume category/document,
