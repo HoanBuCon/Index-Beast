@@ -32,6 +32,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 clean full base + SotE](2026-10-29_s2-tv2_clean-full-base-sote.md)
+
 - [TV2 khảo sát raw và kế hoạch clean/chunk](2026-10-29_s2-tv2_khao-sat-raw-va-ke-hoach-clean-chunk.md)
 
 - [TV2 clean theo inventory](2026-10-28_s2-tv2_clean-inventory.md)

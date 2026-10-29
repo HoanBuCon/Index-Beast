@@ -1,5 +1,10 @@
 # Prototype ingest Sprint 1
 
+Sprint 2 full base+SotE (ngoại lệ đã duyệt): `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/<ten-moi>`.
+Artifact clean hiện hành: `data/clean_runs/s2-full-v2/content_clean_all.csv`; cột `decision`/`chunk_eligible`
+phân biệt nội dung đủ điều kiện và review. Không gán scope base cho DLC; game_scope=elden_ring.
+Xem handover 2026-10-29_s2-tv2_clean-full-base-sote.md, raw/media giữ nguyên.
+
 S2: `python -m ingest clean --all --crawl-report <completed-report.json> --output-dir <new-dir>`
 đọc inventory số trang bất kỳ, giữ nguyên chế độ mẫu mặc định. Xem handover clean-inventory.
 
