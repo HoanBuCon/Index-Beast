@@ -43,6 +43,11 @@ dialogue Ranni được xem trực tiếp; EN/JP/FR/DE được tách đúng the
 
 ## Tài liệu và giới hạn
 
+Đã ghi ngoại lệ tương ứng vào docs/02_SRS.md cho FR-ING-01,03,04,05,10 và nêu rõ
+phần tiêu thụ retrieval/indexing cần TV3 tích hợp. Sau clean đã hoàn tất chunk/nạp PG
+trên nhánh feature/s2-tv2-chunking-metadata (commit e10a354): 23765 chunks cho 4164 docs,
+rerun không đổi chunk state/timestamps. Handover của nhánh chunk ghi số liệu kiểm chứng chi tiết.
+
 Đã cập nhật ngoại lệ ADR-004, AGENTS và planning/sprint_plan.json chỉ cho quyết định TV2 S2;
 đã sinh lại docs/03_SPRINT_PLAN.md bằng hàm generator. File Word export chưa được sinh lại.
 Đã cài dependency python-docx==1.2.0 từ planning/requirements.txt để dùng generator Markdown.
