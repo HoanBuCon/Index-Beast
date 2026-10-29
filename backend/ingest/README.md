@@ -1,5 +1,10 @@
 # Prototype ingest Sprint 1
 
+Sprint 2 full base+SotE (người dùng duyệt): dùng `python -m ingest.chunk.full --input-dir data/clean_runs/s2-full-v2 --tokenizer <local-tokenizer.json> --output-dir data/chunk_runs/<ten-moi>`.
+Nạp PostgreSQL bằng `python -m ingest.chunk.load_full data/chunk_runs/s2-full-v1` (thêm `--validate-only` để kiểm offline).
+game_scope=elden_ring; không thêm passage prefix lần hai khi index DB chunks.text. Xem handover
+2026-10-29_s2-tv2_chunk-full-base-sote.md. Các lệnh prototype dưới vẫn là chế độ cũ cho mẫu base-only.
+
 Phụ trách TV2. Lưu raw và ảnh phục vụ IndexBeast; không tạo embedding, không ghi entities/PG/Qdrant. Dùng Python 3.11 và môi trường backend hiện có.
 
 Chạy từ `backend/`, dùng `.venv/Scripts/python.exe` trên Windows hoặc `.venv/bin/python` trên Linux:
