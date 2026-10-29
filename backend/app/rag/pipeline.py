@@ -44,7 +44,10 @@ def outside_scope(question: str) -> bool:
     return bool(
         re.search(
             r"\b(dark souls|bitcoin|fibonacci|cover letter|"
-            r"gaming laptop|python code|viet.*chuong trinh|build pvp|pvp build|toi uu.*chi so)\b",
+            r"gaming laptop|python code|viet.*chuong trinh|"
+            r"(?:ignore|disregard|forget) (?:all |the |your )?(?:previous |prior |system )?(?:instructions|rules)|"
+            r"(?:reveal|print|show) (?:your |the )?(?:system prompt|api key)|"
+            r"bo qua (?:tat ca )?(?:huong dan|chi dan|quy tac)|tiet lo (?:system prompt|api key))\b",
             plain,
         )
     )
@@ -156,7 +159,25 @@ def context_item(hit: Hit, index: int) -> dict:
         "text": p["text"],
     }
     # Preserve provided unknown/null values, without fabricating absent metadata or wasting budget on it.
-    for key in ("source_type_evidence", "source", "lang", "game_scope", "release_scope", "continuity", "review_status"):
+    for key in (
+        "source_type_evidence",
+        "source",
+        "lang",
+        "game_scope",
+        "release_scope",
+        "continuity",
+        "review_status",
+        "game_version",
+        "patch_version",
+        "upgrade_level",
+        "affinity",
+        "ng_cycle",
+        "source_updated_at",
+        "trigger",
+        "speaker",
+        "variant_context",
+        "unit_kind",
+    ):
         if key in p:
             item[key] = p[key]
     if "indexbeast_admission" in p:
@@ -211,9 +232,11 @@ class ChatPipeline:
         state.update(prepared=prepared, query=req.message, documents=[])
         if outside_scope(req.message):
             prepared.static_answer = (
-                "Mình hỗ trợ lore Elden Ring và nội dung liên quan trong kho nguồn. Bạn hãy hỏi về câu chuyện."
+                "Mình có thể giúp bạn về Elden Ring: cốt truyện, nhiệm vụ, trang bị, cơ chế và hướng build. "
+                "Bạn muốn tìm hiểu phần nào trong game?"
                 if lang == "vi"
-                else "I focus on Elden Ring lore and related source material. Please ask about its story."
+                else "I can help with Elden Ring lore, quests, equipment, mechanics and build ideas. "
+                "What would you like to explore in the game?"
             )
         return state
 
@@ -222,11 +245,17 @@ class ChatPipeline:
         if self.settings.rag_rewrite_enabled:
             rewritten, fallback = await rewrite(self.llm, state["query"], state["history"], p.lang)
             p.trace["rewrite_fallback"] = fallback
-            if rewritten.out_of_scope or rewritten.ambiguous:
+            if rewritten.out_of_scope:
                 p.static_answer = (
-                    "Bạn hãy nêu rõ nhân vật, sự kiện hoặc phiên bản Elden Ring muốn hỏi."
+                    "Mình hỗ trợ các câu hỏi về Elden Ring, từ cốt truyện đến gameplay và build."
                     if p.lang == "vi"
-                    else "Please specify the Elden Ring character, event or release you mean."
+                    else "I help with Elden Ring questions, from lore to gameplay and builds."
+                )
+            elif rewritten.ambiguous:
+                p.static_answer = (
+                    "Bạn đang hỏi nhân vật, trang bị, boss hoặc nhiệm vụ nào trong Elden Ring?"
+                    if p.lang == "vi"
+                    else "Which Elden Ring character, equipment, boss or quest do you mean?"
                 )
             else:
                 state["query"] = rewritten.standalone_query_en
@@ -266,9 +295,11 @@ class ChatPipeline:
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits:
                 p.static_answer = (
-                    "Mình chưa có đủ bằng chứng trong kho tri thức để trả lời câu hỏi này."
+                    "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
+                    "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
                     if p.lang == "vi"
-                    else "The knowledge base has insufficient evidence to answer this question."
+                    else "I couldn't find evidence close enough to answer reliably. "
+                    "Could you name the equipment, boss, quest or specific detail you want to check?"
                 )
         return state
 

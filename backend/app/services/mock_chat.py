@@ -42,7 +42,7 @@ _ANSWER = {
     "vi": "Đây là câu trả lời giả từ máy chủ mock [1]. Nội dung thật sẽ có ở Sprint 3 cùng trích dẫn từ wiki [2].",
     "en": "This is a mock answer from the server [1]. Real content arrives in Sprint 3 with wiki citations [2].",
 }
-_NO_EVIDENCE = "Mình chưa tìm thấy thông tin này trong dữ liệu lore."
+_NO_EVIDENCE = "Mình chưa tìm thấy thông tin này trong dữ liệu hiện có."
 
 
 class MockChatService:
