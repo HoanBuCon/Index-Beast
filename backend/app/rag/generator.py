@@ -69,6 +69,7 @@ class GroundedAnswer(BaseModel):
     answer: str = Field(min_length=1, max_length=16000)
     evidence: list[Evidence] = Field(max_length=5)
     insufficient: bool
+    limitation: str | None = Field(default=None, min_length=1, max_length=1000)
 
 
 def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
@@ -95,7 +96,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
         if parsed.insufficient:
-            if used or evidence:
+            if used or evidence or parsed.limitation is not None:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
             return Generated(parsed.answer)
@@ -109,6 +110,10 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         if any(not CITATION.search(p) for p in parsed.answer.split("\n\n") if p.strip()):
             failure = "uncited_paragraph"
             raise ValueError("Every answer paragraph needs evidence")
+        if parsed.limitation is not None:
+            failure = "invalid_limitation"
+            if not parsed.limitation.strip() or URL.search(parsed.limitation) or CITATION.search(parsed.limitation):
+                raise ValueError("Limitations cannot claim citations or URLs")
         sources = [
             Source(
                 index=i,
@@ -121,7 +126,10 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         ]
         # Operational grounding: model supplied evidence, exact quotes and indices checked.
         # This is NOT a guarantee of semantic entailment of every claim.
-        return Generated(parsed.answer, sources, True)
+        answer = parsed.answer
+        if parsed.limitation is not None:
+            answer += "\n\n" + parsed.limitation.strip()
+        return Generated(answer, sources, True)
     except (ValidationError, ValueError, KeyError, TypeError):
         prepared.trace["validation_failure"] = failure
         # Static category only: never log model output, source quotes, prompts or private reasoning.

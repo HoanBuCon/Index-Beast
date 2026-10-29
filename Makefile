@@ -1,14 +1,15 @@
 # Lệnh dev thường dùng. Windows: chạy trong Git Bash/WSL (cài make: `winget install ezwinports.make`)
 # hoặc gõ thẳng lệnh tương ứng trong README (mục "Chạy local").
-# Các lệnh backend giả định venv đã được kích hoạt.
+# API và test-unit tự dùng backend/.venv khi có; không cần activate.
 
 COMPOSE := docker compose
 INFRA   := postgres qdrant redis
+PYTHON ?= $(if $(wildcard backend/.venv/Scripts/python.exe),$(CURDIR)/backend/.venv/Scripts/python.exe,$(if $(wildcard backend/.venv/bin/python),$(CURDIR)/backend/.venv/bin/python,python))
 # Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 18000 — không dùng cổng mặc định 8000
 # của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
-API_PORT ?= $(or $(shell sed -n 's/^API_PORT=\([0-9]*\).*/\1/p' .env 2>/dev/null),18000)
+API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('API_PORT') or '')"),18000)
 
-.PHONY: help up debug-up down logs ps migrate openapi test lint format api web constraints
+.PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -37,6 +38,9 @@ openapi:         ## Xuất hợp đồng API v1 ra docs/api/openapi.json
 test:            ## Chạy test backend
 	cd backend && pytest
 
+test-unit:       ## Chỉ test unit offline, không gọi LLM hoặc index corpus thật
+	cd backend && "$(PYTHON)" -X utf8 -m pytest -c pyproject.toml tests/unit -q
+
 lint:            ## Kiểm tra lint/format cho backend, web, bot
 	cd backend && ruff check . && ruff format --check .
 	cd web && npm run format:check && npm run typecheck
@@ -48,11 +52,17 @@ format:          ## Tự format code
 	cd bot && npm run format
 
 api:             ## Chạy API local (auto-reload) tại http://127.0.0.1:$(API_PORT)
-	cd backend && uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port $(API_PORT) --no-access-log
+	cd backend && "$(PYTHON)" -X utf8 -m uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port $(API_PORT) --no-access-log
 
 # Frontend TV4: Vite đọc WEB_PORT và proxy API_PORT từ .env gốc, không ghi cứng cổng ở đây.
 web:             ## Chạy frontend Vite (cần npm ci trong web ở lần đầu)
 	cd web && npm run dev
+
+dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
+	$(MAKE) --no-print-directory -j2 api web
+
+health:          ## Đọc health API đang chạy; không gọi LLM hoặc load embedding
+	@"$(PYTHON)" -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:$(API_PORT)/api/v1/health', timeout=10).read().decode())"
 
 constraints:     ## In pip freeze trên Linux (Docker) để cập nhật backend/constraints.txt
 	docker run --rm -v "$(CURDIR)/backend:/src:ro" python:3.11.9-slim-bookworm sh -c "\

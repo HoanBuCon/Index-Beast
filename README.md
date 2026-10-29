@@ -4,7 +4,7 @@
 
 ![Index Beast Banner](assets/onion_ring.jpg)
 
-Dự án **IndexBeast** của nhóm **4 Hollows**: chatbot hỏi đáp lore **Elden Ring và nội dung liên quan trong corpus**, gồm DLC, trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
+Dự án **IndexBeast** của nhóm **4 Hollows**: trợ lý hỏi đáp **Elden Ring và nội dung liên quan trong corpus**, gồm DLC, trên Website và Discord (RAG: hybrid search + optional rerank + DeepSeek). Hỗ trợ lore, gameplay, quest, trang bị và gợi ý build khi có bằng chứng.
 
 Trello: https://trello.com/b/mZEBMPGV/elden-ring
 
@@ -15,7 +15,7 @@ Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xe
 [hướng dẫn LangChain + DeepSeek và tích hợp corpus thử nghiệm](backend/app/rag/README.md).
 `llm_only` dùng được khi dữ liệu chưa sẵn sàng. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
 
-**Phạm vi hiện tại:** lore Elden Ring và nội dung liên quan có nguồn, gồm DLC; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Các tài liệu SRS/ADR cũ cần được nhóm đồng bộ riêng; xem hướng dẫn RAG.
+**Phạm vi hiện tại:** Elden Ring có nguồn, gồm lore, gameplay và tư vấn build định tính; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Dữ liệu gameplay còn thiếu bảng stat/acquisition/combat đã bị lọc; xem [audit khả năng thực tế và cách thử](docs/testing/2026-10-29_elden-ring-assistant-capabilities.md). Các tài liệu SRS/ADR cũ cần nhóm đồng bộ riêng.
 
 ## 4 con Hollows
 
@@ -54,6 +54,9 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 | `infra/`, `scripts/`, `docker-compose.yml` | Triển khai | TV1 |
 
 ## Chạy local
+
+Chạy nhanh API + web + hạ tầng: `make dev`. Kiểm tra: `make health`; unit offline: `make test-unit`.
+Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local-guide.md).
 
 ### Cần cài
 

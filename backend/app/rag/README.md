@@ -2,9 +2,14 @@
 
 TV3 — MinhMuc, nhóm 4 Hollows. Cập nhật 29/10/2026.
 
-Quyết định mới của team: dùng lore Elden Ring và nội dung liên quan trong corpus, gồm DLC.
+Quyết định mới của team: trợ lý Elden Ring hỗ trợ lore, gameplay, quest, trang bị, boss và gợi ý build,
+gồm DLC và nội dung liên quan trong corpus. Không từ chối chỉ vì câu hỏi thuộc gameplay/build.
 Giữ metadata game/release/continuity và độ chưa chắc chắn; không tự coi mọi nguồn là cùng canon.
 Admission kỹ thuật cho phép thử nghiệm trước khi thẩm định toàn bộ, không phải xác minh lore.
+
+**Cập nhật phạm vi đa mục đích:** xem [audit dữ liệu, thay đổi code và 10 câu thử](../../../docs/testing/2026-10-29_elden-ring-assistant-capabilities.md).
+Corpus hiện có cơ chế/notes hữu ích nhưng đã lọc nhiều bảng stat, acquisition và combat. Không hứa build tối ưu
+hoặc walkthrough toàn diện. Collection hiện tại dùng tiếp, không cần reindex cho thay đổi prompt/gate.
 
 ## Trạng thái và luồng xử lý
 
@@ -231,6 +236,10 @@ Prompt phân biệt [persona](prompts/persona.md), [llm_only](prompts/llm_only.m
 
 Validation yêu cầu citation khớp index/evidence, quote nguyên văn, URL/title từ metadata server,
 chỉ trả nguồn thực sự trích. Đây là kiểm grounding hình thức, không phải entailment judge.
+Với partial answer, model có thể thêm field nội bộ `limitation` (tối đa 1.000 ký tự): chỉ nêu thiếu dữ liệu
+hoặc câu hỏi làm rõ, không có facts mới/citation/URL. Backend kiểm rồi nối cuối answer; không đổi API v1.
+Phần answer có facts vẫn cần citation mỗi đoạn; không ép citation không liên quan vào đoạn thiếu dữ liệu.
+`grounded=true` không khẳng định mọi phần câu hỏi đã được giải đáp; limitation vẫn cần review ngữ nghĩa.
 Context bổ sung evidence units có ID: model chọn `quote_id`, backend trích nguyên văn từ chunk đã chọn
 và kiểm citation/evidence-set như cũ. Quote literal vẫn được hỗ trợ; ID không tồn tại bị từ chối.
 Đoạn dài được chia thành các phần evidence giới hạn 2.000 ký tự để chọn quote, không chia lại chunk/index.
@@ -252,6 +261,8 @@ Từ backend, chỉ unit/offline:
 ```
 
 Baseline triển khai: **201 unit test đạt**; sau policy corpus: **242**; sau tuning và regression từ kiểm thử thật: **259**.
+Sau mở rộng trợ lý gameplay/build: **284 unit test đạt**, chỉ kiểm offline trong lượt mở rộng;
+kết quả live cũ không chứng minh chất lượng gameplay của prompt mới.
 Ruff check, format, OpenAPI check, `pip check` và `git diff --check` được kiểm cùng quy trình trên.
 Có một warning dự kiến: Qdrant memory không thực thi payload indexes như server.
 Test mới bao gồm policy pilot/reviewed, ngôn ngữ, lỗi có vị trí, token local, reserved metadata,
