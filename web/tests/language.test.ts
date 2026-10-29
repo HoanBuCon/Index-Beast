@@ -13,6 +13,7 @@ test("UI stays Vietnamese even with an old English preference or blocked storage
   try {
     const { default: App } = await server.ssrLoadModule("/src/App.tsx");
     const { default: ChatPage } = await server.ssrLoadModule("/src/pages/ChatPage.tsx");
+    const { default: MessageList } = await server.ssrLoadModule("/src/components/chat/MessageList.tsx");
     function render(language: string | null, blocked = false, route = "/about") {
       Object.defineProperty(globalThis, "localStorage", {
         configurable: true,
@@ -42,11 +43,29 @@ test("UI stays Vietnamese even with an old English preference or blocked storage
     const chat = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(ChatPage)));
     assert.equal((chat.match(/<textarea/g) ?? []).length, 1);
     assert.match(chat, /Hôm nay bạn muốn khám phá điều gì/);
-    assert.doesNotMatch(chat, /class="suggestions"|class="welcome-logo"/);
+    assert.doesNotMatch(chat, /class="welcome-logo"/);
+    assert.ok(chat.indexOf("<textarea") < chat.indexOf('class="suggestions"'));
+    for (const question of ["Elden Ring là game gì?", "Game thuộc thể loại gì?", "FromSoftware là gì?"]) {
+      assert.ok(chat.includes(question));
+    }
     assert.match(chat, /aria-label="Gửi câu hỏi"/);
     assert.match(chat, /maxLength="2000"/i);
     assert.doesNotMatch(chat, /class="mode-note"/);
     assert.doesNotMatch(chat, /aria-label="Tra cứu lore"|aria-label="Chế độ trò chuyện"|aria-label="Tình huống thử"/);
+    // Chỉ báo chờ phải biến mất khi có nội dung hoặc request kết thúc.
+    const waiting = { id: "waiting", role: "assistant", content: "", sources: [], incomplete: true };
+    const renderMessages = (busy: boolean, content = "") =>
+      renderToStaticMarkup(
+        createElement(MessageList, {
+          messages: [{ ...waiting, content }],
+          busy,
+          demo: false,
+        }),
+      );
+    assert.match(renderMessages(true), /class="thinking-bubble"/);
+    assert.doesNotMatch(renderMessages(true, "Đã có nội dung"), /class="thinking-bubble"/);
+    assert.doesNotMatch(renderMessages(false), /class="thinking-bubble"/);
+    assert.match(renderMessages(false), /Câu trả lời chưa hoàn tất/);
   } finally {
     if (original) Object.defineProperty(globalThis, "localStorage", original);
     else Reflect.deleteProperty(globalThis, "localStorage");

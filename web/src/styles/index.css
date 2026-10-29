@@ -2,10 +2,19 @@
 
 @import "tailwindcss";
 
+/* Font trong thư mục font do người dùng cung cấp; Cambria dự phòng các dấu tiếng Việt còn thiếu. */
+@font-face {
+  font-family: "Agmena Pro Book";
+  src: url("../../font/Agmena Pro Book/Web Fonts/342059cdb5197a064e40738c5fdc8727.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* Font do người dùng cung cấp; chỉ dùng cho chữ Latin vì không có glyph tiếng Việt có dấu. */
 @font-face {
   font-family: "Mantinia";
-  src: url("../../Mantinia Regular/Mantinia Regular.otf") format("opentype");
+  src: url("../../font/Mantinia Regular/Mantinia Regular.otf") format("opentype");
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -51,7 +60,7 @@
   width: 30px;
   height: 30px;
   padding: 3px;
-  border: 1px solid #746540;
+  border: 1px solid transparent;
   border-radius: 0;
   color: #d9bc78;
   background: #141613;
@@ -66,10 +75,12 @@
   transition: opacity 160ms ease;
 }
 .sidebar-toggle .toggle-emblem {
-  display: grid;
-  place-items: center;
-  font-size: 26px;
-  line-height: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
 }
 .sidebar-toggle .toggle-arrow {
   opacity: 0;
@@ -83,7 +94,7 @@
   opacity: 1;
 }
 .sidebar-toggle:hover:not(:disabled) {
-  border-color: transparent;
+  border-color: #d9bc78;
   background: #d9bc7818;
   box-shadow: 0 2px 12px #d9bc7814;
 }
@@ -116,10 +127,11 @@
   --color-parchment: #eee8db;
 }
 :root {
-  font-family: "Segoe UI", sans-serif;
+  --font-interface: "Agmena Pro Book", Cambria, "Times New Roman", serif;
+  font-family: var(--font-interface);
   color: #eee8db;
   background: #101210;
-  font-synthesis: none;
+  font-synthesis: weight;
   color-scheme: dark;
 }
 * {
@@ -210,7 +222,7 @@ a {
   color: #eee8db;
   text-decoration: none;
   letter-spacing: 0.18em;
-  font-family: "Mantinia", "Segoe UI", serif;
+  font-family: var(--font-interface);
   font-size: 20px;
 }
 .brand strong {
@@ -220,9 +232,7 @@ a {
 .brand small {
   display: block;
   margin-top: 5px;
-  font:
-    9px "Segoe UI",
-    sans-serif;
+  font: 9px var(--font-interface);
   letter-spacing: 0.22em;
   color: #a4a794;
 }
@@ -234,6 +244,12 @@ a {
   color: #d9bc78;
   border: 1px solid #746540;
   font-size: 32px;
+}
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
 }
 .header nav {
   display: flex;
@@ -317,12 +333,12 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
-  font-size: 12px;
+  font-size: 15px;
 }
 .history-row small {
   display: block;
   margin-top: 7px;
-  font-size: 10px;
+  font-size: 12px;
   color: #a0a48f;
 }
 .history-row .delete {
@@ -340,10 +356,7 @@ a {
   color: #a89056;
 }
 .sidebar-foot p {
-  font:
-    italic 17px/1.6 "Segoe UI",
-    Arial,
-    sans-serif;
+  font: italic 17px/1.6 var(--font-interface);
   letter-spacing: normal;
   color: #b9b69f;
 }
@@ -361,9 +374,7 @@ a {
   min-height: 0;
   /* Ảnh nền được đóng gói trong web để bản build và Docker cùng sử dụng được. */
   /* Nền chỉ nằm trong Main Content, tự co theo vùng chat khi đóng/mở sidebar. */
-  background-image:
-    radial-gradient(ellipse at 50% 50%, #101410d9 0%, #101410ad 35%, #10141000 78%),
-    linear-gradient(180deg, #10121033, #10121066), url("../assets/patches.png");
+  background-image: linear-gradient(#10141040, #10141040), url("../assets/patches.png");
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
@@ -444,16 +455,13 @@ p {
   margin-top: 0;
 }
 .welcome h1 {
-  font:
-    44px/1.18 "Segoe UI",
-    "Times New Roman",
-    serif;
+  font: 44px/1.18 var(--font-interface);
   letter-spacing: -0.025em;
   margin: 20px 0;
 }
 em {
   /* Georgia italic có thể fallback từng glyph tiếng Việt, làm tách dấu và lệch khoảng cách. */
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-interface);
   letter-spacing: normal;
   color: #dfbf78;
   font-weight: normal;
@@ -484,9 +492,7 @@ em {
   margin-bottom: 18px;
 }
 .suggestions strong {
-  font:
-    normal 16px/1.5 "Segoe UI",
-    serif;
+  font: normal 16px/1.5 var(--font-interface);
 }
 .scope-note {
   color: #9fa58e;
@@ -557,10 +563,8 @@ textarea::placeholder {
   flex-direction: column;
   gap: 36px;
   background: transparent;
-  color: #eee8db;
-  text-shadow:
-    0 1px 3px #000,
-    0 2px 10px #0008;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
 }
 .message {
   padding: 0;
@@ -586,6 +590,14 @@ textarea::placeholder {
 }
 .message-label > span {
   font-size: 22px;
+}
+.message-avatar {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 0;
+  user-select: none;
 }
 .message-label small {
   margin-left: auto;
@@ -622,9 +634,7 @@ textarea::placeholder {
 }
 .prose h2,
 .prose h3 {
-  font:
-    23px "Segoe UI",
-    serif;
+  font: 23px var(--font-interface);
   margin: 16px 0;
 }
 .prose pre,
@@ -683,9 +693,7 @@ pre {
 }
 .source-number {
   color: #d9bc78;
-  font:
-    22px "Segoe UI",
-    serif;
+  font: 22px var(--font-interface);
 }
 .source-list button > span:last-child {
   margin-left: auto;
@@ -720,9 +728,7 @@ pre {
   background: #000a;
 }
 .citation-card h3 {
-  font:
-    26px "Segoe UI",
-    serif;
+  font: 26px var(--font-interface);
   margin: 20px 0;
 }
 .citation-card blockquote {
@@ -781,6 +787,45 @@ input {
   color: #d9bc78;
   font-size: 13px;
 }
+/* Ba chấm nảy khi request hiện tại đang chờ nội dung, không chạy sau khi lỗi hoặc dừng. */
+.thinking-bubble {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 12px 16px;
+  background: #242a1ee6;
+  box-shadow: 0 3px 12px #0003;
+}
+.thinking-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.thinking-dots > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d9bc78;
+  animation: thinking-bounce 2s ease-in-out infinite;
+}
+.thinking-dots > span:nth-child(2) {
+  animation-delay: 0.25s;
+}
+.thinking-dots > span:nth-child(3) {
+  animation-delay: 0.5s;
+}
+@keyframes thinking-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
 .error-box {
   border: 1px solid #aa7e5d;
   padding: 12px;
@@ -803,9 +848,7 @@ input {
   padding: 60px 30px 80px;
 }
 .document h1 {
-  font:
-    46px/1.2 "Segoe UI",
-    serif;
+  font: 46px/1.2 var(--font-interface);
   margin: 25px 0;
 }
 .document .lead {
@@ -820,16 +863,12 @@ input {
   border-top: 1px solid #394030;
 }
 .document h2 {
-  font:
-    27px "Segoe UI",
-    serif;
+  font: 27px var(--font-interface);
   color: #dfcc9f;
   margin-bottom: 18px;
 }
 .document h3 {
-  font:
-    20px "Segoe UI",
-    serif;
+  font: 20px var(--font-interface);
   margin: 10px 0;
 }
 .document p,
@@ -840,6 +879,37 @@ input {
 }
 .document li {
   margin-bottom: 8px;
+}
+/* Agmena có thân chữ nhỏ: tăng cỡ riêng trang Về dự án, giữ nguyên giao diện admin. */
+.document.about h1 {
+  font-size: clamp(36px, 4vw, 50px);
+  line-height: 1.3;
+}
+.document.about h2 {
+  font-size: clamp(26px, 3vw, 30px);
+  line-height: 1.4;
+}
+.document.about h3 {
+  font-size: 24px;
+}
+.document.about p,
+.document.about li {
+  font-size: 18px;
+  line-height: 1.8;
+  color: #e2e5d9;
+  overflow-wrap: anywhere;
+}
+.document.about .lead {
+  font-size: 20px;
+}
+.document.about .eyebrow {
+  font-size: 12px;
+}
+.document.about .team-grid p {
+  font-size: 16px;
+}
+.document.about .inline {
+  font-size: 18px;
 }
 .team-grid {
   display: grid;
@@ -1196,17 +1266,18 @@ input {
   filter: drop-shadow(0 3px 10px #0009);
 }
 .chat-empty .welcome h1 {
-  font:
-    400 30px/1.4 "Segoe UI",
-    Arial,
-    sans-serif;
+  font: 600 32px/1.4 var(--font-interface);
   letter-spacing: normal;
   margin: 0 0 12px;
+  color: #fff;
+  text-shadow: 0 2px 3px #000;
 }
 .chat-empty .welcome .intro {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 500;
   margin-bottom: 32px;
-  color: #e0d4b8;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
 }
 .chat-empty .welcome-input {
   width: 100%;
@@ -1229,20 +1300,26 @@ input {
 .chat-panel .input-note,
 .chat-panel .scope-note {
   background: transparent;
-  color: #eee5d0;
-  text-shadow:
-    0 1px 3px #000,
-    0 0 6px #000;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  text-shadow: 0 1px 2px #000;
   padding: 8px 10px;
 }
 .composer textarea {
   grid-column: 1;
-  height: 36px;
-  min-height: 36px;
+  height: 44px;
+  min-height: 44px;
   padding: 6px 0;
   resize: none;
   overflow-y: hidden;
-  font-size: 14px;
+  font-size: 18px;
+  color: #fff;
+  text-shadow: none;
+}
+.composer textarea::placeholder {
+  color: #ced3c5;
+  opacity: 1;
 }
 /* Ô nhập không có khung sáng riêng khi gõ; giữ nguyên nền và viền của composer. */
 .composer textarea:focus,
@@ -1278,25 +1355,36 @@ input {
   margin: 0;
 }
 .chat-empty .suggestions {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 760px;
   gap: 10px;
-  margin: 25px 0 0;
+  margin: 25px auto 0;
 }
 .chat-empty .suggestions button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
   gap: 8px;
   padding: 10px 16px;
   background: #191d17;
   border-color: #51543f;
+  font-size: 16px;
+  font-weight: 500;
+  color: #fff;
+  text-shadow: none;
+}
+.chat-empty .suggestions button:hover:not(:disabled) {
+  border-color: #51543f;
+  background: #242a1e;
+  box-shadow: 0 3px 12px #0003;
 }
 .chat-empty .suggestions strong {
-  font:
-    500 11px/1.5 "Segoe UI",
-    Arial,
-    sans-serif;
+  font: 500 11px/1.5 var(--font-interface);
   letter-spacing: 0.05em;
 }
 .suggestion-icon {
@@ -1352,7 +1440,7 @@ input {
   border-bottom: 1px solid #34392c;
 }
 .sidebar .brand {
-  font-size: 16px;
+  font-size: 20px;
   gap: 8px;
   letter-spacing: 0.05em;
 }
@@ -1400,7 +1488,7 @@ input {
   color: #b9bcae;
   background: transparent;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 16px;
   white-space: nowrap;
 }
 .rail-icon {
@@ -1441,6 +1529,10 @@ input {
 .sidebar-admin {
   margin-top: auto;
 }
+/* Chỉ hiện khung icon khi tương tác; viền trong suốt vẫn giữ nguyên kích thước. */
+.sidebar-toggle:focus-visible {
+  border-color: #d9bc78;
+}
 /* Thanh thu gọn không có khối chế độ, nên nút Quản trị tự đẩy xuống cuối. */
 .workspace.sidebar-collapsed .sidebar-admin {
   margin-top: auto;
@@ -1477,14 +1569,14 @@ input {
 .history-heading {
   margin: 0;
   padding: 0 6px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 400;
   color: #b0a17b;
 }
 .sidebar-ai-note {
   margin: 0;
   padding: 0 6px;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.6;
   color: #b0a17b;
 }
@@ -1502,7 +1594,7 @@ input {
   flex-shrink: 0;
 }
 .sidebar .brand small {
-  font-size: 7px;
+  font-size: 9px;
   letter-spacing: 0.14em;
 }
 .sidebar .header-actions {
@@ -1539,6 +1631,9 @@ input {
 }
 /* Giữ nguyên font toàn dòng tiếng Việt, tránh fallback từng ký tự làm lệch dấu. */
 @media (prefers-reduced-motion: reduce) {
+  .thinking-dots > span {
+    animation: none;
+  }
   * {
     scroll-behavior: auto !important;
     transition: none !important;

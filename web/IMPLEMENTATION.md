@@ -21,15 +21,20 @@ Lệnh không tự chạy backend; mở terminal khác chạy `make api` nếu m
 ## Chức năng
 
 - Logo ELDEN RING PNG nền trong suốt đã được bỏ khỏi màn hình chat theo yêu cầu người dùng.
-  Ba nút gợi ý Nhân vật / Sự kiện / Thế giới cũng đã được bỏ; giữ lời chào và ô nhập.
+  Ba nút Nhân vật / Sự kiện / Thế giới đã bỏ. Hiện có ba câu hỏi gợi ý mới dưới ô nhập:
+  “Elden Ring là game gì?”, “Game thuộc thể loại gì?”, “FromSoftware là gì?”; bấm để gửi qua luồng chat hiện có.
   Tệp `src/assets/elden-ring-logo.png` được đóng gói cùng web, lấy từ
   [trang Elden Ring của Bandai Namco](https://en.bandainamcoent.eu/elden-ring/elden-ring)
   ([ảnh nguồn](https://static.bandainamcoent.eu/high/elden-ring/elden-ring/00-page-setup/eldenring_new.png)).
   Logo thuộc thương hiệu gốc, không phải logo do nhóm tạo.
 
-- Font Mantinia Regular từ thư mục người dùng cung cấp `web/Mantinia Regular/` được dùng cho logo.
-  File OTF không có glyph trong khối tiếng Việt U+1EA0–U+1EF9, vì vậy tiêu đề và nội dung
-  tiếp tục dùng Segoe UI để giữ dấu chính xác. Font được Vite đóng gói cùng bản build, không tải từ CDN.
+- Giao diện hiện dùng Agmena Pro Book từ `web/font/Agmena Pro Book/Web Fonts/` theo yêu cầu mới.
+  WOFF2 được Vite đóng gói cùng web, không tải font từ CDN. Font này thiếu nhiều ký tự tiếng Việt;
+  Cambria / Times New Roman là dự phòng cho ký tự chưa hỗ trợ. Ghi nguồn font ở trang Về dự án theo License.txt đi kèm.
+  Mantinia là cấu hình trước đây, hiện không dùng làm font chính của logo hay nội dung.
+
+- Icon Grace dùng `src/assets/ERN_Map_Icon_Site_of_Grace.png`. Khi đổi tên hoặc di chuyển ảnh,
+  cập nhật import trong Header, ChatPage và MessageList; đường dẫn cũ `grace.png` làm Vite báo thiếu module.
 
 - Bố cục tham khảo ảnh chat do người dùng cung cấp: thanh bên có cuộc trò chuyện mới, liên kết About/Admin
   và lịch sử; màn hình trống đặt lời chào, ô nhập và gợi ý ở giữa. Khi có tin nhắn, ô nhập nằm cuối vùng chat.

@@ -3,6 +3,7 @@
 
 import { Link } from "react-router";
 import type { ReactNode } from "react";
+import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
 export default function Header({ sidebarToggle }: { sidebarToggle?: ReactNode }) {
   return (
     <header className="header">
@@ -11,7 +12,7 @@ export default function Header({ sidebarToggle }: { sidebarToggle?: ReactNode })
         <Link to="/" className="brand" aria-label={"Index Beast — trang chủ"}>
           {!sidebarToggle && (
             <span className="brand-mark" aria-hidden="true">
-              ✦
+              <img src={graceIcon} alt="" draggable={false} />
             </span>
           )}
           <span>

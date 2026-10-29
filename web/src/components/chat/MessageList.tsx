@@ -8,6 +8,7 @@ import type { Message, Source } from "../../api/types";
 import SourceList from "./SourceList";
 import CitationPopover from "./CitationPopover";
 import FeedbackButtons from "./FeedbackButtons";
+import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
 export default function MessageList({ messages, busy, demo }: { messages: Message[]; busy: boolean; demo: boolean }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -19,7 +20,9 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
       {messages.map((message) => (
         <article key={message.id} className={`message ${message.role}`}>
           <div className={message.role === "user" ? "sr-only" : "message-label"}>
-            <span aria-hidden="true">{message.role === "user" ? "◈" : "✦"}</span>
+            {message.role === "assistant" && (
+              <img className="message-avatar" src={graceIcon} alt="" width={24} height={24} draggable={false} />
+            )}
             {message.role === "user" ? "BẠN" : "INDEX BEAST"}
             {message.role === "assistant" && demo && <small>{"MINH HỌA"}</small>}
           </div>
@@ -55,11 +58,15 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
           </div>
           {message.role === "assistant" && (
             <>
-              {!message.content && busy && (
-                <p role="status" className="searching">
-                  {"Đang tìm trong lore"}
-                  <span>…</span>
-                </p>
+              {!message.content && busy && message.id === messages.at(-1)?.id && (
+                <div role="status" className="thinking-bubble">
+                  <span className="sr-only">Đang chờ câu trả lời…</span>
+                  <span className="thinking-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                </div>
               )}
               {message.incomplete && !(busy && message === messages.at(-1)) && (
                 <p className="muted">{"Câu trả lời chưa hoàn tất."}</p>

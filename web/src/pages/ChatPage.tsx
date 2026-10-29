@@ -11,6 +11,7 @@ import { useChatStream } from "../hooks/useChatStream";
 import MessageInput from "../components/chat/MessageInput";
 import MessageList from "../components/chat/MessageList";
 import { retryInput } from "../hooks/chatState";
+import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
 
 // Thanh thu gọn chỉ dẫn tới chức năng đã có của web TV4.
 function RailIcon({ name }: { name: "new" | "about" | "admin" }) {
@@ -86,9 +87,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         requestAnimationFrame(() => toggleRef.current?.focus());
       }}
     >
-      <span className="toggle-emblem" aria-hidden="true">
-        ✦
-      </span>
+      <img className="toggle-emblem" src={graceIcon} alt="" draggable={false} />
       <svg
         className="toggle-arrow"
         aria-hidden="true"
@@ -199,6 +198,13 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 <h1>{"Hôm nay bạn muốn khám phá điều gì?"}</h1>
                 <p className="intro">{"Lần theo những bí ẩn của Elden Ring."}</p>
                 <div className="input-area welcome-input">{composer}</div>
+                <div className="suggestions" role="group" aria-label="Câu hỏi gợi ý">
+                  {["Elden Ring là game gì?", "Game thuộc thể loại gì?", "FromSoftware là gì?"].map((question) => (
+                    <button key={question} type="button" disabled={stream.busy} onClick={() => send(question)}>
+                      {question}
+                    </button>
+                  ))}
+                </div>
                 <p className="scope-note">{"✧ Chỉ cốt truyện trò chơi gốc · Tiếng Việt · Có thể tiết lộ nội dung"}</p>
               </section>
             ) : (

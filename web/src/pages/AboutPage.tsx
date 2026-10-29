@@ -4,7 +4,7 @@
 import { Link } from "react-router";
 export default function AboutPage() {
   return (
-    <main id="main" className="document">
+    <main id="main" className="document about">
       <span className="eyebrow">{"VỀ KHO LƯU TRỮ"}</span>
       <h1>
         {"Lore có nguồn."}
@@ -84,6 +84,16 @@ export default function AboutPage() {
           {
             "Lịch sử khách được lưu trong localStorage trên trình duyệt này. Bạn có thể xóa từng cuộc trò chuyện ở thanh bên. Trong chế độ API, câu hỏi được gửi tới backend; chính sách lưu trữ phía server do nhóm backend quản lý. Token quản trị chỉ giữ trong bộ nhớ của trang, không lưu vào trình duyệt."
           }
+        </p>
+      </section>
+      <section>
+        <h2>Kiểu chữ</h2>
+        <p>
+          Giao diện dùng Agmena Pro Book từ bộ font người dùng cung cấp qua{" "}
+          <a href="https://www.onlinewebfonts.com/" target="_blank" rel="noreferrer">
+            OnlineWebFonts
+          </a>
+          . Các ký tự tiếng Việt còn thiếu dùng font dự phòng trên thiết bị.
         </p>
       </section>
       <p className="disclaimer">
