@@ -62,6 +62,26 @@ Tăng chữ riêng trang Về dự án qua class `document about`: nội dung/da
 tiêu đề mục 26–30 px, tên thành viên 24 px, mô tả thành viên 16 px. Giãn dòng và tăng độ sáng chữ;
 không đổi nội dung bài giới thiệu hoặc CSS của trang admin.
 
+## Mở lại commit 4a3e833 theo yêu cầu
+
+Người dùng yêu cầu dùng lại commit `feat(web): giao diện và sửa lỗi đường dẫn ảnh` có mã 4a3e833.
+Đã tạo và chuyển sang nhánh riêng `feature/s2-tv4-khoi-phuc-4a3e833` tại đúng commit này.
+Nhánh `feature/s2-tv4-ui-chat-co-ban` đã rebase vẫn được giữ tại 5bdf189, không reset hoặc force-push.
+
+Trước khi đổi nhánh, lưu hai thay đổi tài liệu bàn giao rebase chưa commit vào stash
+`71c2facce7638a4ff38f7e2910ce82d68a25ada2` (mô tả: TV4: luu ban giao rebase truoc khi mo lai 4a3e833).
+Đã kiểm tra HEAD là 4a3e833 và web/Makefile không khác bản 5bdf189 trước đó; không viết lại mã frontend.
+Các kiểm tra build/17 test ở lần rebase vẫn áp dụng cùng nội dung web; không chạy lại test cho thao tác đổi nhánh.
+Bổ sung ghi chú này là thay đổi tài liệu chưa commit; không tự commit/push trong bước khôi phục.
+
+## Giữ nội dung 4a3e833 đồng thời cập nhật develop
+
+Theo yêu cầu tiếp theo, đã git fetch origin và xác nhận origin/develop vẫn là 02c4abf.
+Nhánh feature/s2-tv4-ui-chat-co-ban tại 5bdf189 đã chứa commit develop này và có web/Makefile giống hệt 4a3e833.
+Đã chuyển trở lại nhánh feature đó, giữ thay đổi tài liệu chưa commit. Không cần rebase thêm, không reset/ghi đè mã.
+4a3e833 là mã trước rebase; 5bdf189 là mã mới có cùng nội dung frontend sau khi đổi commit cha.
+Nhánh khôi phục và nhánh backup vẫn được giữ; chưa push remote hoặc tự áp dụng lại stash tài liệu rebase.
+
 Theo yêu cầu gom thư mục font, chuyển `web/Mantinia Regular` vào `web/font/Mantinia Regular`,
 cập nhật src của @font-face Mantinia. Giữ toàn bộ tệp và giấy phép đi kèm; font chính vẫn là Agmena.
 Đã xác minh đường dẫn nguồn/đích nằm trong web trước khi chuyển, không ghi đè thư mục đã tồn tại.

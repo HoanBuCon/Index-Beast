@@ -28,10 +28,10 @@ Lệnh không tự chạy backend; mở terminal khác chạy `make api` nếu m
   ([ảnh nguồn](https://static.bandainamcoent.eu/high/elden-ring/elden-ring/00-page-setup/eldenring_new.png)).
   Logo thuộc thương hiệu gốc, không phải logo do nhóm tạo.
 
-- Giao diện hiện dùng Agmena Pro Book từ `web/font/Agmena Pro Book/Web Fonts/` theo yêu cầu mới.
-  WOFF2 được Vite đóng gói cùng web, không tải font từ CDN. Font này thiếu nhiều ký tự tiếng Việt;
-  Cambria / Times New Roman là dự phòng cho ký tự chưa hỗ trợ. Ghi nguồn font ở trang Về dự án theo License.txt đi kèm.
-  Mantinia là cấu hình trước đây, hiện không dùng làm font chính của logo hay nội dung.
+- Logo dùng Agmena Pro Book từ `web/font/Agmena Pro Book/Web Fonts/`.
+  WOFF2 được Vite đóng gói cùng web, không tải font từ CDN. Nội dung tiếng Việt dùng Cambria,
+  dự phòng Times New Roman/serif để tránh trộn glyph. Giữ `web/font/License.txt` và nguồn font ở trang Về dự án.
+  Đã gỡ Mantinia cùng khai báo CSS không dùng, các bản font dư, trang demo, ZIP và shortcut nguồn.
 
 - Icon Grace dùng `src/assets/ERN_Map_Icon_Site_of_Grace.png`. Khi đổi tên hoặc di chuyển ảnh,
   cập nhật import trong Header, ChatPage và MessageList; đường dẫn cũ `grace.png` làm Vite báo thiếu module.
@@ -97,6 +97,20 @@ Type trong `src/api/types.ts` được viết tay, không sửa OpenAPI hoặc s
 - SSE done cũng có UUID, grounded và latency_ms. Lỗi HTTP không hiển thị nội dung nội bộ của provider.
 - Giao diện admin và client `/admin/*` hiện là khung S5; các endpoint này chưa nằm trong OpenAPI v1.
   Không coi admin đã được tích hợp, không sửa API để khớp khung frontend.
+
+## Tinh chỉnh giao diện chat (29/10/2026)
+
+Font nội dung tiếng Việt dùng Cambria (fallback Times New Roman/serif); Agmena được giữ riêng cho logo qua biến `--font-brand` để tránh trộn nét chữ có dấu.
+
+UI theo hướng chat hiện đại kết hợp Điểm Ân Điển: ảnh patches giảm bão hòa và dịu hơn khi có hội thoại, ô nhập nền đặc, hover đổi sắc nền nhẹ, câu trả lời không có khung bao. Các chuyển động mới tôn trọng `prefers-reduced-motion`.
+
+Ô nhập hiện có hình đại kiếm theo yêu cầu: chuôi SVG cố định, thân CSS giãn theo nội dung và mũi vát. Phần trang trí không nhận chuột; nút gửi máy bay giấy đen–vàng giữ nguyên và ẩn khi input trống.
+
+Ba gợi ý bên dưới có hình cờ chiến trận, viền vàng xỉn và đuôi chữ V; giữ button HTML và focus bàn phím. Desktop ba cột bằng nhau, mobile xếp dọc.
+
+Lớp `src/styles/refinement.css` được nạp sau CSS cũ để giữ ghi chú gốc. Cột chat tối đa 760 px, ba gợi ý chung chiều rộng với ô nhập; màn hình nhỏ dùng rail và menu phủ nội dung, hỗ trợ Escape và bàn phím. Giữ ảnh patches, font Agmena, icon Grace và góc vuông.
+
+Đợt chỉnh đã qua build, 17 test, Prettier và kiểm tra trình duyệt ở 1440/768/390 px. Chi tiết phạm vi, kiểm tra tương tác và giới hạn nằm trong [handover giao diện TV4](../docs/handover/2026-10-29_s2-tv4_tinh-chinh-giao-dien-taste.md).
 
 ## Kiểm tra thực tế và giới hạn
 

@@ -1,7 +1,7 @@
 // Màn chat: danh sách tin nhắn, ô nhập, trạng thái đang tìm/streaming/lỗi.
 // Phụ trách: TV4 · [S2] UI chat cơ bản
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router";
 import Header from "../components/layout/Header";
@@ -51,7 +51,25 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const isChat = useLocation().pathname === "/";
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [smallScreen, setSmallScreen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  // Màn hình nhỏ dùng thanh icon; menu chỉ phủ lên nội dung khi người dùng chủ động mở.
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 900px)");
+    const foldOnSmallScreen = () => {
+      setSmallScreen(query.matches);
+      if (query.matches) setSidebarOpen(false);
+    };
+    foldOnSmallScreen();
+    query.addEventListener("change", foldOnSmallScreen);
+    return () => query.removeEventListener("change", foldOnSmallScreen);
+  }, []);
+  function closeMobileSidebar() {
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      setSidebarOpen(false);
+      requestAnimationFrame(() => toggleRef.current?.focus());
+    }
+  }
   const history = useConversations();
   const [mode, setMode] = useState<Conversation["mode"]>("api");
   const [draft, setDraft] = useState(() => fresh("api"));
@@ -65,6 +83,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     setActive(next.id);
     stream.clearError();
     navigate("/");
+    closeMobileSidebar();
   }
   function send(text: string) {
     void stream.send(conversation, text);
@@ -118,8 +137,42 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     </>
   );
   return (
-    <div className={`workspace${sidebarOpen ? "" : " sidebar-collapsed"}`}>
+    <div
+      className={`workspace${sidebarOpen ? "" : " sidebar-collapsed"}`}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && sidebarOpen) closeMobileSidebar();
+        // Giữ điều hướng bàn phím trong menu khi menu phủ lên nội dung trên điện thoại.
+        if (event.key === "Tab" && smallScreen && sidebarOpen) {
+          const controls = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>(
+              ".sidebar-toggle, .sidebar button:not(:disabled), .sidebar a[href]",
+            ),
+          ).filter((element) => element.getClientRects().length > 0);
+          const first = controls[0];
+          const last = controls.at(-1);
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }
+      }}
+    >
       {sidebarToggle}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          tabIndex={-1}
+          aria-label="Đóng menu điều hướng"
+          onClick={() => {
+            setSidebarOpen(false);
+            requestAnimationFrame(() => toggleRef.current?.focus());
+          }}
+        />
+      )}
       <aside id="conversation-sidebar" className="sidebar" aria-label={"Lịch sử trò chuyện"}>
         <Header sidebarToggle={<span className="sidebar-toggle-space" aria-hidden="true" />} />
         <nav className="sidebar-rail" aria-label="Điều hướng chính">
@@ -135,7 +188,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
             </span>
             <span className="rail-label">Cuộc trò chuyện mới</span>
           </button>
-          <NavLink to="/about" title="Về dự án" aria-label="Về dự án">
+          <NavLink to="/about" title="Về dự án" aria-label="Về dự án" onClick={closeMobileSidebar}>
             <span className="rail-icon">
               <RailIcon name="about" />
             </span>
@@ -159,6 +212,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                       setMode(c.mode);
                       stream.clearError();
                       navigate("/");
+                      closeMobileSidebar();
                     }}
                   >
                     <span>{c.title}</span>
@@ -183,7 +237,13 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           </section>
         )}
         {history.storageError && <p role="status">{"Trình duyệt không lưu được lịch sử."}</p>}
-        <NavLink className="sidebar-admin" to="/admin" title="Quản trị" aria-label="Quản trị">
+        <NavLink
+          className="sidebar-admin"
+          to="/admin"
+          title="Quản trị"
+          aria-label="Quản trị"
+          onClick={closeMobileSidebar}
+        >
           <span className="rail-icon">
             <RailIcon name="admin" />
           </span>
@@ -191,7 +251,11 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         </NavLink>
       </aside>
       {isChat ? (
-        <section id="main" className={`chat-panel${conversation.messages.length === 0 ? " chat-empty" : ""}`}>
+        <section
+          id="main"
+          inert={smallScreen && sidebarOpen}
+          className={`chat-panel${conversation.messages.length === 0 ? " chat-empty" : ""}`}
+        >
           <div className="chat-content">
             {conversation.messages.length === 0 ? (
               <section className="welcome">
@@ -205,7 +269,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                     </button>
                   ))}
                 </div>
-                <p className="scope-note">{"✧ Chỉ cốt truyện trò chơi gốc · Tiếng Việt · Có thể tiết lộ nội dung"}</p>
+                <p className="scope-note">{"Cốt truyện trò chơi gốc · Tiếng Việt · Có thể tiết lộ nội dung"}</p>
               </section>
             ) : (
               <MessageList messages={conversation.messages} busy={stream.busy} demo={mode === "demo"} />
@@ -214,7 +278,9 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           {conversation.messages.length > 0 && <div className="input-area">{composer}</div>}
         </section>
       ) : (
-        <div className="document-panel">{children}</div>
+        <div className="document-panel" inert={smallScreen && sidebarOpen}>
+          {children}
+        </div>
       )}
     </div>
   );

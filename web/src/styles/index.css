@@ -12,13 +12,7 @@
 }
 
 /* Font do người dùng cung cấp; chỉ dùng cho chữ Latin vì không có glyph tiếng Việt có dấu. */
-@font-face {
-  font-family: "Mantinia";
-  src: url("../../font/Mantinia Regular/Mantinia Regular.otf") format("opentype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
+/* TV4: ghi chú trên mô tả Mantinia trước đây; đã gỡ font không dùng khi dọn thư mục font. */
 
 /* Thu gọn thanh lịch sử không xóa hội thoại hoặc ngắt stream đang chạy. */
 .workspace.sidebar-collapsed {
@@ -127,7 +121,9 @@
   --color-parchment: #eee8db;
 }
 :root {
-  --font-interface: "Agmena Pro Book", Cambria, "Times New Roman", serif;
+  /* TV4: dùng cùng một font hỗ trợ tiếng Việt để tránh trộn nét chữ có dấu với Agmena. */
+  --font-interface: Cambria, "Times New Roman", serif;
+  --font-brand: "Agmena Pro Book", Cambria, "Times New Roman", serif;
   font-family: var(--font-interface);
   color: #eee8db;
   background: #101210;
@@ -222,7 +218,7 @@ a {
   color: #eee8db;
   text-decoration: none;
   letter-spacing: 0.18em;
-  font-family: var(--font-interface);
+  font-family: var(--font-brand);
   font-size: 20px;
 }
 .brand strong {
@@ -232,7 +228,7 @@ a {
 .brand small {
   display: block;
   margin-top: 5px;
-  font: 9px var(--font-interface);
+  font: 9px var(--font-brand);
   letter-spacing: 0.22em;
   color: #a4a794;
 }
