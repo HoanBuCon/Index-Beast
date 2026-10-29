@@ -4,6 +4,7 @@ Phụ trách: TV3 · [S3] Generation
 """
 
 import json
+import logging
 import re
 from collections.abc import AsyncIterator
 from contextlib import aclosing
@@ -12,10 +13,11 @@ from typing import Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.adapters.llm import LLMError, LLMResponse
 from app.api.schemas.chat import Source
+from app.rag.evidence import evidence_units
 from app.rag.prompts import generation_prompt
 from core.errors import UpstreamError
 from core.types import Hit
@@ -52,7 +54,14 @@ class Generated:
 class Evidence(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     index: int = Field(ge=1, le=5)
-    quote: str = Field(min_length=8, max_length=2000)
+    quote: str | None = Field(default=None, min_length=8, max_length=2000)
+    quote_id: str | None = Field(default=None, pattern=r"^q\d{1,4}$")
+
+    @model_validator(mode="after")
+    def one_reference(self):
+        if (self.quote is None) == (self.quote_id is None):
+            raise ValueError("Choose exactly one quote_id or legacy quote")
+        return self
 
 
 class GroundedAnswer(BaseModel):
@@ -67,22 +76,38 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         if not isinstance(data, str) or not data.strip() or CITATION.search(data) or URL.search(data):
             raise UpstreamError("Câu trả lời chưa đúng chính sách không trích dẫn nguồn ở chế độ LLM.")
         return Generated(data)
+    failure = "schema_invalid"
     try:
         parsed = GroundedAnswer.model_validate(data)
         used = {int(n) for n in CITATION.findall(parsed.answer)}
-        evidence = {item.index: item.quote for item in parsed.evidence}
+        evidence = {}
+        for item in parsed.evidence:
+            if item.index > len(prepared.hits):
+                failure = "quote_not_verbatim_or_index"
+                raise ValueError("Evidence index is outside selected context")
+            text = prepared.hits[item.index - 1].payload["text"]
+            quote = evidence_units(text).get(item.quote_id) if item.quote_id is not None else item.quote
+            if quote is None:
+                failure = "unknown_quote_id"
+                raise ValueError("Unknown evidence unit ID")
+            evidence[item.index] = quote
         if URL.search(parsed.answer):
+            failure = "model_url"
             raise ValueError("URLs must come from server metadata")
         if parsed.insufficient:
             if used or evidence:
+                failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
             return Generated(parsed.answer)
         if not used or used != set(evidence):
+            failure = "citation_evidence_indices"
             raise ValueError("Citations and explicit evidence must match")
         for index, quote in evidence.items():
             if index > len(prepared.hits) or quote not in prepared.hits[index - 1].payload["text"]:
+                failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence quote is not in cited text")
         if any(not CITATION.search(p) for p in parsed.answer.split("\n\n") if p.strip()):
+            failure = "uncited_paragraph"
             raise ValueError("Every answer paragraph needs evidence")
         sources = [
             Source(
@@ -98,6 +123,9 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         # This is NOT a guarantee of semantic entailment of every claim.
         return Generated(parsed.answer, sources, True)
     except (ValidationError, ValueError, KeyError, TypeError):
+        prepared.trace["validation_failure"] = failure
+        # Static category only: never log model output, source quotes, prompts or private reasoning.
+        logging.getLogger(__name__).warning("RAG validation failed", extra={"data": {"reason": failure}})
         raise UpstreamError("Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ.") from None
 
 
@@ -129,12 +157,15 @@ def answer_prefix(raw: str) -> str:
 
 
 class Generator:
-    def __init__(self, llm: LLM):
+    def __init__(self, llm: LLM, *, thinking: bool = False):
         self.llm = llm
+        self.thinking = thinking
 
     def chain(self, prepared: Prepared) -> Runnable:
         template = prepared.template or generation_prompt()
-        return template | self.llm.bind_model(json_output=prepared.mode == "rag")
+        return template | self.llm.bind_model(
+            json_output=prepared.mode == "rag", thinking=self.thinking and prepared.mode == "rag"
+        )
 
     async def generate(self, prepared: Prepared) -> Generated:
         if prepared.static_answer is not None:

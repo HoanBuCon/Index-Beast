@@ -45,6 +45,7 @@ def hit(index=1, **overrides):
             "game_scope": "base",
             "review_status": "approved",
             "source_type": "wiki_prose",
+            "lang": "en",
             **overrides,
         },
     )
@@ -488,3 +489,101 @@ def test_sources_without_explicit_evidence_do_not_imply_grounding():
     assert validate_answer(prepared, {"answer": "Unknown.", "evidence": [], "insufficient": True}) == Generated(
         "Unknown."
     )
+
+
+async def test_pilot_dlc_question_and_source_metadata_flow_through_langchain_prompt():
+    llm = FakeLLM()
+    source = hit(
+        game_scope="elden_ring",
+        review_status=None,
+        release_scope="sote_candidate",
+        source="wikigg",
+        source_type="speculation",
+        continuity="unknown",
+    )
+    live = service("rag", llm, FakeRetriever([source]))
+    response = await live.answer(ChatRequest(message="Explain related lore in Shadow of the Erdtree", channel="web"))
+    assert response.grounded and response.sources[0].url == source.payload["url"]
+    context = json.loads(llm.seen[-1][-1]["content"])["evidence"][0]
+    assert context["release_scope"] == "sote_candidate" and context["review_status"] is None
+    assert context["source_type"] == "speculation" and context["continuity"] == "unknown"
+    assert "never assume shared canon" in llm.seen[-1][0]["content"]
+
+
+async def test_missing_spoiler_labels_return_insufficient_without_calling_model():
+    llm = FakeLLM()
+    live = service("rag", llm, FakeRetriever([hit(game_scope="elden_ring", review_status=None)]))
+    response = await live.answer(ChatRequest(**BODY, options={"spoilers": False}))
+    assert not response.grounded and response.sources == [] and llm.calls == 0
+
+
+@pytest.mark.parametrize(
+    "question,should_retrieve",
+    [
+        ("Who is Melina and what does she ask the Tarnished to do?", True),
+        ("Who is Rellana, and how is she related to Rennala?", True),
+        ("who is melina and what does she ask the Tarnished to do?", True),
+        ("How is she related to Rennala?", False),
+        ("Tại sao cô ấy rời đi?", False),
+    ],
+)
+async def test_named_subject_is_not_mistaken_for_unbound_pronoun(question, should_retrieve):
+    retrieval = FakeRetriever(hits=[])
+    await service("rag", FakeLLM(), retrieval).answer(ChatRequest(message=question, channel="web"))
+    assert bool(retrieval.calls) is should_retrieve
+
+
+def test_grounding_failure_logs_only_static_category(caplog):
+    prepared = Prepared("rag", "en", [], hits=[hit()])
+    with pytest.raises(UpstreamError):
+        validate_answer(
+            prepared,
+            {
+                "answer": "Ranni [1].",
+                "evidence": [{"index": 1, "quote": "private-model-output-not-a-source"}],
+                "insufficient": False,
+            },
+        )
+    assert prepared.trace["validation_failure"] == "quote_not_verbatim_or_index"
+    assert "private-model-output" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "mode,enabled,expected",
+    [
+        ("rag", True, "enabled"),
+        ("rag", False, "disabled"),
+        ("llm_only", True, "disabled"),
+    ],
+)
+def test_rag_thinking_is_server_config_and_does_not_change_llm_only(mode, enabled, expected):
+    pipeline = ChatPipeline(Settings(_env_file=None, chat_mode=mode, rag_thinking_enabled=enabled), FakeLLM())
+    chain = pipeline.generator.chain(Prepared(mode, "en", []))
+    assert chain.steps[-1].kwargs["extra_body"]["thinking"]["type"] == expected
+
+
+def test_evidence_unit_ids_resolve_to_exact_source_and_legacy_quotes_remain_valid():
+    prepared = Prepared("rag", "en", [], hits=[hit()])
+    result = validate_answer(
+        prepared,
+        {"answer": "Ranni is an Empyrean [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False},
+    )
+    assert result.grounded and result.sources[0].text == TEXT
+    assert result.sources[0].text in prepared.hits[0].payload["text"]
+    with pytest.raises(UpstreamError):
+        validate_answer(
+            prepared, {"answer": "Ranni [1].", "evidence": [{"index": 1, "quote_id": "q999"}], "insufficient": False}
+        )
+    with pytest.raises(UpstreamError):
+        validate_answer(
+            prepared, {"answer": "Ranni [2].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+        )
+
+
+def test_long_evidence_units_are_bounded_exact_substrings():
+    from app.rag.evidence import evidence_units
+
+    text = "A long source sentence. " * 300
+    units = evidence_units(text)
+    assert "q0" not in units and len(units) > 1
+    assert all(8 <= len(quote) <= 2000 and quote in text for quote in units.values())

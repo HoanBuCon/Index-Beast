@@ -161,7 +161,7 @@ async def test_lazy_encoder_constructor_has_no_models(tmp_path):
 async def test_encoder_reuses_models_checks_actual_budget_and_recovers_failed_sparse_init(monkeypatch, tmp_path):
     import fastembed
 
-    calls = {"dense_init": 0, "sparse_init": 0, "embed": []}
+    calls = {"dense_init": 0, "sparse_init": 0, "embed": [], "threads": []}
 
     class Dense:
         @staticmethod
@@ -170,6 +170,7 @@ async def test_encoder_reuses_models_checks_actual_budget_and_recovers_failed_sp
 
         def __init__(self, **kwargs):
             calls["dense_init"] += 1
+            calls["threads"].append(kwargs["threads"])
             self.model = SimpleNamespace(
                 tokenizer=SimpleNamespace(
                     no_truncation=lambda: None,
@@ -183,6 +184,7 @@ async def test_encoder_reuses_models_checks_actual_budget_and_recovers_failed_sp
 
     def sparse(**kwargs):
         calls["sparse_init"] += 1
+        calls["threads"].append(kwargs["threads"])
         if calls["sparse_init"] == 1:
             raise RuntimeError("synthetic init failure")
         vector = SimpleNamespace(indices=array("I", [1]), values=array("f", [1.0]))
@@ -192,7 +194,7 @@ async def test_encoder_reuses_models_checks_actual_budget_and_recovers_failed_sp
 
     monkeypatch.setattr(fastembed, "TextEmbedding", Dense)
     monkeypatch.setattr(fastembed, "SparseTextEmbedding", sparse)
-    encoder = FastEmbedEncoder(tmp_path)
+    encoder = FastEmbedEncoder(tmp_path, threads=4)
     with pytest.raises(RuntimeError):
         await encoder.encode(["passage: Ranni"])
     await encoder.encode(["passage: Ranni"])
@@ -200,6 +202,7 @@ async def test_encoder_reuses_models_checks_actual_budget_and_recovers_failed_sp
     with pytest.raises(ValueError, match="512"):
         await encoder.encode(["oversized"])
     assert calls["dense_init"] == 1 and calls["sparse_init"] == 2
+    assert calls["threads"] == [4, 4, 4]
     assert calls["embed"] == [["passage: Ranni"], ["query: Ranni"]]
 
 

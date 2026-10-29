@@ -25,8 +25,11 @@ def prefixed(text: str, *, query: bool) -> str:
 
 
 class FastEmbedEncoder:
-    def __init__(self, cache_dir: str | Path):
+    def __init__(self, cache_dir: str | Path, *, threads: int = 2):
+        if type(threads) is not int or not 1 <= threads <= 32:
+            raise ValueError("Encoder threads must be between 1 and 32")
         self.cache_dir = str(cache_dir)
+        self.threads = threads
         self._dense = None
         self._sparse = None
         self._lock = asyncio.Lock()
@@ -48,9 +51,9 @@ class FastEmbedEncoder:
                         dim=384,
                         model_file="onnx/model.onnx",
                     )
-            self._dense = TextEmbedding(model_name=E5_MODEL, cache_dir=self.cache_dir, threads=2)
+            self._dense = TextEmbedding(model_name=E5_MODEL, cache_dir=self.cache_dir, threads=self.threads)
         if self._sparse is None:
-            self._sparse = SparseTextEmbedding(model_name="Qdrant/bm25", cache_dir=self.cache_dir, threads=2)
+            self._sparse = SparseTextEmbedding(model_name="Qdrant/bm25", cache_dir=self.cache_dir, threads=self.threads)
         # FastEmbed otherwise truncates silently. Count with the exact loaded tokenizer first.
         tokenizer = self._dense.model.tokenizer
         tokenizer.no_truncation()

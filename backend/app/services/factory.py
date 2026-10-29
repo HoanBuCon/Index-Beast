@@ -6,6 +6,7 @@ Phụ trách: TV3 · [S3] Chat integration
 from app.rag.pipeline import ChatPipeline
 from app.services.chat import ChatService, LiveChatService
 from app.services.mock_chat import MockChatService
+from core.corpus import CorpusPolicy
 
 
 def build_chat_service(ctx) -> ChatService:
@@ -23,8 +24,8 @@ def build_chat_service(ctx) -> ChatService:
         if ctx.qdrant is None:
             raise UnavailableError("Kho tri thức RAG chưa được cấu hình.")
         retriever = HybridRetriever(
-            FastEmbedEncoder(REPO_ROOT / "backend" / settings.rag_models_dir),
-            QdrantStore(ctx.qdrant, settings.rag_collection),
+            FastEmbedEncoder(REPO_ROOT / "backend" / settings.rag_models_dir, threads=settings.rag_encoder_threads),
+            QdrantStore(ctx.qdrant, settings.rag_collection, CorpusPolicy.from_settings(settings)),
             settings.rag_prefetch,
         )
     return LiveChatService(ChatPipeline(settings, ctx.llm, retriever))

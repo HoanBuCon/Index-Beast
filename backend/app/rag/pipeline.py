@@ -14,12 +14,14 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
 from langsmith import tracing_context
 
+from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.reranker import NoReranker, Reranker
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.rewrite import rewrite
 from core.config import Settings
+from core.corpus import CorpusPolicy
 from core.errors import UnavailableError
 from core.types import Hit
 
@@ -41,20 +43,91 @@ def outside_scope(question: str) -> bool:
     plain = "".join(c for c in unicodedata.normalize("NFD", question.lower()) if not unicodedata.combining(c))
     return bool(
         re.search(
-            r"\b(nightreign|shadow of the erdtree|dlc|dark souls|bitcoin|fibonacci|cover letter|"
+            r"\b(dark souls|bitcoin|fibonacci|cover letter|"
             r"gaming laptop|python code|viet.*chuong trinh|build pvp|pvp build|toi uu.*chi so)\b",
             plain,
         )
     )
 
 
-def select_context(hits: list[Hit], limit: int, budget: int) -> list[Hit]:
+def unresolved_reference(question: str) -> bool:
+    """Conservative pronoun-leading gate, not NER. A named/content prefix is left to the LLM/rewrite."""
+    pronoun = re.search(r"\b(ông ta|cô ấy|anh ấy|he|she|him|her)\b", question, re.I)
+    if pronoun is None:
+        return False
+    words = re.findall(r"[^\W\d_]+", question[: pronoun.start()].lower())
+    question_words = set(
+        [
+            "who",
+            "what",
+            "why",
+            "where",
+            "when",
+            "how",
+            "which",
+            "is",
+            "are",
+            "was",
+            "were",
+            "does",
+            "did",
+            "do",
+            "can",
+            "could",
+            "would",
+            "should",
+            "will",
+            "tell",
+            "me",
+            "us",
+            "about",
+            "explain",
+            "describe",
+            "please",
+            "the",
+            "a",
+            "an",
+            "of",
+            "to",
+            "for",
+            "and",
+            "you",
+            "your",
+            "happened",
+            "happen",
+            "tại",
+            "sao",
+            "vì",
+            "ai",
+            "là",
+            "ở",
+            "đâu",
+            "khi",
+            "nào",
+            "hãy",
+            "cho",
+            "tôi",
+            "biết",
+            "giải",
+            "thích",
+            "về",
+            "và",
+            "đã",
+            "có",
+            "thể",
+        ]
+    )
+    return all(word in question_words for word in words)
+
+
+def select_context(
+    hits: list[Hit], limit: int, budget: int, *, policy: CorpusPolicy | None = None, spoilers: bool = True
+) -> list[Hit]:
+    admission = policy or CorpusPolicy()
     selected, seen, used = [], set(), 0
     for hit in hits:
         p = hit.payload
-        if hit.id in seen or p.get("game_scope") != "base" or p.get("review_status") != "approved":
-            continue
-        if p.get("source_type") not in {"in_game_text", "wiki_prose", "speculation"}:
+        if hit.id in seen or admission.exclusion_reason(p, spoilers=spoilers):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
             continue
@@ -73,14 +146,24 @@ def select_context(hits: list[Hit], limit: int, budget: int) -> list[Hit]:
 
 def context_item(hit: Hit, index: int) -> dict:
     p = hit.payload
-    return {
+    item = {
         "index": index,
-        "chunk_id": hit.id,
+        "point_id": hit.id,
+        "chunk_id": p.get("artifact_chunk_id", p.get("chunk_id", hit.id)),
         "title": p["title"],
         "section": p.get("section"),
         "source_type": p["source_type"],
         "text": p["text"],
     }
+    # Preserve provided unknown/null values, without fabricating absent metadata or wasting budget on it.
+    for key in ("source_type_evidence", "source", "lang", "game_scope", "release_scope", "continuity", "review_status"):
+        if key in p:
+            item[key] = p[key]
+    if "indexbeast_admission" in p:
+        item["admission_policy"] = p["indexbeast_admission"]
+    units = evidence_units(p["text"])
+    item["evidence_units"] = {"q0": "entire source text above"} if "q0" in units else units
+    return item
 
 
 class ChatPipeline:
@@ -92,8 +175,12 @@ class ChatPipeline:
         reranker: Reranker | None = None,
     ):
         self.settings, self.llm, self.retriever = settings, llm, retriever
+        self.policy = CorpusPolicy.from_settings(settings)
+        store = getattr(retriever, "store", None)
+        if store is not None and store.policy != self.policy:
+            raise ValueError("Retriever and pipeline must use the same corpus policy/languages")
         self.reranker = (reranker or NoReranker()) if settings.chat_mode == "rag" else None
-        self.generator = Generator(llm) if llm is not None else None
+        self.generator = Generator(llm, thinking=settings.rag_thinking_enabled) if llm is not None else None
         self.template = generation_prompt()
         rag_steps = (
             RunnableLambda(self._rewrite, name="rewrite")
@@ -124,9 +211,9 @@ class ChatPipeline:
         state.update(prepared=prepared, query=req.message, documents=[])
         if outside_scope(req.message):
             prepared.static_answer = (
-                "Mình chỉ hỗ trợ lore Elden Ring base game. Bạn hãy hỏi về câu chuyện trong game."
+                "Mình hỗ trợ lore Elden Ring và nội dung liên quan trong kho nguồn. Bạn hãy hỏi về câu chuyện."
                 if lang == "vi"
-                else "I focus on Elden Ring base-game lore. Please ask about its story."
+                else "I focus on Elden Ring lore and related source material. Please ask about its story."
             )
         return state
 
@@ -137,13 +224,13 @@ class ChatPipeline:
             p.trace["rewrite_fallback"] = fallback
             if rewritten.out_of_scope or rewritten.ambiguous:
                 p.static_answer = (
-                    "Bạn hãy nêu rõ nhân vật/sự kiện thuộc lore base game muốn hỏi."
+                    "Bạn hãy nêu rõ nhân vật, sự kiện hoặc phiên bản Elden Ring muốn hỏi."
                     if p.lang == "vi"
-                    else "Please specify the base-game character or event you mean."
+                    else "Please specify the Elden Ring character, event or release you mean."
                 )
             else:
                 state["query"] = rewritten.standalone_query_en
-        elif not state["history"] and re.search(r"\b(ông ta|cô ấy|anh ấy|he|she|him|her)\b", state["query"], re.I):
+        elif not state["history"] and unresolved_reference(state["query"]):
             p.static_answer = "Bạn đang hỏi nhân vật nào?" if p.lang == "vi" else "Which character do you mean?"
         return state
 
@@ -173,6 +260,8 @@ class ChatPipeline:
                 [document_to_hit(d) for d in state["documents"]],
                 self.settings.rag_top_k,
                 self.settings.rag_context_chars,
+                policy=self.policy,
+                spoilers=state["req"].options.spoilers,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits:

@@ -5,15 +5,17 @@ Phụ trách: TV3 · [S2] Module retrieval hybrid
 
 from qdrant_client import models
 
+from core.corpus import CorpusPolicy
 from core.errors import UnavailableError
 from core.types import ChunkRecord, Encoded, Hit
 from core.vector.schema import ensure_collection
 
 
 class QdrantStore:
-    def __init__(self, client, collection: str):
+    def __init__(self, client, collection: str, policy: CorpusPolicy | None = None):
         self.client = client
         self.collection = collection
+        self.policy = policy or CorpusPolicy()
 
     async def ready(self) -> None:
         info = await ensure_collection(self.client, self.collection)
@@ -24,7 +26,7 @@ class QdrantStore:
         points = [
             models.PointStruct(
                 id=str(chunk.point_uuid),
-                payload=chunk.payload(),
+                payload=self.policy.index_payload(chunk.payload()),
                 vector={
                     "dense": v.dense,
                     "bm25": models.SparseVector(
@@ -38,13 +40,7 @@ class QdrantStore:
         await self.client.upsert(self.collection, points=points, wait=True)
 
     async def search(self, vector: Encoded, *, limit: int, spoilers: bool = True) -> list[Hit]:
-        must = [
-            models.FieldCondition(key="game_scope", match=models.MatchValue(value="base")),
-            models.FieldCondition(key="review_status", match=models.MatchValue(value="approved")),
-        ]
-        if not spoilers:
-            must.append(models.FieldCondition(key="spoiler_level", range=models.Range(lte=0)))
-        filters = models.Filter(must=must)
+        filters = self.policy.query_filter(spoilers=spoilers)
         result = await self.client.query_points(
             self.collection,
             prefetch=[
@@ -61,4 +57,8 @@ class QdrantStore:
             limit=limit,
             with_payload=True,
         )
-        return [Hit(str(p.id), p.score, p.payload or {}) for p in result.points]
+        return [
+            Hit(str(p.id), p.score, p.payload or {})
+            for p in result.points
+            if self.policy.exclusion_reason(p.payload or {}, spoilers=spoilers) is None
+        ]

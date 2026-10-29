@@ -33,6 +33,8 @@ async def ensure_collection(client, name: str, *, create: bool = False):
             ("document_id", models.PayloadSchemaType.KEYWORD),
             ("spoiler_level", models.PayloadSchemaType.INTEGER),
             ("review_status", models.PayloadSchemaType.KEYWORD),
+            ("lang", models.PayloadSchemaType.KEYWORD),
+            ("indexbeast_admission", models.PayloadSchemaType.KEYWORD),
         )
         for field, kind in fields:
             existing = info.payload_schema.get(field)

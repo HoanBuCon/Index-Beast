@@ -14,6 +14,10 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean, chunk and index (TV2/TV3)")
     p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index"])
     p.add_argument("--input", type=Path, help="Reviewed chunk JSONL for index")
+    p.add_argument("--policy", choices=["reviewed", "pilot"], help="Index admission; defaults to RAG_CORPUS_POLICY")
+    p.add_argument("--languages", help="Index languages, e.g. en or en,ja; defaults to RAG_LANGUAGES")
+    p.add_argument("--collection", help="Index collection; defaults to RAG_COLLECTION")
+    p.add_argument("--details", action="store_true", help="Include all excluded locations in the index report")
     p.add_argument("--input-dir", type=Path)
     p.add_argument("--tokenizer", type=Path)
     p.add_argument("--max-tokens", type=int)
@@ -33,7 +37,18 @@ def main(argv=None):
             p.error("index requires --input reviewed-chunks.jsonl")
         from ingest.indexing import run_cli
 
-        return run_cli(args.input, dry_run=args.dry_run)
+        try:
+            return run_cli(
+                args.input,
+                dry_run=args.dry_run,
+                policy=args.policy,
+                languages=args.languages,
+                collection=args.collection,
+                tokenizer_path=args.tokenizer,
+                details=args.details,
+            )
+        except ValueError as exc:
+            p.error(str(exc))
     if args.limit < 1:
         p.error("--limit must be positive")
     config = load_settings(args.config)

@@ -1,0 +1,65 @@
+{
+  "runs": [
+    {
+      "run": 1,
+      "started_at": "2026-10-29T19:15:01.374903+07:00",
+      "thinking": false,
+      "max_tokens": "2048 at execution",
+      "protocol": "literal_quotes_v0",
+      "passed": false,
+      "failures": [
+        "EN01:grounding",
+        "EN03:grounding",
+        "EN05:negative_grounding",
+        "sse"
+      ],
+      "qa_http_200": 10,
+      "qa_count": 10
+    },
+    {
+      "run": 2,
+      "started_at": "2026-10-29T19:23:44.045460+07:00",
+      "thinking": false,
+      "max_tokens": "2048 at execution",
+      "protocol": "literal_quotes_v0",
+      "passed": false,
+      "failures": [
+        "VI04:http",
+        "EN01:http",
+        "EN03:http",
+        "EN05:http",
+        "sse"
+      ],
+      "qa_http_200": 6,
+      "qa_count": 10
+    },
+    {
+      "run": 3,
+      "started_at": "2026-10-29T19:30:39.555620+07:00",
+      "thinking": true,
+      "max_tokens": "2048 at execution",
+      "protocol": "literal_quotes_v0",
+      "passed": false,
+      "failures": [
+        "VI01:http",
+        "VI03:http",
+        "EN02:http",
+        "sse"
+      ],
+      "qa_http_200": 7,
+      "qa_count": 10
+    },
+    {
+      "run": 4,
+      "started_at": "2026-10-29T19:39:36.895874+07:00",
+      "thinking": true,
+      "max_tokens": 4096,
+      "protocol": "server_quote_ids_v1",
+      "passed": true,
+      "failures": [],
+      "qa_http_200": 10,
+      "qa_count": 10
+    }
+  ],
+  "final_passed": true
+}
