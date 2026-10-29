@@ -33,7 +33,7 @@ class AppContext:
     settings: Settings
     engine: AsyncEngine
     sessionmaker: async_sessionmaker
-    qdrant: AsyncQdrantClient
+    qdrant: AsyncQdrantClient | None
     redis: Redis
     llm: DeepSeekLLM | None = None
     health_checks: dict[str, HealthCheck] = field(default_factory=dict)
@@ -68,12 +68,27 @@ def register_infra(ctx: AppContext) -> None:
         if not await ctx.redis.ping():
             raise ConnectionError("redis ping returned false")
 
+    # llm_only chat never constructs a Qdrant client. Keep the existing /health
+    # contract: an explicit infrastructure probe may lazily create its own client.
+    health_qdrant = ctx.qdrant
+
     async def check_qdrant() -> None:
-        await ctx.qdrant.get_collections()
+        nonlocal health_qdrant
+        if health_qdrant is None:
+            health_qdrant = AsyncQdrantClient(
+                url=ctx.settings.qdrant_url,
+                timeout=max(1, round(ctx.settings.client_timeout_seconds)),
+                check_compatibility=False,
+            )
+        await health_qdrant.get_collections()
+
+    async def close_qdrant() -> None:
+        if health_qdrant is not None:
+            await health_qdrant.close()
 
     ctx.register("postgres", close=ctx.engine.dispose, check=check_postgres)
     ctx.register("redis", close=ctx.redis.aclose, check=check_redis)
-    ctx.register("qdrant", close=ctx.qdrant.close, check=check_qdrant)
+    ctx.register("qdrant", close=close_qdrant, check=check_qdrant)
 
 
 def build_context(settings: Settings) -> AppContext:
@@ -84,7 +99,15 @@ def build_context(settings: Settings) -> AppContext:
         settings=settings,
         engine=engine,
         sessionmaker=create_sessionmaker(engine),
-        qdrant=AsyncQdrantClient(url=settings.qdrant_url, timeout=max(1, round(timeout))),  # client chỉ nhận số nguyên
+        qdrant=(
+            AsyncQdrantClient(
+                url=settings.qdrant_url,
+                timeout=max(1, round(timeout)),
+                check_compatibility=False,
+            )
+            if settings.chat_mode != "llm_only"
+            else None
+        ),  # /health có thể tự tạo client probe riêng; llm_only chat không khởi tạo client
         redis=Redis.from_url(
             settings.redis_url, decode_responses=True, socket_timeout=timeout, socket_connect_timeout=timeout
         ),

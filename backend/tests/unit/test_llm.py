@@ -3,6 +3,7 @@
 Phụ trách: TV3 · [S1] Xác nhận DeepSeek
 """
 
+import asyncio
 import json
 from contextlib import aclosing, asynccontextmanager
 
@@ -12,6 +13,7 @@ from openai import AsyncOpenAI
 
 from app.adapters.llm import DeepSeekLLM, LLMConfigurationError, LLMError
 from app.context import build_context
+from app.rag.prompts import generation_prompt
 from core.config import Settings
 
 MESSAGES = [{"role": "user", "content": "Who is Godrick?"}]
@@ -31,13 +33,16 @@ def completion(content="Hello", reason="stop"):
 @asynccontextmanager
 async def fake_llm(handler):
     settings = Settings(_env_file=None, llm_model="test-model")
-    async with AsyncOpenAI(
-        api_key="fake-key",
-        base_url="https://api.deepseek.com",
-        max_retries=0,
-        http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
-    ) as client:
-        yield DeepSeekLLM(settings, client=client)
+    async with (
+        AsyncOpenAI(
+            api_key="fake-key",
+            base_url="https://api.deepseek.com",
+            max_retries=0,
+            http_client=httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+        ) as client,
+        DeepSeekLLM(settings, client=client) as llm,
+    ):
+        yield llm
 
 
 async def test_complete_sends_deepseek_parameters_and_exposes_usage():
@@ -164,6 +169,22 @@ async def test_stream_yields_only_answer_and_closes_http_response():
     assert body.closed
 
 
+async def test_stream_can_request_json_output_without_changing_default_text_mode():
+    body = SSEBody()
+
+    def handler(request):
+        data = json.loads(request.content)
+        assert data["response_format"] == {"type": "json_object"}
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=body)
+
+    async with (
+        fake_llm(handler) as llm,
+        aclosing(llm.stream([{"role": "system", "content": "Return JSON."}], json_output=True)) as stream,
+    ):
+        assert await anext(stream) == "Xin "
+    assert body.closed
+
+
 async def test_stream_can_be_closed_when_consumer_stops_early():
     body = SSEBody()
     async with fake_llm(lambda _: httpx.Response(200, stream=body)) as llm:
@@ -231,3 +252,79 @@ async def test_context_registers_llm_for_shutdown_but_not_paid_health_probes():
     client = ctx.llm._client
     await ctx.aclose()
     assert client.is_closed()
+
+
+async def test_missing_usage_stays_unknown_instead_of_zero():
+    payload = completion()
+    payload.pop("usage")
+    async with fake_llm(lambda _: httpx.Response(200, json=payload)) as llm:
+        result = await llm.complete(MESSAGES)
+    assert result.prompt_tokens is None and result.completion_tokens is None
+
+
+async def test_model_and_transport_configuration_come_from_settings():
+    settings = Settings(
+        _env_file=None,
+        deepseek_api_key="offline-key",
+        deepseek_base_url="https://provider.example.test/v1",
+        llm_model="model-from-settings",
+        llm_timeout_seconds=17,
+        llm_max_retries=3,
+        llm_temperature=0.7,
+        llm_max_tokens=177,
+    )
+    async with DeepSeekLLM(settings) as llm:
+        assert llm.model.model_name == settings.llm_model
+        assert llm.model.api_base == settings.deepseek_base_url
+        assert llm.model.request_timeout == 17 and llm.model.max_retries == 3
+        assert llm._client.timeout == 17 and llm._client.max_retries == 3
+        params = llm.bind_model().kwargs
+        assert params["temperature"] == 0.7 and params["max_tokens"] == 177
+
+
+async def test_json_prompt_model_lcel_closes_when_consumer_moves_to_another_task():
+    body = SSEBody()
+    async with fake_llm(lambda _: httpx.Response(200, stream=body)) as llm:
+        chain = generation_prompt() | llm.bind_model(json_output=True)
+        stream = llm.stream_chain(
+            chain,
+            {
+                "persona": "IndexBeast",
+                "lang": "vi",
+                "spoilers": True,
+                "policy": "Return JSON.",
+                "history": [],
+                "payload": "Who is Ranni?",
+            },
+        )
+        assert await anext(stream) == "Xin "
+        await asyncio.wait_for(asyncio.create_task(stream.aclose()), timeout=3)
+    assert body.closed
+
+
+async def test_cancel_blocked_provider_stream_closes_response_without_retry():
+    entered = asyncio.Event()
+
+    class BlockingBody(SSEBody):
+        async def __aiter__(self):
+            async for chunk in super().__aiter__():
+                yield chunk
+                if b'"content": "Xin "' in chunk:
+                    entered.set()
+                    await asyncio.Event().wait()
+
+    body, requests = BlockingBody(), []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, stream=body)
+
+    async with fake_llm(handler) as llm:
+        stream = llm.stream(MESSAGES)
+        assert await anext(stream) == "Xin "
+        task = asyncio.create_task(anext(stream))
+        await asyncio.wait_for(entered.wait(), timeout=3)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, timeout=3)
+    assert body.closed and len(requests) == 1

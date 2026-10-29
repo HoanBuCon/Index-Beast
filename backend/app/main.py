@@ -18,6 +18,7 @@ from app.api.router import API_PREFIX, HEALTH_PATH, api_router
 from app.api.routes import llm_test
 from app.context import AppContext, build_context
 from app.middleware import install_middleware
+from app.services.factory import build_chat_service
 from app.services.mock_chat import MockChatService
 from core.config import Settings, ensure_safe_for_environment, get_settings
 from core.logging import setup_logging
@@ -35,6 +36,8 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         ctx = context or build_context(settings)
         app.state.ctx = ctx
+        if settings.chat_mode != "mock":
+            app.state.chat_service = build_chat_service(ctx)
         started = {"environment": settings.environment, "resources": list(ctx.health_checks)}
         log.info("api started", extra={"data": started})
         try:
@@ -53,7 +56,8 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
         openapi_url="/api/openapi.json" if public_docs else None,
         redoc_url=None,
     )
-    app.state.chat_service = MockChatService()  # S3: thay bằng service RAG thật
+    # OpenAPI can be built without lifespan. Live service is wired after AppContext is ready.
+    app.state.chat_service = MockChatService()
     install_error_handlers(app)
     install_middleware(app, settings, quiet_paths=[HEALTH_PATH])
     app.include_router(api_router)

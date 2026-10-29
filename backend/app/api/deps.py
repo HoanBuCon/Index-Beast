@@ -12,7 +12,7 @@ from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import AppContext
-from app.services.mock_chat import MockChatService
+from app.services.chat import ChatService
 
 
 def get_ctx(request: Request) -> AppContext:
@@ -31,5 +31,5 @@ async def get_session(ctx: AppContext = Depends(get_ctx)) -> AsyncIterator[Async
 SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]
 
 
-def get_chat_service(request: Request) -> MockChatService:
+def get_chat_service(request: Request) -> ChatService:
     return request.app.state.chat_service

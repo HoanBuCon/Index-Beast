@@ -63,6 +63,29 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=60, gt=0)
     llm_max_retries: int = Field(default=2, ge=0, le=5)
 
+    # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
+    chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
+    chat_history_messages: int = Field(default=8, ge=0, le=32)
+    chat_history_chars: int = Field(default=8000, ge=0, le=32000)
+    rag_collection: str = "lore_chunks"
+    rag_corpus_policy: Literal["reviewed", "pilot"] = "pilot"
+    rag_languages: Annotated[list[str], NoDecode] = ["en"]
+    rag_prefetch: int = Field(default=30, ge=5, le=200)
+    rag_top_k: int = Field(default=5, ge=1, le=5)
+    rag_context_chars: int = Field(default=12000, ge=256, le=64000)
+    rag_rewrite_enabled: bool = False
+    rag_thinking_enabled: bool = False
+    rag_models_dir: str = "models/fastembed"
+    rag_batch_size: int = Field(default=32, ge=1, le=128)
+    rag_encoder_threads: int = Field(default=2, ge=1, le=32)
+
+    @field_validator("rag_languages", mode="before")
+    @classmethod
+    def _languages(cls, value):
+        from core.corpus import parse_languages
+
+        return list(parse_languages(value))
+
     # --- HTTP ---
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:15173"]  # .env: phân cách bằng dấu phẩy
 
