@@ -47,3 +47,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-28 | TV2 (UncleThing) | [Nghiên cứu chunking trên 200 trang](2026-10-28_s2-tv2_nghien-cuu-chunking-200-trang.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Prototype chunking có cấu trúc](2026-10-28_s2-tv2_chunking-co-cau-truc.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Đẩy mã nguồn làm sạch và chunking lên GitHub](2026-10-28_s2-tv2_day-ma-nguon-github.md) |
+| 2026-10-28 | TV4 (QuyVuiVe) | [Web: đối chiếu OpenAPI v1 và tích hợp API mock Sprint 2](2026-10-28_s2-tv4_web-api-mock.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Favicon HoanGiapVang](2026-10-29_s2-tv4_favicon.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Đổi font Agmena và sửa lỗi khởi động web](2026-10-29_s2-tv4_font-va-khoi-dong-web.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Cài Taste Skill cho công việc frontend](2026-10-29_s2-tv4_cai-taste-skill.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Tinh chỉnh giao diện chat bằng Taste Skill](2026-10-29_s2-tv4_tinh-chinh-giao-dien-taste.md) |
