@@ -11,6 +11,10 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 > Repo đang ở giai đoạn nền tảng: API health, cấu hình và adapter DeepSeek đã có triển khai.
 > Pipeline dữ liệu và RAG đang được phát triển theo kế hoạch sprint.
 
+Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xem
+[hướng dẫn LangChain + DeepSeek và nối corpus sau](backend/app/rag/README.md).
+`llm_only` dùng được khi dữ liệu chưa sẵn sàng; phần live đã kiểm thử offline, cần bạn tự thử API thật.
+
 **Phạm vi:** lore Elden Ring base game.
 
 ## 4 con Hollows
@@ -35,6 +39,7 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 | [docs/04_ARCHITECTURE.md](docs/04_ARCHITECTURE.md) | Kiến trúc thư mục, pipeline dữ liệu, debug, mở rộng |
 | [docs/quy_uoc.md](docs/quy_uoc.md) | Quy ước nhánh Git, Conventional Commits, PR và Mentor review |
 | [docs/handover/2026-10-19_s1-tv3_deepseek-llm.md](docs/handover/2026-10-19_s1-tv3_deepseek-llm.md) | Cấu hình, sử dụng và kiểm tra DeepSeek LLM |
+| [backend/app/rag/README.md](backend/app/rag/README.md) | LangChain, ba mode chat, prompt, hướng dẫn tự chạy và nối artifact RAG |
 
 ## Cấu trúc
 

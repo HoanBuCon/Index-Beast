@@ -1,4 +1,4 @@
-"""Offline crawl, cleaning and chunk CLI owned by TV2; no encoder or indexing."""
+"""Offline data CLI: TV2 crawl/clean/chunk and explicit TV3 indexing."""
 
 import argparse
 import json
@@ -11,8 +11,9 @@ from ingest.sources.wikigg import WikiGG
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean and chunk (TV2 S1/S2)")
-    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk"])
+    p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean, chunk and index (TV2/TV3)")
+    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index"])
+    p.add_argument("--input", type=Path, help="Reviewed chunk JSONL for index")
     p.add_argument("--input-dir", type=Path)
     p.add_argument("--tokenizer", type=Path)
     p.add_argument("--max-tokens", type=int)
@@ -27,6 +28,12 @@ def main(argv=None):
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--config", type=Path)
     args = p.parse_args(argv)
+    if args.command == "index":
+        if args.input is None:
+            p.error("index requires --input reviewed-chunks.jsonl")
+        from ingest.indexing import run_cli
+
+        return run_cli(args.input, dry_run=args.dry_run)
     if args.limit < 1:
         p.error("--limit must be positive")
     config = load_settings(args.config)

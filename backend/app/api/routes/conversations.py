@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import get_chat_service
 from app.api.errors import ErrorBody
 from app.api.schemas.conversation import ConversationOut
-from app.services.mock_chat import MockChatService
+from app.services.chat import ChatService
 
 router = APIRouter(tags=["conversations"])
 
@@ -21,7 +21,5 @@ router = APIRouter(tags=["conversations"])
     responses={404: {"model": ErrorBody}, 422: {"model": ErrorBody}},
     summary="Lịch sử hội thoại",
 )
-async def get_conversation(
-    conversation_id: UUID, service: MockChatService = Depends(get_chat_service)
-) -> ConversationOut:
+async def get_conversation(conversation_id: UUID, service: ChatService = Depends(get_chat_service)) -> ConversationOut:
     return service.history(conversation_id)

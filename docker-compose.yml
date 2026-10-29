@@ -81,6 +81,16 @@ services:
       LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2048}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
+      CHAT_MODE: ${CHAT_MODE:-mock}
+      CHAT_HISTORY_MESSAGES: ${CHAT_HISTORY_MESSAGES:-8}
+      CHAT_HISTORY_CHARS: ${CHAT_HISTORY_CHARS:-8000}
+      RAG_COLLECTION: ${RAG_COLLECTION:-lore_chunks}
+      RAG_PREFETCH: ${RAG_PREFETCH:-30}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      RAG_CONTEXT_CHARS: ${RAG_CONTEXT_CHARS:-12000}
+      RAG_REWRITE_ENABLED: ${RAG_REWRITE_ENABLED:-false}
+      RAG_MODELS_DIR: ${RAG_MODELS_DIR:-models/fastembed}
+      RAG_BATCH_SIZE: ${RAG_BATCH_SIZE:-32}
     volumes:
       - ./backend/data:/app/data      # dữ liệu crawl thô
     depends_on:
