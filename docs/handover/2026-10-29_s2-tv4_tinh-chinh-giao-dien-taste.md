@@ -4,6 +4,8 @@ Ngày: 29/10/2026 (Asia/Saigon). Nhánh: `feature/s2-tv4-ui-chat-co-ban`. Chưa 
 
 Cập nhật Git: người dùng đã yêu cầu stage toàn bộ, commit và push lên chính nhánh feature này. Đã fetch origin, xác nhận HEAD chứa develop hiện tại và chỉ có thay đổi web/tài liệu TV4. Remote feature còn lịch sử trước rebase; hợp nhất lịch sử remote để dùng push thường, không ghi đè lịch sử bằng force-push. Trạng thái chưa commit ở dòng đầu mô tả lúc bắt đầu bàn giao; commit/push sau đó theo yêu cầu mới, kết quả được thông báo cho người dùng.
 
+Đã tạo commit UI `0673a21`. Khi merge remote feature gặp xung đột các bản web cũ; đối chiếu `git cherry` và hai commit tương ứng `4e21f05`/`b710bf7` xác nhận nội dung web giống nhau, khác phần chỉ mục handover đã giữ các mục TV2 mới. Giải quyết bằng bản web mới nhất tại `0673a21`; không khôi phục thư mục Mantinia cũ do merge đưa trở lại. Đã xác nhận cây web sau giải quyết giống hoàn toàn commit UI đã build/test, chỉ thêm ghi nhận Git này trong merge commit.
+
 ## Phạm vi
 
 Chỉnh UI chat cơ bản thuộc TV4, Sprint 2 trong `planning/sprint_plan.json`: ô nhập, danh sách tin nhắn và trạng thái chờ/lỗi. Đọc các quy ước trong `docs/`; không sửa backend, bot, dữ liệu, RAG, hợp đồng OpenAPI hoặc kế hoạch sprint. Giữ ghi chú cũ và root README.
