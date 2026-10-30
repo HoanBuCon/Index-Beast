@@ -15,7 +15,7 @@ export function readConversations(): Conversation[] {
           c &&
           typeof c.id === "string" &&
           typeof c.title === "string" &&
-          (c.mode === "demo" || c.mode === "api") &&
+          (c.mode === "demo" || c.mode === "api" || c.mode === "api-stream") &&
           (c.serverId === null || typeof c.serverId === "string") &&
           typeof c.updatedAt === "string" &&
           Array.isArray(c.messages) &&

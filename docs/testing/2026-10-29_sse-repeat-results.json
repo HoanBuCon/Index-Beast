@@ -1,0 +1,89 @@
+[
+  {
+    "attempt": 1,
+    "http_status": 200,
+    "seconds": 3.884,
+    "event_sequence": [
+      "status",
+      "token",
+      "token",
+      "token",
+      "token",
+      "token",
+      "sources",
+      "done"
+    ],
+    "answer": "The Twinbird is described as the envoy of an Outer God and the mother of the Deathbirds [4]. The Deathbirds are therefore said to be its offspring, not the Twinbird itself [2].\n\nIn the age before the Erdtree, the Deathbirds served as keepers of ghostflame, burning the dead and raking out their ashen remains; vengeful spirits arose from those cinders [2]. The sources present the Twinbird as the parent entity behind these birds, while its own whereabouts are unknown [3].",
+    "sources": [
+      {
+        "index": 2,
+        "title": "Deathbird",
+        "section": "Overview",
+        "url": "https://eldenring.wiki.gg/wiki/Deathbird#Overview",
+        "text": "Deathbirds are gigantic decaying birds with incrusted corpses over their body.\nAll Deathbirds are said to be the offspring of an entity called the twinbird, which is an envoy of an outer god.\nIn the time when there was no Erdtree, death was burned in ghostflame, and the Deathbirds were the keepers of that fire. They were graveyard fire keepers and were said to rake out the ashen remains of the dead from their kiln. From the cinders of the dead burned with ghostflame arose vengeful spirits. The Deathbirds were regarded as malevolent deities by some.\nThrough the ancient act of the rite of Death, priests of old were permitted to come among the Deathbirds and become their guardians, and act which serves as an oath sworn to their distant resurrection. Such priests can be seen inside the wings of the Death Rite Birds as spirit beings wielding Death ritual spears.\nThey count as Those Who Live in Death despite predating the deathroot.",
+        "origin": "corpus"
+      },
+      {
+        "index": 3,
+        "title": "Twinbird",
+        "section": "Overview",
+        "url": "https://eldenring.wiki.gg/wiki/Twinbird#Overview",
+        "text": "The Twinbird is scarcely mentioned in the Lands Between. It is portrayed as a two-headed bird with half-red and half-blue or black plumage.\nThe Twinbird is said to be the envoy of an Outer God, and the mother of the Deathbirds. Its whereabouts are unknown, and only its offspring being seen throughout the Lands Between. The colour of its plumage may be alluded to by the red and blue feathers on the Red-Feathered Branchsword and Blue-Feathered Branchsword used in ancient Death rituals before the age of the Erdtree.",
+        "origin": "corpus"
+      },
+      {
+        "index": 4,
+        "title": "Twinbird Kite Shield",
+        "section": "Description",
+        "url": "https://eldenring.wiki.gg/wiki/Twinbird_Kite_Shield#%F0%9F%8F%B4%F3%A0%81%A7%F3%A0%81%A2%F3%A0%81%A5%F3%A0%81%AE%F3%A0%81%A7%F3%A0%81%BF-0",
+        "text": "Shield featuring a vividly painted twinbird. The twinbird is said to be the envoy of an outer god, and mother of the Deathbirds.\nAt dwindling levels of HP, this shield slightly boosts both attack and defense.",
+        "origin": "corpus"
+      }
+    ],
+    "done": {
+      "conversation_id": "d24c15cd-71e2-406d-87ab-d6829163f023",
+      "message_id": "aafab57d-4ce1-458f-946a-dc92344eb8aa",
+      "grounded": true,
+      "latency_ms": 3605.14
+    },
+    "errors": []
+  },
+  {
+    "attempt": 2,
+    "http_status": 200,
+    "seconds": 2.452,
+    "event_sequence": [
+      "status",
+      "token",
+      "token",
+      "sources",
+      "done"
+    ],
+    "answer": "The connection is maternal: the Twinbird is said to be the mother of the Deathbirds, making all Deathbirds its offspring [4][2]. The Twinbird is also described as the envoy of an outer god, while the Deathbirds served as keepers of ghostflame in the age before the Erdtree [4][2].",
+    "sources": [
+      {
+        "index": 2,
+        "title": "Deathbird",
+        "section": "Overview",
+        "url": "https://eldenring.wiki.gg/wiki/Deathbird#Overview",
+        "text": "Deathbirds are gigantic decaying birds with incrusted corpses over their body.\nAll Deathbirds are said to be the offspring of an entity called the twinbird, which is an envoy of an outer god.\nIn the time when there was no Erdtree, death was burned in ghostflame, and the Deathbirds were the keepers of that fire. They were graveyard fire keepers and were said to rake out the ashen remains of the dead from their kiln. From the cinders of the dead burned with ghostflame arose vengeful spirits. The Deathbirds were regarded as malevolent deities by some.\nThrough the ancient act of the rite of Death, priests of old were permitted to come among the Deathbirds and become their guardians, and act which serves as an oath sworn to their distant resurrection. Such priests can be seen inside the wings of the Death Rite Birds as spirit beings wielding Death ritual spears.\nThey count as Those Who Live in Death despite predating the deathroot.",
+        "origin": "corpus"
+      },
+      {
+        "index": 4,
+        "title": "Twinbird Kite Shield",
+        "section": "Description",
+        "url": "https://eldenring.wiki.gg/wiki/Twinbird_Kite_Shield#%F0%9F%8F%B4%F3%A0%81%A7%F3%A0%81%A2%F3%A0%81%A5%F3%A0%81%AE%F3%A0%81%A7%F3%A0%81%BF-0",
+        "text": "Shield featuring a vividly painted twinbird. The twinbird is said to be the envoy of an outer god, and mother of the Deathbirds.\nAt dwindling levels of HP, this shield slightly boosts both attack and defense.",
+        "origin": "corpus"
+      }
+    ],
+    "done": {
+      "conversation_id": "d336fef9-17b1-4e5a-99f5-c7f5ff9342c8",
+      "message_id": "40e1656d-8e46-4550-9267-70fd1fc12d68",
+      "grounded": true,
+      "latency_ms": 2256.19
+    },
+    "errors": []
+  }
+]

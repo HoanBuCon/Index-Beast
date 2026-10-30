@@ -368,12 +368,26 @@
       "LLMTestUsage": {
         "properties": {
           "completion_tokens": {
-            "title": "Completion Tokens",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Tokens"
           },
           "prompt_tokens": {
-            "title": "Prompt Tokens",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Tokens"
           },
           "reasoning_tokens": {
             "anyOf": [
@@ -387,8 +401,15 @@
             "title": "Reasoning Tokens"
           },
           "total_tokens": {
-            "title": "Total Tokens",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tokens"
           }
         },
         "required": [
@@ -621,6 +642,16 @@
               }
             },
             "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Hỏi đáp, trả một lần (bot)",
@@ -691,6 +722,16 @@
               }
             },
             "description": "Bad Gateway"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Hỏi đáp, stream SSE (web)",

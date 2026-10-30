@@ -21,9 +21,9 @@ class LLMTestIn(BaseModel):
 
 
 class LLMTestUsage(BaseModel):
-    prompt_tokens: int
-    completion_tokens: int
-    total_tokens: int
+    prompt_tokens: int | None
+    completion_tokens: int | None
+    total_tokens: int | None
     reasoning_tokens: int | None
 
 

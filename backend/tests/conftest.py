@@ -24,6 +24,13 @@ def settings() -> Settings:
     return Settings(_env_file=None, environment="test", health_timeout_seconds=0.2)
 
 
+@pytest.fixture(autouse=True)
+def disable_remote_tracing(monkeypatch):
+    """Offline tests must not export traces because a developer enabled tracing in their shell."""
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+
+
 @dataclass
 class FakeResource:
     """Tài nguyên giả: hoạt động bình thường, ném lỗi (fail) hoặc treo (hang) để test timeout."""

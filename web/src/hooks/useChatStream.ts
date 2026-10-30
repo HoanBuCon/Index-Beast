@@ -3,14 +3,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Conversation } from "../api/types";
-import { ApiError, chatStream } from "../api/client";
-import { demoStream } from "../api/demo";
+import { ApiError } from "../api/client";
+import { replyEvents } from "../api/chat";
+import type { ChatOptions } from "../api/chat";
+// S2 bổ sung JSON /chat, giữ nguyên luồng sự kiện SSE đã có cho S3.
 export function useChatStream(update: (conversation: Conversation) => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
-  async function send(base: Conversation, text: string) {
+  async function send(base: Conversation, text: string, options: ChatOptions = {}) {
     if (controller.current) return;
     const abort = new AbortController();
     controller.current = abort;
@@ -37,9 +39,9 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         conversation_id: base.serverId,
         message: text,
         channel: "web" as const,
-        options: { lang: "auto" as const, spoilers: true },
+        options: { lang: "vi" as const, spoilers: true },
       };
-      const stream = base.mode === "demo" ? demoStream(request, abort.signal) : chatStream(request, abort.signal);
+      const stream = replyEvents(request, base.mode, abort.signal, options);
       let content = "";
       for await (const event of stream) {
         if (event.type === "token") {
@@ -53,6 +55,8 @@ export function useChatStream(update: (conversation: Conversation) => void) {
       }
     } catch (cause) {
       if (abort.signal.aborted) setError("Đã dừng. Câu trả lời chưa hoàn tất.");
+      else if (cause instanceof Error && cause.name === "TimeoutError")
+        setError("API phản hồi quá lâu. Vui lòng thử lại.");
       else if (cause instanceof ApiError)
         setError(cause.message + (cause.retryAfter ? ` Thử lại sau ${cause.retryAfter}.` : ""));
       else

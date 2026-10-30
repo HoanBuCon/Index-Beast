@@ -54,7 +54,11 @@ async def test_llm(body: LLMTestIn, ctx: AppContext = Depends(get_ctx)) -> LLMTe
         usage=LLMTestUsage(
             prompt_tokens=result.prompt_tokens,
             completion_tokens=result.completion_tokens,
-            total_tokens=result.prompt_tokens + result.completion_tokens,
+            total_tokens=(
+                result.prompt_tokens + result.completion_tokens
+                if result.prompt_tokens is not None and result.completion_tokens is not None
+                else None
+            ),
             reasoning_tokens=result.reasoning_tokens,
         ),
     )
