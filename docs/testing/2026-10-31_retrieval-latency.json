@@ -1,0 +1,1757 @@
+{
+  "status": "complete",
+  "started_at": "2026-10-31T00:00:46.291028+07:00",
+  "collection": "indexbeast_tv3_integration_20261029_c1871afc",
+  "policy": "pilot",
+  "languages": [
+    "en"
+  ],
+  "spoilers": true,
+  "prefetch_and_fusion_limit": 30,
+  "context_top_k_setting": 5,
+  "rounds": 3,
+  "concurrency": 1,
+  "encoder_threads": 4,
+  "model": "intfloat/multilingual-e5-small",
+  "sparse_model": "Qdrant/bm25",
+  "fusion": "RRF",
+  "python": "3.11.9",
+  "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+  "versions": {
+    "fastembed": "0.9.0",
+    "onnxruntime": "1.31.0",
+    "qdrant-client": "1.19.1"
+  },
+  "percentile_method": "nearest rank: sorted[ceil(0.95*n)-1]; median uses statistics.median",
+  "cold_definition": "First retrieve with fresh encoder/client and cached weights, NOT cold OS/disk cache. Client construction and read-only prechecks excluded; actual first model load included in embedding.",
+  "timing_definition": "total_retrieve_ms wraps native HybridRetriever.retrieve including readiness, embedding, Query API, LangChain/Document/policy processing. qdrant_ms wraps the client's query_points round-trip including transport/decoding, excludes ready/count calls. No rewrite/rerank/context/LLM/API HTTP.",
+  "rows": [
+    {
+      "id": "VI01",
+      "lang": "vi",
+      "question": "Ranni là ai, cha mẹ cô là ai?",
+      "phase": "cold",
+      "round": 0,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "53c176a3-70a8-5183-aaf3-d116c92e2b10",
+          "score": 0.64285713,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+          "score": 0.5,
+          "title": "Letter for Freyja",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.33333334,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "1673d120-7bbb-50b4-864a-ec118ff3adc3",
+          "score": 0.33333334,
+          "title": "Crucible Knight Ordovis",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a3fde55-cf0f-5c51-b4d0-70e5b8afb79c",
+          "score": 0.25,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 12.609299999894574,
+      "embedding_ms": 1684.9570000049425,
+      "qdrant_ms": 108.3336999945459,
+      "total_retrieve_ms": 1855.1466999997501,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI01",
+      "lang": "vi",
+      "question": "Ranni là ai, cha mẹ cô là ai?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "53c176a3-70a8-5183-aaf3-d116c92e2b10",
+          "score": 0.64285713,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+          "score": 0.5,
+          "title": "Letter for Freyja",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.33333334,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "1673d120-7bbb-50b4-864a-ec118ff3adc3",
+          "score": 0.33333334,
+          "title": "Crucible Knight Ordovis",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "26986be3-3b0f-599e-a434-4d5f731d0802",
+          "score": 0.25,
+          "title": "Ulcerated Tree Spirit",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 14.442100000451319,
+      "embedding_ms": 7.051199994748458,
+      "qdrant_ms": 31.17039999779081,
+      "total_retrieve_ms": 54.97350000223378,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI02",
+      "lang": "vi",
+      "question": "Vì sao Godwyn được gọi là Prince of Death?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "77aabb3e-f48b-57bc-adf5-73057b9a8ae6",
+          "score": 0.75,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "f9d1ec82-507e-5c59-a478-015e50f3201a",
+          "score": 0.7,
+          "title": "Prince of Death's Pustule",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc53ed3e-2a29-595d-8a11-a210f84d2d57",
+          "score": 0.41025642,
+          "title": "Those Who Live in Death",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ae1ab659-ef3d-5e2f-9e97-30bc6e1f12f7",
+          "score": 0.39285713,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "9910b789-f45e-5ac6-9b05-e19c285caa8d",
+          "score": 0.33333334,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 15.473800005565863,
+      "embedding_ms": 8.013099999516271,
+      "qdrant_ms": 34.476300003007054,
+      "total_retrieve_ms": 59.9311999976635,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI03",
+      "lang": "vi",
+      "question": "Flame, Cleanse Me chữa được những hiệu ứng nào?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "78b50e79-e955-5aa2-8524-a207b16e7da2",
+          "score": 1.0,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc873d80-0452-5ca2-bc98-24c1aa39f4a6",
+          "score": 0.5833334,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "02a07eb9-1126-50c5-8190-583acfec12de",
+          "score": 0.45,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d61a3937-da9d-5546-b947-4f631400e096",
+          "score": 0.33333334,
+          "title": "Fell God",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "c4892222-4eb9-5b13-b6e1-419fb42767f1",
+          "score": 0.2,
+          "title": "Flame, Protect Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 15.053299997816794,
+      "embedding_ms": 7.7415999985532835,
+      "qdrant_ms": 33.119200001237914,
+      "total_retrieve_ms": 57.947699999203905,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI04",
+      "lang": "vi",
+      "question": "So sánh Uchigatana và Rivers of Blood về blood loss.",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "7a66763a-2fa4-515b-bfda-a333798d04a6",
+          "score": 1.0,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b9c1bd44-00b5-5800-aa62-f5444a9939c9",
+          "score": 0.35,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d3594aeb-0dbc-521e-8939-7dd641ed043b",
+          "score": 0.33333334,
+          "title": "White Reed Set",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "d056be56-f07f-5822-966c-15d87aa6a647",
+          "score": 0.33333334,
+          "title": "Katanas",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "11209274-05ab-546e-8be9-b3e2056af697",
+          "score": 0.30952382,
+          "title": "Rivers of Blood",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 8.000299996638205,
+      "embedding_ms": 9.13600000058068,
+      "qdrant_ms": 21.744300000136718,
+      "total_retrieve_ms": 41.919000002963,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI05",
+      "lang": "vi",
+      "question": "Làm sao bắt đầu nhiệm vụ Ranni ở Church of Elleh?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "a8bb9a42-f64b-56af-ab2d-d43d28d1dd99",
+          "score": 0.6666667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "87a01a30-d046-5acb-b003-f986c7a0d684",
+          "score": 0.64285713,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "4dd3e32d-2419-590a-a9a7-97a9576b8bc9",
+          "score": 0.53333336,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "13523fe1-49f0-53be-9a0b-5d781f2fb2bb",
+          "score": 0.4166667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "7538df61-7b78-5844-872e-3ba9510a8aa9",
+          "score": 0.37333333,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 9.398599999258295,
+      "embedding_ms": 8.54589999653399,
+      "qdrant_ms": 14.428000002226327,
+      "total_retrieve_ms": 35.25400000216905,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN01",
+      "lang": "en",
+      "question": "Who is Melina and what is her connection to the Tarnished?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "b8ae19f7-860a-5c87-a10d-156094435023",
+          "score": 0.75,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "64df50bd-96f1-5fc0-bc59-24472a5967ce",
+          "score": 0.625,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "56d98860-40e4-54f2-8942-14143338f1a2",
+          "score": 0.44444445,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d0186603-a2de-52fa-9118-06cb4beef603",
+          "score": 0.42424244,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a4d7ff6-13bd-5bd0-a49f-43e1fd3bd70d",
+          "score": 0.36666667,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 8.38369999837596,
+      "embedding_ms": 9.079100003873464,
+      "qdrant_ms": 15.284900000551715,
+      "total_retrieve_ms": 35.51950000110082,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN02",
+      "lang": "en",
+      "question": "How is Rellana related to Rennala?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "c2968654-2054-5f80-b623-f7fb197bf7b9",
+          "score": 0.75,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ce9c94c9-e3b7-5291-bdae-76f8f07490fb",
+          "score": 0.6111111,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0d698550-85c5-5403-9c2c-0237ddc8ab69",
+          "score": 0.45833334,
+          "title": "Rellana's Twin Moons",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.41025642,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0506b1b7-7ce7-50e0-98f6-cc3f383bb190",
+          "score": 0.34285715,
+          "title": "Rellana's Helm",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 8.556099994166289,
+      "embedding_ms": 7.07729999703588,
+      "qdrant_ms": 14.010600003530271,
+      "total_retrieve_ms": 31.465299995034,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN03",
+      "lang": "en",
+      "question": "What does Arsenal Charm do for equipment load?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "45977dce-4e92-5ca8-b60f-3ba1c558235a",
+          "score": 0.8333334,
+          "title": "Arsenal Charms",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "9c75615e-a1b7-5c20-a075-93a729e86cae",
+          "score": 0.8333334,
+          "title": "Arsenal Charm +1",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ac10a03b-46a9-5d2f-8704-ae5534e68e09",
+          "score": 0.4166667,
+          "title": "Great-Jar's Arsenal",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "645a4905-c1f8-588e-942d-ac7f5cc107e2",
+          "score": 0.4,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "38dba21f-9c3f-57c8-80fa-0df770b042ad",
+          "score": 0.33333334,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 9.425500000361353,
+      "embedding_ms": 7.453500002156943,
+      "qdrant_ms": 15.763100003823638,
+      "total_retrieve_ms": 35.207100001571234,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN04",
+      "lang": "en",
+      "question": "Suggest a Bloodhound's Fang PvE build at level 80.",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "8ecadc44-1cd4-586d-af54-9b9b3846f409",
+          "score": 1.0,
+          "title": "Bloodhound's Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "94b3b87c-1029-59ab-865e-8ac17bef5661",
+          "score": 0.41025642,
+          "title": "Briar Set",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e4b412d0-5d2a-576e-b3e1-b98b56da95a9",
+          "score": 0.4047619,
+          "title": "Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "2b7a5aa8-190b-5401-a762-91a8c24dd827",
+          "score": 0.36666667,
+          "title": "Venomous Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "545cdb28-cd9a-54a7-a0e1-0263cffe28d8",
+          "score": 0.30882353,
+          "title": "Drawstring Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.14729999890551,
+      "embedding_ms": 9.859199999482371,
+      "qdrant_ms": 17.167700003483333,
+      "total_retrieve_ms": 36.57099999691127,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN05",
+      "lang": "en",
+      "question": "What is the relationship between Miquella and St. Trina?",
+      "phase": "warm",
+      "round": 1,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "a5fa3cf8-1db8-55a4-9c43-7c6ca7839aea",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "8482df6f-b80f-5acd-8ada-5f5767d63078",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e218542c-f325-5272-94c4-088b7a28f0ff",
+          "score": 0.45,
+          "title": "Needle Knight Leda",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "2497fad9-5452-5044-9aef-b433247acf50",
+          "score": 0.4166667,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "159c536a-e762-538c-826c-5c2c4422b2b7",
+          "score": 0.2909091,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 7.479699997929856,
+      "embedding_ms": 7.8467999992426485,
+      "qdrant_ms": 15.91510000434937,
+      "total_retrieve_ms": 33.61210000002757,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI01",
+      "lang": "vi",
+      "question": "Ranni là ai, cha mẹ cô là ai?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "53c176a3-70a8-5183-aaf3-d116c92e2b10",
+          "score": 0.64285713,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+          "score": 0.5,
+          "title": "Letter for Freyja",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "1673d120-7bbb-50b4-864a-ec118ff3adc3",
+          "score": 0.33333334,
+          "title": "Crucible Knight Ordovis",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.33333334,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a3fde55-cf0f-5c51-b4d0-70e5b8afb79c",
+          "score": 0.25,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 8.30149999819696,
+      "embedding_ms": 6.593400001293048,
+      "qdrant_ms": 11.79759999649832,
+      "total_retrieve_ms": 29.2325999980676,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI02",
+      "lang": "vi",
+      "question": "Vì sao Godwyn được gọi là Prince of Death?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "77aabb3e-f48b-57bc-adf5-73057b9a8ae6",
+          "score": 0.75,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "f9d1ec82-507e-5c59-a478-015e50f3201a",
+          "score": 0.7,
+          "title": "Prince of Death's Pustule",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc53ed3e-2a29-595d-8a11-a210f84d2d57",
+          "score": 0.41025642,
+          "title": "Those Who Live in Death",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ae1ab659-ef3d-5e2f-9e97-30bc6e1f12f7",
+          "score": 0.39285713,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "9910b789-f45e-5ac6-9b05-e19c285caa8d",
+          "score": 0.33333334,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 7.788899994920939,
+      "embedding_ms": 7.219099999929313,
+      "qdrant_ms": 12.098300001525786,
+      "total_retrieve_ms": 29.586200005724095,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI03",
+      "lang": "vi",
+      "question": "Flame, Cleanse Me chữa được những hiệu ứng nào?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "78b50e79-e955-5aa2-8524-a207b16e7da2",
+          "score": 1.0,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc873d80-0452-5ca2-bc98-24c1aa39f4a6",
+          "score": 0.5833334,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "02a07eb9-1126-50c5-8190-583acfec12de",
+          "score": 0.45,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d61a3937-da9d-5546-b947-4f631400e096",
+          "score": 0.33333334,
+          "title": "Fell God",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "c4892222-4eb9-5b13-b6e1-419fb42767f1",
+          "score": 0.2,
+          "title": "Flame, Protect Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.183699999586679,
+      "embedding_ms": 7.8906000053393655,
+      "qdrant_ms": 12.65100000455277,
+      "total_retrieve_ms": 29.721700004301965,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI04",
+      "lang": "vi",
+      "question": "So sánh Uchigatana và Rivers of Blood về blood loss.",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "7a66763a-2fa4-515b-bfda-a333798d04a6",
+          "score": 1.0,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b9c1bd44-00b5-5800-aa62-f5444a9939c9",
+          "score": 0.35,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d3594aeb-0dbc-521e-8939-7dd641ed043b",
+          "score": 0.33333334,
+          "title": "White Reed Set",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "d056be56-f07f-5822-966c-15d87aa6a647",
+          "score": 0.33333334,
+          "title": "Katanas",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "11209274-05ab-546e-8be9-b3e2056af697",
+          "score": 0.30952382,
+          "title": "Rivers of Blood",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 8.371900003112387,
+      "embedding_ms": 8.80229999893345,
+      "qdrant_ms": 12.461899998015724,
+      "total_retrieve_ms": 31.87400000024354,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI05",
+      "lang": "vi",
+      "question": "Làm sao bắt đầu nhiệm vụ Ranni ở Church of Elleh?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "a8bb9a42-f64b-56af-ab2d-d43d28d1dd99",
+          "score": 0.6666667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "87a01a30-d046-5acb-b003-f986c7a0d684",
+          "score": 0.64285713,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "4dd3e32d-2419-590a-a9a7-97a9576b8bc9",
+          "score": 0.53333336,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "13523fe1-49f0-53be-9a0b-5d781f2fb2bb",
+          "score": 0.4166667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "7538df61-7b78-5844-872e-3ba9510a8aa9",
+          "score": 0.37333333,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.804999993823003,
+      "embedding_ms": 8.198600000469014,
+      "qdrant_ms": 13.206900002842303,
+      "total_retrieve_ms": 31.91950000473298,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN01",
+      "lang": "en",
+      "question": "Who is Melina and what is her connection to the Tarnished?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "b8ae19f7-860a-5c87-a10d-156094435023",
+          "score": 0.75,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "64df50bd-96f1-5fc0-bc59-24472a5967ce",
+          "score": 0.625,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "56d98860-40e4-54f2-8942-14143338f1a2",
+          "score": 0.44444445,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d0186603-a2de-52fa-9118-06cb4beef603",
+          "score": 0.42424244,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a4d7ff6-13bd-5bd0-a49f-43e1fd3bd70d",
+          "score": 0.36666667,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.905300000857096,
+      "embedding_ms": 8.684500004164875,
+      "qdrant_ms": 14.49299999512732,
+      "total_retrieve_ms": 33.80260000267299,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN02",
+      "lang": "en",
+      "question": "How is Rellana related to Rennala?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "c2968654-2054-5f80-b623-f7fb197bf7b9",
+          "score": 0.75,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ce9c94c9-e3b7-5291-bdae-76f8f07490fb",
+          "score": 0.6111111,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0d698550-85c5-5403-9c2c-0237ddc8ab69",
+          "score": 0.45833334,
+          "title": "Rellana's Twin Moons",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.41025642,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0506b1b7-7ce7-50e0-98f6-cc3f383bb190",
+          "score": 0.34285715,
+          "title": "Rellana's Helm",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 8.523000004061032,
+      "embedding_ms": 8.285600000817794,
+      "qdrant_ms": 14.512499998090789,
+      "total_retrieve_ms": 34.321699997235555,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN03",
+      "lang": "en",
+      "question": "What does Arsenal Charm do for equipment load?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "45977dce-4e92-5ca8-b60f-3ba1c558235a",
+          "score": 0.8333334,
+          "title": "Arsenal Charms",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "9c75615e-a1b7-5c20-a075-93a729e86cae",
+          "score": 0.8333334,
+          "title": "Arsenal Charm +1",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ac10a03b-46a9-5d2f-8704-ae5534e68e09",
+          "score": 0.4166667,
+          "title": "Great-Jar's Arsenal",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "645a4905-c1f8-588e-942d-ac7f5cc107e2",
+          "score": 0.4,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "38dba21f-9c3f-57c8-80fa-0df770b042ad",
+          "score": 0.33333334,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 8.186700004443992,
+      "embedding_ms": 6.899899999552872,
+      "qdrant_ms": 12.514100002590567,
+      "total_retrieve_ms": 30.191000005288515,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN04",
+      "lang": "en",
+      "question": "Suggest a Bloodhound's Fang PvE build at level 80.",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "8ecadc44-1cd4-586d-af54-9b9b3846f409",
+          "score": 1.0,
+          "title": "Bloodhound's Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "94b3b87c-1029-59ab-865e-8ac17bef5661",
+          "score": 0.41025642,
+          "title": "Briar Set",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e4b412d0-5d2a-576e-b3e1-b98b56da95a9",
+          "score": 0.4047619,
+          "title": "Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "2b7a5aa8-190b-5401-a762-91a8c24dd827",
+          "score": 0.36666667,
+          "title": "Venomous Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "545cdb28-cd9a-54a7-a0e1-0263cffe28d8",
+          "score": 0.30882353,
+          "title": "Drawstring Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.668599995668046,
+      "embedding_ms": 10.790700005600229,
+      "qdrant_ms": 12.971000003744848,
+      "total_retrieve_ms": 34.30030000163242,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN05",
+      "lang": "en",
+      "question": "What is the relationship between Miquella and St. Trina?",
+      "phase": "warm",
+      "round": 2,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "8482df6f-b80f-5acd-8ada-5f5767d63078",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "a5fa3cf8-1db8-55a4-9c43-7c6ca7839aea",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e218542c-f325-5272-94c4-088b7a28f0ff",
+          "score": 0.45,
+          "title": "Needle Knight Leda",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "2497fad9-5452-5044-9aef-b433247acf50",
+          "score": 0.4166667,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "159c536a-e762-538c-826c-5c2c4422b2b7",
+          "score": 0.2909091,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 8.404400003200863,
+      "embedding_ms": 8.191900000383612,
+      "qdrant_ms": 12.218999996548519,
+      "total_retrieve_ms": 31.495099996391218,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI01",
+      "lang": "vi",
+      "question": "Ranni là ai, cha mẹ cô là ai?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "53c176a3-70a8-5183-aaf3-d116c92e2b10",
+          "score": 0.64285713,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+          "score": 0.5,
+          "title": "Letter for Freyja",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "1673d120-7bbb-50b4-864a-ec118ff3adc3",
+          "score": 0.33333334,
+          "title": "Crucible Knight Ordovis",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.33333334,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a3fde55-cf0f-5c51-b4d0-70e5b8afb79c",
+          "score": 0.25,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 8.399899998039473,
+      "embedding_ms": 8.375699995667674,
+      "qdrant_ms": 12.391100004606415,
+      "total_retrieve_ms": 31.861999996181112,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI02",
+      "lang": "vi",
+      "question": "Vì sao Godwyn được gọi là Prince of Death?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "77aabb3e-f48b-57bc-adf5-73057b9a8ae6",
+          "score": 0.75,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "f9d1ec82-507e-5c59-a478-015e50f3201a",
+          "score": 0.7,
+          "title": "Prince of Death's Pustule",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc53ed3e-2a29-595d-8a11-a210f84d2d57",
+          "score": 0.41025642,
+          "title": "Those Who Live in Death",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ae1ab659-ef3d-5e2f-9e97-30bc6e1f12f7",
+          "score": 0.39285713,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "9910b789-f45e-5ac6-9b05-e19c285caa8d",
+          "score": 0.33333334,
+          "title": "Godwyn the Golden",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 6.768399995053187,
+      "embedding_ms": 7.551599999715108,
+      "qdrant_ms": 11.973199994827155,
+      "total_retrieve_ms": 28.50169999874197,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI03",
+      "lang": "vi",
+      "question": "Flame, Cleanse Me chữa được những hiệu ứng nào?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "78b50e79-e955-5aa2-8524-a207b16e7da2",
+          "score": 1.0,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "bc873d80-0452-5ca2-bc98-24c1aa39f4a6",
+          "score": 0.5833334,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "02a07eb9-1126-50c5-8190-583acfec12de",
+          "score": 0.45,
+          "title": "Flame, Cleanse Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d61a3937-da9d-5546-b947-4f631400e096",
+          "score": 0.33333334,
+          "title": "Fell God",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "c4892222-4eb9-5b13-b6e1-419fb42767f1",
+          "score": 0.2,
+          "title": "Flame, Protect Me",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.438700005877763,
+      "embedding_ms": 8.038899999519344,
+      "qdrant_ms": 12.675099998887163,
+      "total_retrieve_ms": 30.832299999019597,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI04",
+      "lang": "vi",
+      "question": "So sánh Uchigatana và Rivers of Blood về blood loss.",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "7a66763a-2fa4-515b-bfda-a333798d04a6",
+          "score": 1.0,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "b9c1bd44-00b5-5800-aa62-f5444a9939c9",
+          "score": 0.35,
+          "title": "Uchigatana",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d3594aeb-0dbc-521e-8939-7dd641ed043b",
+          "score": 0.33333334,
+          "title": "White Reed Set",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "d056be56-f07f-5822-966c-15d87aa6a647",
+          "score": 0.33333334,
+          "title": "Katanas",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "11209274-05ab-546e-8be9-b3e2056af697",
+          "score": 0.30952382,
+          "title": "Rivers of Blood",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "ready_ms": 7.446200004778802,
+      "embedding_ms": 8.73429999774089,
+      "qdrant_ms": 11.657399998512119,
+      "total_retrieve_ms": 30.457600005320273,
+      "query_api_calls": 1
+    },
+    {
+      "id": "VI05",
+      "lang": "vi",
+      "question": "Làm sao bắt đầu nhiệm vụ Ranni ở Church of Elleh?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "a8bb9a42-f64b-56af-ab2d-d43d28d1dd99",
+          "score": 0.6666667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "87a01a30-d046-5acb-b003-f986c7a0d684",
+          "score": 0.64285713,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "4dd3e32d-2419-590a-a9a7-97a9576b8bc9",
+          "score": 0.53333336,
+          "title": "Church of Elleh",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "13523fe1-49f0-53be-9a0b-5d781f2fb2bb",
+          "score": 0.4166667,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "7538df61-7b78-5844-872e-3ba9510a8aa9",
+          "score": 0.37333333,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.356699999945704,
+      "embedding_ms": 7.865999999921769,
+      "qdrant_ms": 12.426299996150192,
+      "total_retrieve_ms": 30.226199996832293,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN01",
+      "lang": "en",
+      "question": "Who is Melina and what is her connection to the Tarnished?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "b8ae19f7-860a-5c87-a10d-156094435023",
+          "score": 0.75,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "64df50bd-96f1-5fc0-bc59-24472a5967ce",
+          "score": 0.625,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "56d98860-40e4-54f2-8942-14143338f1a2",
+          "score": 0.44444445,
+          "title": "The Tarnished (Protagonist)",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "d0186603-a2de-52fa-9118-06cb4beef603",
+          "score": 0.42424244,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "6a4d7ff6-13bd-5bd0-a49f-43e1fd3bd70d",
+          "score": 0.36666667,
+          "title": "Melina",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.740200002444908,
+      "embedding_ms": 8.185400001821108,
+      "qdrant_ms": 12.412600000970997,
+      "total_retrieve_ms": 30.856500001391396,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN02",
+      "lang": "en",
+      "question": "How is Rellana related to Rennala?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "c2968654-2054-5f80-b623-f7fb197bf7b9",
+          "score": 0.75,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ce9c94c9-e3b7-5291-bdae-76f8f07490fb",
+          "score": 0.6111111,
+          "title": "Rellana, Twin Moon Knight",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0d698550-85c5-5403-9c2c-0237ddc8ab69",
+          "score": 0.45833334,
+          "title": "Rellana's Twin Moons",
+          "lang": "en",
+          "release_scope": "sote_candidate"
+        },
+        {
+          "point_id": "8854fff7-f68d-5c56-99e1-b9b52bf08a70",
+          "score": 0.41025642,
+          "title": "Ranni the Witch",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "0506b1b7-7ce7-50e0-98f6-cc3f383bb190",
+          "score": 0.34285715,
+          "title": "Rellana's Helm",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 7.522800005972385,
+      "embedding_ms": 7.229599999845959,
+      "qdrant_ms": 11.700900002324488,
+      "total_retrieve_ms": 28.674400004092604,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN03",
+      "lang": "en",
+      "question": "What does Arsenal Charm do for equipment load?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "9c75615e-a1b7-5c20-a075-93a729e86cae",
+          "score": 0.8333334,
+          "title": "Arsenal Charm +1",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "45977dce-4e92-5ca8-b60f-3ba1c558235a",
+          "score": 0.8333334,
+          "title": "Arsenal Charms",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "ac10a03b-46a9-5d2f-8704-ae5534e68e09",
+          "score": 0.4166667,
+          "title": "Great-Jar's Arsenal",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "645a4905-c1f8-588e-942d-ac7f5cc107e2",
+          "score": 0.4,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "38dba21f-9c3f-57c8-80fa-0df770b042ad",
+          "score": 0.33333334,
+          "title": "Arsenal Charm",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 7.511499999964144,
+      "embedding_ms": 7.557199998700526,
+      "qdrant_ms": 11.997400004474912,
+      "total_retrieve_ms": 29.495199996745214,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN04",
+      "lang": "en",
+      "question": "Suggest a Bloodhound's Fang PvE build at level 80.",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "8ecadc44-1cd4-586d-af54-9b9b3846f409",
+          "score": 1.0,
+          "title": "Bloodhound's Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "94b3b87c-1029-59ab-865e-8ac17bef5661",
+          "score": 0.41025642,
+          "title": "Briar Set",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e4b412d0-5d2a-576e-b3e1-b98b56da95a9",
+          "score": 0.4047619,
+          "title": "Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "2b7a5aa8-190b-5401-a762-91a8c24dd827",
+          "score": 0.36666667,
+          "title": "Venomous Fang",
+          "lang": "en",
+          "release_scope": "base_candidate"
+        },
+        {
+          "point_id": "545cdb28-cd9a-54a7-a0e1-0263cffe28d8",
+          "score": 0.30882353,
+          "title": "Drawstring Poison Grease",
+          "lang": "en",
+          "release_scope": "unknown"
+        }
+      ],
+      "ready_ms": 8.045499998843297,
+      "embedding_ms": 8.783999997831415,
+      "qdrant_ms": 14.085400005569682,
+      "total_retrieve_ms": 33.29410000151256,
+      "query_api_calls": 1
+    },
+    {
+      "id": "EN05",
+      "lang": "en",
+      "question": "What is the relationship between Miquella and St. Trina?",
+      "phase": "warm",
+      "round": 3,
+      "success": true,
+      "hit_count": 30,
+      "top5": [
+        {
+          "point_id": "a5fa3cf8-1db8-55a4-9c43-7c6ca7839aea",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "8482df6f-b80f-5acd-8ada-5f5767d63078",
+          "score": 0.8333334,
+          "title": "St. Trina",
+          "lang": "en",
+          "release_scope": "unknown"
+        },
+        {
+          "point_id": "e218542c-f325-5272-94c4-088b7a28f0ff",
+          "score": 0.45,
+          "title": "Needle Knight Leda",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "2497fad9-5452-5044-9aef-b433247acf50",
+          "score": 0.4166667,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        },
+        {
+          "point_id": "159c536a-e762-538c-826c-5c2c4422b2b7",
+          "score": 0.2909091,
+          "title": "Miquella of the Haligtree",
+          "lang": "en",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "ready_ms": 8.33260000217706,
+      "embedding_ms": 8.76330000028247,
+      "qdrant_ms": 12.870999998995103,
+      "total_retrieve_ms": 32.69480000017211,
+      "query_api_calls": 1
+    }
+  ],
+  "points_before": 18368,
+  "filters": {
+    "must": [
+      {
+        "key": "game_scope",
+        "match": {
+          "any": [
+            "base",
+            "elden_ring"
+          ]
+        }
+      },
+      {
+        "key": "indexbeast_admission",
+        "match": {
+          "value": "pilot-v1"
+        }
+      },
+      {
+        "key": "lang",
+        "match": {
+          "any": [
+            "en"
+          ]
+        }
+      },
+      {
+        "key": "source_type",
+        "match": {
+          "any": [
+            "in_game_text",
+            "wiki_prose",
+            "speculation"
+          ]
+        }
+      }
+    ]
+  },
+  "warm_summary": {
+    "requests": 30,
+    "successful": 30,
+    "errors": 0,
+    "empty_successful_results": 0,
+    "ready_ms": {
+      "samples": 30,
+      "min": 6.768399995053187,
+      "median": 8.022899997740751,
+      "p95": 15.053299997816794,
+      "max": 15.473800005565863
+    },
+    "embedding_ms": {
+      "samples": 30,
+      "min": 6.593400001293048,
+      "median": 8.112150000670226,
+      "p95": 9.859199999482371,
+      "max": 10.790700005600229
+    },
+    "qdrant_ms": {
+      "samples": 30,
+      "min": 11.657399998512119,
+      "median": 12.921000001369976,
+      "p95": 33.119200001237914,
+      "max": 34.476300003007054
+    },
+    "total_retrieve_ms": {
+      "samples": 30,
+      "min": 28.50169999874197,
+      "median": 31.89675000248826,
+      "p95": 57.947699999203905,
+      "max": 59.9311999976635
+    }
+  },
+  "warm_by_language": {
+    "vi": {
+      "requests": 15,
+      "successful": 15,
+      "errors": 0,
+      "empty_successful_results": 0,
+      "ready_ms": {
+        "samples": 15,
+        "min": 6.768399995053187,
+        "median": 8.000299996638205,
+        "p95": 15.473800005565863,
+        "max": 15.473800005565863
+      },
+      "embedding_ms": {
+        "samples": 15,
+        "min": 6.593400001293048,
+        "median": 8.013099999516271,
+        "p95": 9.13600000058068,
+        "max": 9.13600000058068
+      },
+      "qdrant_ms": {
+        "samples": 15,
+        "min": 11.657399998512119,
+        "median": 12.65100000455277,
+        "p95": 34.476300003007054,
+        "max": 34.476300003007054
+      },
+      "total_retrieve_ms": {
+        "samples": 15,
+        "min": 28.50169999874197,
+        "median": 31.861999996181112,
+        "p95": 59.9311999976635,
+        "max": 59.9311999976635
+      }
+    },
+    "en": {
+      "requests": 15,
+      "successful": 15,
+      "errors": 0,
+      "empty_successful_results": 0,
+      "ready_ms": {
+        "samples": 15,
+        "min": 7.14729999890551,
+        "median": 8.045499998843297,
+        "p95": 9.425500000361353,
+        "max": 9.425500000361353
+      },
+      "embedding_ms": {
+        "samples": 15,
+        "min": 6.899899999552872,
+        "median": 8.191900000383612,
+        "p95": 10.790700005600229,
+        "max": 10.790700005600229
+      },
+      "qdrant_ms": {
+        "samples": 15,
+        "min": 11.700900002324488,
+        "median": 14.010600003530271,
+        "p95": 17.167700003483333,
+        "max": 17.167700003483333
+      },
+      "total_retrieve_ms": {
+        "samples": 15,
+        "min": 28.674400004092604,
+        "median": 33.29410000151256,
+        "p95": 36.57099999691127,
+        "max": 36.57099999691127
+      }
+    }
+  },
+  "points_after": 18368,
+  "point_count_unchanged": true,
+  "finished_at": "2026-10-31T00:00:49.652812+07:00",
+  "benchmark_wall_seconds": 3.358145999998669
+}
