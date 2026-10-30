@@ -33,6 +33,12 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 resume qua Windows Task Scheduler](2026-10-29_s2-tv2_resume-task-scheduler.md)
+
+- [TV2 đồng bộ các nhánh GitHub](2026-10-28_s2-tv2_dong-bo-cac-nhanh.md)
+
+- [TV2 full crawl — đang kiểm chứng](2026-10-28_s2-tv2_full-crawl.md)
+
 | Ngày | Người | Chủ đề |
 |---|---|---|
 | 2026-10-29 | TV3 (MinhMuc) | [Tích hợp corpus pilot vào RAG LangChain và kiểm thử thật](2026-10-29_s2-tv3_corpus-pilot-rag.md) |
