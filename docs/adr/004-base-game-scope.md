@@ -1,5 +1,8 @@
 # ADR 004 Phạm vi lore Elden Ring
 
+> Cập nhật được người dùng duyệt 29/10/2026: Sprint 2 clean/chunk toàn bộ 4164 raw base game + Shadow of the Erdtree. game_scope=elden_ring; release_scope là nhãn có bằng chứng/candidate/unknown. Không áp dụng điều kiện base-only để chặn DLC trong lượt này. Nightreign/Tarnished Edition vẫn ở review. TV3 cần phối hợp bộ lọc retrieval, không thay đổi tự động trong phần việc TV2. Nội dung base-only bên dưới là quyết định trước ngoại lệ này.
+
+
 Ngày: 2026-10-17. Trạng thái: Chấp nhận theo yêu cầu nhóm 4 Hollows.
 
 ## Quyết định

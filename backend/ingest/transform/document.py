@@ -83,7 +83,9 @@ def inside(root, path):
     return value
 
 
-def select_sample(data_dir, crawl_report=None):
+def select_sample(data_dir, crawl_report=None, *, full=False):
+    if full and not crawl_report:
+        raise ValueError("Full cleaning requires an explicit crawl report")
     if crawl_report:
         path = crawl_report
     else:
@@ -100,7 +102,13 @@ def select_sample(data_dir, crawl_report=None):
             raise ValueError("No 200-page sample report found; specify --crawl-report")
         path = max(candidates, key=lambda p: p.stat().st_mtime)
     job = read(path)
-    if len(job.get("pages", [])) != 200 or len({str(x["id"]) for x in job["pages"]}) != 200:
+    pages = job.get("pages", [])
+    if full:
+        if not pages or len({str(x["id"]) for x in pages}) != len(pages):
+            raise ValueError("Crawl report must contain distinct page IDs")
+        if job.get("status") != "completed":
+            raise ValueError("Full cleaning requires a completed crawl report")
+    elif len(pages) != 200 or len({str(x["id"]) for x in pages}) != 200:
         raise ValueError("Sample report must identify exactly 200 distinct pages")
     return path, job
 
@@ -146,7 +154,7 @@ def verify_csv(output, expected):
 
 
 def run_clean(config, output, *, crawl_report=None, limit=200):
-    if not 1 <= limit <= 200:
+    if limit is not None and not 1 <= limit <= 200:
         raise ValueError("clean limit must be 1..200")
     data_dir = config["data_dir"]
     output = output.resolve()
@@ -154,7 +162,7 @@ def run_clean(config, output, *, crawl_report=None, limit=200):
         raise ValueError("Output directory must be new or empty")
     if any(output.is_relative_to((data_dir / name).resolve()) for name in ("raw", "media", "reports", "research")):
         raise ValueError("Output cannot overwrite input artifacts")
-    report_path, job = select_sample(data_dir, crawl_report)
+    report_path, job = select_sample(data_dir, crawl_report, full=limit is None)
     config = dict(config, clean=dict(config["clean"]))
     config["clean"]["uncertain_entities"] = sorted(
         {x["title"] for x in job.get("scope_excluded", []) if "Shadow of the Erdtree" in x.get("reason", "")}
@@ -273,7 +281,11 @@ def run_clean(config, output, *, crawl_report=None, limit=200):
                         )
                     )
                     reasons[note] += 1
-        manifest_path = data_dir / "media/manifests" / raw["source"] / (raw["source_id"] + ".json")
+        manifest_path = (
+            inside(data_dir, item["media_manifest"])
+            if item.get("media_manifest")
+            else data_dir / "media/manifests" / raw["source"] / (raw["source_id"] + ".json")
+        )
         if not manifest_path.exists():
             raise ValueError("Missing media manifest for " + raw["source_id"])
         manifest = read(manifest_path)

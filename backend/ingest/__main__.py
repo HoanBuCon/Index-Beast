@@ -26,6 +26,7 @@ def main(argv=None):
     p.add_argument("--crawl-report", type=Path)
     p.add_argument("--source", choices=["wikigg"], default="wikigg")
     p.add_argument("--limit", type=int, default=200)
+    p.add_argument("--all", action="store_true", help="Clean all pages from an explicit completed report")
     p.add_argument("--page")
     p.add_argument("--no-media", action="store_true")
     p.add_argument("--refresh-discovery", action="store_true")
@@ -76,7 +77,9 @@ def main(argv=None):
 
         if not args.output_dir:
             p.error("clean requires --output-dir pointing to a new or empty directory")
-        result = run_clean(config, args.output_dir, crawl_report=args.crawl_report, limit=args.limit)
+        result = run_clean(
+            config, args.output_dir, crawl_report=args.crawl_report, limit=None if args.all else args.limit
+        )
         print(json.dumps(result["counts"], ensure_ascii=False, indent=2))
         return 0
     if args.command == "chunk":

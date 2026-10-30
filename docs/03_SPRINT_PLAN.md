@@ -331,7 +331,7 @@ Thu thập đầy đủ các trang lore.
 
 #### 2.5 [TV2] Làm sạch & chuẩn hoá nội dung
 
-Biến wikitext/HTML thành văn bản sạch giàu lore.
+Biến wikitext/HTML thành văn bản sạch giàu lore. Ngoại lệ Sprint 2 được người dùng duyệt 29/10/2026: clean toàn bộ 4164 raw, gồm base game và Shadow of the Erdtree; text/media nghiệm thu riêng.
 
 - [ ] Parse wikitext/HTML → text (mwparserfromhell hoặc BeautifulSoup)
 - [ ] Bỏ infobox chỉ số, navbox, bảng stats, references rác
@@ -344,7 +344,7 @@ Chia đoạn theo ADR-003 và gắn metadata.
 
 - [ ] Chunk theo heading, kích thước/overlap cấu hình được
 - [ ] Metadata: doc_id, title, section, url, source, game_scope, source_type, lang, updated_at
-- [ ] Gán game_scope=base cho chunk
+- [ ] Sprint 2: game_scope=elden_ring cho corpus base+SotE; release_scope giữ bằng chứng hoặc unknown, không ép thành base
 - [ ] Heuristic source_type (in-game text / wiki prose / speculation)
 - [ ] Ghi chunks vào PostgreSQL
 
