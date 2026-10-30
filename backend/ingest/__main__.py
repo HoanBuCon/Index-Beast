@@ -1,4 +1,4 @@
-"""Offline crawl, cleaning and chunk CLI owned by TV2; no encoder or indexing."""
+"""Offline data CLI: TV2 crawl/clean/chunk and explicit TV3 indexing."""
 
 import argparse
 import json
@@ -11,8 +11,13 @@ from ingest.sources.wikigg import WikiGG
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean and chunk (TV2 S1/S2)")
-    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk"])
+    p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean, chunk and index (TV2/TV3)")
+    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index"])
+    p.add_argument("--input", type=Path, help="Reviewed chunk JSONL for index")
+    p.add_argument("--policy", choices=["reviewed", "pilot"], help="Index admission; defaults to RAG_CORPUS_POLICY")
+    p.add_argument("--languages", help="Index languages, e.g. en or en,ja; defaults to RAG_LANGUAGES")
+    p.add_argument("--collection", help="Index collection; defaults to RAG_COLLECTION")
+    p.add_argument("--details", action="store_true", help="Include all excluded locations in the index report")
     p.add_argument("--input-dir", type=Path)
     p.add_argument("--tokenizer", type=Path)
     p.add_argument("--max-tokens", type=int)
@@ -21,12 +26,30 @@ def main(argv=None):
     p.add_argument("--crawl-report", type=Path)
     p.add_argument("--source", choices=["wikigg"], default="wikigg")
     p.add_argument("--limit", type=int, default=200)
+    p.add_argument("--all", action="store_true", help="Clean all pages from an explicit completed report")
     p.add_argument("--page")
     p.add_argument("--no-media", action="store_true")
     p.add_argument("--refresh-discovery", action="store_true")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--config", type=Path)
     args = p.parse_args(argv)
+    if args.command == "index":
+        if args.input is None:
+            p.error("index requires --input reviewed-chunks.jsonl")
+        from ingest.indexing import run_cli
+
+        try:
+            return run_cli(
+                args.input,
+                dry_run=args.dry_run,
+                policy=args.policy,
+                languages=args.languages,
+                collection=args.collection,
+                tokenizer_path=args.tokenizer,
+                details=args.details,
+            )
+        except ValueError as exc:
+            p.error(str(exc))
     if args.limit < 1:
         p.error("--limit must be positive")
     config = load_settings(args.config)
@@ -54,7 +77,9 @@ def main(argv=None):
 
         if not args.output_dir:
             p.error("clean requires --output-dir pointing to a new or empty directory")
-        result = run_clean(config, args.output_dir, crawl_report=args.crawl_report, limit=args.limit)
+        result = run_clean(
+            config, args.output_dir, crawl_report=args.crawl_report, limit=None if args.all else args.limit
+        )
         print(json.dumps(result["counts"], ensure_ascii=False, indent=2))
         return 0
     if args.command == "chunk":

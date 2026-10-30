@@ -111,3 +111,22 @@ win32_setctime==1.2.0
 wsproto==1.3.2
 zope.event==6.2
 zope.interface==8.7
+
+# LangChain migration: resolved against all pins above, without a Windows pip freeze.
+# Existing dependency pins and Linux/Windows markers are retained unchanged.
+distro==1.9.0
+jsonpatch==1.38
+jsonpointer==3.5
+langchain-core==1.7.1
+langchain-deepseek==1.1.1
+langchain-openai==1.7.3
+langchain-protocol==0.0.20
+langsmith==0.14.14
+orjson==3.13.0
+regex==2026.9.29
+requests-toolbelt==1.0.0
+tenacity==9.2.1
+tiktoken==0.14.0
+uuid-utils==0.19.0
+xxhash==4.0.2
+zstandard==0.25.0

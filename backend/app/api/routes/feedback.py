@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Response, status
 from app.api.deps import get_chat_service
 from app.api.errors import ErrorBody
 from app.api.schemas.feedback import FeedbackRequest
-from app.services.mock_chat import MockChatService
+from app.services.chat import ChatService
 from core.errors import NotFoundError
 
 router = APIRouter(tags=["feedback"])
@@ -20,7 +20,7 @@ router = APIRouter(tags=["feedback"])
     responses={404: {"model": ErrorBody}, 422: {"model": ErrorBody}},
     summary="Gửi 👍/👎 cho message_id",
 )
-async def feedback(body: FeedbackRequest, service: MockChatService = Depends(get_chat_service)) -> Response:
+async def feedback(body: FeedbackRequest, service: ChatService = Depends(get_chat_service)) -> Response:
     if not service.has_message(body.message_id):
         raise NotFoundError("Không tìm thấy câu trả lời để đánh giá.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

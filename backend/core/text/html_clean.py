@@ -57,7 +57,7 @@ def render(node):
     return ("\n" + inner + "\n") if node.name in {"p", "li", "dt", "dd", "blockquote"} else inner
 
 
-def clean_html(html: str, *, title: str, skip_sections=()) -> dict:
+def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     body = soup.select_one(".mw-parser-output, #page-content, main")
     if body is None:
@@ -126,6 +126,22 @@ def clean_html(html: str, *, title: str, skip_sections=()) -> dict:
             active["blocks"].append(
                 {"text": text, "kind": kind, "location": positions.get(id(node), "article"), "notes": notes or []}
             )
+            if capture_context:
+                block = active["blocks"][-1]
+                block["variant_context"] = variant_context(node)
+                block["source_citations"] = (
+                    [a.get("href") for a in node.select("sup.reference a[href]")] if isinstance(node, Tag) else []
+                )
+                block["literal_description"] = bool(
+                    re.search(r"(?:^| > )(?:Variant )?Descriptions?$", active["section"], re.I)
+                ) and any(
+                    isinstance(p, Tag)
+                    and (
+                        p.name in {"i", "em", "blockquote"}
+                        or "font-style:italic" in p.get("style", "").replace(" ", "")
+                    )
+                    for p in [node, *node.parents]
+                )
 
     def infobox(node):
         previous = active
@@ -293,6 +309,18 @@ def clean_html(html: str, *, title: str, skip_sections=()) -> dict:
         for child in node.children:
             walk(child)
 
+    if capture_context:
+        for node in list(body.select('span[style*="float"]')):
+            if "float:right" in node.get("style", "").replace(" ", "") and re.fullmatch(
+                r"(?:Source:|\d+\.\d+(?:\.\d+)?)", node.get_text("", strip=True)
+            ):
+                heading = node.find_previous(["h2", "h3", "h4"])
+                audit(
+                    node,
+                    "literal_description_version_label",
+                    section=heading.get_text(" ", strip=True) if heading else "Introduction",
+                )
+                node.decompose()
     for child in body.children:
         walk(child)
     for n, section in enumerate(sections):

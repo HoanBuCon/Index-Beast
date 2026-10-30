@@ -4,14 +4,18 @@
 
 ![Index Beast Banner](assets/onion_ring.jpg)
 
-Dự án **IndexBeast** của nhóm **4 Hollows**: chatbot hỏi đáp lore **Elden Ring base game** trên Website và Discord (RAG: hybrid search + rerank + DeepSeek).
+Dự án **IndexBeast** của nhóm **4 Hollows**: trợ lý hỏi đáp **Elden Ring và nội dung liên quan trong corpus**, gồm DLC, trên Website và Discord (RAG: hybrid search + optional rerank + DeepSeek). Hỗ trợ lore, gameplay, quest, trang bị và gợi ý build khi có bằng chứng.
 
 Trello: https://trello.com/b/mZEBMPGV/elden-ring
 
 > Repo đang ở giai đoạn nền tảng: API health, cấu hình và adapter DeepSeek đã có triển khai.
 > Pipeline dữ liệu và RAG đang được phát triển theo kế hoạch sprint.
 
-**Phạm vi:** lore Elden Ring base game.
+Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xem
+[hướng dẫn LangChain + DeepSeek và tích hợp corpus thử nghiệm](backend/app/rag/README.md).
+`llm_only` dùng được khi dữ liệu chưa sẵn sàng. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
+
+**Phạm vi hiện tại:** Elden Ring có nguồn, gồm lore, gameplay và tư vấn build định tính; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Dữ liệu gameplay còn thiếu bảng stat/acquisition/combat đã bị lọc; xem [audit khả năng thực tế và cách thử](docs/testing/2026-10-29_elden-ring-assistant-capabilities.md). Các tài liệu SRS/ADR cũ cần nhóm đồng bộ riêng.
 
 ## 4 con Hollows
 
@@ -35,6 +39,7 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 | [docs/04_ARCHITECTURE.md](docs/04_ARCHITECTURE.md) | Kiến trúc thư mục, pipeline dữ liệu, debug, mở rộng |
 | [docs/quy_uoc.md](docs/quy_uoc.md) | Quy ước nhánh Git, Conventional Commits, PR và Mentor review |
 | [docs/handover/2026-10-19_s1-tv3_deepseek-llm.md](docs/handover/2026-10-19_s1-tv3_deepseek-llm.md) | Cấu hình, sử dụng và kiểm tra DeepSeek LLM |
+| [backend/app/rag/README.md](backend/app/rag/README.md) | LangChain, ba mode chat, prompt, hướng dẫn tự chạy và nối artifact RAG |
 
 ## Cấu trúc
 
@@ -49,6 +54,9 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 | `infra/`, `scripts/`, `docker-compose.yml` | Triển khai | TV1 |
 
 ## Chạy local
+
+Chạy nhanh API + web + hạ tầng: `make dev`. Kiểm tra: `make health`; unit offline: `make test-unit`.
+Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local-guide.md).
 
 ### Cần cài
 

@@ -4,9 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AdminStats } from "../api/types";
 import { getAdminStats, getTrace } from "../api/client";
-import { useLanguage } from "../lib/i18n";
 export default function AdminPage() {
-  const { t } = useLanguage();
   const [token, setToken] = useState("");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [trace, setTrace] = useState<unknown>(null);
@@ -25,7 +23,7 @@ export default function AdminPage() {
       if (kind === "stats") setStats(await getAdminStats(token.trim(), next.signal));
       else setTrace(await getTrace(token.trim(), messageId.trim(), next.signal));
     } catch (cause) {
-      if (!next.signal.aborted) setError(cause instanceof Error ? cause.message : t("Không tải được dữ liệu."));
+      if (!next.signal.aborted) setError(cause instanceof Error ? cause.message : "Không tải được dữ liệu.");
     } finally {
       if (!next.signal.aborted) setBusy(false);
     }
@@ -40,11 +38,11 @@ export default function AdminPage() {
   }
   return (
     <main id="main" className="document admin">
-      <span className="eyebrow">{t("BÀN ĐIỀU KHIỂN / 4 HOLLOWS")}</span>
-      <h1>{t("Quản trị kho lore")}</h1>
-      <p className="lead">{t("Hội thoại, phản hồi và chất lượng dữ liệu.")}</p>
+      <span className="eyebrow">{"BÀN ĐIỀU KHIỂN / 4 HOLLOWS"}</span>
+      <h1>{"Quản trị kho lore"}</h1>
+      <p className="lead">{"Hội thoại, phản hồi và chất lượng dữ liệu."}</p>
       <p className="mode-note">
-        {t("Giao diện kết nối API quản trị do TV1 phụ trách. Chưa có dữ liệu thật khi API chưa sẵn sàng.")}
+        {"Giao diện kết nối API quản trị do TV1 phụ trách. Chưa có dữ liệu thật khi API chưa sẵn sàng."}
       </p>
       <form
         className="admin-auth"
@@ -53,7 +51,7 @@ export default function AdminPage() {
           void load("stats");
         }}
       >
-        <label htmlFor="admin-token">{t("Token quản trị")}</label>
+        <label htmlFor="admin-token">{"Token quản trị"}</label>
         <input
           id="admin-token"
           type="password"
@@ -70,19 +68,19 @@ export default function AdminPage() {
           required
         />
         <button className="primary" disabled={busy || !token.trim()}>
-          {busy ? t("Đang tải…") : t("Kết nối")}
+          {busy ? "Đang tải…" : "Kết nối"}
         </button>
         <button type="button" onClick={logout}>
-          {t("Xóa phiên")}
+          {"Xóa phiên"}
         </button>
       </form>
       {error && (
         <p className="error-box" role="alert">
-          {t(error)}
+          {error}
         </p>
       )}
       <section>
-        <h2>{t("Hội thoại gần đây")}</h2>
+        <h2>{"Hội thoại gần đây"}</h2>
         {stats ? (
           <ul className="admin-list">
             {stats.conversations?.map((c) => (
@@ -95,11 +93,11 @@ export default function AdminPage() {
             ))}
           </ul>
         ) : (
-          <p className="muted">{t("Kết nối để xem hội thoại.")}</p>
+          <p className="muted">{"Kết nối để xem hội thoại."}</p>
         )}
       </section>
       <section>
-        <h2>{t("Tra cứu trace")}</h2>
+        <h2>{"Tra cứu trace"}</h2>
         <form
           className="trace-form"
           onSubmit={(e) => {
@@ -117,25 +115,25 @@ export default function AdminPage() {
             onChange={(e) => setMessageId(e.target.value)}
             required
           />
-          <button disabled={!token.trim() || !messageId.trim() || busy}>{t("Xem trace")}</button>
+          <button disabled={!token.trim() || !messageId.trim() || busy}>{"Xem trace"}</button>
         </form>
         {trace !== null && <pre>{JSON.stringify(trace, null, 2)}</pre>}
       </section>
       <section>
-        <h2>{t("Phản hồi chưa hữu ích")}</h2>
+        <h2>{"Phản hồi chưa hữu ích"}</h2>
         {stats ? (
           <ul className="admin-list">
             {stats.feedback
               ?.filter((f) => f.rating < 0)
               .map((f, i) => (
                 <li key={`${f.message_id}-${i}`}>
-                  <strong>{f.reason || t("Không ghi lý do")}</strong>
+                  <strong>{f.reason || "Không ghi lý do"}</strong>
                   <small>{f.message_id}</small>
                 </li>
               ))}
           </ul>
         ) : (
-          <p className="muted">{t("Chưa tải phản hồi.")}</p>
+          <p className="muted">{"Chưa tải phản hồi."}</p>
         )}
       </section>
       <div className="admin-columns">
@@ -143,20 +141,20 @@ export default function AdminPage() {
           <h2>Ingestion</h2>
           {stats?.ingestion_jobs?.map((job) => (
             <p key={job.id}>
-              {job.id} · {job.status} · {job.pages_ok} {t("trang")}
+              {job.id} · {job.status} · {job.pages_ok} {"trang"}
             </p>
           ))}
-          {!stats?.ingestion_jobs?.length && <p className="muted">{t("Chưa có job để hiển thị.")}</p>}
+          {!stats?.ingestion_jobs?.length && <p className="muted">{"Chưa có job để hiển thị."}</p>}
         </section>
         <section>
-          <h2>{t("Kết quả đánh giá")}</h2>
+          <h2>{"Kết quả đánh giá"}</h2>
           {stats?.eval_runs?.map((run) => (
             <div key={run.id}>
               <h3>{run.id}</h3>
               <pre>{JSON.stringify(run.metrics, null, 2)}</pre>
             </div>
           ))}
-          {!stats?.eval_runs?.length && <p className="muted">{t("Chưa có kết quả eval.")}</p>}
+          {!stats?.eval_runs?.length && <p className="muted">{"Chưa có kết quả eval."}</p>}
         </section>
       </div>
     </main>

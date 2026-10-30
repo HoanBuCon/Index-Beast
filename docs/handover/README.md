@@ -12,6 +12,7 @@ Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước kh
 
 | Phần | Ý nghĩa | Ví dụ |
 |---|---|---|
+| 2026-10-29 | TV3 (MinhMuc) | [Trợ lý Elden Ring: gameplay, build và audit corpus](2026-10-29_s2-tv3_gameplay-assistant.md) |
 | `YYYY-MM-DD` | Ngày bàn giao | `2026-10-19` |
 | `s<sprint>-tv<thành-viên>` | Sprint và người phụ trách, khớp mã task trong tên nhánh (`feature/s1-tv1-…`) | `s1-tv1` |
 | `ten-ngan-khong-dau` | Chủ đề, chữ thường không dấu, nối bằng `-` | `nen-tang-va-cau-hinh` |
@@ -37,9 +38,20 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 - [TV2 cài Docker local — chờ reboot](2026-10-28_s2-tv2_docker-local.md)
 
 - [TV2 chunk và PostgreSQL — chờ nghiệm thu DB](2026-10-28_s2-tv2_chunk-postgresql.md)
+- [TV2 clean full base + SotE](2026-10-29_s2-tv2_clean-full-base-sote.md)
+
+- [TV2 khảo sát raw và kế hoạch clean/chunk](2026-10-29_s2-tv2_khao-sat-raw-va-ke-hoach-clean-chunk.md)
+
+- [TV2 clean theo inventory](2026-10-28_s2-tv2_clean-inventory.md)
+- [TV2 resume qua Windows Task Scheduler](2026-10-29_s2-tv2_resume-task-scheduler.md)
+
+- [TV2 đồng bộ các nhánh GitHub](2026-10-28_s2-tv2_dong-bo-cac-nhanh.md)
+
+- [TV2 full crawl — đang kiểm chứng](2026-10-28_s2-tv2_full-crawl.md)
 
 | Ngày | Người | Chủ đề |
 |---|---|---|
+| 2026-10-29 | TV3 (MinhMuc) | [Tích hợp corpus pilot vào RAG LangChain và kiểm thử thật](2026-10-29_s2-tv3_corpus-pilot-rag.md) |
 | 2026-10-19 | TV1 (Hoanbucon) | [Nền tảng backend, hạ tầng dev và cấu hình](2026-10-19_s1-tv1_nen-tang-va-cau-hinh.md) |
 | 2026-10-19 | TV3 (MinhMuc) | [DeepSeek LLM](2026-10-19_s1-tv3_deepseek-llm.md) |
 | 2026-10-24 | TV2 (UncleThing) | [Crawler, mẫu raw và dữ liệu ảnh](2026-10-24_s1-tv2_crawler-va-du-lieu-anh.md) |
@@ -53,3 +65,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-28 | TV2 (UncleThing) | [Nghiên cứu chunking trên 200 trang](2026-10-28_s2-tv2_nghien-cuu-chunking-200-trang.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Prototype chunking có cấu trúc](2026-10-28_s2-tv2_chunking-co-cau-truc.md) |
 | 2026-10-28 | TV2 (UncleThing) | [Đẩy mã nguồn làm sạch và chunking lên GitHub](2026-10-28_s2-tv2_day-ma-nguon-github.md) |
+| 2026-10-28 | TV4 (QuyVuiVe) | [Web: đối chiếu OpenAPI v1 và tích hợp API mock Sprint 2](2026-10-28_s2-tv4_web-api-mock.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Favicon HoanGiapVang](2026-10-29_s2-tv4_favicon.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Đổi font Agmena và sửa lỗi khởi động web](2026-10-29_s2-tv4_font-va-khoi-dong-web.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Cài Taste Skill cho công việc frontend](2026-10-29_s2-tv4_cai-taste-skill.md) |
+| 2026-10-29 | TV4 (QuyVuiVe) | [Tinh chỉnh giao diện chat bằng Taste Skill](2026-10-29_s2-tv4_tinh-chinh-giao-dien-taste.md) |

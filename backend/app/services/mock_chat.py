@@ -16,7 +16,7 @@ from collections import OrderedDict
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.api.schemas.chat import ChatRequest, ChatResponse, Source
+from app.api.schemas.chat import ChatRequest, ChatResponse, DoneEvent, Source, SourcesEvent, StatusEvent, TokenEvent
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from core.errors import NotFoundError, RateLimitedError, UpstreamError
 
@@ -42,12 +42,24 @@ _ANSWER = {
     "vi": "Đây là câu trả lời giả từ máy chủ mock [1]. Nội dung thật sẽ có ở Sprint 3 cùng trích dẫn từ wiki [2].",
     "en": "This is a mock answer from the server [1]. Real content arrives in Sprint 3 with wiki citations [2].",
 }
-_NO_EVIDENCE = "Mình chưa tìm thấy thông tin này trong dữ liệu lore."
+_NO_EVIDENCE = "Mình chưa tìm thấy thông tin này trong dữ liệu hiện có."
 
 
 class MockChatService:
     def __init__(self) -> None:
         self._conversations: OrderedDict[UUID, ConversationOut] = OrderedDict()
+
+    async def open_stream(self, req: ChatRequest):
+        result = await self.answer(req)
+
+        async def events():
+            yield "status", StatusEvent(status="searching")
+            for word in result.answer.split(" "):
+                yield "token", TokenEvent(token=word + " ")
+            yield "sources", SourcesEvent(sources=result.sources)
+            yield "done", DoneEvent.model_validate(result, from_attributes=True)
+
+        return events()
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
         start = time.perf_counter()

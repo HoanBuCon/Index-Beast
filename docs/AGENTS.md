@@ -16,7 +16,7 @@ Theo yêu cầu của người dùng ngày 26/10/2026, mỗi khi hoàn thành m�
 
 ## Các ràng buộc đang áp dụng
 
-- Phạm vi nội dung: lore **Elden Ring base game**, theo [ADR-004](docs/adr/004-base-game-scope.md).
+- Phạm vi nội dung mặc định: lore **Elden Ring base game**; ngoại lệ Sprint 2 người dùng duyệt 29/10/2026 cho TV2 clean/chunk **base + Shadow of the Erdtree**, xem cập nhật trong [ADR-004](docs/adr/004-base-game-scope.md).
 - Không tự chạy notebook, tải model, embedding/indexing hoặc gọi API LLM. Chỉ thực hiện khi người dùng yêu cầu rõ; nếu không, viết hướng dẫn để người dùng tự chạy. Có thể đọc output đã lưu và kiểm tra tĩnh JSON/lint/định dạng mà không thực thi cell.
 - Không commit/push trực tiếp lên `main`, `master` hoặc `develop`; dùng nhánh riêng và Conventional Commits theo `docs/quy_uoc.md`. Không tự merge PR khi người dùng chưa yêu cầu.
 - Khi tạo nhánh từ `origin/develop`, dùng `git switch --no-track -c <ten-nhanh> origin/develop` để không gán upstream của nhánh mới vào `develop`. Lần push đầu dùng `git push -u origin <ten-nhanh>` và xác minh upstream đúng nhánh công việc.

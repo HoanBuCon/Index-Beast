@@ -90,9 +90,10 @@ def verify_image(data, mime, settings):
 
 
 class MediaStore:
-    def __init__(self, client, config):
+    def __init__(self, client, config, *, manifest_root=None):
         self.client, self.config = client, config
         self.root = config["data_dir"]
+        self.manifest_root = manifest_root or self.root / "media" / "manifests"
         self.index_path = self.root / "media" / "url-index.json"
         self.index = read(self.index_path) if self.index_path.exists() else {}
 
@@ -134,7 +135,7 @@ class MediaStore:
         return dict(record, status="downloaded")
 
     def page(self, source, raw):
-        path = self.root / "media" / "manifests" / source.name / (raw["source_id"] + ".json")
+        path = self.manifest_root / source.name / (raw["source_id"] + ".json")
         occurrences = image_occurrences(raw)
         manifest = {
             "source_id": raw["source_id"],
