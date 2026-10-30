@@ -12,6 +12,7 @@ Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước kh
 
 | Phần | Ý nghĩa | Ví dụ |
 |---|---|---|
+| 2026-10-31 | TV3 (MinhMuc) | [Sửa web HTTP LAN/VPN và PostgreSQL health](2026-10-31_s2-tv3_sua-web-http-lan-vpn.md) |
 | 2026-10-30 | TV3 (MinhMuc) | [Đo thời gian index toàn bộ corpus được chọn](2026-10-30_s2-tv3_do-thoi-gian-index-toan-bo.md) |
 | 2026-10-29 | TV3 (MinhMuc) | [Trợ lý Elden Ring: gameplay, build và audit corpus](2026-10-29_s2-tv3_gameplay-assistant.md) |
 | `YYYY-MM-DD` | Ngày bàn giao | `2026-10-19` |

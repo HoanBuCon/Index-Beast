@@ -1,6 +1,7 @@
 // Dữ liệu minh họa cố định cho TV4 thử UI; không phải kết quả RAG hoặc API thật.
 // Phụ trách: TV4 · [S2–S4] UI chat và streaming
 import type { ChatRequest, ChatResponse, StreamEvent } from "./types";
+import { createUuid } from "../lib/uuid.ts";
 
 export type DemoScenario = "success" | "error" | "slow";
 // Mock chỉ trong frontend để thử UI S2; không tạo endpoint hoặc thay backend của TV1.
@@ -27,8 +28,8 @@ export async function demoChat(
   signal.throwIfAborted();
   if (scenario === "error") throw new Error("Lỗi minh họa. Chọn Thành công rồi bấm Thử lại để kiểm tra.");
   return {
-    conversation_id: body.conversation_id ?? crypto.randomUUID(),
-    message_id: crypto.randomUUID(),
+    conversation_id: body.conversation_id ?? createUuid(),
+    message_id: createUuid(),
     grounded: false,
     latency_ms: 0,
     answer:
@@ -78,8 +79,8 @@ export async function* demoStream(body: ChatRequest, signal: AbortSignal): Async
   yield {
     type: "done",
     data: {
-      conversation_id: body.conversation_id ?? crypto.randomUUID(),
-      message_id: crypto.randomUUID(),
+      conversation_id: body.conversation_id ?? createUuid(),
+      message_id: createUuid(),
       grounded: false,
       latency_ms: 0,
     },

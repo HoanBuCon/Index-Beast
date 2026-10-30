@@ -6,6 +6,7 @@ import type { Conversation } from "../api/types";
 import { ApiError } from "../api/client";
 import { replyEvents } from "../api/chat";
 import type { ChatOptions } from "../api/chat";
+import { createUuid } from "../lib/uuid.ts";
 // S2 bổ sung JSON /chat, giữ nguyên luồng sự kiện SSE đã có cho S3.
 export function useChatStream(update: (conversation: Conversation) => void) {
   const [busy, setBusy] = useState(false);
@@ -18,14 +19,14 @@ export function useChatStream(update: (conversation: Conversation) => void) {
     controller.current = abort;
     setBusy(true);
     setError("");
-    const answerId = crypto.randomUUID();
+    const answerId = createUuid();
     let current: Conversation = {
       ...base,
       title: base.messages.length ? base.title : text.slice(0, 60),
       updatedAt: new Date().toISOString(),
       messages: [
         ...base.messages,
-        { id: crypto.randomUUID(), role: "user", content: text, sources: [] },
+        { id: createUuid(), role: "user", content: text, sources: [] },
         { id: answerId, role: "assistant", content: "", sources: [], incomplete: true },
       ],
     };

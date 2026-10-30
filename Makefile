@@ -8,6 +8,8 @@ PYTHON ?= $(if $(wildcard backend/.venv/Scripts/python.exe),$(CURDIR)/backend/.v
 # Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 18000 — không dùng cổng mặc định 8000
 # của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
 API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('API_PORT') or '')"),18000)
+# Đọc host chia sẻ web từ .env; override: make web WEB_HOST=<IP-LAN-hoac-VPN>.
+WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
 
 .PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
 
@@ -55,8 +57,8 @@ api:             ## Chạy API local (auto-reload) tại http://127.0.0.1:$(API_
 	cd backend && "$(PYTHON)" -X utf8 -m uvicorn --factory app.main:create_app --reload --host 127.0.0.1 --port $(API_PORT) --no-access-log
 
 # Frontend TV4: Vite đọc WEB_PORT và proxy API_PORT từ .env gốc, không ghi cứng cổng ở đây.
-web:             ## Chạy frontend Vite (cần npm ci trong web ở lần đầu)
-	cd web && npm run dev
+web:             ## Chạy Vite theo WEB_HOST trong .env; cổng và proxy do Vite đọc
+	cd web && npm run dev -- --host "$(WEB_HOST)"
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
 	$(MAKE) --no-print-directory -j2 api web

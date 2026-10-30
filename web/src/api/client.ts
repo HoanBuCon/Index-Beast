@@ -3,6 +3,7 @@
 
 import type { AdminStats, ChatRequest, ChatResponse, ConversationOut, FeedbackRequest, StreamEvent } from "./types";
 import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
+import { createUuid } from "../lib/uuid.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -16,7 +17,7 @@ export class ApiError extends Error {
 async function request(path: string, init: RequestInit = {}) {
   const response = await fetch(`/api/v1${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", "X-Request-ID": crypto.randomUUID(), ...init.headers },
+    headers: { "Content-Type": "application/json", "X-Request-ID": createUuid(), ...init.headers },
   });
   if (!response.ok) {
     const message =
