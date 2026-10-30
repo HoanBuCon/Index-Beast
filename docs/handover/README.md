@@ -74,3 +74,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-29 | TV4 (QuyVuiVe) | [Đổi font Agmena và sửa lỗi khởi động web](2026-10-29_s2-tv4_font-va-khoi-dong-web.md) |
 | 2026-10-29 | TV4 (QuyVuiVe) | [Cài Taste Skill cho công việc frontend](2026-10-29_s2-tv4_cai-taste-skill.md) |
 | 2026-10-29 | TV4 (QuyVuiVe) | [Tinh chỉnh giao diện chat bằng Taste Skill](2026-10-29_s2-tv4_tinh-chinh-giao-dien-taste.md) |
+| 2026-10-30 | TV4 (QuyVuiVe) | [Bot ask và API client mock Sprint 2](2026-10-30_s2-tv4_bot-ask-api-mock.md) |

@@ -4,6 +4,8 @@
 
 COMPOSE := docker compose
 INFRA   := postgres qdrant redis
+# TV4: npm.cmd tránh npm.ps1 trên Windows; Linux/macOS dùng npm, có thể ghi đè BOT_NPM.
+BOT_NPM ?= $(if $(filter Windows_NT,$(OS)),npm.cmd,npm)
 PYTHON ?= $(if $(wildcard backend/.venv/Scripts/python.exe),$(CURDIR)/backend/.venv/Scripts/python.exe,$(if $(wildcard backend/.venv/bin/python),$(CURDIR)/backend/.venv/bin/python,python))
 # Cổng API dev: lấy API_PORT từ .env (chỉ đọc đúng dòng đó), mặc định 18000 — không dùng cổng mặc định 8000
 # của uvicorn (docs/quy_uoc.md → "Quy ước cổng"). Ghi đè: `make api API_PORT=18001`
@@ -12,9 +14,10 @@ API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print
 WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
 
 .PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
+.PHONY: bot bot-deploy bot-check
 
 help:            ## Liệt kê lệnh
-	@grep -E '^[a-z]+:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
+	@grep -E '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
 
 up:              ## Bật PostgreSQL, Qdrant, Redis và chờ healthy
 	$(COMPOSE) up -d --wait $(INFRA)
@@ -59,6 +62,16 @@ api:             ## Chạy API local (auto-reload) tại http://127.0.0.1:$(API_
 # Frontend TV4: Vite đọc WEB_PORT và proxy API_PORT từ .env gốc, không ghi cứng cổng ở đây.
 web:             ## Chạy Vite theo WEB_HOST trong .env; cổng và proxy do Vite đọc
 	cd web && npm run dev -- --host "$(WEB_HOST)"
+
+# Bot TV4: chỉ chạy client Discord; backend dùng make api ở terminal riêng.
+bot:             ## Chạy bot Discord dev, đọc .env gốc và tự khởi động lại khi sửa code
+	cd bot && $(BOT_NPM) run dev
+
+bot-deploy:      ## Đăng ký slash commands global; chạy khi thêm hoặc sửa định nghĩa lệnh
+	cd bot && $(BOT_NPM) run deploy-commands
+
+bot-check:       ## TypeScript + test giả lập + Prettier của bot; không cần Discord/backend
+	cd bot && $(BOT_NPM) run typecheck && $(BOT_NPM) test && $(BOT_NPM) run format:check
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
 	$(MAKE) --no-print-directory -j2 api web
