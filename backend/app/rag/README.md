@@ -2,6 +2,10 @@
 
 TV3 — MinhMuc, nhóm 4 Hollows. Cập nhật 29/10/2026.
 
+Đo full re-embedding/upsert ngày 30/10/2026: 18.368 chunk EN, **999,802 giây** cho index,
+**1.009,263 giây** kể cả preflight/xác minh. Xem [benchmark trọn lượt](../../../docs/testing/2026-10-30_full-index-benchmark.md).
+Đây là chạy lại trên collection đã có; không cần index lần nữa chỉ để demo.
+
 Quyết định mới của team: trợ lý Elden Ring hỗ trợ lore, gameplay, quest, trang bị, boss và gợi ý build,
 gồm DLC và nội dung liên quan trong corpus. Không từ chối chỉ vì câu hỏi thuộc gameplay/build.
 Giữ metadata game/release/continuity và độ chưa chắc chắn; không tự coi mọi nguồn là cùng canon.
