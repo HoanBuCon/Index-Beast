@@ -1,5 +1,9 @@
 # Prototype ingest Sprint 1
 
+Sprint 2 full base+SotE (người dùng duyệt): dùng `python -m ingest.chunk.full --input-dir data/clean_runs/s2-full-v2 --tokenizer <local-tokenizer.json> --output-dir data/chunk_runs/<ten-moi>`.
+Nạp PostgreSQL bằng `python -m ingest.chunk.load_full data/chunk_runs/s2-full-v1` (thêm `--validate-only` để kiểm offline).
+game_scope=elden_ring; không thêm passage prefix lần hai khi index DB chunks.text. Xem handover
+2026-10-29_s2-tv2_chunk-full-base-sote.md. Các lệnh prototype dưới vẫn là chế độ cũ cho mẫu base-only.
 Sprint 2 full base+SotE (ngoại lệ đã duyệt): `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/<ten-moi>`.
 Artifact clean hiện hành: `data/clean_runs/s2-full-v2/content_clean_all.csv`; cột `decision`/`chunk_eligible`
 phân biệt nội dung đủ điều kiện và review. Không gán scope base cho DLC; game_scope=elden_ring.

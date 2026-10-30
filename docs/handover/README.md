@@ -33,6 +33,11 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV2 full chunk và PostgreSQL base/SotE](2026-10-29_s2-tv2_chunk-full-base-sote.md)
+
+- [TV2 cài Docker local — chờ reboot](2026-10-28_s2-tv2_docker-local.md)
+
+- [TV2 chunk và PostgreSQL — chờ nghiệm thu DB](2026-10-28_s2-tv2_chunk-postgresql.md)
 - [TV2 clean full base + SotE](2026-10-29_s2-tv2_clean-full-base-sote.md)
 
 - [TV2 khảo sát raw và kế hoạch clean/chunk](2026-10-29_s2-tv2_khao-sat-raw-va-ke-hoach-clean-chunk.md)
