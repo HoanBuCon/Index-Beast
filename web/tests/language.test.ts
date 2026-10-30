@@ -7,13 +7,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { createServer } from "vite";
 
-test("UI stays Vietnamese even with an old English preference or blocked storage", async () => {
+test("UI renders on HTTP LAN without randomUUID, old English preference or blocked storage", async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: "custom" });
   const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const originalCrypto = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  const getRandomValues = globalThis.crypto.getRandomValues.bind(globalThis.crypto);
   try {
     const { default: App } = await server.ssrLoadModule("/src/App.tsx");
     const { default: ChatPage } = await server.ssrLoadModule("/src/pages/ChatPage.tsx");
     const { default: MessageList } = await server.ssrLoadModule("/src/components/chat/MessageList.tsx");
+    Object.defineProperty(globalThis, "crypto", { configurable: true, value: { getRandomValues } });
     function render(language: string | null, blocked = false, route = "/about") {
       Object.defineProperty(globalThis, "localStorage", {
         configurable: true,
@@ -67,6 +70,8 @@ test("UI stays Vietnamese even with an old English preference or blocked storage
     assert.doesNotMatch(renderMessages(false), /class="thinking-bubble"/);
     assert.match(renderMessages(false), /Câu trả lời chưa hoàn tất/);
   } finally {
+    if (originalCrypto) Object.defineProperty(globalThis, "crypto", originalCrypto);
+    else Reflect.deleteProperty(globalThis, "crypto");
     if (original) Object.defineProperty(globalThis, "localStorage", original);
     else Reflect.deleteProperty(globalThis, "localStorage");
     await server.close();

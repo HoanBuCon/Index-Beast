@@ -12,6 +12,7 @@ import MessageInput from "../components/chat/MessageInput";
 import MessageList from "../components/chat/MessageList";
 import { retryInput } from "../hooks/chatState";
 import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
+import { createUuid } from "../lib/uuid.ts";
 
 // Thanh thu gọn chỉ dẫn tới chức năng đã có của web TV4.
 function RailIcon({ name }: { name: "new" | "about" | "admin" }) {
@@ -38,7 +39,7 @@ function RailIcon({ name }: { name: "new" | "about" | "admin" }) {
 }
 function fresh(mode: Conversation["mode"]): Conversation {
   return {
-    id: crypto.randomUUID(),
+    id: createUuid(),
     title: "Cuộc trò chuyện mới",
     mode,
     serverId: null,
