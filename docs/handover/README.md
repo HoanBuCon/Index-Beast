@@ -1,5 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Ghép favicon và rà soát Quản trị (31/10/2026)](2026-10-31_s2-tv4_favicon-va-ra-soat-admin.md)
+
+- [TV4 · Khung chat kiểu menu Elden Ring (31/10/2026)](2026-10-31_s2-tv4_khung-chat-menu.md)
+
 Mỗi khi hoàn thành một nhóm task, người thực hiện ghi lại **quy tắc, quy ước, quyết định và bài học** mà người khác cần biết để tiếp tục — đặt cùng mã nguồn, review trong cùng PR.
 
 Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước khi báo hoàn tất cho mọi nhóm task có thay đổi file, bao gồm tài liệu, notebook, bộ đánh giá và xử lý sự cố Git. Hướng dẫn cho trợ lý được lưu tại [`AGENTS.md`](../AGENTS.md). Với câu hỏi giải thích không làm thay đổi file, không cần tạo handover mới.
@@ -74,3 +78,6 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-29 | TV4 (QuyVuiVe) | [Đổi font Agmena và sửa lỗi khởi động web](2026-10-29_s2-tv4_font-va-khoi-dong-web.md) |
 | 2026-10-29 | TV4 (QuyVuiVe) | [Cài Taste Skill cho công việc frontend](2026-10-29_s2-tv4_cai-taste-skill.md) |
 | 2026-10-29 | TV4 (QuyVuiVe) | [Tinh chỉnh giao diện chat bằng Taste Skill](2026-10-29_s2-tv4_tinh-chinh-giao-dien-taste.md) |
+| 2026-10-30 | TV4 (QuyVuiVe) | [Bot ask và API client mock Sprint 2](2026-10-30_s2-tv4_bot-ask-api-mock.md) |
+| 2026-10-31 | TV4 (QuyVuiVe) | [Một lệnh chạy bot và API mock](2026-10-31_s2-tv4_make-bot-dev.md) |
+| 2026-10-31 | TV4 (QuyVuiVe) | [Nút sidebar với vệt sáng Grace và icon item](2026-10-31_s2-tv4_sidebar-grace-menu.md) |

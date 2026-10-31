@@ -30,7 +30,7 @@ test("UI renders on HTTP LAN without randomUUID, old English preference or block
       return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [route] }, createElement(App)));
     }
     const savedEnglish = render("en");
-    assert.match(savedEnglish, /Cuộc trò chuyện mới/);
+    assert.match(savedEnglish, /TRÒ CHUYỆN MỚI/);
     assert.match(savedEnglish, /Nguồn &amp; ghi nhận/);
     assert.doesNotMatch(savedEnglish, /Explore lore|Sources &amp; credits/);
     const admin = render("en", false, "/admin");
@@ -38,17 +38,20 @@ test("UI renders on HTTP LAN without randomUUID, old English preference or block
     assert.doesNotMatch(admin, /language-switch|Ngôn ngữ giao diện|aria-label="English"/);
     assert.ok(savedEnglish.indexOf("<aside") < savedEnglish.indexOf("<header"));
     const vietnamese = render("vi");
-    assert.match(vietnamese, /Cuộc trò chuyện mới/);
+    assert.match(vietnamese, /TRÒ CHUYỆN MỚI/);
     assert.match(vietnamese, /Nguồn &amp; ghi nhận/);
-    assert.match(render("invalid"), /Cuộc trò chuyện mới/);
-    assert.match(render(null, true), /Cuộc trò chuyện mới/);
+    // Sidebar trở về nhãn tiếng Việt cố định theo yêu cầu; giữ kiểm tra lựa chọn cũ.
+    assert.match(render("invalid"), /TRÒ CHUYỆN MỚI/);
+    assert.match(render(null, true), /TRÒ CHUYỆN MỚI/);
+    assert.match(savedEnglish, /aria-label="VỀ DỰ ÁN"/);
+    assert.match(savedEnglish, /aria-label="QUẢN TRỊ"/);
     // Trạng thái rỗng chỉ có một ô nhập, nằm trước các gợi ý như bố cục tham khảo.
     const chat = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(ChatPage)));
     assert.equal((chat.match(/<textarea/g) ?? []).length, 1);
     assert.match(chat, /Hôm nay bạn muốn khám phá điều gì/);
     assert.doesNotMatch(chat, /class="welcome-logo"/);
     assert.ok(chat.indexOf("<textarea") < chat.indexOf('class="suggestions"'));
-    for (const question of ["Elden Ring là game gì?", "Game thuộc thể loại gì?", "FromSoftware là gì?"]) {
+    for (const question of ["Elden Ring là gì?", "Boss cuối là ai?", "Có bao nhiêu ending?"]) {
       assert.ok(chat.includes(question));
     }
     assert.match(chat, /aria-label="Gửi câu hỏi"/);

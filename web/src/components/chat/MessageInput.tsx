@@ -3,6 +3,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { MAX_MESSAGE_CHARS } from "../../api/types";
+import enterIcon from "../../../item_/KG_Key_Enter.png";
 
 // Đo cả dòng xuống hàng tự nhiên; giới hạn chiều cao rồi cuộn nội dung dài.
 function fitTextarea(element: HTMLTextAreaElement) {
@@ -60,24 +61,15 @@ export default function MessageInput({
         submit();
       }}
     >
-      {/* Đại kiếm chỉ là lớp trang trí, không nhận chuột hoặc thay đổi thao tác nhập/gửi. */}
-      <span className="composer-sword" aria-hidden="true">
-        <span className="sword-blade" />
-        <svg className="sword-hilt" width="76" height="80" viewBox="0 0 76 80" fill="none">
-          <path d="M10 33h44v14H10z" fill="#24271f" stroke="#8b7950" />
-          <path d="M3 33 10 28l8 12-8 12-7-5z" fill="#8b7950" />
-          <path d="m23 34 5 12m7-12 5 12" stroke="#8b7950" />
-          <path d="m54 9 10-5 7 6-7 18v24l7 18-7 6-10-5 4-20V29z" fill="#393c2c" stroke="#b49a60" />
-          <path d="M59 34h13v12H59z" fill="#b49a60" />
-        </svg>
-      </span>
+      {/* Trang trí đại kiếm trước đây được thay bằng khung menu hi_01 trong CSS.
+          Lớp trang trí vẫn không nhận chuột hoặc thay đổi thao tác nhập/gửi. */}
       <label className="sr-only" htmlFor="question">
         {"Câu hỏi về lore Elden Ring"}
       </label>
       <textarea
         ref={textareaRef}
         id="question"
-        placeholder={"Hỏi về một nhân vật, một bí ẩn, một thời đại…"}
+        placeholder={"Hỏi INDEX BEAST"}
         value={text}
         maxLength={MAX_MESSAGE_CHARS}
         aria-describedby="question-limit"
@@ -118,9 +110,8 @@ export default function MessageInput({
             title={"Gửi câu hỏi"}
           >
             <span className="sr-only">{"Gửi câu hỏi"}</span>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M3.3 2.8a1 1 0 0 0-1.4 1.2l2.6 6.5L14 12l-9.5 1.5L1.9 20a1 1 0 0 0 1.4 1.2l18-8.3a1 1 0 0 0 0-1.8l-18-8.3Z" />
-            </svg>
+            {/* TV4: dùng đúng hình phím Enter trong item_, thay biểu tượng máy bay trước đây. */}
+            <img className="send-enter-icon" src={enterIcon} width={44} height={32} alt="" draggable={false} />
           </button>
         )}
       </div>
