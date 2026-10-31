@@ -9,7 +9,7 @@ from app.services.mock_chat import MockChatService
 from core.corpus import CorpusPolicy
 
 
-def build_chat_service(ctx) -> ChatService:
+def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
     settings = ctx.settings
     if settings.chat_mode == "mock":
         return MockChatService()
@@ -28,4 +28,4 @@ def build_chat_service(ctx) -> ChatService:
             QdrantStore(ctx.qdrant, settings.rag_collection, CorpusPolicy.from_settings(settings)),
             settings.rag_prefetch,
         )
-    return LiveChatService(ChatPipeline(settings, ctx.llm, retriever))
+    return LiveChatService(ChatPipeline(settings, ctx.llm, retriever), image_catalog=image_catalog)

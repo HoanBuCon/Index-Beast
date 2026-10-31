@@ -4,6 +4,7 @@ Phụ trách: TV3 · [S3] Chat integration
 """
 
 import asyncio
+import logging
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -15,7 +16,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel
 
-from app.api.schemas.chat import ChatRequest, ChatResponse, DoneEvent, SourcesEvent, StatusEvent, TokenEvent
+from app.api.schemas.chat import ChatImage, ChatRequest, ChatResponse, DoneEvent, SourcesEvent, StatusEvent, TokenEvent
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
@@ -66,8 +67,9 @@ def notice(lang: str) -> str:
 
 
 class LiveChatService:
-    def __init__(self, pipeline: ChatPipeline):
+    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None):
         self.pipeline = pipeline
+        self.image_catalog = image_catalog
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
         self.traces: OrderedDict[UUID, dict] = OrderedDict()
 
@@ -115,7 +117,22 @@ class LiveChatService:
             size += len(msg.content)
         return list(reversed(rows))
 
-    def _save(self, req, state, prepared: Prepared, result: Generated, started: float) -> ChatResponse:
+    async def _images(self, req, prepared, result) -> list[ChatImage]:
+        if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
+            return []
+        try:
+            resolved = await self.image_catalog.resolve(
+                prepared.hits, [s.index for s in result.sources], spoilers=req.options.spoilers
+            )
+            prepared.trace["images"] = {"returned": len(resolved.images), "excluded": resolved.reasons}
+            return resolved.images
+        except Exception:
+            # Images are optional. Never swallow task cancellation or leak paths/data through errors.
+            prepared.trace["images"] = {"returned": 0, "excluded": {"resolver_unavailable": 1}}
+            logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
+            return []
+
+    def _save(self, req, state, prepared: Prepared, result: Generated, started: float, images=None) -> ChatResponse:
         answer = (notice(prepared.lang) if prepared.mode == "llm_only" else "") + result.answer
         now = datetime.now(UTC)
         message_id = uuid4()
@@ -127,6 +144,7 @@ class LiveChatService:
                     role="assistant",
                     content=answer,
                     sources=result.sources,
+                    images=images or [],
                     grounded=result.grounded,
                     created_at=now,
                 ),
@@ -145,6 +163,7 @@ class LiveChatService:
             sources=result.sources,
             grounded=result.grounded,
             latency_ms=trace["latency_ms"],
+            images=images or [],
         )
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
@@ -153,7 +172,8 @@ class LiveChatService:
         async with state.lock:
             prepared = await self.pipeline.prepare(req, self._history_for(state))
             result = await self.pipeline.generator.generate(prepared)
-            return self._save(req, state, prepared, result, started)
+            images = await self._images(req, prepared, result)
+            return self._save(req, state, prepared, result, started, images)
 
     async def open_stream(self, req: ChatRequest) -> ChatEvents:
         """Prepare and prime provider BEFORE sending HTTP headers, then stream actual deltas."""
@@ -193,8 +213,10 @@ class LiveChatService:
                     yield "token", TokenEvent(token=first)
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)
-                    response = self._save(req, state, prepared, prepared.trace["result"], started)
-                    yield "sources", SourcesEvent(sources=response.sources)
+                    result = prepared.trace["result"]
+                    images = await self._images(req, prepared, result)
+                    response = self._save(req, state, prepared, result, started, images)
+                    yield "sources", SourcesEvent(sources=response.sources, images=response.images)
                     yield "done", DoneEvent.model_validate(response, from_attributes=True)
             finally:
                 await cleanup()

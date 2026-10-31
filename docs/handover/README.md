@@ -16,6 +16,7 @@ Theo yêu cầu ngày **26/10/2026**, đây là bước bắt buộc trước kh
 
 | Phần | Ý nghĩa | Ví dụ |
 |---|---|---|
+| 2026-10-31 | TV3 (MinhMuc) | [Backend ảnh liên quan cho RAG và contract TV4](2026-10-31_s2-tv3_rag-images-backend.md) |
 | 2026-10-31 | TV3 (MinhMuc) | [Mở rộng golden set và phiếu review chéo TV2](2026-10-31_s2-tv3_mo-rong-golden-set.md) |
 | 2026-10-31 | TV3 (MinhMuc) | [Sửa web HTTP LAN/VPN và PostgreSQL health](2026-10-31_s2-tv3_sua-web-http-lan-vpn.md) |
 | 2026-10-31 | TV3 (MinhMuc) | [Đo độ trễ retrieval hybrid / Query API](2026-10-31_s2-tv3_do-tre-retrieval.md) |

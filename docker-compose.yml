@@ -95,6 +95,13 @@ services:
       RAG_MODELS_DIR: ${RAG_MODELS_DIR:-models/fastembed}
       RAG_BATCH_SIZE: ${RAG_BATCH_SIZE:-32}
       RAG_ENCODER_THREADS: ${RAG_ENCODER_THREADS:-2}
+      RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-true}
+      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/clean_runs/s2-full-v2/images.csv}
+      RAG_IMAGES_DOCUMENTS: ${RAG_IMAGES_DOCUMENTS:-data/chunk_runs/s2-full-v1/documents.jsonl}
+      RAG_IMAGES_ROOT: ${RAG_IMAGES_ROOT:-data/media/blobs}
+      RAG_IMAGES_MANIFESTS: ${RAG_IMAGES_MANIFESTS:-data/crawl_runs/s2-full-20261028/media}
+      RAG_IMAGES_MAX_BYTES: ${RAG_IMAGES_MAX_BYTES:-20000000}
+      RAG_IMAGES_MAX_PIXELS: ${RAG_IMAGES_MAX_PIXELS:-40000000}
     volumes:
       - ./backend/data:/app/data      # dữ liệu crawl thô
     depends_on:
