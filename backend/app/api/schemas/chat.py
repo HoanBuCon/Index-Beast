@@ -30,6 +30,21 @@ class ChatRequest(BaseModel):
     options: ChatOptions = ChatOptions()
 
 
+class ChatImage(BaseModel):
+    id: str = Field(pattern=r"^[0-9a-f]{64}$")
+    url: str
+    caption: str | None = None
+    alt: str | None = None
+    source_url: str
+    source_indices: list[int] = Field(min_length=1, max_length=5)
+    attribution: str | None = None
+    license: str | None = None
+    license_status: str | None = None
+    file_page_url: str | None = None
+    game_scope: str | None = None
+    release_scope: str | None = None
+
+
 class Source(BaseModel):
     index: Annotated[int, Field(ge=1, description="Số trích dẫn [n] trong câu trả lời.")]
     title: str
@@ -46,6 +61,7 @@ class ChatResponse(BaseModel):
     sources: list[Source]
     grounded: bool = Field(description="False khi không đủ bằng chứng; khi đó sources rỗng.")
     latency_ms: float
+    images: list[ChatImage] = Field(default_factory=list, max_length=3)
 
 
 class DoneEvent(BaseModel):
@@ -65,6 +81,7 @@ class TokenEvent(BaseModel):
 
 class SourcesEvent(BaseModel):
     sources: list[Source]
+    images: list[ChatImage] = Field(default_factory=list, max_length=3)
 
 
 class ErrorEvent(BaseModel):

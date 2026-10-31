@@ -1,6 +1,128 @@
 {
   "components": {
     "schemas": {
+      "ChatImage": {
+        "properties": {
+          "alt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt"
+          },
+          "attribution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribution"
+          },
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "file_page_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Page Url"
+          },
+          "game_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Game Scope"
+          },
+          "id": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "license_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License Status"
+          },
+          "release_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Scope"
+          },
+          "source_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Source Indices",
+            "type": "array"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "source_url",
+          "source_indices"
+        ],
+        "title": "ChatImage",
+        "type": "object"
+      },
       "ChatOptions": {
         "properties": {
           "lang": {
@@ -94,6 +216,14 @@
             "description": "False khi không đủ bằng chứng; khi đó sources rỗng.",
             "title": "Grounded",
             "type": "boolean"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ChatImage"
+            },
+            "maxItems": 3,
+            "title": "Images",
+            "type": "array"
           },
           "latency_ms": {
             "title": "Latency Ms",
@@ -447,6 +577,14 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/ChatImage"
+            },
+            "maxItems": 3,
+            "title": "Images",
+            "type": "array"
           },
           "role": {
             "enum": [
@@ -865,6 +1003,80 @@
         "summary": "Health",
         "tags": [
           "health"
+        ]
+      }
+    },
+    "/api/v1/images/{image_id}": {
+      "get": {
+        "operationId": "image_api_v1_images__image_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "image_id",
+            "required": true,
+            "schema": {
+              "title": "Image Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "Unchanged verified image"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Image unavailable"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ảnh raster local đã kiểm tra hash/MIME, không nhận đường dẫn file",
+        "tags": [
+          "images"
         ]
       }
     }

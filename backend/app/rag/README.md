@@ -2,6 +2,10 @@
 
 TV3 — MinhMuc, nhóm 4 Hollows. Cập nhật 31/10/2026.
 
+Backend đã hỗ trợ ảnh raster local liên kết với citation: JSON/history có images, SSE đặt images trong event sources,
+GET /api/v1/images/{id} phục vụ bytes đã kiểm. Max 3, không bịa ảnh hoặc reindex; lỗi ảnh vẫn trả text.
+TV4 cần bổ sung phần hiển thị; client text cũ vẫn tương thích. Xem [contract ảnh](../../../docs/api/images-tv4.md).
+
 Benchmark retrieval riêng ngày 31/10/2026: 30 warm request, median **31,897 ms**, p95 **57,948 ms**;
 lượt đầu load encoder **1.855,147 ms**. Xem [phương pháp và giới hạn](../../../docs/testing/2026-10-31_retrieval-latency.md).
 Không gồm rerank/LLM hoặc tải đồng thời; không thay đánh giá chất lượng retrieval.

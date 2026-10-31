@@ -19,6 +19,7 @@ from app.api.routes import llm_test
 from app.context import AppContext, build_context
 from app.middleware import install_middleware
 from app.services.factory import build_chat_service
+from app.services.images import ImageCatalog
 from app.services.mock_chat import MockChatService
 from core.config import Settings, ensure_safe_for_environment, get_settings
 from core.logging import setup_logging
@@ -37,7 +38,7 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
         ctx = context or build_context(settings)
         app.state.ctx = ctx
         if settings.chat_mode != "mock":
-            app.state.chat_service = build_chat_service(ctx)
+            app.state.chat_service = build_chat_service(ctx, image_catalog=app.state.image_catalog)
         started = {"environment": settings.environment, "resources": list(ctx.health_checks)}
         log.info("api started", extra={"data": started})
         try:
@@ -58,6 +59,8 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
     )
     # OpenAPI can be built without lifespan. Live service is wired after AppContext is ready.
     app.state.chat_service = MockChatService()
+    # Constructor is cheap/lazy: no artifact or image file reads during import/OpenAPI generation.
+    app.state.image_catalog = ImageCatalog(settings)
     install_error_handlers(app)
     install_middleware(app, settings, quiet_paths=[HEALTH_PATH])
     app.include_router(api_router)
