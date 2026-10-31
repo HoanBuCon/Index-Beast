@@ -45,7 +45,17 @@ class ManagedChatDeepSeek(ChatDeepSeek):
 class LLMError(RuntimeError):
     """Provider/output error without request bodies, credentials or private reasoning."""
 
-    def __init__(self, message, *, reason="llm_error", finish_reason=None, prompt_tokens=None, completion_tokens=None):
+    def __init__(
+        self,
+        message,
+        *,
+        reason="llm_error",
+        finish_reason=None,
+        prompt_tokens=None,
+        completion_tokens=None,
+        http_status=None,
+        error_type=None,
+    ):
         super().__init__(message)
         reasons = {
             "llm_error",
@@ -57,7 +67,15 @@ class LLMError(RuntimeError):
             "provider_stream_failed",
             "invalid_json",
         }
-        known = {"stop", "length", "content_filter", "tool_calls", "function_call"}
+        known = {
+            "stop",
+            "length",
+            "content_filter",
+            "tool_calls",
+            "function_call",
+            "insufficient_system_resource",
+            "aborted",
+        }
         self.diagnostics = {
             "reason": reason if isinstance(reason, str) and reason in reasons else "llm_error",
             "finish_reason": finish_reason
@@ -67,6 +85,27 @@ class LLMError(RuntimeError):
         for key, value in (("prompt_tokens", prompt_tokens), ("completion_tokens", completion_tokens)):
             if type(value) is int and value >= 0:
                 self.diagnostics[key] = value
+        if type(http_status) is int and 100 <= http_status <= 599:
+            self.diagnostics["http_status"] = http_status
+        known_errors = {
+            "APITimeoutError",
+            "APIConnectionError",
+            "RateLimitError",
+            "AuthenticationError",
+            "BadRequestError",
+            "PermissionDeniedError",
+            "InternalServerError",
+            "NotFoundError",
+            "UnprocessableEntityError",
+            "APIStatusError",
+            "LengthFinishReasonError",
+            "ContentFilterFinishReasonError",
+            "JSONDecodeError",
+        }
+        if error_type is not None:
+            self.diagnostics["error_type"] = (
+                error_type if isinstance(error_type, str) and error_type in known_errors else "unknown"
+            )
 
 
 class LLMConfigurationError(LLMError):
@@ -199,7 +238,10 @@ class DeepSeekLLM:
         except Exception as exc:
             status = getattr(exc, "status_code", None)
             raise LLMError(
-                f"DeepSeek request failed ({type(exc).__name__}, status={status}).", reason="provider_request_failed"
+                f"DeepSeek request failed ({type(exc).__name__}, status={status}).",
+                reason="provider_request_failed",
+                http_status=status,
+                error_type=type(exc).__name__,
             ) from None
 
     async def stream_chain(self, chain: Runnable, inputs: Any) -> AsyncIterator[str]:
@@ -261,7 +303,10 @@ class DeepSeekLLM:
         except Exception as exc:
             status = getattr(exc, "status_code", None)
             raise LLMError(
-                f"DeepSeek stream failed ({type(exc).__name__}, status={status}).", reason="provider_stream_failed"
+                f"DeepSeek stream failed ({type(exc).__name__}, status={status}).",
+                reason="provider_stream_failed",
+                http_status=status,
+                error_type=type(exc).__name__,
             ) from None
         finally:
             stopping.set()

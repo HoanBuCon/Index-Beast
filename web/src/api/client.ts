@@ -4,6 +4,7 @@
 import type { AdminStats, ChatRequest, ChatResponse, ConversationOut, FeedbackRequest, StreamEvent } from "./types";
 import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 import { createUuid } from "../lib/uuid.ts";
+import { readChatImages } from "./images.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -65,6 +66,8 @@ export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<Cha
   ) {
     throw new Error("Dữ liệu câu trả lời không hợp lệ.");
   }
+  if (result.images !== undefined)
+    result.images = readChatImages(result.images, result.sources as ChatResponse["sources"]);
   return data as ChatResponse;
 }
 
@@ -117,7 +120,11 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
     else if (type === "status" && typeof data.status === "string") yield { type, status: data.status };
     else if (type === "sources") {
       if (!Array.isArray(data.sources) || !data.sources.every(isSource)) throw new Error("Dữ liệu nguồn không hợp lệ.");
-      yield { type, sources: data.sources };
+      yield {
+        type,
+        sources: data.sources,
+        ...(data.images === undefined ? {} : { images: readChatImages(data.images, data.sources) }),
+      };
     } else if (type === "error") throw new Error("Dịch vụ gặp lỗi khi sinh câu trả lời. Vui lòng thử lại.");
     else if (type === "done") {
       if (
@@ -173,7 +180,12 @@ export async function getConversation(id: string, signal?: AbortSignal): Promise
     )
   )
     throw new Error("Dữ liệu hội thoại không hợp lệ.");
-  return data;
+  return {
+    ...data,
+    messages: data.messages.map((message: ConversationOut["messages"][number]) =>
+      message.images === undefined ? message : { ...message, images: readChatImages(message.images, message.sources) },
+    ),
+  };
 }
 // Token admin chỉ giữ trong state của trang, không ghi vào localStorage hay bundle.
 export async function getAdminStats(token: string, signal?: AbortSignal): Promise<AdminStats> {

@@ -7,6 +7,7 @@ import asyncio
 import json
 from contextlib import aclosing
 from typing import Any
+from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
@@ -649,6 +650,244 @@ def test_malformed_json_stream_logs_reason_and_never_done(client, caplog):
     assert "event: error" in response.text and "event: done" not in response.text
     assert "private-invalid-json" not in response.text and "private-invalid-json" not in caplog.text
     assert any(getattr(r, "data", {}).get("reason") == "invalid_json" for r in caplog.records)
+
+
+class SequenceLLM(FakeLLM):
+    """Provider-shaped failures, not pre-serialized dicts that hide JSON parsing bugs."""
+
+    def __init__(self, outputs):
+        super().__init__()
+        self.outputs = outputs
+        self.attempts = 0
+
+    async def invoke_chain(self, chain, inputs):
+        self.attempts += 1
+        self.seen.append(dict(inputs))
+        output = self.outputs[min(self.attempts - 1, len(self.outputs) - 1)]
+        if isinstance(output, Exception):
+            raise output
+        return LLMResponse(output, "fake", 10, 5, "stop")
+
+
+@pytest.mark.parametrize("lang", ["vi", "en"])
+async def test_no_context_bypasses_generation_but_insufficient_context_uses_valid_json(lang):
+    llm = FakeLLM()
+    req = ChatRequest(**BODY, options={"lang": lang})
+    empty = await service("rag", llm, FakeRetriever([])).answer(req)
+    assert not empty.grounded and empty.sources == [] and llm.calls == 0
+    llm.data = {
+        "answer": "Chưa đủ bằng chứng." if lang == "vi" else "Not enough evidence.",
+        "evidence": [],
+        "insufficient": True,
+    }
+    live = service("rag", llm, FakeRetriever())
+    response = await live.answer(req)
+    assert response.answer == llm.data["answer"] and not response.grounded and response.sources == []
+    assert llm.calls == 1 and "generation_retries" not in live.traces[response.message_id]
+
+
+@pytest.mark.parametrize("failure", ["syntax", "blank"])
+def test_json_api_recovers_format_once_and_saves_only_valid_answer(client, failure):
+    from app.api.deps import get_chat_service
+
+    output = json.dumps(FakeLLM().data)
+    first = "private invalid-json" if failure == "syntax" else LLMError("blank", reason="empty_output")
+    llm = SequenceLLM([first, output])
+    live = service("rag", llm, FakeRetriever())
+    client.app.dependency_overrides[get_chat_service] = lambda: live
+    response = client.post("/api/v1/chat", json=BODY)
+    assert response.status_code == 200 and response.json()["grounded"]
+    history = live.history(UUID(response.json()["conversation_id"]))
+    assert [m.content for m in history.messages] == [BODY["message"], llm.data["answer"]]
+    assert llm.attempts == 2 and "private invalid-json" not in str(llm.seen)
+    assert llm.seen[0]["payload"] == llm.seen[1]["payload"]
+
+
+@pytest.mark.parametrize("retries,expected_calls", [(0, 1), (1, 2)])
+async def test_format_retries_are_bounded_and_failed_outputs_are_not_saved(retries, expected_calls):
+    llm = SequenceLLM(["private invalid-json"])
+    live = service("rag", llm, FakeRetriever(), rag_format_retries=retries)
+    with pytest.raises(UpstreamError):
+        await live.answer(ChatRequest(**BODY))
+    assert llm.attempts == expected_calls and not live.traces
+    assert all(not state.conversation.messages for state in live._conversations.values())
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        LLMError("network", reason="provider_request_failed"),
+        LLMError("length", reason="incomplete_output", finish_reason="length"),
+        LLMError("other", reason="unsupported_content_type"),
+        json.dumps({"answer": "Uncited claim.", "evidence": [], "insufficient": False}),
+        json.dumps(
+            {
+                "answer": "Ranni [1].",
+                "evidence": [{"index": 1, "quote": "Not in the original source"}],
+                "insufficient": False,
+            }
+        ),
+        json.dumps({"answer": "Schema missing fields."}),
+    ],
+)
+async def test_transport_length_grounding_and_schema_errors_do_not_trigger_format_retry(failure):
+    llm = SequenceLLM([failure])
+    with pytest.raises(UpstreamError):
+        await service("rag", llm, FakeRetriever()).answer(ChatRequest(**BODY))
+    assert llm.attempts == 1
+
+
+async def test_llm_only_does_not_retry_or_apply_rag_json_parser():
+    llm = SequenceLLM(["Normal plain text."])
+    response = await service("llm_only", llm).answer(ChatRequest(**BODY))
+    assert "Normal plain text." in response.answer and llm.attempts == 1
+
+
+async def test_blank_completion_usage_is_counted_when_retry_succeeds():
+    llm = SequenceLLM(
+        [
+            LLMError("blank", reason="empty_output", prompt_tokens=7, completion_tokens=3),
+            json.dumps(FakeLLM().data),
+        ]
+    )
+    live = service("rag", llm, FakeRetriever())
+    result = await live.answer(ChatRequest(**BODY))
+    assert live.traces[result.message_id]["usage"] == {"prompt_tokens": 17, "completion_tokens": 8}
+
+
+async def test_observed_insufficient_with_citation_is_regenerated_not_accepted_or_stripped():
+    invalid = {"answer": "Nguồn không xác nhận boss cuối. Có Elden Beast [1].", "evidence": [], "insufficient": True}
+    valid = {
+        "answer": "Mình chưa có bằng chứng xác định boss cuối từ những đoạn này.",
+        "evidence": [],
+        "insufficient": True,
+    }
+    llm = SequenceLLM([json.dumps(invalid), json.dumps(valid)])
+    live = service("rag", llm, FakeRetriever(), rag_thinking_enabled=True)
+    result = await live.answer(ChatRequest(message="boss cuối của game là con gì?", channel="web"))
+    assert result.answer == valid["answer"] and result.sources == [] and not result.grounded
+    assert llm.attempts == 2 and "Có Elden Beast" not in str(llm.seen)
+    trace = live.traces[result.message_id]
+    assert trace["generation_retries"] == 1 and trace["generation_retry_thinking"] is False
+    assert trace["generation_retry_reason"] == "insufficient_with_citations"
+    assert "validation_failure" not in trace
+
+
+@pytest.mark.parametrize("retries,expected_calls", [(0, 1), (1, 2)])
+async def test_repeated_insufficient_protocol_errors_still_fail_closed(retries, expected_calls):
+    llm = SequenceLLM([json.dumps({"answer": "Unsupported facts [1].", "evidence": [], "insufficient": True})])
+    live = service("rag", llm, FakeRetriever(), rag_format_retries=retries)
+    with pytest.raises(UpstreamError):
+        await live.answer(ChatRequest(**BODY))
+    assert llm.attempts == expected_calls and not live.traces
+
+
+@pytest.mark.parametrize("emit_first", [False, True])
+async def test_insufficient_protocol_stream_recovery_only_before_visible_tokens(emit_first):
+    class ProtocolStream(FakeLLM):
+        attempts = 0
+
+        async def stream(self, messages, **kwargs):
+            self.attempts += 1
+            if self.attempts == 1:
+                answer = "Ranni [1]. Another clause [1]." if emit_first else "Thiếu bằng chứng [1]"
+                data = {"answer": answer, "evidence": [], "insufficient": True}
+            else:
+                data = {"answer": "Chưa đủ bằng chứng cho câu hỏi này.", "evidence": [], "insufficient": True}
+            yield json.dumps(data, ensure_ascii=False)
+
+    llm = ProtocolStream()
+    live = service("rag", llm, FakeRetriever())
+    stream = await live.open_stream(ChatRequest(**BODY))
+    frames = []
+    if emit_first:
+        with pytest.raises(UpstreamError):
+            async with aclosing(stream):
+                async for frame in stream:
+                    frames.append(frame)
+        assert llm.attempts == 1 and not live.traces and all(name != "done" for name, _ in frames)
+    else:
+        async with aclosing(stream):
+            frames = [frame async for frame in stream]
+        assert llm.attempts == 2 and frames[-1][0] == "done"
+        assert not frames[-1][1].grounded
+        assert "[1]" not in "".join(value.token for name, value in frames if name == "token")
+
+
+async def test_wrapped_response_still_cannot_bypass_grounding_checks():
+    llm = SequenceLLM(
+        [
+            "```json\n"
+            + json.dumps(
+                {
+                    "answer": "Invented claim [1].",
+                    "evidence": [{"index": 1, "quote": "private invented evidence"}],
+                    "insufficient": False,
+                }
+            )
+            + "\n```"
+        ]
+    )
+    with pytest.raises(UpstreamError):
+        await service("rag", llm, FakeRetriever()).answer(ChatRequest(**BODY))
+    assert llm.attempts == 1
+
+
+@pytest.mark.parametrize("wrapper", ["{}", "```json\n{}\n```", "\ufeff{}"])
+async def test_json_and_stream_agree_on_wrapped_valid_answers(wrapper):
+    llm = SequenceLLM([wrapper.format(json.dumps(FakeLLM().data))])
+    live = service("rag", llm, FakeRetriever())
+    expected = await live.answer(ChatRequest(**BODY))
+    streaming = FakeLLM(tokens=list(wrapper.format(json.dumps(llm.data))))
+    async with aclosing(await service("rag", streaming, FakeRetriever()).open_stream(ChatRequest(**BODY))) as events:
+        frames = [frame async for frame in events]
+    assert "".join(p.token for n, p in frames if n == "token") == expected.answer
+    assert frames[-1][0] == "done"
+    assert next(payload.sources for name, payload in frames if name == "sources") == expected.sources
+
+
+async def test_stream_retries_only_before_any_visible_token_and_closes_each_attempt():
+    class RecoveringStream(FakeLLM):
+        def __init__(self):
+            super().__init__()
+            self.attempts = self.closed_attempts = 0
+
+        async def stream(self, messages, **kwargs):
+            self.attempts += 1
+            self.seen.append(messages)
+            raw = "not-json" if self.attempts == 1 else json.dumps(self.data)
+            try:
+                for char in raw:
+                    yield char
+            finally:
+                self.closed_attempts += 1
+
+    llm = RecoveringStream()
+    live = service("rag", llm, FakeRetriever())
+    async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
+        frames = [frame async for frame in events]
+    assert "".join(p.token for n, p in frames if n == "token") == llm.data["answer"]
+    assert frames[-1][0] == "done" and llm.attempts == llm.closed_attempts == 2
+
+
+async def test_stream_never_retries_after_visible_text():
+    class BrokenStream(FakeLLM):
+        attempts = 0
+
+        async def stream(self, messages, **kwargs):
+            self.attempts += 1
+            yield '{"answer":"Ranni is an Empyrean [1]. Next sentence [1].", invalid}'
+
+    llm = BrokenStream()
+    live = service("rag", llm, FakeRetriever())
+    events = await live.open_stream(ChatRequest(**BODY))
+    frames = []
+    with pytest.raises(UpstreamError):
+        async with aclosing(events):
+            async for frame in events:
+                frames.append(frame)
+    assert llm.attempts == 1 and any(name == "token" for name, _ in frames)
+    assert not live.traces and all(name != "done" for name, _ in frames)
 
 
 @pytest.mark.parametrize(

@@ -7,6 +7,7 @@ import { ApiError } from "../api/client";
 import { replyEvents } from "../api/chat";
 import type { ChatOptions } from "../api/chat";
 import { createUuid } from "../lib/uuid.ts";
+import { answerSources } from "./chatState.ts";
 // S2 bổ sung JSON /chat, giữ nguyên luồng sự kiện SSE đã có cho S3.
 export function useChatStream(update: (conversation: Conversation) => void) {
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,7 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         if (event.type === "token") {
           content += event.token;
           changeAnswer({ content });
-        } else if (event.type === "sources") changeAnswer({ sources: event.sources });
+        } else if (event.type === "sources") changeAnswer(answerSources(event));
         else if (event.type === "done") {
           current = { ...current, serverId: event.data.conversation_id };
           changeAnswer({ serverId: event.data.message_id, grounded: event.data.grounded, incomplete: false });

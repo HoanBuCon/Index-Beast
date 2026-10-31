@@ -13,7 +13,8 @@ from openai import AsyncOpenAI
 
 from app.adapters.llm import DeepSeekLLM, LLMConfigurationError, LLMError
 from app.context import build_context
-from app.rag.prompts import generation_prompt
+from app.rag.generator import Generator, Prepared
+from app.rag.prompts import generation_prompt, prompt
 from core.config import Settings
 
 MESSAGES = [{"role": "user", "content": "Who is Godrick?"}]
@@ -78,6 +79,50 @@ async def test_json_mode_adds_instruction_without_mutating_messages():
     assert messages == MESSAGES
 
 
+@pytest.mark.parametrize("thinking", [False, True])
+async def test_rag_json_retry_wire_contract_with_real_langchain_and_fake_http(thinking):
+    requests = []
+    expected = {"answer": "Chưa có bằng chứng cho chi tiết này.", "evidence": [], "insufficient": True}
+
+    def handler(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        assert body["response_format"] == {"type": "json_object"}
+        active_thinking = thinking and len(requests) == 1
+        assert body["thinking"] == {"type": "enabled" if active_thinking else "disabled"}
+        assert ("temperature" in body) is not active_thinking
+        if len(requests) == 2:
+            assert body["temperature"] == 0
+        assert body["stream"] is False and "tools" not in body
+        # Past answers are ordinary display text; the current instruction still requires JSON.
+        assert body["messages"][-2] == {"role": "assistant", "content": "Câu trả lời cũ dạng text."}
+        assert "MUST be JSON" in body["messages"][0]["content"]
+        if len(requests) == 1:
+            return httpx.Response(200, json=completion('private malformed {"answer":'))
+        assert "FORMAT RETRY" in body["messages"][0]["content"]
+        assert "private malformed" not in str(body)
+        assert body["messages"][1:] == requests[0]["messages"][1:]
+        return httpx.Response(200, json=completion(json.dumps(expected, ensure_ascii=False)))
+
+    prepared = Prepared("rag", "vi", [])
+    prepared.values = {
+        "persona": prompt("persona"),
+        "lang": "vi",
+        "spoilers": True,
+        "policy": prompt("answer"),
+        "history": [
+            {"role": "user", "content": "Câu trước."},
+            {"role": "assistant", "content": "Câu trả lời cũ dạng text."},
+        ],
+        "payload": json.dumps({"question": "Chi tiết chưa rõ?", "evidence": []}),
+    }
+    async with fake_llm(handler) as llm:
+        result = await Generator(llm, thinking=thinking).generate(prepared)
+    assert result.answer == expected["answer"] and not result.grounded and result.sources == []
+    assert len(requests) == 2 and prepared.trace["generation_retries"] == 1
+    assert prepared.trace["usage"] == {"prompt_tokens": 20, "completion_tokens": 10}
+
+
 async def test_thinking_mode_omits_temperature_and_preserves_provider_reasoning():
     def handler(request):
         body = json.loads(request.content)
@@ -133,6 +178,22 @@ def test_diagnostics_do_not_log_arbitrary_provider_reason_or_message():
         "private provider text", reason="private_reason", finish_reason="private_finish", prompt_tokens="secret"
     )
     assert error.diagnostics == {"reason": "llm_error", "finish_reason": "unknown"}
+
+
+def test_provider_status_and_error_class_are_whitelisted_without_provider_text():
+    error = LLMError("private body", http_status=429, error_type="RateLimitError")
+    assert error.diagnostics["http_status"] == 429 and error.diagnostics["error_type"] == "RateLimitError"
+    malicious = LLMError("private body", http_status="private status", error_type="private exception")
+    assert "http_status" not in malicious.diagnostics and malicious.diagnostics["error_type"] == "unknown"
+
+
+@pytest.mark.parametrize("reason", ["aborted", "insufficient_system_resource"])
+async def test_provider_interruption_reasons_are_preserved_and_not_success(reason):
+    async with fake_llm(lambda _: httpx.Response(200, json=completion("partial", reason))) as llm:
+        with pytest.raises(LLMError) as caught:
+            await llm.complete(MESSAGES)
+    assert caught.value.diagnostics["reason"] == "incomplete_output"
+    assert caught.value.diagnostics["finish_reason"] == reason
 
 
 @pytest.mark.parametrize("status", [401, 402, 429, 500])

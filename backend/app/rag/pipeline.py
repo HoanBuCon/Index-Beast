@@ -3,6 +3,7 @@
 Phụ trách: TV3 · [S2–S3] Pipeline
 """
 
+import asyncio
 import json
 import re
 import time
@@ -16,7 +17,9 @@ from langsmith import tracing_context
 
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
+from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
 from app.rag.prompts import generation_prompt, prompt
+from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.rewrite import rewrite
@@ -55,7 +58,7 @@ def outside_scope(question: str) -> bool:
 
 def unresolved_reference(question: str) -> bool:
     """Conservative pronoun-leading gate, not NER. A named/content prefix is left to the LLM/rewrite."""
-    pronoun = re.search(r"\b(ông ta|cô ấy|anh ấy|he|she|him|her)\b", question, re.I)
+    pronoun = re.search(r"\b(ông ta|cô ấy|anh ấy|nó|họ|he|she|him|her|it|they|them)\b", question, re.I)
     if pronoun is None:
         return False
     words = re.findall(r"[^\W\d_]+", question[: pronoun.start()].lower())
@@ -82,6 +85,10 @@ def unresolved_reference(question: str) -> bool:
             "will",
             "tell",
             "me",
+            "i",
+            "get",
+            "obtain",
+            "find",
             "us",
             "about",
             "explain",
@@ -115,6 +122,10 @@ def unresolved_reference(question: str) -> bool:
             "thích",
             "về",
             "và",
+            "lấy",
+            "tìm",
+            "nhặt",
+            "kiếm",
             "đã",
             "có",
             "thể",
@@ -127,10 +138,15 @@ def select_context(
     hits: list[Hit], limit: int, budget: int, *, policy: CorpusPolicy | None = None, spoilers: bool = True
 ) -> list[Hit]:
     admission = policy or CorpusPolicy()
-    selected, seen, used = [], set(), 0
+    selected, seen, seen_content, used = [], set(), set(), 0
     for hit in hits:
         p = hit.payload
-        if hit.id in seen or admission.exclusion_reason(p, spoilers=spoilers):
+        key = content_key(hit)
+        if (
+            hit.id in seen
+            or (key is not None and key in seen_content)
+            or admission.exclusion_reason(p, spoilers=spoilers)
+        ):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
             continue
@@ -141,6 +157,8 @@ def select_context(
             continue  # Whole chunks only: do not silently cut dialogue/conditions.
         selected.append(hit)
         seen.add(hit.id)
+        if key is not None:
+            seen_content.add(key)
         used += size
         if len(selected) >= limit:
             break
@@ -201,7 +219,11 @@ class ChatPipeline:
         if store is not None and store.policy != self.policy:
             raise ValueError("Retriever and pipeline must use the same corpus policy/languages")
         self.reranker = (reranker or NoReranker()) if settings.chat_mode == "rag" else None
-        self.generator = Generator(llm, thinking=settings.rag_thinking_enabled) if llm is not None else None
+        self.generator = (
+            Generator(llm, thinking=settings.rag_thinking_enabled, format_retries=settings.rag_format_retries)
+            if llm is not None
+            else None
+        )
         self.template = generation_prompt()
         rag_steps = (
             RunnableLambda(self._rewrite, name="rewrite")
@@ -218,9 +240,21 @@ class ChatPipeline:
             | RunnableLambda(self._prompt, name="prepare_chat_prompt")
         )
 
-    async def prepare(self, req, history: list[dict]) -> Prepared:
+    async def prepare(self, req, history: list[dict], *, diagnostic_queries: bool = False) -> Prepared:
+        state = {
+            "req": req,
+            "history": history,
+            "started": time.perf_counter(),
+            "diagnostic_queries": diagnostic_queries,
+        }
         with tracing_context(enabled=False):
-            return await self.prepare_chain.ainvoke({"req": req, "history": history, "started": time.perf_counter()})
+            try:
+                return await self.prepare_chain.ainvoke(state)
+            except UnavailableError as exc:
+                if diagnostic_queries and "prepared" in state:
+                    # Opt-in local benchmark data only; API error schema/loggers remain unchanged.
+                    exc.rag_diagnostics = dict(state["prepared"].trace)
+                raise
 
     def _scope(self, state: dict) -> dict:
         req = state["req"]
@@ -238,12 +272,32 @@ class ChatPipeline:
                 else "I can help with Elden Ring lore, quests, equipment, mechanics and build ideas. "
                 "What would you like to explore in the game?"
             )
+        if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
+            state["overview"] = detect_overview(req.message)
+            if state["overview"] is not None:
+                prepared.trace["request_kind"] = "overview"
+                prepared.trace["overview_topic"] = state["overview"].topic
         return state
 
     async def _rewrite(self, state: dict) -> dict:
         p = state["prepared"]
+        if state.get("overview") is not None:
+            # A recognized global topic is already a valid scope, not an ambiguous referent.
+            # The bounded overview query plan supplies English search cues without a paid rewrite call.
+            p.trace["rewrite"] = {"status": "not_run", "reason": "overview_query_plan", "model_calls": 0}
+            return state
         if self.settings.rag_rewrite_enabled:
-            rewritten, fallback = await rewrite(self.llm, state["query"], state["history"], p.lang)
+            diagnostics = {}
+            rewritten, fallback = await rewrite(
+                self.llm,
+                state["query"],
+                state["history"],
+                p.lang,
+                deadline_seconds=self.settings.rag_rewrite_timeout_seconds,
+                max_tokens=self.settings.rag_rewrite_max_tokens,
+                diagnostics=diagnostics,
+            )
+            p.trace["rewrite"] = diagnostics
             p.trace["rewrite_fallback"] = fallback
             if rewritten.out_of_scope:
                 p.static_answer = (
@@ -251,7 +305,7 @@ class ChatPipeline:
                     if p.lang == "vi"
                     else "I help with Elden Ring questions, from lore to gameplay and builds."
                 )
-            elif rewritten.ambiguous:
+            elif rewritten.ambiguous or (fallback and not state["history"] and unresolved_reference(state["query"])):
                 p.static_answer = (
                     "Bạn đang hỏi nhân vật, trang bị, boss hoặc nhiệm vụ nào trong Elden Ring?"
                     if p.lang == "vi"
@@ -268,10 +322,47 @@ class ChatPipeline:
             if self.retriever is None:
                 raise UnavailableError("Kho tri thức RAG chưa được cấu hình.")
             # Copy only the Pydantic retriever wrapper; clients/encoder remain shared.
-            retriever = self.retriever.model_copy(update={"spoilers": state["req"].options.spoilers})
-            state["documents"] = await retriever.ainvoke(state["query"])
-            state["prepared"].trace["retrieved"] = [
-                {"id": h.id, "score": h.score} for h in map(document_to_hit, state["documents"])
+            retriever = self.retriever.model_copy(
+                update={
+                    "spoilers": state["req"].options.spoilers,
+                    "limit": self.settings.rag_prefetch,
+                }
+            )
+            queries = plan_queries(state["req"].message, state["query"], self.settings.rag_query_mode)
+            if state.get("overview") is not None:
+                queries = overview_queries(queries, state["overview"])
+            rows, diagnostics = [], []
+            for kind, query in queries:
+                started = time.perf_counter()
+                row = {"kind": kind}
+                if state.get("diagnostic_queries"):
+                    row["query"] = query
+                try:
+                    async with asyncio.timeout(self.settings.rag_retrieval_timeout_seconds / len(queries)):
+                        documents = await retriever.ainvoke(query)
+                    hits = [document_to_hit(d) for d in documents[: self.settings.rag_prefetch]]
+                    rows.append(hits)
+                    row.update(status="ok", candidates=len(hits))
+                except (UnavailableError, TimeoutError) as exc:
+                    row.update(status="error", error_type=type(exc).__name__)
+                row["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
+                diagnostics.append(row)
+            p = state["prepared"]
+            p.trace["retrieval_queries"] = diagnostics
+            if not rows:
+                raise UnavailableError("Không thể truy vấn kho tri thức RAG.")
+            # One query keeps its native Qdrant score. Dual-query scores are rank fusion, NOT probabilities.
+            hits = rows[0] if len(rows) == 1 else fuse_ranked(rows, self.settings.rag_prefetch)
+            state["documents"] = [hit_to_document(h) for h in hits]
+            p.trace["retrieved"] = [
+                {
+                    "id": h.id,
+                    "score": h.score,
+                    "chunk_id": h.payload.get("artifact_chunk_id", h.id),
+                    "title": h.payload.get("title"),
+                    "url": h.payload.get("url"),
+                }
+                for h in hits
             ]
         return state
 
@@ -279,6 +370,9 @@ class ChatPipeline:
         if state["prepared"].static_answer is None:
             hits = [document_to_hit(d) for d in state["documents"]]
             ranked = await self.reranker.rank(state["query"], hits)
+            if state.get("overview") is not None:
+                ranked = prefer_overview(ranked, state["overview"])
+                state["prepared"].trace["context_ordering"] = "overview_title_section_preference"
             state["documents"] = [hit_to_document(h) for h in ranked]
         return state
 
@@ -295,11 +389,15 @@ class ChatPipeline:
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits:
                 p.static_answer = (
-                    "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
-                    "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
-                    if p.lang == "vi"
-                    else "I couldn't find evidence close enough to answer reliably. "
-                    "Could you name the equipment, boss, quest or specific detail you want to check?"
+                    no_overview_evidence(state["overview"], p.lang)
+                    if state.get("overview") is not None
+                    else (
+                        "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
+                        "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
+                        if p.lang == "vi"
+                        else "I couldn't find evidence close enough to answer reliably. "
+                        "Could you name the equipment, boss, quest or specific detail you want to check?"
+                    )
                 )
         return state
 
@@ -310,7 +408,8 @@ class ChatPipeline:
             "persona": prompt("persona"),
             "lang": p.lang,
             "spoilers": req.options.spoilers,
-            "policy": prompt("answer" if p.mode == "rag" else "llm_only"),
+            "policy": prompt("answer" if p.mode == "rag" else "llm_only")
+            + ("\n" + prompt("overview") if state.get("overview") is not None else ""),
             "history": state["history"],
             "payload": json.dumps(
                 {"question": req.message, "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)]},

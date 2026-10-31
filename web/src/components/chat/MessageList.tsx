@@ -10,7 +10,7 @@ import CitationPopover from "./CitationPopover";
 import FeedbackButtons from "./FeedbackButtons";
 import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
 import AnswerIllustrations from "./AnswerIllustrations";
-import { canShowIllustrations } from "./answerMedia";
+import { backendIllustrations, canShowIllustrations } from "./answerMedia";
 import type { AnswerIllustration, IllustrationPreviewState } from "./answerMedia";
 export default function MessageList({
   messages,
@@ -22,7 +22,7 @@ export default function MessageList({
   messages: Message[];
   busy: boolean;
   demo: boolean;
-  // TV4: adapter UI truyền ảnh theo ID; không dò từ khóa, không đổi Message/API chung.
+  // Explicit fixture overrides are retained for the DEV preview only.
   illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
   illustrationPreviewState?: IllustrationPreviewState;
 }) {
@@ -92,7 +92,10 @@ export default function MessageList({
               )}
               {canShowIllustrations(message, busy && message.id === messages.at(-1)?.id) && (
                 <AnswerIllustrations
-                  illustrations={illustrationsByMessage?.[message.id]}
+                  illustrations={
+                    illustrationsByMessage?.[message.id] ??
+                    (message.grounded === true ? backendIllustrations(message.images, message.sources) : [])
+                  }
                   previewState={illustrationPreviewState}
                 />
               )}

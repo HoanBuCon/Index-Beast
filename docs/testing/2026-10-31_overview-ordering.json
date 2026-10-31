@@ -1,0 +1,58 @@
+{
+  "method": "read-only local artifact metadata ordering sample; manually selected candidates, not retrieval or model benchmark",
+  "before": [
+    {
+      "chunk_id": "13649d89-ce8f-5ccd-8973-8ba609cf20b2",
+      "title": "Letter for Freyja",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "4351ed8d-6902-59c2-b655-b7d063a19683",
+      "title": "Bosses",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "8a9e72c5-eea7-54fe-b297-01e55762a859",
+      "title": "Bosses",
+      "section": "Overview"
+    },
+    {
+      "chunk_id": "f66f07d5-f2d4-5d40-8183-c1f6eb373faa",
+      "title": "Elden Beast",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "5354f1a5-1e51-5362-a0c6-033166921138",
+      "title": "Maliketh, the Black Blade",
+      "section": "Introduction"
+    }
+  ],
+  "after": [
+    {
+      "chunk_id": "4351ed8d-6902-59c2-b655-b7d063a19683",
+      "title": "Bosses",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "8a9e72c5-eea7-54fe-b297-01e55762a859",
+      "title": "Bosses",
+      "section": "Overview"
+    },
+    {
+      "chunk_id": "13649d89-ce8f-5ccd-8973-8ba609cf20b2",
+      "title": "Letter for Freyja",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "f66f07d5-f2d4-5d40-8183-c1f6eb373faa",
+      "title": "Elden Beast",
+      "section": "Introduction"
+    },
+    {
+      "chunk_id": "5354f1a5-1e51-5362-a0c6-033166921138",
+      "title": "Maliketh, the Black Blade",
+      "section": "Introduction"
+    }
+  ],
+  "metadata_preserved": true
+}

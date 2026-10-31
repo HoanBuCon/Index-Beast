@@ -2,7 +2,9 @@
 
 TV3 — MinhMuc, 31/10/2026. Nhánh `feature/s2-tv3-rag-images`.
 Đây là truy xuất ảnh raster local đã có của TV2; không tạo ảnh, OCR, hiểu ảnh đầu vào hoặc CLIP search.
-Không sửa frontend/bot trong tác vụ này. [OpenAPI](openapi.json) được sinh lại bằng script của repository.
+Tác vụ backend ban đầu không sửa frontend/bot. Ngày 31/10/2026 TV3 đã nối contract ảnh vào web thật,
+xem [bàn giao tích hợp](../handover/2026-10-31_s2-tv3_noi-anh-backend-web.md).
+[OpenAPI](openapi.json) được sinh lại bằng script của repository.
 
 ## Contract additive, client text cũ vẫn chạy
 
@@ -13,9 +15,8 @@ Không sửa frontend/bot trong tác vụ này. [OpenAPI](openapi.json) được
 | SSE `sources` | `data.images`, cùng payload với `data.sources`, tối đa 3 |
 | GET /api/v1/images/{id} | Bytes PNG/JPEG/WebP/GIF, hoặc error JSON 404 |
 
-Không thêm event `images`, không đổi event `done`/`token` hoặc field cũ. Client TV4 hiện chỉ đọc các field cần thiết
-trong JSON và event sources nên bỏ qua images an toàn. Muốn hiển thị ảnh, TV4 cần bổ sung types, parse và UI;
-hiện giao diện cũ tiếp tục trả text/citation, **chưa tự hiển thị ảnh**.
+Không thêm event `images`, không đổi event `done`/`token` hoặc field cũ. Web đã đọc images từ JSON và event sources,
+lưu metadata trong message/history, ánh xạ sang component ảnh TV4. Client cũ vẫn có thể bỏ qua field bổ sung.
 Không cần request opt-in; server dùng RAG_IMAGES_ENABLED. mock/llm_only trả images=[] cho chat.
 
 Ảnh chỉ được resolve **sau khi đáp án và citation validation thành công**. SSE vẫn stream token thật trước đó,
@@ -81,7 +82,7 @@ data: {"conversation_id":"11111111-1111-4111-8111-111111111111","message_id":"22
 
 ```
 
-Khi có ảnh, event sources dùng cùng mảng images như JSON minh họa trên. TV4 cần giữ ảnh trong state/history;
+Khi có ảnh, event sources dùng cùng mảng images như JSON minh họa trên. Web đã giữ ảnh trong state/history;
 không tìm `images` trong từng token hoặc suy ra ảnh từ text model. Backend history vẫn RAM, không phải lưu DB bền vững.
 
 ## Chính sách chọn và phục vụ

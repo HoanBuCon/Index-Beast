@@ -262,11 +262,63 @@ History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa
 
 ## Kiểm thử và phần cần đồng bộ riêng
 
+### Câu hỏi tổng quan / danh sách
+
+`RAG_OVERVIEW_ENABLED=true` mặc định nhận diện các yêu cầu VI/EN như “các boss trong elden ring”,
+“các loại vũ khí”, “những kiểu build”, “tổng quan cốt truyện” hoặc “Elden Ring là gì?”.
+Topic rõ ràng không bắt buộc phải có tên một nhân vật/vật phẩm; câu có tên riêng hoặc đại từ chưa rõ giữ luồng cũ.
+Đây là heuristic, không phải NER hoặc bộ phân loại ngữ nghĩa tổng quát.
+
+Nhánh overview bỏ qua paid rewrite, thêm English search cues kèm nguyên query/điều kiện gốc;
+tối đa 2 query trong budget retrieval hiện có, fusion RRF và context tối đa 5. Ưu tiên title trang tổng quan,
+section Introduction/Overview/List/Types/Categories và xen kẽ section/source; không gọi đây là semantic reranker.
+Không tạo kiến thức taxonomy từ query cues. Prompt yêu cầu dùng grouping/ví dụ có evidence, trả phần hữu ích
+khi nguồn chưa đầy đủ, không tuyên bố danh sách exhaustive hoặc số liệu current-patch nếu nguồn không xác lập.
+
+Không cần reindex hoặc sửa .env thật để dùng default. Đặt flag false rồi restart để tắt.
+Benchmark VI–EN có ghi flag overview và tính thêm query này trong upper bound; khi muốn cô lập tác dụng rewrite,
+tự tắt overview trong phiên benchmark. Xem [hướng dẫn và kiểm chứng](../../../docs/testing/2026-10-31_overview-routing.md).
+
+### Query VI → EN và chế độ dual
+
+Rewrite vẫn tắt mặc định, không tự sửa `.env`. Khi bật, `RAG_QUERY_MODE=rewrite` dùng một query English đã validate;
+`dual` tìm thêm query gốc nếu khác, tối đa hai query. Giữ ngôn ngữ answer từ request, không lấy lang từ rewrite.
+Fallback về câu gốc khi rewrite lỗi/mất constraint; tham chiếu mơ hồ không có history thì hỏi lại.
+Dual gộp rank bằng RRF, không cộng score native; exact content dedup giữ provenance/release/conditions/images khác nhau.
+Mỗi query lấy tối đa rag_prefetch, context vẫn top-5; một query lỗi có thể dùng query kia, tất cả lỗi vẫn unavailable.
+Budget mới: rewrite 8 giây/512 token, retrieval 20 giây chia đều theo số query, chỉnh bằng biến server.
+Không thêm model reranker, tăng temperature hoặc bật fallback kiến thức ngoài corpus.
+Xem [cấu hình, giới hạn và lệnh benchmark VI–EN](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md).
+
 Nếu DeepSeek trả HTTP 200 nhưng chat báo 502, kiểm tra log `Generation failed`,
 `Citation index mismatch` và `RAG validation failed` theo request_id.
 HTTP 200 chưa xác nhận output đã vượt kiểm tra JSON/citation.
 Diagnostic chỉ giữ mã lỗi, finish reason, token counters hoặc chỉ số; không log private reasoning.
 Xem [báo cáo tái hiện và giới hạn](../../../docs/testing/2026-10-31_generation-error-report.md).
+
+### Xử lý output JSON lỗi (31/10/2026)
+
+`RAG_FORMAT_RETRIES=1` mặc định: cho phép **một lần generation bổ sung** khi output RAG sai cú pháp JSON,
+rỗng hoặc báo insufficient nhưng vẫn chèn citation/evidence, dùng nguyên câu hỏi/history/context và lời nhắc cố định.
+Có thể phát sinh thêm phí
+và độ trễ. Đặt `0` để tắt; chỉ backend quyết định, API client không được đổi setting này.
+Đây là retry định dạng, khác `LLM_MAX_RETRIES` xử lý lỗi transport của SDK; không nhân định dạng retry
+cho lỗi mạng, hết token, schema hoặc quote sai. Citation mismatch thông thường vẫn bị chặn;
+chỉ lỗi protocol `insufficient_with_citations` được phục hồi cùng ngân sách format (không cộng thêm lượt riêng).
+Lượt đầu giữ thinking theo cấu hình; lượt phục hồi dùng non-thinking, temperature=0, JSON mode vẫn bật.
+Mọi output mới vẫn vượt validator đầy đủ. Không sửa/cắt bỏ citation từ answer lỗi rồi công bố answer đó.
+
+Parser dùng chung cho JSON/SSE chỉ chấp nhận toàn bộ JSON, có thể bỏ một BOM hoặc một code fence hoàn chỉnh.
+Không tìm object con trong prose, không thêm dấu đóng/escape, không sửa facts/citation.
+Duplicate key, NaN/Infinity, phần dư và JSON thiếu vẫn bị chặn. Output quá lớn hoặc quá sâu không retry.
+Nguồn và quote vẫn phải vượt validator cũ. Chỉ answer hợp lệ mới vào history và chọn ảnh.
+
+SSE chỉ retry nếu **chưa gửi token đáp án nào**; sau khi đã gửi text, lỗi kết thúc bằng error và không done.
+Không chuyển sang llm_only khi lỗi hoặc thiếu bằng chứng. Không có context thì trả thông báo có sẵn,
+không gọi generation. Có context nhưng thiếu evidence thì model trả JSON `insufficient=true`, sources rỗng.
+Diagnostic JSON bổ sung vị trí dòng/cột/offset và số ký tự, không có output thô hay nội dung reasoning.
+Xem [phân tích và kiểm thử offline](../../../docs/testing/2026-10-31_rag-json-recovery.md).
+Xem [kiểm chứng DeepSeek thật và cập nhật protocol recovery](../../../docs/testing/2026-10-31_deepseek-live-output-fix.md).
 
 Từ backend, chỉ unit/offline:
 
@@ -302,6 +354,6 @@ và sinh `s2-chunk-1.0`; artifact bàn giao dùng `s2-full-*`. Adapter đọc ar
 
 Đã kiểm hạ tầng server Docker, embedding và DeepSeek thật theo báo cáo liên kết ở đầu trang. Chưa kiểm image API
 trên Linux hoặc benchmark lore/entailment độc lập. Heuristic đại từ chỉ xử lý tham chiếu đầu câu đơn giản,
-không phải NER; câu có tên/nội dung trước đại từ được chuyển cho rewrite/LLM. Validator lỗi chỉ log mã tĩnh.
+không phải NER; câu có tên/nội dung trước đại từ được chuyển cho rewrite/LLM. Validator chỉ log mã lỗi/chỉ số protocol.
 Không sửa web/bot, SRS/ADR/planning/Trello hoặc dữ liệu nguồn. `.env` đã sửa theo yêu cầu mới, không đổi key.
 Không commit/push/merge và không tạo handover riêng.

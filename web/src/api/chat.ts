@@ -21,7 +21,7 @@ export async function* replyEvents(
   const reply = mode === "demo" ? await demoChat(body, signal, options.scenario) : await chat(body, signal);
   signal.throwIfAborted();
   yield { type: "token", token: reply.answer };
-  yield { type: "sources", sources: reply.sources };
+  yield { type: "sources", sources: reply.sources, ...(reply.images === undefined ? {} : { images: reply.images }) };
   yield {
     type: "done",
     data: {

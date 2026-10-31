@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.adapters.llm import LLMError, LLMResponse
 from app.api.schemas.chat import Source
 from app.rag.evidence import evidence_units
+from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output, stream_body_prefix
 from app.rag.prompts import generation_prompt
 from core.errors import UpstreamError
 from core.types import Hit
@@ -49,6 +50,14 @@ class Generated:
     answer: str
     sources: list[Source] = field(default_factory=list)
     grounded: bool = False
+
+
+class RAGValidationError(UpstreamError):
+    """Static reason used internally for bounded protocol recovery; no answer bodies."""
+
+    def __init__(self, reason: str):
+        super().__init__("Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ.")
+        self.reason = reason
 
 
 class Evidence(BaseModel):
@@ -139,11 +148,12 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         prepared.trace["validation_failure"] = failure
         # Static category only: never log model output, source quotes, prompts or private reasoning.
         logging.getLogger(__name__).warning("RAG validation failed", extra={"data": {"reason": failure}})
-        raise UpstreamError("Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ.") from None
+        raise RAGValidationError(failure) from None
 
 
 def answer_prefix(raw: str) -> str:
     """Decode complete JSON string units while answer is still streaming; never expose JSON metadata."""
+    raw = stream_body_prefix(raw)
     match = re.match(r'^\s*\{\s*"answer"\s*:\s*"', raw)
     if not match:
         if len(raw) > 64:
@@ -170,53 +180,151 @@ def answer_prefix(raw: str) -> str:
 
 
 class Generator:
-    def __init__(self, llm: LLM, *, thinking: bool = False):
+    def __init__(self, llm: LLM, *, thinking: bool = False, format_retries: int = 1):
+        if format_retries not in (0, 1):
+            raise ValueError("format_retries must be 0 or 1")
         self.llm = llm
         self.thinking = thinking
+        self.format_retries = format_retries
 
-    def chain(self, prepared: Prepared) -> Runnable:
-        template = prepared.template or generation_prompt()
-        return template | self.llm.bind_model(
-            json_output=prepared.mode == "rag", thinking=self.thinking and prepared.mode == "rag"
+    @staticmethod
+    def _inputs(prepared: Prepared, attempt: int) -> dict:
+        if not attempt:
+            return prepared.values
+        # Retry with the SAME evidence/question/history and a fixed protocol reminder.
+        # Never feed malformed output or private reasoning back into the prompt.
+        values = dict(prepared.values)
+        values["policy"] = values.get("policy", "") + (
+            '\nFORMAT RETRY: Return ONLY one valid JSON object, with "answer" first, '
+            '"evidence" array and "insufficient" boolean. No Markdown or prose outside JSON. '
+            'If evidence is insufficient, return {"answer":"State the specific evidence gap '
+            'in the requested language.","evidence":[],"insufficient":true}. '
+            "Use only the supplied evidence; never invent citations or change source indices."
+            " If insufficient=true, answer must contain ONLY the specific gap or clarification: no related facts, "
+            "source counts, source descriptions or bracketed citations. "
+            "Keep the response short and avoid decorative quotes."
         )
+        return values
+
+    def _retry(self, prepared: Prepared, attempt: int, diagnostics: dict, *, emitted: str = "") -> bool:
+        allowed = (
+            prepared.mode == "rag"
+            and attempt < self.format_retries
+            and not emitted
+            and diagnostics.get("reason") in {"invalid_json", "empty_output", "insufficient_with_citations"}
+            and diagnostics.get("json_error") not in {"output_too_large", "nesting_too_deep"}
+        )
+        if allowed:
+            prepared.trace["generation_retries"] = attempt + 1
+            prepared.trace["generation_retry_reason"] = diagnostics.get("reason")
+            prepared.trace["generation_retry_thinking"] = False
+            logging.getLogger(__name__).warning(
+                "Retrying RAG generation", extra={"data": {"attempt": attempt + 2, "thinking": False, **diagnostics}}
+            )
+        return allowed
+
+    @staticmethod
+    def _decode(prepared: Prepared, raw: str):
+        if prepared.mode != "rag":
+            return raw
+        data, wrapper = decode_output(raw)
+        if wrapper != "none":
+            prepared.trace["output_normalization"] = wrapper
+        return data
+
+    @staticmethod
+    def _usage(prepared: Prepared, usage: dict):
+        attempts = prepared.trace.setdefault("generation_usage", [])
+        attempts.append({key: usage.get(key) for key in ("prompt_tokens", "completion_tokens")})
+        # Preserve usage of discarded malformed completions as well as the accepted one.
+        prepared.trace["usage"] = {
+            key: sum(row[key] for row in attempts) if all(type(row[key]) is int for row in attempts) else None
+            for key in ("prompt_tokens", "completion_tokens")
+        }
+
+    def chain(self, prepared: Prepared, *, recovery: bool = False) -> Runnable:
+        template = prepared.template or generation_prompt()
+        params = {
+            "json_output": prepared.mode == "rag",
+            "thinking": self.thinking and prepared.mode == "rag" and not recovery,
+        }
+        if recovery:
+            params["temperature"] = 0
+        return template | self.llm.bind_model(**params)
 
     @staticmethod
     def _failed(prepared, diagnostics):
         prepared.trace["generation_failure"] = dict(diagnostics)
-        logging.getLogger(__name__).warning("Generation failed", extra={"data": dict(diagnostics)})
-        return UpstreamError("Mô hình trả kết quả chưa hoàn chỉnh hoặc chưa đúng định dạng. Vui lòng thử lại.")
+        logging.getLogger(__name__).error("Generation failed", extra={"data": dict(diagnostics)})
+        messages = {
+            "invalid_json": "Mô hình trả câu trả lời chưa đúng định dạng. Vui lòng thử lại.",
+            "empty_output": "Mô hình chưa trả nội dung câu trả lời. Vui lòng thử lại.",
+            "incomplete_output": "Câu trả lời từ mô hình bị ngắt trước khi hoàn tất. Vui lòng thử lại.",
+            "provider_request_failed": "Yêu cầu tới dịch vụ mô hình thất bại. Vui lòng thử lại.",
+        }
+        return UpstreamError(
+            messages.get(diagnostics.get("reason"), "Không nhận được câu trả lời hợp lệ từ mô hình. Vui lòng thử lại.")
+        )
 
     async def generate(self, prepared: Prepared) -> Generated:
         if prepared.static_answer is not None:
             return Generated(prepared.static_answer)
-        try:
-            result = await self.llm.invoke_chain(self.chain(prepared), prepared.values)
-            prepared.trace["usage"] = {
-                "prompt_tokens": result.prompt_tokens,
-                "completion_tokens": result.completion_tokens,
-            }
-            data = json.loads(result.content) if prepared.mode == "rag" else result.content
-            return validate_answer(prepared, data)
-        except LLMError as exc:
-            raise self._failed(prepared, exc.diagnostics) from None
-        except json.JSONDecodeError:
-            raise self._failed(prepared, {"reason": "invalid_json", "finish_reason": result.finish_reason}) from None
-        except ValueError:
-            raise self._failed(prepared, {"reason": "generation_value_error"}) from None
+        for attempt in range(self.format_retries + 1):
+            try:
+                result = await self.llm.invoke_chain(
+                    self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt)
+                )
+                self._usage(
+                    prepared, {"prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens}
+                )
+                try:
+                    data = self._decode(prepared, result.content)
+                except OutputFormatError as exc:
+                    exc.diagnostics["finish_reason"] = result.finish_reason
+                    raise
+                return validate_answer(prepared, data)
+            except RAGValidationError as exc:
+                if self._retry(prepared, attempt, {"reason": exc.reason}):
+                    prepared.trace.pop("validation_failure", None)
+                    continue
+                raise
+            except (LLMError, OutputFormatError) as exc:
+                if isinstance(exc, LLMError) and exc.diagnostics.get("reason") == "empty_output":
+                    self._usage(prepared, exc.diagnostics)
+                if self._retry(prepared, attempt, exc.diagnostics):
+                    continue
+                raise self._failed(prepared, exc.diagnostics) from None
+            except ValueError:
+                raise self._failed(prepared, {"reason": "generation_value_error"}) from None
 
     async def stream(self, prepared: Prepared) -> AsyncIterator[str]:
         if prepared.static_answer is not None:
             yield prepared.static_answer
             prepared.trace["result"] = Generated(prepared.static_answer)
             return
+        for attempt in range(self.format_retries + 1):
+            async with aclosing(self._stream_attempt(prepared, attempt)) as tokens:
+                async for token in tokens:
+                    yield token
+            if not prepared.trace.pop("_format_retry", False):
+                return
+
+    async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
         try:
-            async with aclosing(self.llm.stream_chain(self.chain(prepared), prepared.values)) as stream:
+            async with aclosing(
+                self.llm.stream_chain(self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt))
+            ) as stream:
                 async for token in stream:
                     raw += token
-                    if len(raw) > 100000:
+                    if len(raw) > MAX_OUTPUT_CHARS:
                         raise UpstreamError("Câu trả lời vượt giới hạn stream.")
-                    text = answer_prefix(raw) if prepared.mode == "rag" else raw
+                    try:
+                        text = answer_prefix(raw) if prepared.mode == "rag" else raw
+                    except UpstreamError:
+                        raise OutputFormatError(
+                            {"json_error": "invalid_answer_prefix", "output_chars": len(raw)}
+                        ) from None
                     # Validate complete visible clauses before emission, including citations
                     # split across provider chunks. Keep an unfinished clause in the buffer.
                     boundary = max(text.rfind("\n"), text.rfind(". "), text.rfind("! "), text.rfind("? "))
@@ -225,17 +333,24 @@ class Generator:
                     if len(safe) > len(emitted):
                         yield safe[len(emitted) :]
                         emitted = safe
-            data = json.loads(raw) if prepared.mode == "rag" else raw
+            data = self._decode(prepared, raw)
             result = validate_answer(prepared, data)
             if not result.answer.startswith(emitted):
                 raise UpstreamError("Stream không nhất quán với câu trả lời cuối.")
             if len(result.answer) > len(emitted):
                 yield result.answer[len(emitted) :]
             prepared.trace["result"] = result
-        except LLMError as exc:
+        except RAGValidationError as exc:
+            if self._retry(prepared, attempt, {"reason": exc.reason}, emitted=emitted):
+                prepared.trace.pop("validation_failure", None)
+                prepared.trace["_format_retry"] = True
+                return
+            raise
+        except (LLMError, OutputFormatError) as exc:
+            if self._retry(prepared, attempt, exc.diagnostics, emitted=emitted):
+                prepared.trace["_format_retry"] = True
+                return
             raise self._failed(prepared, exc.diagnostics) from None
-        except json.JSONDecodeError:
-            raise self._failed(prepared, {"reason": "invalid_json"}) from None
         except ValueError:
             raise self._failed(prepared, {"reason": "generation_value_error"}) from None
 

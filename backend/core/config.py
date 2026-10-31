@@ -79,7 +79,14 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(default=5, ge=1, le=5)
     rag_context_chars: int = Field(default=12000, ge=256, le=64000)
     rag_rewrite_enabled: bool = False
+    rag_overview_enabled: bool = True
+    rag_query_mode: Literal["rewrite", "dual"] = "rewrite"
+    rag_rewrite_timeout_seconds: float = Field(default=8, gt=0, le=60)
+    rag_rewrite_max_tokens: int = Field(default=512, ge=128, le=2048)
+    rag_retrieval_timeout_seconds: float = Field(default=20, gt=0, le=120)
     rag_thinking_enabled: bool = False
+    # One additional generation on malformed/blank RAG output, not a grounding bypass.
+    rag_format_retries: int = Field(default=1, ge=0, le=1)
     rag_models_dir: str = "models/fastembed"
     rag_batch_size: int = Field(default=32, ge=1, le=128)
     rag_encoder_threads: int = Field(default=2, ge=1, le=32)

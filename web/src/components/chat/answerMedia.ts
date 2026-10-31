@@ -1,5 +1,7 @@
-// TV4 · Dữ liệu trình bày phía UI; không mở rộng DTO/API hoặc lưu vào lịch sử hội thoại.
-export type IllustrationKind = "character" | "weapon" | "item";
+// TV4 presentation + TV3 adapter for citation-associated backend media.
+import type { ChatImage, Source } from "../../api/types";
+import { readChatImages } from "../../api/images.ts";
+export type IllustrationKind = "character" | "weapon" | "item" | "related";
 export type IllustrationPreviewState = "loading" | "error";
 
 export interface AnswerIllustration {
@@ -8,6 +10,7 @@ export interface AnswerIllustration {
   name: string;
   src: string;
   alt: string;
+  description?: string;
   source: { label: string; url: string; credit: string };
 }
 
@@ -15,7 +18,33 @@ export const illustrationKindLabels: Record<IllustrationKind, string> = {
   character: "Nhân vật",
   weapon: "Vũ khí",
   item: "Vật phẩm",
+  related: "Ảnh từ nguồn trích dẫn",
 };
+
+export function backendIllustrations(
+  images: readonly ChatImage[] | undefined,
+  sources: readonly Source[],
+): AnswerIllustration[] {
+  return readChatImages(images, sources).map((image) => {
+    const source = sources.find((source) => image.source_indices.includes(source.index))!;
+    const credit = [
+      image.attribution,
+      image.license ? `Giấy phép: ${image.license}` : "Chưa có thông tin giấy phép.",
+      image.license_status !== "approved" ? "Quyền sử dụng ảnh chưa được xác minh." : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    return {
+      id: image.id,
+      kind: "related",
+      name: source.title,
+      src: image.url,
+      alt: image.alt?.trim() || image.caption?.trim() || `Ảnh từ nguồn ${source.title}`,
+      description: image.caption?.trim() || undefined,
+      source: { label: `Nguồn ảnh [${image.source_indices.join(", ")}]`, url: image.source_url, credit },
+    };
+  });
+}
 
 // Chỉ ảnh/link HTTP(S) hoặc đường dẫn cùng origin; không nhận javascript:, data: hay //host.
 export function isIllustrationUrl(value: string): boolean {

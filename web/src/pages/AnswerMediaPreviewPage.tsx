@@ -2,12 +2,11 @@
 import { useState } from "react";
 import MessageList from "../components/chat/MessageList";
 import { illustrationKindLabels } from "../components/chat/answerMedia";
-import type { IllustrationKind } from "../components/chat/answerMedia";
 import { illustrationFixtureMessages, illustrationFixtures } from "../fixtures/answerIllustrations";
 
 type Scenario = "success" | "loading" | "error" | "none" | "answering" | "stopped";
 export default function AnswerMediaPreviewPage() {
-  const [kind, setKind] = useState<IllustrationKind | "all">("character");
+  const [kind, setKind] = useState<keyof typeof illustrationFixtures | "all">("character");
   const [scenario, setScenario] = useState<Scenario>("success");
   const images =
     scenario === "none" ? [] : kind === "all" ? Object.values(illustrationFixtures) : [illustrationFixtures[kind]];
@@ -24,9 +23,9 @@ export default function AnswerMediaPreviewPage() {
         <label htmlFor="illustration-kind">
           Loại đối tượng
           <select id="illustration-kind" value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}>
-            {Object.entries(illustrationKindLabels).map(([value, label]) => (
+            {(Object.keys(illustrationFixtures) as (keyof typeof illustrationFixtures)[]).map((value) => (
               <option value={value} key={value}>
-                {label}
+                {illustrationKindLabels[value]}
               </option>
             ))}
             <option value="all">Cả ba loại</option>

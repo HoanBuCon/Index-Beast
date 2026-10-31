@@ -2,7 +2,8 @@
 // Phụ trách: TV4 · [S4]
 
 import type { Conversation } from "../api/types";
-import { isSource } from "../api/types";
+import { isSource } from "../api/types.ts";
+import { readChatImages } from "../api/images.ts";
 const KEY = "indexbeast.conversations.v1";
 export function readConversations(): Conversation[] {
   try {
@@ -31,7 +32,15 @@ export function readConversations(): Conversation[] {
             );
           }),
       )
-      .slice(0, 30);
+      .slice(0, 30)
+      .map((conversation) => ({
+        ...conversation,
+        messages: conversation.messages.map((message) =>
+          message.images === undefined
+            ? message
+            : { ...message, images: readChatImages(message.images, message.sources) },
+        ),
+      }));
   } catch {
     return [];
   }

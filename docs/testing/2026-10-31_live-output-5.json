@@ -1,0 +1,63 @@
+{
+  "question": "các boss trong elden ring",
+  "context_method": "actual hybrid retrieval using cached E5 and read-only Qdrant; no rewrite/history",
+  "thinking": true,
+  "max_tokens": 4096,
+  "transport_retries": 0,
+  "format_retries": 0,
+  "paid_completion_calls": 1,
+  "initial_response_replayed_from_observed_protocol_failure": false,
+  "selected": [
+    {
+      "id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+      "title": "Letter for Freyja"
+    },
+    {
+      "id": "ee803fb4-9838-52b2-b614-9f18c5fa40fe",
+      "title": "Bosses"
+    },
+    {
+      "id": "cc23a5c2-2700-527b-b674-e030f4d9c7c0",
+      "title": "Bosses"
+    },
+    {
+      "id": "49120a18-12f4-578e-aba6-944d8b779205",
+      "title": "Elden Beast"
+    },
+    {
+      "id": "fb401c32-afcb-5e59-84de-080ce1fbecab",
+      "title": "Maliketh, the Black Blade"
+    }
+  ],
+  "status": "success",
+  "answer": "Trong ELDEN RING (2022), boss là những kẻ địch mạnh, có thể gặp ở overworld hoặc trong các địa điểm của Lands Between; wiki hiện liệt kê tổng cộng 238 boss [2]. Nhóm được chú ý nhất là các Remembrance Boss của bản gốc, gồm Regal Ancestor Spirit, Astel Naturalborn of the Void, Lichdragon Fortissax, Fire Giant, Godrick the Grafted, Rennala Queen of the Full Moon, Rykard Lord of Blasphemy, Starscourge Radahn, Morgott the Omen King, Mohg Lord of Blood, Malenia Blade of Miquella, Maliketh the Black Blade, Hoarah Loux Warrior, Dragonlord Placidusax và Elden Beast [3].\n\nMột số boss gắn với tiến trình chính: Maliketh, the Black Blade xuất hiện ở Crumbling Farum Azula và là boss bắt buộc, vì phải đánh bại để mở Leyndell, Ashen Capital và tiến vào giai đoạn cuối game [5]; Elden Beast là boss cuối, gặp bên trong Erdtree ở Leyndell, Ashen Capital [4].\n\nMình chưa có danh sách đầy đủ 238 boss hay chiến thuật cho từng boss; nếu bạn muốn, hãy nói rõ boss nào hoặc khu vực nào để mình đi sâu hơn.",
+  "grounded": true,
+  "source_indices": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "elapsed_seconds": 3.296,
+  "provider_shape": {
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 3239,
+      "output_tokens": 475,
+      "total_tokens": 3714,
+      "input_token_details": {
+        "cache_read": 1408
+      },
+      "output_token_details": {
+        "reasoning": 64
+      }
+    },
+    "content_chars": 1168
+  },
+  "bindings": [
+    {
+      "json_output": true,
+      "thinking": true
+    }
+  ]
+}
