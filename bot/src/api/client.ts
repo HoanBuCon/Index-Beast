@@ -35,7 +35,8 @@ export function createApiClient(
   config: ReturnType<typeof loadApiConfig> = loadApiConfig(),
   {
     fetcher = fetch,
-    timeoutMs = 30_000,
+    // Lớn hơn CHAT_TIMEOUT_SECONDS (45 s) của backend: backend báo 504 trước, bot không bỏ cuộc khi API còn chạy.
+    timeoutMs = 60_000,
     requestId,
   }: { fetcher?: typeof fetch; timeoutMs?: number; requestId?: string } = {},
 ) {

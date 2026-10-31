@@ -5,7 +5,7 @@ Mã phía bot đã có kiểm thử độc lập bằng dữ liệu giả. **Ch�
 ## Phạm vi
 
 - Types viết tay theo `docs/api/openapi.json`, thích nghi phần hợp đồng công khai đã có trong web; không import mã UI hay sinh lại OpenAPI.
-- Client `createApiClient()` có `chat`, `chatStream`, `sendFeedback`, `getConversation`; timeout mặc định 30 giây, `X-Request-ID`, service token tùy chọn, kiểm tra dữ liệu trả về, lỗi thân thiện và giữ `Retry-After` khi 429.
+- Client `createApiClient()` có `chat`, `chatStream`, `sendFeedback`, `getConversation`; timeout mặc định 60 giây (lớn hơn hạn 45 giây `CHAT_TIMEOUT_SECONDS` của backend), `X-Request-ID`, service token tùy chọn, kiểm tra dữ liệu trả về, lỗi thân thiện và giữ `Retry-After` khi 429.
 - `/ask question`: defer trước I/O, gọi JSON `/api/v1/chat` với `channel=discord`, trả embed có nguồn. Không gửi raw user ID trong `external_ref`; dùng SHA-256 cho phần user.
 - Câu trả lời/nguồn dài được rút gọn để vừa một embed, có ghi chú. Không tạo link “xem đầy đủ” giả vì route hội thoại công khai chưa được tích hợp.
 - Đăng ký trong registry cùng `/ping`; script deploy hiện có vẫn đăng ký global theo yêu cầu trước đó.
@@ -40,7 +40,7 @@ Không cần sửa `.env.example` hoặc Docker Compose cho bước này.
 - `BOT_API_URL`: để trống khi chạy bot trên máy → `http://127.0.0.1:<API_PORT>`; `API_PORT` mặc định 18000. Chấp nhận URL gốc hoặc kết thúc `/api/v1`, không ghép tiền tố hai lần.
 - Trong container, Compose hiện đặt `BOT_API_URL=http://api:18000`; `api` là tên service, không phải localhost của máy.
 - `API_SERVICE_TOKEN`: gửi `X-Service-Token` nếu được cấu hình khác `change-me`. Theo bàn giao TV1, xác thực service token thuộc S4; client không tự thêm yêu cầu bảo mật vào backend.
-- API timeout 30 giây; không tự retry POST để tránh gửi câu hỏi hai lần.
+- API timeout 60 giây; không tự retry POST để tránh gửi câu hỏi hai lần.
 
 Client không ép backend sang mock. Backend có thể đang ở mode `rag`/`llm_only`; chỉ dùng môi trường mock của TV1 khi nghiệm thu Sprint 2, tránh vô tình gọi LLM trả phí. Không tự sửa mode hoặc `.env` của thành viên khác.
 

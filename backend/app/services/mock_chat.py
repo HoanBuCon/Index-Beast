@@ -48,6 +48,9 @@ _NO_EVIDENCE = "Mình chưa tìm thấy thông tin này trong dữ liệu hiện
 class MockChatService:
     def __init__(self) -> None:
         self._conversations: OrderedDict[UUID, ConversationOut] = OrderedDict()
+        self._by_ref: dict[
+            tuple[str, str], UUID
+        ] = {}  # giống LiveChatService: bot dùng lại hội thoại theo external_ref
 
     async def open_stream(self, req: ChatRequest):
         result = await self.answer(req)
@@ -102,8 +105,13 @@ class MockChatService:
     def _conversation_for(self, req: ChatRequest) -> ConversationOut:
         if req.conversation_id is not None:
             return self.history(req.conversation_id)
+        ref = (req.channel, req.external_ref) if req.external_ref else None
+        if ref is not None and (existing := self._by_ref.get(ref)) in self._conversations:
+            return self._conversations[existing]
         conversation = ConversationOut(id=uuid4(), channel=req.channel, created_at=datetime.now(UTC), messages=[])
         self._conversations[conversation.id] = conversation
+        if ref is not None:
+            self._by_ref[ref] = conversation.id
         while len(self._conversations) > MAX_CONVERSATIONS:
             self._conversations.popitem(last=False)
         return conversation
