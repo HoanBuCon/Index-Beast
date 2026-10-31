@@ -1,114 +1,93 @@
-# Khảo sát toàn bộ `backend/data` và đề xuất xử lý dữ liệu
+# Khảo sát toàn bộ `backend/data` và đề xuất xử lý dữ liệu (bản 2, sau phản biện)
 
 | | |
 |---|---|
 | Ngày | 31/10/2026 (Asia/Saigon) |
 | Người lập | TV1 (Hoanbucon), Tech Lead |
-| Nhánh | `docs/s2-tv1-khao-sat-du-lieu` (từ `origin/develop` tại `f089538`, sau PR #51) |
-| Căn cứ | Bản sao `backend/data` TV2 bàn giao (~9,2 GB); handover TV2/TV3 S2; [audit độ phủ của TV2](../testing/2026-10-31_tv2-corpus-readiness.md) |
-| Cách làm | Chỉ đọc: liệt kê, đếm, hash, thống kê bằng script Python. Không crawl, không gọi LLM, không embedding/index, không ghi DB/Qdrant, không sửa file dữ liệu |
+| Nhánh | `docs/s2-tv1-khao-sat-du-lieu` (từ `origin/develop` tại `f089538`) |
+| Trạng thái | **Chưa duyệt.** Bản 1 bị trả lại vì chưa đủ sâu. Bản này kiểm chứng lại từng luận điểm bằng số liệu, bỏ các đề xuất không có bằng chứng |
+| Căn cứ | Bản sao `backend/data` (~9,2 GB); handover TV2/TV3 S2; [audit độ phủ TV2](../testing/2026-10-31_tv2-corpus-readiness.md); [audit năng lực TV3](../testing/2026-10-29_elden-ring-assistant-capabilities.md); mã `backend/core/text/html_clean.py` |
+| Cách làm | Chỉ đọc: liệt kê, hash, đếm, parse lại HTML raw bằng BeautifulSoup. Không crawl, không LLM, không embedding/index, không ghi DB/Qdrant, không sửa dữ liệu |
 
-## 1. Kết luận nhanh
+## 1. Bản cuối của từng tầng
 
-| Tầng | Bản cuối | Quy mô | Trạng thái |
+| Tầng | Bản cuối | Quy mô | Kiểm chứng |
 |---|---|---|---|
-| **Raw** | `raw/wikigg/snapshots/<pageid>/<revid>-<hash>.json`, chọn theo `crawl_runs/s2-full-20261028/report.json` + `checkpoint.json` | 4.164 trang (158 MB). 4.170 file vì 6 trang có thêm 1 revision cũ | Đủ: 4.157 trang thành công + 7 trang chỉ lỗi ảnh (text có đủ) |
-| **Ảnh** | `media/blobs/` (theo SHA-256) + manifest `crawl_runs/s2-full-20261028/media/<pageid>.json` | 10.371 blob, 7,96 GB | Khớp số TV2 audit; giấy phép chưa rõ toàn bộ |
-| **Clean** | `clean_runs/s2-full-v2/` | 4.164 trang, 22.419 record (20.235 eligible, 2.184 review), 207 MB | SHA-256 của 3 CSV khớp `delivery/s2-full/manifest.json` |
-| **Chunk** | `chunk_runs/s2-full-v1/` (`chunks.jsonl` là nguồn cho index) | 23.765 chunk, 129 MB | SHA-256 của 5 file chính khớp `report.json`; đầu vào chính là `clean_runs/s2-full-v2` |
-| Điểm vào | `delivery/s2-full/README.md`, `manifest.json` | — | Chỉ trỏ tới hai thư mục trên |
+| Raw | `raw/wikigg/snapshots/<pageid>/<revid>-<hash>.json`, đúng file mà `crawl_runs/s2-full-20261028/report.json` trỏ tới | 4.164 trang, 158 MB | 4.157 id trong report có snapshot; 7 snapshot còn lại đúng là 7 trang chỉ lỗi ảnh. 6 trang có thêm một revision cũ (bỏ qua) |
+| Ảnh | `media/blobs/` + manifest `crawl_runs/s2-full-20261028/media/<pageid>.json` | 10.371 blob, 7,96 GB | Khớp audit TV2 |
+| Clean | `clean_runs/s2-full-v2/` | 22.419 record giữ/review + 55.560 dòng ghi lý do loại (`review.csv`) | SHA-256 ba CSV khớp `delivery/s2-full/manifest.json` |
+| Chunk | `chunk_runs/s2-full-v1/chunks.jsonl` | 23.765 chunk (18.368 EN được index) | SHA-256 năm file khớp `report.json` |
 
-**Lưu ý dễ nhầm:**
-- `raw/wikigg/*.json` (247 file nằm phẳng) và `media/manifests/` (200 file) là **mẫu Sprint 1**, không thuộc bộ cuối.
-- `clean_runs/s2-full-v1` là lượt thử trước khi chuyển "Boss Fight" sang review. **Không dùng.**
+Không phải bản cuối:
+- 247 file `raw/wikigg/*.json` và `media/manifests/` (200 file) là mẫu Sprint 1.
+- `clean_runs/s2-full-v1` là lượt thử trước.
+- 29 lượt `*-20`, `*-200`, `trial`, `repeat` là thử nghiệm.
+- `local-setup/` (592 MB) là bộ cài Docker, không phải dữ liệu.
 
-## 2. Kiểm kê toàn bộ thư mục
+## 2. Phản biện bản đề xuất 1
 
-| Thư mục | Dung lượng | Nội dung | Vai trò |
-|---|---:|---|---|
-| `media/` | 7,5 GB | `blobs/` 10.371 ảnh; `manifests/` 200 (S1); `url-index.json` | Cuối (blobs); manifests là S1 |
-| `local-setup/` | 592 MB | Bộ cài Docker Desktop, script và log sửa WSL/Docker | **Rác, không phải dữ liệu** |
-| `clean_runs/` | 552 MB | 23 lượt chạy (20/200 trang, regression, full v1, full v2) | Cuối: `s2-full-v2`; 22 lượt còn lại (346 MB) là thử nghiệm |
-| `chunk_runs/` | 176 MB | 8 lượt chạy | Cuối: `s2-full-v1`; 7 lượt còn lại (47 MB) là thử nghiệm |
-| `raw/` | 171 MB | `snapshots/` (cuối) + 247 file S1 | Xem mục 1 |
-| `crawl_runs/` | 132 MB | `s2-full-20261028`: inventory 4.179, checkpoint, report, history 2 lượt, 4.164 media manifest, log | Bằng chứng + chỉ mục chọn raw cuối |
-| `research_runs/` | 23 MB | Khảo sát phạm vi 29/10 (v1, v2) | Nghiên cứu |
-| `studies/` | 4 MB | Nghiên cứu chunk 200 trang | Nghiên cứu |
-| `reports/` | 428 KB | `categories.json`, report crawl S1 | Lịch sử |
-| `validation_manifests/` | 112 KB | Danh sách 200 trang regression | Dùng cho test hồi quy |
-
-Thư mục `research_runs/s2-readiness-20261031` (output audit TV2 ngày 31/10) **không có trong bản sao này**.
-
-## 3. Hồ sơ dữ liệu (đo lại trên bản cuối)
-
-**Chunk `s2-full-v1`:**
-
-| Chỉ số | Giá trị |
-|---|---|
-| Ngôn ngữ | en 18.368 · ja 3.447 · unknown 1.801 · 10 ngôn ngữ khác 149 |
-| Loại nguồn | wiki_prose 15.393 · in_game_text 8.329 · speculation 43 |
-| Loại đơn vị | prose 16.077 · infobox 4.155 · dialogue 3.288 · quote 245 |
-| `release_scope` | unknown 14.165 (60%) · base_candidate 6.185 · mixed_or_sote_candidate 2.011 · sote_candidate 1.404 |
-| Token (cả bộ) | min 13 · **median 55** · mean 78 · max 450 |
-| Chunk EN (đã index) | 18.368, **median 52 token, 8.720 chunk (47%) dưới 50 token** |
-| Chunk infobox EN | 2.582, median 27 token (mỗi trường infobox thành một chunk riêng) |
-| Thân chunk trùng y hệt | 2.068 bản lặp; ví dụ `Slots Used: 1` ×190, `Region: Liurnia of the Lakes` ×49, `Affinity: Keen` ×35 |
-| Chunk mỗi trang | median 5, lớn nhất 162 |
-| Metadata trống ở mọi chunk | `review_status`, `content_type`, `speaker`, `spoiler_level`, `patch_version` |
-
-**Document:** `release_scope` unknown 2.748, base_candidate 767, mixed_or_sote_candidate 366, sote_candidate 283.
-
-**Trên máy TV1** (máy nhận bản sao): PostgreSQL `index-beast` có **0 document, 0 chunk**. Qdrant ở cổng 16333 **không có collection `lore_chunks`**. Dữ liệu mới nằm trên đĩa, chưa được nạp.
-
-## 4. Vấn đề rút ra (góc nhìn Data Engineer)
-
-1. **Không có bản phát hành dữ liệu rõ ràng.** Bản cuối chỉ được nhận ra qua README/handover; 30 lượt chạy nằm lẫn với bản cuối và với 592 MB bộ cài Docker.
-2. **Artifact không di chuyển được.** `manifest.json`, `input-fingerprints.json` và `report.json` ghi đường dẫn tuyệt đối `D:\Index-Beast\...` (máy TV2). Sang máy khác (`D:\Hoc_Tap\...`), mọi bước kiểm fingerprint theo đường dẫn đều phải sửa tay.
-3. **Chunk quá vụn: ảnh hưởng lớn nhất tới chất lượng truy xuất.** Gần một nửa chunk EN dưới 50 token; infobox bị cắt thành từng dòng. Các mảnh "Slots Used: 1" giống hệt nhau giữa hàng trăm trang chiếm chỗ trong top-k mà không mang ngữ cảnh. Embedding câu ngắn cũng kém ổn định.
-4. **Phạm vi sản phẩm lệch chính sách làm sạch.** Sản phẩm đã mở sang gameplay/build, nhưng clean vẫn bỏ Weight, FP, HP/Runes, bảng chỉ số và các mục Effects/Acquisition (số liệu trong audit TV2). Chatbot sẽ không trả lời được câu hỏi thông số.
-5. **Metadata để lọc chưa dùng được.** 60% chunk có `release_scope=unknown`, nên chưa lọc được base/SotE. `spoiler_level` trống, nên tùy chọn tắt spoiler luôn trả rỗng.
-6. **Lỗi nội dung đã biết:** trang mẫu Talisman Template lọt vào corpus; 17 chunk tiếng Bồ Đào Nha gắn nhãn `en`; 15 chunk tab 🇹🇼 gắn `unknown`; còn sót markup `[[...]]` (chi tiết trong audit TV2).
-7. **Chỉ số trên 4.157 vs 4.164:** 7 trang lỗi ảnh vẫn có text trong clean và chunk. Đúng, nhưng phải đọc `checkpoint.json` mới thấy; report crawl ghi `partial`.
-
-## 5. Đề xuất xử lý
-
-Nguyên tắc: không crawl lại; mọi bước ghi vào thư mục mới; đánh giá A/B bằng golden set trước khi thay corpus đang phục vụ. Không xây hạ tầng mới (orchestrator, data lake).
-
-### P0: làm ngay đầu S3
-
-| # | Việc | Phụ trách | Kết quả mong đợi |
-|---|---|---|---|
-| 1 | **Đóng gói bản phát hành `data/releases/s2-r1/`** gồm `raw` (danh sách đường dẫn revision cuối), `clean`, `chunk`, `MANIFEST.json` (đường dẫn **tương đối**, SHA-256, số lượng, commit code đã sinh ra). Code đọc release qua một biến `DATA_RELEASE`, không trỏ thẳng tên run | TV2, TV1 review | Mọi máy biết chính xác bản nào là cuối; chạy lại được ở đường dẫn khác |
-| 2 | **Dọn `backend/data`:** xóa `local-setup/`; chuyển 30 lượt thử sang `archive/` hoặc xóa (chỉ giữ regression 200 làm test). Media 8 GB phân phối riêng, không gói chung với text | TV2 | Gói text ~0,5 GB dễ chia sẻ |
-| 3 | **Nạp lên máy chung:** `python -m ingest.chunk.load_full` rồi index EN vào Qdrant (~17 phút) trên máy demo | TV1 + TV3 | Demo S3 chạy trên dữ liệu thật; index cần người dùng xác nhận chạy embedding |
-| 4 | **Sửa lỗi nội dung đã biết** (template, map tab 🇧🇷/🇹🇼, markup), đúng thứ tự P0 trong audit TV2 | TV2 | Release `s2-r2`, có test âm cho từng lỗi |
-
-### P1: trong S3
-
-| # | Việc | Ghi chú |
+| Luận điểm bản 1 | Kiểm chứng lại | Kết luận |
 |---|---|---|
-| 5 | **Gộp chunk vụn**: trong cùng một section, gộp các unit liên tiếp tới khoảng 250–350 token. Mỗi trang có một **"thẻ infobox"** (tiêu đề + mọi trường) thay vì một chunk cho mỗi trường. Giữ nguyên ranh giới dialogue/quote | Ước tính 18,4k chunk EN còn khoảng 8–10k; thời gian index giảm tương ứng. Chỉ thay sau khi Recall@5 và MRR trên golden set không giảm (A/B hai collection) |
-| 6 | **Chốt phạm vi gameplay bằng CHANGE-REQ.** Nếu giữ gameplay, cách rẻ nhất là thêm "thẻ thông số" dạng văn bản cho mỗi vật phẩm (trường infobox + hàng bảng chỉ số có header), gắn `content_type=stats`. Chưa cần bảng dữ liệu cấu trúc riêng | Nếu bỏ gameplay: sửa README, prompt và golden set cho khớp |
-| 7 | **Index theo release và đổi bằng alias Qdrant** (`lore_chunks` → `lore_chunks_s2_r2`) | Thay corpus không ảnh hưởng lúc đang phục vụ; xóa luôn point cũ (phát hiện #6 của code review) |
-| 8 | Tính `release_scope` từ category và infobox có bằng chứng; ghi `unknown` khi không chắc. Tắt tùy chọn `spoilers=false` cho tới khi có `spoiler_level` | Không gán hàng loạt |
+| "Chunk vụn, mất ngữ cảnh: `Slots Used: 1` lặp 190 lần" | Thân chunk trùng, nhưng `embedding_text` luôn có `passage: <tiêu đề trang>\n<section>`. Trong 18.368 chunk EN chỉ **7** `embedding_text` trùng hoàn toàn | **Sai.** Chunk nhỏ vẫn mang tên trang, không phải mảnh vô danh |
+| "Gộp chunk sẽ giảm 18k xuống 8–10k" | Mô phỏng gộp các unit liên tiếp cùng section tới 300 token (không gộp dialogue/quote): 18.368 → **17.281** (−6%). Phần lớn chunk nhỏ đứng một mình trong section | **Sai ước tính.** Lợi ích nhỏ; không làm như một dự án riêng |
+| "Chunk vụn là vấn đề ảnh hưởng lớn nhất tới truy xuất" | Chưa từng đo Recall@K/MRR trên corpus đầy đủ (TV3 ghi rõ ở báo cáo độ trễ và audit năng lực). Bộ 10/10 là smoke test lore | **Không có bằng chứng.** Phải đo trước khi tối ưu |
+| "Cần bản phát hành `data/releases/` + biến `DATA_RELEASE`" | Thứ thật sự hỏng: `load_full --validate-only` trên máy TV1 **lỗi `FileNotFoundError`** vì `documents.jsonl` ghi `source_snapshot` tuyệt đối `D:\Index-Beast\...`. Index Qdrant không đọc trường này nên không bị ảnh hưởng | **Phức tạp hóa.** Chỉ cần sửa đường dẫn tương đối |
+| "Index theo release + alias Qdrant" | `RAG_COLLECTION` và `--collection` đã có: index sang collection mới rồi đổi `.env` | **Thừa.** Dùng cơ chế sẵn có |
+| "Tính `release_scope` vì 60% unknown" | Phạm vi đã gồm cả base và SotE; chưa có yêu cầu lọc theo bản phát hành | **Chưa cần.** Hoãn |
+| "Viết parser mới, dựng thẻ thông số" | `review.csv` **đã có sẵn text** của phần gameplay bị loại, kèm lý do. Ví dụ Moonveil: `Type: Katana / Skill: Transient Moonlight / Sell Price: 500` (`gameplay_infobox_field`), `Weight / 6.5`, `FP Cost / - (15 20)` (`infobox_numeric_or_production_field`), `Acquisition: Dropped by the Magma Wyrm in Gael Tunnel` (`gameplay_section`) | **Phần lớn thừa.** Đổi chính sách giữ/loại là đủ cho các mục này |
+| "Dữ liệu gameplay thiếu do chính sách lore" | Đúng một phần, nhưng **bỏ sót nguyên nhân lớn hơn** (mục 3) | Cần sửa |
 
-### P2: S4–S5
+## 3. Phát hiện chính: bảng chỉ số trong infobox bị mất không để lại dấu vết
 
-- Cập nhật tăng dần theo revision (FR-ING-07): crawl chỉ trang đổi revision, clean/chunk lại theo trang, upsert và xóa point theo `doc_id`.
-- Rà soát giấy phép ảnh trước khi web hiển thị rộng.
-- Một lệnh `make data-release` chạy chuỗi clean → chunk → validate → nạp PG → index collection mới, bằng các CLI đã có.
+`html_clean.infobox()` (`backend/core/text/html_clean.py`, quanh dòng 149) chỉ duyệt các phần tử `.pi-data`. Các bảng Attack Power, Guarded Damage Negation, Attributes (Required/Scaling), Damage Negation, Resistance, Poise lại nằm trong `<table>` lồng trong `.pi-group`. Hàm không thêm chúng vào clean, cũng không gọi `audit()`, nên chúng **không có trong `content_clean_all.csv` lẫn `review.csv`**.
 
-## 6. Việc cần team quyết định
+Đo trên 4.164 trang raw (parse lại infobox, so với mọi dòng clean/review của trang):
 
-1. Có giữ phạm vi gameplay/build không (quyết định P1 #6).
-2. Ai giữ bản phát hành dữ liệu và chia sẻ bằng cách nào (ổ chung, Google Drive, GitHub Release), kèm checksum.
-3. Có đồng ý xóa `local-setup/` và các lượt chạy thử không.
+| Bảng trong infobox raw | Số trang có trong raw | Có trong clean | Chỉ có trong review | **Mất không dấu vết** |
+|---|---:|---:|---:|---:|
+| Attack Power | 572 | 234 | 51 | **287** |
+| Damage Negation | 1.410 | 94 | 72 | **1.244** |
+| Attribute (Required/Scaling) | 800 | 88 | 63 | **649** |
+| Resistance | 770 | 2 | 0 | **768** |
+| Poise | 754 | 2 | 1 | **751** |
+| Trang mất toàn bộ bảng chỉ số infobox | | | | **1.477 / 1.824** |
 
-## 7. Cách tái lập số liệu
+Số "có trong clean" phần lớn đến từ chữ xuất hiện trong văn xuôi (Notes…), không phải bảng. Kiểm trực tiếp Moonveil: không dòng nào ở clean hay review chứa `Physical`, `73` hay `Intelligence`.
 
-Script khảo sát là script tạm của TV1 (không đưa vào repo), chỉ đọc file. Kết quả kiểm chứng chính:
+Ví dụ trang bị mất: Flame, Cleanse Me; Lionel's Greaves; Carian Knight's Shield; Chain Coif; Battlemage Robe…
 
-- SHA-256 của `content_clean_all.csv`, `review.csv`, `images.csv` khớp `delivery/s2-full/manifest.json`.
-- SHA-256 của `chunks.jsonl`, `chunks.csv`, `documents.jsonl`, `review.jsonl`, `coverage.jsonl` khớp `chunk_runs/s2-full-v1/report.json`.
-- 4.157 id trong `report.json` crawl đều có snapshot. 7 snapshot còn lại đúng là 7 trang lỗi ảnh.
-- Không đọc nội dung ảnh, không decode pixel.
+Hệ quả:
+- Đây là nguyên nhân chính khiến chatbot không trả lời được chỉ số vũ khí và giáp, lớn hơn chính sách lore.
+- Audit TV2 báo "0 lỗi integrity" vì chỉ kiểm những gì đã vào ledger; phần bị bỏ qua thì không có trong ledger.
+- Nguyên tắc "mọi phần bị loại đều có lý do" của pipeline đang bị vi phạm. Đây là lỗi mã, không phải dữ liệu nguồn kém.
+
+## 4. Đề xuất (bản 2): ít việc hơn, sửa đúng chỗ
+
+| # | Việc | Phụ trách | Vì sao / bằng chứng | Chi phí |
+|---|---|---|---|---|
+| 1 | **Sửa `html_clean.infobox()`:** xử lý bảng trong `.pi-group` thành dòng `Nhóm / Cột: giá trị` (vd. `Attack Power / Physical: 73`, `Attributes / Intelligence: Required 23, Scaling C`). Mọi phần không dùng phải gọi `audit()`. Thêm test: Moonveil có đủ Attack Power và Attributes; không còn node infobox nào thoát khỏi cả clean lẫn ledger | TV2 | Mục 3: 1.477 trang | Nhỏ: một hàm + test |
+| 2 | **Nhận lại các mục gameplay đã có sẵn trong `review.csv`:** đổi quyết định của `gameplay_infobox_field`, `infobox_numeric_or_production_field` (bỏ trường sản xuất như Voice actor), `gameplay_section`, giữ nguyên nhãn `content_type` từ lý do để lọc khi cần. **Chỉ làm sau khi team chốt CHANGE-REQ gameplay** | TV2 | Text đã có, không cần parser mới | Nhỏ: sửa `lore_policy.py`, chạy lại clean/chunk |
+| 3 | **Giữ infobox của một trang trong một chunk** (≤450 token) thay vì mỗi trường một chunk | TV2 | Sau #1 mỗi trang vũ khí/giáp có thêm khoảng 10–20 dòng chỉ số. Để mỗi dòng một chunk sẽ thêm hàng chục nghìn chunk 1 dòng, và top-5 không chứa đủ một bộ chỉ số | Nhỏ: luật nhóm unit trong chunker |
+| 4 | **Ghi `source_snapshot` dạng tương đối** so với `data/` (hoặc cho `load_full` tìm theo `pageid/revid-hash`) | TV2 | `load_full` hỏng trên máy khác (đã chạy thử) | Rất nhỏ |
+| 5 | **Sửa các lỗi nội dung TV2 đã liệt kê:** trang mẫu Talisman Template, tab 🇧🇷 gắn `en`, tab 🇹🇼 `unknown`, markup `[[...]]` | TV2 | Audit TV2 | Nhỏ |
+| 6 | **Đo trước, đo sau.** Trước khi đổi corpus, chạy Recall@5/MRR của corpus hiện tại trên golden set, bổ sung khoảng 15 câu hỏi chỉ số (Moonveil, Uchigatana, một bộ giáp, một phép). Index bản sửa sang collection mới, so sánh rồi mới đổi `RAG_COLLECTION` | TV3 | Hiện chưa có số đo chất lượng nào trên corpus đầy đủ | Index ~17 phút mỗi lần; cần người dùng duyệt chạy embedding |
+| 7 | Xóa `local-setup/` và các lượt thử sau khi team đồng ý | TV2 | ~1 GB không phải dữ liệu | Rất nhỏ |
+
+Thứ tự: #4 và #5 bất kỳ lúc nào; #6 (đo baseline) trước #1–#3; #1 → #3 → chạy clean/chunk vào thư mục mới → #6 (đo lại).
+
+**Không làm** (đã bỏ so với bản 1): hệ thống release dữ liệu, alias Qdrant, gộp chunk văn xuôi, suy `release_scope`, parser hay bảng dữ liệu cấu trúc riêng.
+
+**Về bảng nâng cấp (+0…+25, affinity):** đây là phần khó (bảng gộp ô, nguồn chỉ hiện một số hàng). Không đưa vào đợt này. Chatbot trả lời giá trị +0 từ infobox và dẫn link trang cho bảng nâng cấp.
+
+## 5. Việc cần team quyết định
+
+1. Chốt phạm vi gameplay/build bằng CHANGE-REQ. #1, #3, #4, #5 cần làm dù quyết định thế nào; #2 phụ thuộc quyết định này.
+2. Đồng ý chạy embedding để đo baseline và index bản sửa (#6).
+3. Đồng ý xóa `local-setup/` và các lượt thử (#7).
+
+## 6. Giới hạn của khảo sát này
+
+- Việc nhận diện bảng chỉ số dựa trên chữ khóa trong infobox (Attack Power, Damage Negation, Attribute, Resistance, Poise). Có thể sót loại bảng khác, ví dụ chỉ số của phép hoặc boss.
+- "Có trong clean" được tính khi chữ khóa xuất hiện ở bất kỳ dòng nào của trang, nên số trang thực sự còn bảng có thể còn thấp hơn.
+- Chưa đo chất lượng truy xuất. Mọi nhận định về ảnh hưởng tới câu trả lời vẫn là suy luận cho tới khi có số đo ở #6.
+- Script khảo sát là script tạm của TV1, không đưa vào repo. Muốn tái lập, parse `.portable-infobox` của các snapshot trong mục 1 và so với `content_clean_all.csv` và `review.csv` theo `source_id`.
