@@ -4,6 +4,15 @@ Ngày 31/10/2026, TV2 (UncleThing). Nhánh `docs/s2-tv2-audit-do-phu-du-lieu`,
 từ origin/develop bcefa26. Phạm vi: kiểm dữ liệu hiện có và chỉ ra thiếu sót trước
 khi bổ sung thông số; không sửa production cleaner/chunker, DB, index hoặc phần TV khác.
 
+## Git và PR
+
+- Commit audit ban đầu: `230c335`; đã fetch origin và rebase origin/develop, không
+  có thay đổi nền mới hoặc conflict trong lượt đồng bộ.
+- Đã push nhánh riêng, upstream là origin/docs/s2-tv2-audit-do-phu-du-lieu.
+- [PR #51](https://github.com/HoanBuCon/Index-Beast/pull/51), base develop, trạng thái
+  open khi kiểm tra. GitHub xác nhận requested reviewer HoanBuCon; chưa tuyên bố
+  được approve, CI đạt hoặc merge. Commit bổ sung này ghi trạng thái bàn giao vào cùng PR.
+
 ## File và kết quả
 
 - `backend/ingest/debug/corpus_readiness.py`: audit chỉ đọc corpus bàn giao, kiểm local
