@@ -3,8 +3,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import Header from "../components/layout/Header";
+import GraceMenuItem from "../components/layout/GraceMenuItem";
 import type { Conversation } from "../api/types";
 import { useConversations } from "../hooks/useConversations";
 import { useChatStream } from "../hooks/useChatStream";
@@ -15,28 +16,7 @@ import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
 import { createUuid } from "../lib/uuid.ts";
 
 // Thanh thu gọn chỉ dẫn tới chức năng đã có của web TV4.
-function RailIcon({ name }: { name: "new" | "about" | "admin" }) {
-  const paths = {
-    new: "M12 5H5v14h14v-7M10 14l1-4 7-7 3 3-7 7-4 1Z",
-    about: "M12 3 2 8l10 5 10-5-10-5ZM6 10v6l6 3 6-3v-6",
-    admin: "M9 3h6l1 3 3 1 2 5-2 5-3 1-1 3H9l-1-3-3-1-2-5 2-5 3-1 1-3ZM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z",
-  };
-  return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={paths[name]} />
-    </svg>
-  );
-}
+// S2: ảnh item_ và hiệu ứng dùng chung nằm trong GraceMenuItem, thay RailIcon nét SVG trước đây.
 function fresh(mode: Conversation["mode"]): Conversation {
   return {
     id: createUuid(),
@@ -135,6 +115,8 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         </div>
       )}
       <MessageInput busy={stream.busy} onSend={send} onStop={stream.stop} />
+      {/* TV4: ghi chú đặt dưới ô chat, dùng chung cả màn chào và hội thoại. */}
+      <p className="chat-ai-note">AI có thể mắc sai sót.</p>
     </>
   );
   return (
@@ -177,26 +159,9 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
       <aside id="conversation-sidebar" className="sidebar" aria-label={"Lịch sử trò chuyện"}>
         <Header sidebarToggle={<span className="sidebar-toggle-space" aria-hidden="true" />} />
         <nav className="sidebar-rail" aria-label="Điều hướng chính">
-          <button
-            type="button"
-            title="Cuộc trò chuyện mới"
-            aria-label="Cuộc trò chuyện mới"
-            disabled={stream.busy}
-            onClick={() => reset()}
-          >
-            <span className="rail-icon">
-              <RailIcon name="new" />
-            </span>
-            <span className="rail-label">Cuộc trò chuyện mới</span>
-          </button>
-          <NavLink to="/about" title="Về dự án" aria-label="Về dự án" onClick={closeMobileSidebar}>
-            <span className="rail-icon">
-              <RailIcon name="about" />
-            </span>
-            <span className="rail-label">Về dự án</span>
-          </NavLink>
+          <GraceMenuItem icon="new" label="TRÒ CHUYỆN MỚI" disabled={stream.busy} onClick={() => reset()} />
+          <GraceMenuItem icon="about" label="VỀ DỰ ÁN" to="/about" onClick={closeMobileSidebar} />
         </nav>
-        <p className="sidebar-ai-note">AI có thể mắc sai sót.</p>
 
         {history.conversations.length > 0 && (
           <section className="conversation-history" aria-labelledby="conversation-history-title">
@@ -238,18 +203,13 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           </section>
         )}
         {history.storageError && <p role="status">{"Trình duyệt không lưu được lịch sử."}</p>}
-        <NavLink
+        <GraceMenuItem
           className="sidebar-admin"
           to="/admin"
-          title="Quản trị"
-          aria-label="Quản trị"
+          icon="admin"
+          label="QUẢN TRỊ"
           onClick={closeMobileSidebar}
-        >
-          <span className="rail-icon">
-            <RailIcon name="admin" />
-          </span>
-          <span className="rail-label">Quản trị</span>
-        </NavLink>
+        />
       </aside>
       {isChat ? (
         <section
@@ -264,7 +224,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 <p className="intro">{"Lần theo những bí ẩn của Elden Ring."}</p>
                 <div className="input-area welcome-input">{composer}</div>
                 <div className="suggestions" role="group" aria-label="Câu hỏi gợi ý">
-                  {["Elden Ring là game gì?", "Game thuộc thể loại gì?", "FromSoftware là gì?"].map((question) => (
+                  {["Elden Ring là gì?", "Boss cuối là ai?", "Có bao nhiêu ending?"].map((question) => (
                     <button key={question} type="button" disabled={stream.busy} onClick={() => send(question)}>
                       {question}
                     </button>

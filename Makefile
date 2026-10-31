@@ -14,7 +14,7 @@ API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print
 WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
 
 .PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
-.PHONY: bot bot-deploy bot-check
+.PHONY: bot bot-deploy bot-check bot-dev
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -72,6 +72,12 @@ bot-deploy:      ## Đăng ký slash commands global; chạy khi thêm hoặc s�
 
 bot-check:       ## TypeScript + test giả lập + Prettier của bot; không cần Discord/backend
 	cd bot && $(BOT_NPM) run typecheck && $(BOT_NPM) test && $(BOT_NPM) run format:check
+
+# TV4: một lệnh cho bot S2; biến chỉ truyền cho lệnh này/các tiến trình con, không sửa .env.
+bot-dev: export CHAT_MODE := mock
+bot-dev: export BOT_API_URL = http://127.0.0.1:$(API_PORT)
+bot-dev: up      ## Bật hạ tầng, API mock và bot cùng terminal; cần Docker Desktop đang chạy
+	$(MAKE) --no-print-directory -j2 api bot
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
 	$(MAKE) --no-print-directory -j2 api web

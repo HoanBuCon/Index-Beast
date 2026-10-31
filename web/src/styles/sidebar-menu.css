@@ -1,0 +1,220 @@
+/* TV4 · Chỉ Sidebar Navigation. Gradient/glow theo yêu cầu menu chính Elden Ring;
+   không đổi nền trang, composer, gợi ý, logo Grace hoặc những control khác. */
+.workspace .sidebar .grace-menu {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  height: 56px;
+  padding: 10px 0 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  /* TV4: trắng ngà dịu, opacity đầy đủ để nét vẫn rõ trên nền tối. */
+  color: var(--ui-text);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.workspace .sidebar .grace-menu__label {
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+  text-transform: uppercase;
+  font: 400 16px/1.4 var(--font-interface);
+  opacity: 1;
+  text-shadow: none;
+  transition:
+    opacity 0.3s ease-in-out,
+    text-shadow 0.3s ease-in-out;
+}
+
+/* Thắng các rule hover/active của sidebar cũ, kể cả khi CSS nền được nạp sau component. */
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible, .active) {
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace .sidebar .grace-menu__line {
+  position: absolute;
+  z-index: 0;
+  top: calc(50% + 5px);
+  /* Phủ cả hàng điều hướng, vượt hai mép nhãn thay vì chỉ sáng quanh tâm chữ. */
+  left: -12px;
+  right: -14px;
+  height: 44px;
+  pointer-events: none;
+  /* Trước đây dùng texture hi_01 sau chữ; nay thay bằng CSS theo yêu cầu mới.
+     Dải sáng vẫn nằm SAU chữ, không tải hoặc phóng ảnh cursor. */
+  isolation: isolate;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0.15);
+  transform-origin: center;
+  transition:
+    opacity 0.65s ease-in-out,
+    transform 0.65s ease-in-out;
+}
+
+/* taste-skill-ignore: gradient/glow theo yêu cầu menu Elden Ring của người dùng. */
+.workspace .sidebar .grace-menu__line::before,
+.workspace .sidebar .grace-menu__line::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  transform-origin: center;
+}
+
+/* Quầng vàng mềm và lõi sáng riêng, không còn mảng ảnh sắc cạnh. */
+.workspace .sidebar .grace-menu__line::before {
+  inset: 0 -8px;
+  /* Tâm trải rộng để quầng sáng bao cả nhãn, không chỉ một đốm giữa chữ. */
+  background: radial-gradient(ellipse at center, #eac16c66 0%, #bc862e55 52%, #b07a2022 73%, transparent 94%);
+  filter: blur(3px);
+  opacity: 0.55;
+}
+
+.workspace .sidebar .grace-menu__line::after {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  margin-top: -1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #b48b4133 15%,
+    #e9c77a88 36%,
+    #fff0c6cc 50%,
+    #e9c77a88 64%,
+    #b48b4133 85%,
+    transparent
+  );
+  filter: blur(0.7px);
+  opacity: 0.65;
+}
+
+/* Mờ → sáng → dịu xuống; nhịp 3,2 giây chậm hơn bản lóe nhanh 1,15 giây trước. */
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::before {
+  animation: grace-menu-shimmer 3.2s ease-in-out infinite;
+}
+
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::after {
+  animation: grace-menu-core 3.2s ease-in-out infinite;
+}
+
+@keyframes grace-menu-shimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scaleX(0.97) scaleY(0.9);
+  }
+  45% {
+    opacity: 0.95;
+    transform: scaleX(1.04) scaleY(1.12);
+  }
+  75% {
+    opacity: 0.55;
+    transform: scaleX(0.96) scaleY(0.9);
+  }
+}
+
+@keyframes grace-menu-core {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scaleX(0.95);
+  }
+  45% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  75% {
+    opacity: 0.55;
+    transform: scaleX(0.98);
+  }
+}
+
+.workspace .sidebar .grace-menu__icon,
+.workspace .sidebar .grace-menu__label {
+  position: relative;
+  z-index: 1;
+}
+
+.workspace .sidebar .grace-menu__icon {
+  width: 28px;
+  height: 32px;
+}
+
+.workspace .sidebar .grace-menu__icon img {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  /* Ảnh gốc có khoảng trống: phóng nội dung trong ô cố định, không đổi vị trí rail. */
+  transform: scale(1.15);
+  filter: brightness(1.4) contrast(1.08);
+  opacity: 1;
+  user-select: none;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.workspace .sidebar .grace-menu.active .grace-menu__label {
+  opacity: 1;
+}
+
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__label {
+  opacity: 1;
+  text-shadow:
+    0 1px 2px #15120c,
+    0 0 8px #edc77b33;
+}
+
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+
+.workspace .sidebar .grace-menu:is(:hover, :focus-visible, .active):not(:disabled) .grace-menu__icon img {
+  opacity: 1;
+}
+
+.workspace .sidebar .grace-menu:disabled {
+  cursor: not-allowed;
+}
+
+.workspace .sidebar .grace-menu:disabled .grace-menu__label,
+.workspace .sidebar .grace-menu:disabled .grace-menu__icon img {
+  opacity: 0.3;
+}
+
+/* Rail thu gọn giữ nguyên ô icon; vệt sáng nhỏ phía trên icon thay cho nhãn đang ẩn. */
+/* Mẫu mới đặt dải sáng sau icon, cùng cách đặt sau chữ khi sidebar mở. */
+.workspace.sidebar-collapsed .sidebar .grace-menu {
+  grid-template-columns: 28px;
+}
+
+.workspace.sidebar-collapsed .sidebar .grace-menu__line {
+  left: -6px;
+  right: -6px;
+  height: 32px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace .sidebar .grace-menu__line::before,
+  .workspace .sidebar .grace-menu__line::after {
+    animation: none !important;
+  }
+
+  .workspace .sidebar .grace-menu__line,
+  .workspace .sidebar .grace-menu__label,
+  .workspace .sidebar .grace-menu__icon img {
+    transition: none;
+  }
+}

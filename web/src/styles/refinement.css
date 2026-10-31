@@ -6,8 +6,10 @@
   --ui-surface: #1a1d18;
   --ui-raised: #282c24;
   --ui-rule: #2b3027;
-  --ui-text: #ededeb;
-  --ui-muted: #b5b9ae;
+  /* TV4: trắng ngà dịu cho chữ chính, màu phụ trầm hơn; không giảm opacity nét chữ. */
+  --ui-text: #ddd7ca;
+  --ui-muted: #b7b09f;
+  --ui-brand: #d4b571;
   --ui-accent: #d9bc78;
   --ui-chat-width: 760px;
 }
@@ -70,23 +72,37 @@ body {
 }
 
 .sidebar .brand {
-  color: var(--ui-accent);
-  font-size: 20px;
-  letter-spacing: 0.06em;
+  /* TV4: Agmena nét mảnh ở cỡ nhỏ; tăng độ rõ riêng logo, không thêm glow/blur. */
+  color: var(--ui-brand);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   line-height: 1.15;
   white-space: nowrap;
 }
 
 .sidebar .brand strong {
-  font-weight: 400;
+  color: inherit;
+  font-weight: inherit;
 }
 
 .sidebar .brand small {
   margin-top: 8px;
-  font-size: 11px;
+  font-family: var(--font-interface);
+  font-size: 12px;
+  font-weight: 400;
   line-height: 1.3;
   letter-spacing: 0.03em;
   color: var(--ui-muted);
+}
+
+/* TV4: ghi chú AI thuộc vùng chat chính, không nằm trong sidebar điều hướng. */
+.chat-panel .chat-ai-note {
+  margin: 12px 0 0;
+  color: var(--ui-muted);
+  font: 400 14px/1.5 var(--font-interface);
+  text-align: center;
+  text-shadow: 0 1px 3px #000;
 }
 
 .sidebar-rail {
@@ -243,50 +259,75 @@ body {
   grid-template-columns: minmax(0, 1fr) 44px;
   align-items: end;
   gap: 16px;
-  padding: 12px 40px 12px 88px;
+  padding: 12px 26px;
   background: transparent;
   border: 0;
   box-shadow: none;
   border-radius: 0;
 }
 
-/* TV4 · Đại kiếm theo yêu cầu: chuôi cố định, thân giãn theo vùng nhập, mũi vát riêng.
-   Lớp trang trí nằm sau control; giữ nguyên nút gửi đen–vàng và khung focus bàn phím. */
-.composer-sword {
+/* TV4 · Khung đại kiếm cũ được thay bằng hai texture menu gốc hi_01.
+   Dùng nine-slice để giữ góc ngoặc khi ô nhập dài hoặc tự giãn nhiều dòng.
+   Lớp trang trí nằm sau control; giữ nút gửi đen–vàng và thao tác bàn phím. */
+.workspace .chat-panel .composer::before,
+.workspace .chat-panel .composer::after,
+.workspace .chat-empty .suggestions button::before,
+.workspace .chat-empty .suggestions button::after {
+  content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
+  clip-path: none;
+  background: none;
+  border: 16px solid transparent;
+  border-image: url("../../item_/MENU_FL_Cursor_Ent.png") 30 45 fill / 16px 24px / 0 stretch;
+  transition: opacity 240ms ease;
 }
 
-.sword-blade,
-.sword-blade::before {
-  position: absolute;
-  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 0 100%);
+.workspace .chat-panel .composer::before {
+  z-index: 0;
 }
 
-.sword-blade {
-  inset: 0 0 0 64px;
-  background: #81734e;
+.workspace .chat-panel .composer::after,
+.workspace .chat-empty .suggestions button::after {
+  border-image-source: url("../../item_/MENU_FL_Cursor_EntWaku.png");
+  opacity: 0;
 }
 
-.sword-blade::before {
-  content: "";
-  inset: 1px;
-  background: var(--ui-surface);
+/* TV4: lúc gõ giống ô Tên trong ảnh mẫu, không dùng ngoặc sáng của ô Loại cơ thể.
+   Giữ texture hi_01 cho mặc định và gợi ý; riêng ô nhập có nền đen, mép mềm. */
+.workspace .chat-panel .composer::after {
+  border: 0;
+  border-image: none;
+  border-radius: 5px;
+  background: #080907ed;
+  box-shadow:
+    inset 0 0 0 1px #bbb6a34d,
+    inset 0 0 8px 2px #000,
+    0 0 6px #c9c3aa33;
 }
 
-.sword-hilt {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 76px;
-  height: 80px;
+.workspace .chat-panel .composer:focus-within::before,
+.workspace .chat-empty .suggestions button:is(:hover, :focus-visible, :active):not(:disabled)::before {
+  opacity: 0;
+}
+
+.workspace .chat-panel .composer:focus-within::after,
+.workspace .chat-empty .suggestions button:is(:hover, :focus-visible, :active):not(:disabled)::after {
+  opacity: 1;
+}
+
+.workspace .chat-panel .composer,
+.workspace .chat-panel .composer:focus-within {
+  border: 0;
+  outline: none;
+  box-shadow: none;
 }
 
 .composer textarea,
 .composer-bottom {
   position: relative;
+  z-index: 1;
 }
 
 .composer textarea {
@@ -339,15 +380,24 @@ body {
   opacity: 1;
 }
 
-/* TV4: biểu tượng gửi kiểu Messenger; chỉ đổi nút gửi, nút dừng giữ kiểu hiện có. */
+/* TV4: biểu tượng Messenger cũ thay bằng phím Enter từ item_; nút dừng giữ kiểu hiện có. */
 .composer .primary.send-button {
   color: #141610;
-  background: var(--ui-accent);
+  background: transparent;
 }
 
 .composer .primary.send-button:hover:not(:disabled) {
   color: #141610;
-  background: #ead9ad;
+  background: #d9bc7814;
+}
+
+.send-enter-icon {
+  display: block;
+  width: 44px;
+  height: 32px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
 }
 
 .composer .primary.send-button:disabled {
@@ -366,8 +416,8 @@ body {
 .chat-empty .suggestions button {
   position: relative;
   isolation: isolate;
-  min-height: 76px;
-  padding: 14px 16px 24px;
+  min-height: 60px;
+  padding: 16px 20px;
   color: var(--ui-text);
   font: 400 16px/1.5 var(--font-interface);
   background: transparent;
@@ -376,26 +426,13 @@ body {
   box-shadow: none;
 }
 
-/* TV4 · Ba lá cờ chiến trận: đầu treo vàng xỉn, đuôi chữ V; viền trang trí không cắt focus. */
-.chat-empty .suggestions button::before,
-.chat-empty .suggestions button::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 10px), 0 100%);
-  transition: background-color 160ms ease;
-}
-
-.chat-empty .suggestions button::before {
+/* TV4 · Ba lá cờ cũ thay bằng cùng khung ngoặc menu với ô nhập. */
+.workspace .chat-empty .suggestions button::before {
   z-index: -2;
-  inset: 0;
-  background: #786a46;
 }
 
-.chat-empty .suggestions button::after {
+.workspace .chat-empty .suggestions button::after {
   z-index: -1;
-  inset: 3px 1px 1px;
-  background: var(--ui-surface);
 }
 
 .chat-empty .suggestions button:hover:not(:disabled) {
@@ -403,15 +440,6 @@ body {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
-}
-
-.chat-empty .suggestions button:hover:not(:disabled)::before,
-.chat-empty .suggestions button:focus-visible::before {
-  background: var(--ui-accent);
-}
-
-.chat-empty .suggestions button:hover:not(:disabled)::after {
-  background: var(--ui-raised);
 }
 
 .chat-empty .scope-note {
@@ -448,6 +476,7 @@ body {
 }
 
 .message.user .prose {
+  max-width: 80%;
   padding: 14px 20px;
   background: #252a20;
   border: 0;
@@ -456,7 +485,9 @@ body {
 }
 
 .message.user {
-  max-width: 80%;
+  /* Cả hàng rộng bằng câu trả lời; chỉ giới hạn bong bóng để mép phải không bị hụt 20%. */
+  width: 100%;
+  max-width: 100%;
 }
 
 .message.assistant {
@@ -582,21 +613,7 @@ body {
 
   .composer {
     gap: 10px;
-    padding: 12px 28px 12px 54px;
-  }
-
-  .sword-blade {
-    left: 36px;
-  }
-
-  .sword-blade,
-  .sword-blade::before {
-    clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 50%, calc(100% - 18px) 100%, 0 100%);
-  }
-
-  .sword-hilt {
-    width: 44px;
-    height: 64px;
+    padding: 12px 20px;
   }
 
   .composer textarea {
@@ -610,7 +627,7 @@ body {
 
   .chat-empty .suggestions button {
     min-height: 60px;
-    padding: 10px 14px 20px;
+    padding: 16px 20px;
     text-align: left;
     justify-content: flex-start;
   }
@@ -635,7 +652,7 @@ body {
     font-size: 19px;
   }
 
-  .message.user {
+  .message.user .prose {
     max-width: 92%;
   }
 }
@@ -646,6 +663,8 @@ body {
   .sidebar-rail button,
   .sidebar-admin,
   .composer .primary,
+  .workspace .chat-panel .composer::before,
+  .workspace .chat-panel .composer::after,
   .chat-empty .suggestions button,
   .chat-empty .suggestions button::before,
   .chat-empty .suggestions button::after {

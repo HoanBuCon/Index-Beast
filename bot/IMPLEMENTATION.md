@@ -46,6 +46,16 @@ Client không ép backend sang mock. Backend có thể đang ở mode `rag`/`llm
 
 ## Khi sẵn sàng kiểm thử tích hợp
 
+Để chạy bằng **một lệnh**: mở Docker Desktop trước, rồi tại gốc repo chạy:
+
+```powershell
+make bot-dev
+```
+
+Lệnh chờ PostgreSQL/Redis/Qdrant healthy rồi chạy API mock và bot song song trong cùng terminal. Tự truyền `CHAT_MODE=mock` và địa chỉ API localhost đúng `API_PORT` cho tiến trình con, không sửa `.env`. Chờ cả `Application startup complete` và `Bot đã online.` trước khi gửi `/ask`. Giữ terminal mở; Ctrl+C dừng API/bot, hạ tầng Docker vẫn chạy và giữ dữ liệu.
+
+Cần dependency backend/bot đã cài và cấu hình Discord hợp lệ. Nếu API hoặc bot đã chạy ở terminal khác, dừng bản đó trước để tránh trùng cổng/đăng nhập bot hai lần. Lệnh không tự đăng ký slash commands; `/ask` đã đăng ký thì chỉ cần `make bot-dev`, còn lần đầu thêm lệnh chạy riêng `make bot-deploy` một lần.
+
 Ở **gốc dự án**, terminal chạy API dùng `make api` với môi trường mock của TV1. Terminal bot:
 
 ```powershell
