@@ -29,7 +29,13 @@
 - Chạy cleaner mới trên **toàn bộ 4.164 raw cuối, chỉ trong bộ nhớ** (172 giây, 0 lỗi):
   - 2.209 khối chỉ số trên 1.503 trang; 722 khối trống và 342 giá trị không nhãn được ghi ledger.
   - Trong 1.450 trang có Attack Power/Damage Negation/Attribute/Resistance/Poise trong smart group, chỉ 1 trang (Unarmed) không có đủ chữ khóa. Đã xem trực tiếp: phần thiếu là bảng để trống, được ghi `infobox_placeholder_stats`. Không còn trang nào mất chỉ số không dấu vết.
-- **Chưa** ghi artifact mới, chạy lại clean/chunk vào thư mục dữ liệu, nạp DB hay index.
+- **Chạy thật trên máy TV1** (31/10, sau khi merge `develop` vào nhánh): `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/s2-full-v3-tv1-test`. Mất 5 phút 4 giây, exit 0, `input_artifacts_unchanged=true`, 0 lời gọi mạng, 0 ghi DB. So với `s2-full-v2`:
+  - Nội dung **keep** trùng khớp từng dòng: 73.559/73.559 dòng; số block keep 43.581 không đổi. Số record keep tăng từ 20.235 lên 20.250 chỉ vì khối chỉ số (excluded) chen giữa các trường infobox, làm một record bị tách đôi; chữ không đổi.
+  - `review.csv` tăng từ 55.560 lên 58.160 dòng: thêm 1.551 dòng `infobox_stats_group` (1.503 trang), 721 `infobox_placeholder_stats`, 342 `infobox_unlabeled_value`.
+  - `unclassified_structure` giảm 14 record: 258 trang có infobox chỉ gồm smart group, trước đây bị dồn nguyên khối thành một chuỗi dính chữ, nay tách đúng loại. Đã đối chiếu các trang có số liệu (vd. 5676 `Fire: -20%`, 6199 Samurai `HP: 455`): giá trị đều còn, chỉ đổi định dạng.
+  - Moonveil có trong `review.csv`: `Stats | Attack Power / Physical: 73 | Guarded Damage Negation / Physical: 31 | …`.
+  - Thư mục `s2-full-v3-tv1-test` chỉ để kiểm thử, **không phải bản bàn giao**; TV2 nên tự chạy lại vào thư mục chính thức. Chưa chạy chunk (máy TV1 không có `tokenizer.json`), chưa nạp DB, chưa index.
+- Cùng lượt: backend 391 unit + 15 integration passed; web 24/24, bot 21/21; lint/format/typecheck đạt.
 
 ## Việc tiếp theo
 
