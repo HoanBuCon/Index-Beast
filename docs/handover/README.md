@@ -64,6 +64,7 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 | Ngày | Người | Chủ đề |
 |---|---|---|
+| 2026-10-31 | TV2 (UncleThing) | [Audit độ phủ raw, clean, chunk và thông số còn thiếu](2026-10-31_s2-tv2_audit-do-phu-du-lieu.md) |
 | 2026-10-29 | TV3 (MinhMuc) | [Tích hợp corpus pilot vào RAG LangChain và kiểm thử thật](2026-10-29_s2-tv3_corpus-pilot-rag.md) |
 | 2026-10-19 | TV1 (Hoanbucon) | [Nền tảng backend, hạ tầng dev và cấu hình](2026-10-19_s1-tv1_nen-tang-va-cau-hinh.md) |
 | 2026-10-19 | TV3 (MinhMuc) | [DeepSeek LLM](2026-10-19_s1-tv3_deepseek-llm.md) |
