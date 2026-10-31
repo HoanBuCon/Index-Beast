@@ -8,7 +8,7 @@ import type { Message } from "../api/types";
 const credit = "Tài nguyên người dùng cung cấp; chưa xác minh tác giả/giấy phép. Chỉ dùng thử giao diện.";
 const source = (url: string) => ({ label: "Nguồn ảnh: tài nguyên dự án", url, credit });
 
-export const illustrationFixtures: Record<IllustrationKind, AnswerIllustration> = {
+export const illustrationFixtures: Record<Exclude<IllustrationKind, "related">, AnswerIllustration> = {
   character: {
     id: "fixture-character",
     kind: "character",

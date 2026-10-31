@@ -53,6 +53,17 @@ def test_timeouts_must_be_positive():
         make(health_timeout_seconds=0)
 
 
+@pytest.mark.parametrize("retries", [0, 1])
+def test_rag_format_retries_can_be_disabled_or_bounded_at_one(retries):
+    assert make(rag_format_retries=retries).rag_format_retries == retries
+
+
+@pytest.mark.parametrize("retries", [-1, 2])
+def test_rag_format_retries_reject_unbounded_extra_generations(retries):
+    with pytest.raises(ValidationError):
+        make(rag_format_retries=retries)
+
+
 def test_prod_refuses_placeholder_secrets_without_leaking_values():
     settings = make(environment="prod", qdrant_host="real-host")
 

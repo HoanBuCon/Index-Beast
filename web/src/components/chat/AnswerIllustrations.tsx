@@ -69,6 +69,7 @@ function Illustration({ image, previewState }: { image: AnswerIllustration; prev
       <figcaption>
         <p className="answer-illustration__kind">{illustrationKindLabels[image.kind]}</p>
         <h3>{image.name}</h3>
+        {image.description && <p>{image.description}</p>}
         <a href={image.source.url} target="_blank" rel="noreferrer">
           {image.source.label}
         </a>

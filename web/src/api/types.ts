@@ -42,8 +42,24 @@ export interface ChatResponse {
   message_id: string;
   answer: string;
   sources: Source[];
+  images?: ChatImage[];
   grounded: boolean;
   latency_ms: number;
+}
+// Additive backend contract: legacy responses/history may omit images.
+export interface ChatImage {
+  id: string;
+  url: string;
+  source_url: string;
+  source_indices: number[];
+  caption?: string | null;
+  alt?: string | null;
+  attribution?: string | null;
+  license?: string | null;
+  license_status?: string | null;
+  file_page_url?: string | null;
+  game_scope?: string | null;
+  release_scope?: string | null;
 }
 export interface FeedbackRequest {
   message_id: string;
@@ -59,6 +75,7 @@ export interface ConversationOut {
     role: "user" | "assistant";
     content: string;
     sources: Source[];
+    images?: ChatImage[];
     grounded?: boolean | null;
     created_at: string;
   }[];
@@ -66,14 +83,15 @@ export interface ConversationOut {
 export type StreamEvent =
   | { type: "status"; status: string }
   | { type: "token"; token: string }
-  | { type: "sources"; sources: Source[] }
-  | { type: "done"; data: Omit<ChatResponse, "answer" | "sources"> }
+  | { type: "sources"; sources: Source[]; images?: ChatImage[] }
+  | { type: "done"; data: Omit<ChatResponse, "answer" | "sources" | "images"> }
   | { type: "error"; message: string };
 export interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   sources: Source[];
+  images?: ChatImage[];
   serverId?: string;
   incomplete?: boolean;
   grounded?: boolean;

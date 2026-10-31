@@ -1,5 +1,9 @@
 # Golden set IndexBeast — Sprint 2
 
+Bộ so sánh ngôn ngữ riêng: [vi_en_pairs.jsonl](vi_en_pairs.jsonl), 13 cặp VI–EN đang chờ review.
+Không gộp vào golden_set 60 câu hoặc tính evidence recall khi chưa có chunk labels đã review.
+Xem [hướng dẫn benchmark theo tầng](../../docs/testing/2026-10-31_vi-en-retrieval-guide.md).
+
 [golden_set.jsonl](golden_set.jsonl) là file chính, đường dẫn `eval/golden_set.jsonl` khi đứng ở backend.
 Hiện có **60 câu: 38 VI / 22 EN (63,33% VI)**. Bổ sung 30 ID `IB-GS-031`–`IB-GS-060`,
 gồm 18 VI/12 EN, 10 câu SotE, 6 câu ngoài phạm vi. Độ khó toàn bộ: easy 21, medium 26, hard 13.
