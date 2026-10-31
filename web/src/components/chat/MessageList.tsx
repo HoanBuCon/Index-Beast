@@ -9,7 +9,23 @@ import SourceList from "./SourceList";
 import CitationPopover from "./CitationPopover";
 import FeedbackButtons from "./FeedbackButtons";
 import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
-export default function MessageList({ messages, busy, demo }: { messages: Message[]; busy: boolean; demo: boolean }) {
+import AnswerIllustrations from "./AnswerIllustrations";
+import { canShowIllustrations } from "./answerMedia";
+import type { AnswerIllustration, IllustrationPreviewState } from "./answerMedia";
+export default function MessageList({
+  messages,
+  busy,
+  demo,
+  illustrationsByMessage,
+  illustrationPreviewState,
+}: {
+  messages: Message[];
+  busy: boolean;
+  demo: boolean;
+  // TV4: adapter UI truyền ảnh theo ID; không dò từ khóa, không đổi Message/API chung.
+  illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
+  illustrationPreviewState?: IllustrationPreviewState;
+}) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -73,6 +89,12 @@ export default function MessageList({ messages, busy, demo }: { messages: Messag
               )}
               {message.grounded === false && !demo && (
                 <p className="muted">{"Chưa tìm được đủ bằng chứng trong kho nguồn."}</p>
+              )}
+              {canShowIllustrations(message, busy && message.id === messages.at(-1)?.id) && (
+                <AnswerIllustrations
+                  illustrations={illustrationsByMessage?.[message.id]}
+                  previewState={illustrationPreviewState}
+                />
               )}
               <SourceList sources={message.sources} onSelect={setSelected} />
               {!message.incomplete && message.serverId && <FeedbackButtons messageId={message.serverId} demo={demo} />}

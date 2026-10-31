@@ -5,6 +5,9 @@ import { Route, Routes, Link } from "react-router";
 import ChatPage from "./pages/ChatPage";
 import AboutPage from "./pages/AboutPage";
 import AdminPage from "./pages/AdminPage";
+import { lazy, Suspense } from "react";
+// TV4: chỉ mở fixture khi DEV và truy cập URL rõ ràng; không đóng gói fixture vào production.
+const AnswerMediaPreviewPage = import.meta.env.DEV ? lazy(() => import("./pages/AnswerMediaPreviewPage")) : null;
 export default function App() {
   return (
     <>
@@ -16,6 +19,22 @@ export default function App() {
           <Route path="/" element={null} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          {AnswerMediaPreviewPage && (
+            <Route
+              path="/preview/answer-images"
+              element={
+                <Suspense
+                  fallback={
+                    <main id="main">
+                      <p role="status">Đang mở trang thử…</p>
+                    </main>
+                  }
+                >
+                  <AnswerMediaPreviewPage />
+                </Suspense>
+              }
+            />
+          )}
           <Route
             path="*"
             element={
