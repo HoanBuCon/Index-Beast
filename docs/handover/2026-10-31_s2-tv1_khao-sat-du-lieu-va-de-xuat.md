@@ -5,7 +5,7 @@
 | Ngày | 31/10/2026 (Asia/Saigon) |
 | Người lập | TV1 (Hoanbucon), Tech Lead |
 | Nhánh | `docs/s2-tv1-khao-sat-du-lieu` (từ `origin/develop` tại `f089538`) |
-| Trạng thái | **Chưa duyệt.** Bản 1 bị trả lại vì chưa đủ sâu. Bản này kiểm chứng lại từng luận điểm bằng số liệu, bỏ các đề xuất không có bằng chứng |
+| Trạng thái | **Đã duyệt bản 2 (31/10/2026).** Bản 1 bị trả lại vì chưa đủ sâu; bản này kiểm chứng lại từng luận điểm bằng số liệu, bỏ các đề xuất không có bằng chứng |
 | Căn cứ | Bản sao `backend/data` (~9,2 GB); handover TV2/TV3 S2; [audit độ phủ TV2](../testing/2026-10-31_tv2-corpus-readiness.md); [audit năng lực TV3](../testing/2026-10-29_elden-ring-assistant-capabilities.md); mã `backend/core/text/html_clean.py` |
 | Cách làm | Chỉ đọc: liệt kê, hash, đếm, parse lại HTML raw bằng BeautifulSoup. Không crawl, không LLM, không embedding/index, không ghi DB/Qdrant, không sửa dữ liệu |
 
