@@ -45,6 +45,29 @@ class ManagedChatDeepSeek(ChatDeepSeek):
 class LLMError(RuntimeError):
     """Provider/output error without request bodies, credentials or private reasoning."""
 
+    def __init__(self, message, *, reason="llm_error", finish_reason=None, prompt_tokens=None, completion_tokens=None):
+        super().__init__(message)
+        reasons = {
+            "llm_error",
+            "incomplete_output",
+            "empty_output",
+            "missing_finish_reason",
+            "unsupported_content_type",
+            "provider_request_failed",
+            "provider_stream_failed",
+            "invalid_json",
+        }
+        known = {"stop", "length", "content_filter", "tool_calls", "function_call"}
+        self.diagnostics = {
+            "reason": reason if isinstance(reason, str) and reason in reasons else "llm_error",
+            "finish_reason": finish_reason
+            if finish_reason is None or (isinstance(finish_reason, str) and finish_reason in known)
+            else "unknown",
+        }
+        for key, value in (("prompt_tokens", prompt_tokens), ("completion_tokens", completion_tokens)):
+            if type(value) is int and value >= 0:
+                self.diagnostics[key] = value
+
 
 class LLMConfigurationError(LLMError):
     """Missing or invalid model configuration."""
@@ -133,8 +156,6 @@ class DeepSeekLLM:
     def response(self, message: AIMessage) -> LLMResponse:
         metadata = message.response_metadata
         reason = metadata.get("finish_reason")
-        if reason != "stop" or not isinstance(message.content, str) or not message.content.strip():
-            raise LLMError("DeepSeek returned empty or incomplete output.")
         raw = metadata.get("token_usage")
         if isinstance(raw, dict) and raw:
             prompt_tokens, completion_tokens = raw.get("prompt_tokens"), raw.get("completion_tokens")
@@ -143,6 +164,19 @@ class DeepSeekLLM:
             usage = message.usage_metadata or {}
             prompt_tokens, completion_tokens = usage.get("input_tokens"), usage.get("output_tokens")
             reasoning = (usage.get("output_token_details") or {}).get("reasoning")
+        if reason != "stop" or not isinstance(message.content, str) or not message.content.strip():
+            failure = "incomplete_output" if reason != "stop" else "empty_output"
+            if reason is None:
+                failure = "missing_finish_reason"
+            elif not isinstance(message.content, str):
+                failure = "unsupported_content_type"
+            raise LLMError(
+                "DeepSeek returned empty or incomplete output.",
+                reason=failure,
+                finish_reason=reason,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
         return LLMResponse(
             content=message.content,
             model=metadata.get("model_name") or self.settings.llm_model,
@@ -164,7 +198,9 @@ class DeepSeekLLM:
             raise
         except Exception as exc:
             status = getattr(exc, "status_code", None)
-            raise LLMError(f"DeepSeek request failed ({type(exc).__name__}, status={status}).") from None
+            raise LLMError(
+                f"DeepSeek request failed ({type(exc).__name__}, status={status}).", reason="provider_request_failed"
+            ) from None
 
     async def stream_chain(self, chain: Runnable, inputs: Any) -> AsyncIterator[str]:
         # One producer owns every LCEL context and provider iterator for the whole run.
@@ -210,18 +246,23 @@ class DeepSeekLLM:
                 reason = message.response_metadata.get("finish_reason")
                 if reason is not None:
                     if reason != "stop":
-                        raise LLMError("DeepSeek stream incomplete.")
+                        raise LLMError("DeepSeek stream incomplete.", reason="incomplete_output", finish_reason=reason)
                     finished = True
                 if isinstance(message.content, str) and message.content:
                     has_content = has_content or bool(message.content.strip())
                     yield message.content
             if not has_content or not finished:
-                raise LLMError("DeepSeek stream ended without a complete answer.")
+                raise LLMError(
+                    "DeepSeek stream ended without a complete answer.",
+                    reason="empty_output" if not has_content else "missing_finish_reason",
+                )
         except LLMError:
             raise
         except Exception as exc:
             status = getattr(exc, "status_code", None)
-            raise LLMError(f"DeepSeek stream failed ({type(exc).__name__}, status={status}).") from None
+            raise LLMError(
+                f"DeepSeek stream failed ({type(exc).__name__}, status={status}).", reason="provider_stream_failed"
+            ) from None
         finally:
             stopping.set()
             # A nested provider may consume cancellation while unwinding. Unblock the
@@ -273,7 +314,7 @@ class DeepSeekLLM:
                 raise ValueError()
             return data
         except (ValueError, RecursionError):
-            raise LLMError("DeepSeek returned invalid JSON.") from None
+            raise LLMError("DeepSeek returned invalid JSON.", reason="invalid_json") from None
 
     async def stream(
         self,

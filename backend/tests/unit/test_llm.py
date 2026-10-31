@@ -110,6 +110,31 @@ async def test_empty_or_truncated_completion_is_not_success(content, reason):
             await llm.complete(MESSAGES)
 
 
+@pytest.mark.parametrize(
+    "content,reason,expected",
+    [
+        ("half", "length", "incomplete_output"),
+        ("", "stop", "empty_output"),
+        ("answer", None, "missing_finish_reason"),
+    ],
+)
+async def test_rejected_provider_output_has_safe_structured_diagnostics(content, reason, expected):
+    async with fake_llm(lambda _: httpx.Response(200, json=completion(content, reason))) as llm:
+        with pytest.raises(LLMError) as caught:
+            await llm.complete(MESSAGES)
+    assert caught.value.diagnostics["reason"] == expected
+    assert caught.value.diagnostics["finish_reason"] == reason
+    assert caught.value.diagnostics["completion_tokens"] == 5
+    assert "half" not in str(caught.value.diagnostics)
+
+
+def test_diagnostics_do_not_log_arbitrary_provider_reason_or_message():
+    error = LLMError(
+        "private provider text", reason="private_reason", finish_reason="private_finish", prompt_tokens="secret"
+    )
+    assert error.diagnostics == {"reason": "llm_error", "finish_reason": "unknown"}
+
+
 @pytest.mark.parametrize("status", [401, 402, 429, 500])
 async def test_provider_errors_are_sanitized(status):
     def handler(_):

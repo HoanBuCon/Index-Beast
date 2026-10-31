@@ -587,6 +587,70 @@ def test_long_evidence_units_are_bounded_exact_substrings():
     assert all(8 <= len(quote) <= 2000 and quote in text for quote in units.values())
 
 
+async def test_final_boss_question_keeps_original_source_index_instead_of_renumbering():
+    llm = FakeLLM()
+    text = "The Elden Beast is the final boss of Elden Ring."
+    llm.data = {
+        "answer": "Boss cuối bản gốc là Elden Beast [2].",
+        "evidence": [{"index": 2, "quote_id": "q0"}],
+        "insufficient": False,
+    }
+    live = service("rag", llm, FakeRetriever([hit(1), hit(2, title="Elden Beast", text=text)]))
+    response = await live.answer(ChatRequest(message="boss cuối của game là con gì?", channel="web"))
+    assert response.grounded and response.sources[0].index == 2 and response.sources[0].text == text
+    assert "NEVER renumber" in llm.seen[-1][0]["content"]
+
+
+@pytest.mark.parametrize("failure", ["invalid_json", "length"])
+async def test_generation_failures_have_sanitized_reason_without_output_or_reasoning(caplog, failure):
+    class Broken(FakeLLM):
+        async def invoke_chain(self, chain, inputs):
+            if failure == "length":
+                raise LLMError(
+                    "private provider answer",
+                    reason="incomplete_output",
+                    finish_reason="length",
+                    completion_tokens=4096,
+                )
+            return LLMResponse(
+                "private invalid final output", "fake", 10, 5, "stop", reasoning_content="private reasoning"
+            )
+
+    live = service("rag", Broken(), FakeRetriever())
+    with pytest.raises(UpstreamError):
+        await live.answer(ChatRequest(message="boss cuối của game là con gì?", channel="web"))
+    records = [r for r in caplog.records if r.getMessage() == "Generation failed"]
+    assert records and records[-1].data["reason"] == (
+        "invalid_json" if failure == "invalid_json" else "incomplete_output"
+    )
+    assert records[-1].data["finish_reason"] == ("stop" if failure == "invalid_json" else "length")
+    assert "private" not in caplog.text and not live.traces
+
+
+def test_citation_mismatch_logs_only_indices_and_still_rejects(caplog):
+    prepared = Prepared("rag", "en", [], hits=[hit(1), hit(2)])
+    with pytest.raises(UpstreamError):
+        validate_answer(
+            prepared,
+            {"answer": "private answer [2].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False},
+        )
+    assert prepared.trace["citation_indices"] == {"answer_indices": [2], "evidence_indices": [1]}
+    assert prepared.trace["validation_failure"] == "citation_evidence_indices"
+    assert "private answer" not in caplog.text and TEXT not in caplog.text
+
+
+def test_malformed_json_stream_logs_reason_and_never_done(client, caplog):
+    from app.api.deps import get_chat_service
+
+    llm = FakeLLM(tokens=list('{"answer":"Ranni is an Empyrean [1]. Another sentence [1].", private-invalid-json'))
+    live = service("rag", llm, FakeRetriever())
+    client.app.dependency_overrides[get_chat_service] = lambda: live
+    response = client.post("/api/v1/chat/stream", json=BODY)
+    assert "event: error" in response.text and "event: done" not in response.text
+    assert "private-invalid-json" not in response.text and "private-invalid-json" not in caplog.text
+    assert any(getattr(r, "data", {}).get("reason") == "invalid_json" for r in caplog.records)
+
+
 @pytest.mark.parametrize(
     "question",
     [

@@ -102,6 +102,11 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             return Generated(parsed.answer)
         if not used or used != set(evidence):
             failure = "citation_evidence_indices"
+            # Only numeric protocol metadata, never answer/quote contents or private reasoning.
+            prepared.trace["citation_indices"] = {"answer_indices": sorted(used), "evidence_indices": sorted(evidence)}
+            logging.getLogger(__name__).warning(
+                "Citation index mismatch", extra={"data": prepared.trace["citation_indices"]}
+            )
             raise ValueError("Citations and explicit evidence must match")
         for index, quote in evidence.items():
             if index > len(prepared.hits) or quote not in prepared.hits[index - 1].payload["text"]:
@@ -175,6 +180,12 @@ class Generator:
             json_output=prepared.mode == "rag", thinking=self.thinking and prepared.mode == "rag"
         )
 
+    @staticmethod
+    def _failed(prepared, diagnostics):
+        prepared.trace["generation_failure"] = dict(diagnostics)
+        logging.getLogger(__name__).warning("Generation failed", extra={"data": dict(diagnostics)})
+        return UpstreamError("Mô hình trả kết quả chưa hoàn chỉnh hoặc chưa đúng định dạng. Vui lòng thử lại.")
+
     async def generate(self, prepared: Prepared) -> Generated:
         if prepared.static_answer is not None:
             return Generated(prepared.static_answer)
@@ -186,8 +197,12 @@ class Generator:
             }
             data = json.loads(result.content) if prepared.mode == "rag" else result.content
             return validate_answer(prepared, data)
-        except (LLMError, ValueError):
-            raise UpstreamError() from None
+        except LLMError as exc:
+            raise self._failed(prepared, exc.diagnostics) from None
+        except json.JSONDecodeError:
+            raise self._failed(prepared, {"reason": "invalid_json", "finish_reason": result.finish_reason}) from None
+        except ValueError:
+            raise self._failed(prepared, {"reason": "generation_value_error"}) from None
 
     async def stream(self, prepared: Prepared) -> AsyncIterator[str]:
         if prepared.static_answer is not None:
@@ -217,8 +232,12 @@ class Generator:
             if len(result.answer) > len(emitted):
                 yield result.answer[len(emitted) :]
             prepared.trace["result"] = result
-        except (LLMError, ValueError):
-            raise UpstreamError() from None
+        except LLMError as exc:
+            raise self._failed(prepared, exc.diagnostics) from None
+        except json.JSONDecodeError:
+            raise self._failed(prepared, {"reason": "invalid_json"}) from None
+        except ValueError:
+            raise self._failed(prepared, {"reason": "generation_value_error"}) from None
 
     @staticmethod
     def _check_visible(prepared: Prepared, text: str) -> None:
