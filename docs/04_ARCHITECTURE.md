@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Trạng thái | Khung xương — 2026-10-17 |
+| Trạng thái | Khung xương 2026-10-17; cập nhật 2026-10-31 theo code sau Sprint 2 |
 | Mục tiêu | Dễ mở rộng, dễ debug; crawl → lọc → xử lý → index tách rời từng bước |
 
-**Phạm vi:** lore Elden Ring base game. `game_scope=base` áp dụng cho ingestion, retrieval và web fallback.
+**Phạm vi:** Elden Ring base game + Shadow of the Erdtree theo ngoại lệ ADR-004 ngày 29/10 (corpus `game_scope=elden_ring`); chờ team chốt bằng CHANGE-REQ.
 
 Quy trình Git áp dụng theo [quy_uoc.md](quy_uoc.md): feature tách từ develop, PR về develop và Mentor review trước khi merge.
 
@@ -18,7 +18,8 @@ Index-Beast/
 │  │  ├─ config.py          # toàn bộ tham số
 │  │  ├─ logging.py         # log JSON + request_id / job_id
 │  │  ├─ errors.py
-│  │  ├─ ids.py             # id ổn định → upsert idempotent
+│  │  ├─ ids.py             # id ổn định (uuid5) → upsert idempotent
+│  │  ├─ corpus.py          # chính sách nạp corpus/lọc truy vấn (reviewed | pilot, ngôn ngữ)
 │  │  ├─ types.py           # hợp đồng dữ liệu giữa các bước
 │  │  ├─ db/                # session, models, repositories
 │  │  ├─ vector/            # schema collection, store (upsert, hybrid search)
@@ -27,10 +28,10 @@ Index-Beast/
 │  │
 │  ├─ app/                  # ONLINE — API
 │  │  ├─ main.py, context.py
-│  │  ├─ api/               # HTTP: routes/, schemas/, deps.py, router.py
-│  │  ├─ services/          # nghiệp vụ: chat_service, feedback_service
-│  │  ├─ rag/               # pipeline, rewrite, retriever, reranker, generator, web_fallback, trace, prompts/
-│  │  └─ adapters/          # bên ngoài: llm (DeepSeek), redis, web_search (DuckDuckGo)
+│  │  ├─ api/               # HTTP: routes/, schemas/, deps.py, router.py, errors.py, guard.py (token + rate-limit)
+│  │  ├─ services/          # chat (live), mock_chat, factory (chọn theo CHAT_MODE), images
+│  │  ├─ rag/               # pipeline LangChain LCEL: rewrite, retriever, reranker, generator, evidence, prompts/; web_fallback, trace (khung)
+│  │  └─ adapters/          # bên ngoài: llm (DeepSeek qua langchain-deepseek), redis, web_search (DuckDuckGo, S4)
 │  │
 │  ├─ ingest/               # OFFLINE — pipeline dữ liệu
 │  │  ├─ __main__.py        # CLI
@@ -45,7 +46,8 @@ Index-Beast/
 │  │  ├─ entities/          # alias thực thể
 │  │  └─ debug/             # inspect_page, report
 │  │
-│  ├─ eval/                 # golden_set.jsonl, retrieval.py, answer.py, reports/
+│  ├─ eval/                 # golden_set.jsonl, validate_golden.py, reviews/, retrieval.py, answer.py, reports/
+│  ├─ scripts/              # export_openapi, benchmark_index, benchmark_retrieval, run_live_acceptance…
 │  ├─ migrations/           # Alembic
 │  ├─ tests/                # unit/, integration/, fixtures/
 │  └─ data/                 # (gitignore) artifact từng bước ingest — xem §3
@@ -125,7 +127,7 @@ Tính chất bắt buộc của mỗi bước:
 | Thêm kênh (Telegram, Messenger…) | Client mới gọi `/api/v1/chat` với `channel` và `external_ref` riêng |
 | Tăng tải | API stateless (state ở PG/Redis/Qdrant): tăng worker hoặc instance; tách ingest sang máy khác vì chỉ dùng chung `core/` |
 
-Nguồn dữ liệu mới phải cung cấp lore Elden Ring base game.
+Nguồn dữ liệu mới phải nằm trong phạm vi đã duyệt (base game, Shadow of the Erdtree) và gắn nhãn `release_scope`.
 
 ## 6. Thứ tự dựng (Sprint 1–2)
 
@@ -133,4 +135,4 @@ Nguồn dữ liệu mới phải cung cấp lore Elden Ring base game.
 2. `core/types.py` → cả team thống nhất hợp đồng dữ liệu trước khi code các bước.
 3. `ingest/sources/wikigg.py` + `crawl/` → có `data/raw/`.
 4. `filter/` → `transform/` → `chunk/` → `index/`, kiểm tra từng bước bằng `inspect`.
-5. `app/rag/*` → `services/chat_service.py` → `api/routes/chat.py`.
+5. `app/rag/*` → `services/chat.py` (chọn qua `services/factory.py`) → `api/routes/chat.py`.
