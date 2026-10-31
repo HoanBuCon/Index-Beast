@@ -7,7 +7,7 @@ import json
 import re
 import uuid
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from sqlalchemy import select
 
@@ -24,6 +24,18 @@ def read_lines(path):
         for line in stream:
             if line.strip():
                 yield json.loads(line)
+
+
+def local_snapshot(recorded, data_dir):
+    """Artifact ghi đường dẫn tuyệt đối của máy tạo ra nó (vd. D:/Index-Beast/backend/data/raw/...).
+    Trên máy khác, tìm cùng file theo phần sau thư mục `raw` trong data dir hiện tại; hash vẫn được kiểm sau đó."""
+    path = Path(recorded)
+    if path.exists():
+        return path
+    parts = PureWindowsPath(recorded).parts
+    if "raw" not in parts:
+        return path
+    return data_dir.joinpath(*parts[parts.index("raw") :])
 
 
 def validate_document(doc, rows, cap):
@@ -66,7 +78,7 @@ def preflight(directory):
         rows = [json.loads(line) for line in payload.decode("utf-8").splitlines() if line]
         validate_document(doc, rows, report["max_tokens"])
         n += len(rows)
-        raw = read(Path(doc["source_snapshot"]))
+        raw = read(local_snapshot(doc["source_snapshot"], directory.resolve().parents[1]))
         if (
             raw["source"] != doc["source"]
             or raw["source_id"] != doc["source_id"]
