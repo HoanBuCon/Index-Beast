@@ -90,3 +90,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-31 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 2 và code review](2026-10-31_s2-tv1_bao-cao-ban-giao-sprint-2.md) |
 | 2026-10-31 | TV1 (Hoanbucon) | [Rate-limit, hội thoại bot theo external_ref, hạn thời gian](2026-10-31_s2-tv1_rate-limit-hoi-thoai-bot-timeout.md) |
 | 2026-10-31 | TV1 (Hoanbucon) | [Cập nhật tài liệu công nghệ sau Sprint 2](2026-10-31_s2-tv1_cap-nhat-tai-lieu-cong-nghe.md) |
+| 2026-10-31 | TV1 (Hoanbucon) | [Sửa cleaner: không còn mất bảng chỉ số infobox](2026-10-31_s2-tv1_sua-cleaner-bang-chi-so-infobox.md) |

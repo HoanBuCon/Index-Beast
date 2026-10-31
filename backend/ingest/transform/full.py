@@ -13,7 +13,7 @@ from ingest.filter.rules import page_evidence
 from ingest.settings import load_settings
 from ingest.transform.document import csv_write, inside, stable_id
 
-VERSION = "s2-full-clean-1.0"
+VERSION = "s2-full-clean-1.1"
 SAMPLE = [
     "Elden Remembrance",
     "Scadutree Fragment",

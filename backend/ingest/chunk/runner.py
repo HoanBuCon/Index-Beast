@@ -30,7 +30,7 @@ def run_chunk(input_dir, tokenizer_path, output_dir, *, cap=450, overlap=50):
     tokenizer.no_truncation()
     tokenizer.no_padding()
     report = read(input_dir / "report.json")
-    if report["cleaning_version"] != "s2-clean-2.0":
+    if report["cleaning_version"] not in {"s2-clean-2.0", "s2-clean-2.1"}:
         raise ValueError("Run clean v2 to recover typed dialogue/anchors first")
     for name, info in report["csv_validation"].items():
         if sha256((input_dir / name).read_bytes()) != info["sha256"]:

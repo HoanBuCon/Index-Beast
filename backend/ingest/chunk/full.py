@@ -85,7 +85,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
     if output.exists():
         raise ValueError("Use a new output directory")
     report = read(input_dir / "report.json")
-    if report["cleaning_version"] != "s2-full-clean-1.0":
+    if report["cleaning_version"] not in {"s2-full-clean-1.0", "s2-full-clean-1.1"}:
         raise ValueError("Full clean version required")
     for name, info in report["csv_validation"].items():
         if sha256((input_dir / name).read_bytes()) != info["sha256"]:
