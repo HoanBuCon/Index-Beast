@@ -87,3 +87,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-31 | TV4 (QuyVuiVe) | [Một lệnh chạy bot và API mock](2026-10-31_s2-tv4_make-bot-dev.md) |
 | 2026-10-31 | TV4 (QuyVuiVe) | [Nút sidebar với vệt sáng Grace và icon item](2026-10-31_s2-tv4_sidebar-grace-menu.md) |
 | 2026-10-31 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 2 và code review](2026-10-31_s2-tv1_bao-cao-ban-giao-sprint-2.md) |
+| 2026-10-31 | TV1 (Hoanbucon) | [Rate-limit, hội thoại bot theo external_ref, hạn thời gian](2026-10-31_s2-tv1_rate-limit-hoi-thoai-bot-timeout.md) |

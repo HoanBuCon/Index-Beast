@@ -54,6 +54,12 @@ class UpstreamError(AppError):
     message = "Dịch vụ phía sau gặp lỗi. Vui lòng thử lại."
 
 
+class TimeoutAppError(AppError):
+    status_code = 504
+    code = "timeout"
+    message = "Câu hỏi xử lý quá lâu. Vui lòng thử lại."
+
+
 class UnavailableError(AppError):
     status_code = 503
     code = "unavailable"

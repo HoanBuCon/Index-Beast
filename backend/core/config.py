@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=60, gt=0)
     llm_max_retries: int = Field(default=2, ge=0, le=5)
 
+    # --- Bảo vệ API (TV1): chỉ áp dụng khi CHAT_MODE gọi LLM thật (llm_only, rag) ---
+    api_service_token: SecretStr | None = None  # bot gửi qua X-Service-Token; bỏ trống/"change-me" = chưa cấu hình
+    rate_limit_per_minute: int = Field(default=10, ge=1, le=1000)  # mỗi IP (web) hoặc mỗi external_ref (bot)
+    chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
+
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
     chat_history_messages: int = Field(default=8, ge=0, le=32)
