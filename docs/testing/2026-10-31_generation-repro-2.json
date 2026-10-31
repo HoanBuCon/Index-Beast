@@ -1,0 +1,50 @@
+{
+  "question": "boss cuối của game là con gì?",
+  "model": "deepseek-flash",
+  "max_tokens": 4096,
+  "thinking": true,
+  "max_retries": 0,
+  "paid_generation_calls": 1,
+  "history": "empty for reproduction; original conversation history unavailable",
+  "selected_titles": [
+    "Elden Beast",
+    "Letter for Freyja",
+    "Claws",
+    "Demi-Human Swordmaster Onze",
+    "Bosses"
+  ],
+  "selected_count": 5,
+  "status": "success",
+  "answer": "Trong bản gốc Elden Ring (2022), boss cuối là Elden Beast, xuất hiện bên trong Erdtree ở Leyndell, Ashen Capital [1]. Tên này cũng nằm trong danh sách boss Remembrance của game gốc [5].",
+  "grounded": true,
+  "source_indices": [
+    1,
+    5
+  ],
+  "provider_output_shape": {
+    "finish_reason": "stop",
+    "content_chars": 288,
+    "content_is_string": true,
+    "input_tokens": 3114,
+    "output_tokens": 159,
+    "total_tokens": 3273,
+    "starts_json_object": true,
+    "contains_fence": false,
+    "json_type": "dict",
+    "expected_keys_present": [
+      "answer",
+      "evidence",
+      "insufficient"
+    ],
+    "unexpected_keys_count": 0,
+    "answer_indices": [
+      1,
+      5
+    ],
+    "evidence_indices": [
+      1,
+      5
+    ],
+    "insufficient": false
+  }
+}

@@ -46,6 +46,12 @@ For each cited index, select ONE quote_id from that source's evidence_units; do 
 q0 means the entire provided source text; other IDs refer to the literal source fragments listed in evidence_units.
 The server resolves IDs to exact source quotes and rejects unknown IDs. Never invent a quote_id or use one from another source.
 Use only the minimal evidence needed, normally 1–3 source indices. The set of cited [n] MUST equal the set of evidence.index.
+Keep the server's original source indices; NEVER renumber a source to 1 just because it is your first citation.
+Before returning JSON, collect the distinct [n] in answer and emit exactly one evidence object for each.
+An evidence object without its matching [n] in answer is invalid. A citation without evidence is also invalid.
+For a sufficient answer, every answer paragraph must contain a supported [n]; use limitation for unsourced gaps.
+Do not return a prose-only answer with a nonempty evidence array. For clarification-only answers use insufficient=true,
+answer with the clarification, evidence=[] and no citations. Do this final protocol check without printing your reasoning.
 Evidence must be an array of objects with integer index and string quote_id. insufficient must be a JSON boolean.
 If insufficient=true, do not cite sources and use an empty evidence array.
 For a partial answer, insufficient=false means the answer body has evidence, not that every requested part

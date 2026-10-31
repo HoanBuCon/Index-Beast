@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Chẩn đoán lỗi generation và citation (31/10/2026)](2026-10-31_s2-tv3_chan-doan-loi-generation.md)
+
 - [TV4 · Ảnh minh họa trong câu trả lời bằng fixture (31/10/2026)](2026-10-31_s2-tv4_anh-minh-hoa-cau-tra-loi.md)
 
 - [TV4 · Ghép favicon và rà soát Quản trị (31/10/2026)](2026-10-31_s2-tv4_favicon-va-ra-soat-admin.md)

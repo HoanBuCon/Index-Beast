@@ -1,0 +1,38 @@
+{
+  "question": "boss cuối của game là con gì?",
+  "model": "deepseek-flash",
+  "max_tokens": 4096,
+  "thinking": true,
+  "max_retries": 0,
+  "paid_generation_calls": 1,
+  "history": "empty for reproduction; original conversation history unavailable",
+  "selected_titles": [
+    "Letter for Freyja",
+    "Elden Beast",
+    "Demi-Human Swordmaster Onze",
+    "Claws",
+    "Bosses"
+  ],
+  "selected_count": 5,
+  "status": "failed",
+  "error_type": "UpstreamError",
+  "validation_failure": "citation_evidence_indices",
+  "generation_failure": null,
+  "provider_output_shape": {
+    "finish_reason": "stop",
+    "content_chars": 474,
+    "content_is_string": true,
+    "input_tokens": 2981,
+    "output_tokens": 240,
+    "total_tokens": 3221,
+    "starts_json_object": true,
+    "contains_fence": false,
+    "json_type": "dict",
+    "expected_keys_present": [
+      "answer",
+      "evidence",
+      "insufficient"
+    ],
+    "unexpected_keys_count": 0
+  }
+}

@@ -262,6 +262,12 @@ History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa
 
 ## Kiểm thử và phần cần đồng bộ riêng
 
+Nếu DeepSeek trả HTTP 200 nhưng chat báo 502, kiểm tra log `Generation failed`,
+`Citation index mismatch` và `RAG validation failed` theo request_id.
+HTTP 200 chưa xác nhận output đã vượt kiểm tra JSON/citation.
+Diagnostic chỉ giữ mã lỗi, finish reason, token counters hoặc chỉ số; không log private reasoning.
+Xem [báo cáo tái hiện và giới hạn](../../../docs/testing/2026-10-31_generation-error-report.md).
+
 Từ backend, chỉ unit/offline:
 
 ```powershell
