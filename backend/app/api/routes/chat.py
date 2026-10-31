@@ -9,12 +9,13 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import aclosing
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
 from app.api.deps import get_chat_service
 from app.api.errors import ErrorBody
+from app.api.guard import enforce_chat_limits
 from app.api.schemas.chat import (
     SSE_EVENT_MODELS,
     ChatRequest,
@@ -28,7 +29,7 @@ from core.logging import request_id_var
 router = APIRouter(tags=["chat"])
 log = logging.getLogger(__name__)
 
-_ERROR_RESPONSES = {code: {"model": ErrorBody} for code in (404, 422, 429, 502, 503)}
+_ERROR_RESPONSES = {code: {"model": ErrorBody} for code in (401, 404, 422, 429, 502, 503, 504)}
 
 
 def _sse(event: str, payload: object) -> str:
@@ -36,7 +37,8 @@ def _sse(event: str, payload: object) -> str:
 
 
 @router.post("/chat", response_model=ChatResponse, responses=_ERROR_RESPONSES, summary="Hỏi đáp, trả một lần (bot)")
-async def chat(body: ChatRequest, service: ChatService = Depends(get_chat_service)) -> ChatResponse:
+async def chat(body: ChatRequest, request: Request, service: ChatService = Depends(get_chat_service)) -> ChatResponse:
+    await enforce_chat_limits(request, body)
     return await service.answer(body)
 
 
@@ -53,7 +55,10 @@ async def chat(body: ChatRequest, service: ChatService = Depends(get_chat_servic
     },
     summary="Hỏi đáp, stream SSE (web)",
 )
-async def chat_stream(body: ChatRequest, service: ChatService = Depends(get_chat_service)) -> StreamingResponse:
+async def chat_stream(
+    body: ChatRequest, request: Request, service: ChatService = Depends(get_chat_service)
+) -> StreamingResponse:
+    await enforce_chat_limits(request, body)
     # Lỗi trước khi bắt đầu stream (hội thoại không tồn tại, quá tốc độ…) vẫn trả JSON + mã HTTP đúng
     stream = await service.open_stream(body)
 

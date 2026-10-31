@@ -20,7 +20,7 @@ from app.api.schemas.chat import ChatImage, ChatRequest, ChatResponse, DoneEvent
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
-from core.errors import NotFoundError
+from core.errors import NotFoundError, TimeoutAppError, UnavailableError
 
 ChatEvents = AsyncIterator[tuple[str, BaseModel]]
 
@@ -71,6 +71,9 @@ class LiveChatService:
         self.pipeline = pipeline
         self.image_catalog = image_catalog
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
+        # (channel, external_ref) → hội thoại: bot không giữ conversation_id, nên mỗi thread hoặc user Discord
+        # dùng lại một hội thoại
+        self._by_ref: dict[tuple[str, str], UUID] = {}
         self.traces: OrderedDict[UUID, dict] = OrderedDict()
 
     def history(self, conversation_id: UUID) -> ConversationOut:
@@ -90,18 +93,25 @@ class LiveChatService:
             state = self._conversations.get(req.conversation_id)
             if state is None or state.conversation.channel != req.channel or state.external_ref != req.external_ref:
                 raise NotFoundError("Không tìm thấy hội thoại.")
+            self._conversations.move_to_end(req.conversation_id)
             return state
-        # Evict only inactive conversations. This remains a dev memory store, not durable storage.
+        ref = (req.channel, req.external_ref) if req.external_ref else None
+        if ref is not None and (existing := self._by_ref.get(ref)) in self._conversations:
+            self._conversations.move_to_end(existing)
+            return self._conversations[existing]
+        # Evict only inactive conversations, ít dùng gần đây nhất trước. Kho RAM cho dev; S3 chuyển sang PostgreSQL.
         if len(self._conversations) >= 500:
             victim = next((k for k, v in self._conversations.items() if not v.lock.locked()), None)
             if victim is None:
-                from core.errors import UnavailableError
-
                 raise UnavailableError("Có quá nhiều hội thoại đang hoạt động.")
-            del self._conversations[victim]
+            evicted = self._conversations.pop(victim)
+            if evicted.external_ref:
+                self._by_ref.pop((evicted.conversation.channel, evicted.external_ref), None)
         conv = ConversationOut(id=uuid4(), channel=req.channel, created_at=datetime.now(UTC), messages=[])
         state = ConversationState(conv, req.external_ref)
         self._conversations[conv.id] = state
+        if ref is not None:
+            self._by_ref[ref] = conv.id
         return state
 
     def _history_for(self, state: ConversationState) -> list[dict]:
@@ -169,11 +179,15 @@ class LiveChatService:
     async def answer(self, req: ChatRequest) -> ChatResponse:
         started = time.perf_counter()
         state = self._state(req)
-        async with state.lock:
-            prepared = await self.pipeline.prepare(req, self._history_for(state))
-            result = await self.pipeline.generator.generate(prepared)
-            images = await self._images(req, prepared, result)
-            return self._save(req, state, prepared, result, started, images)
+        try:
+            # Hạn tổng cho cả chờ khóa, LLM (kể cả retry) và ảnh: bot bỏ cuộc ở 60 s, backend phải dừng trước
+            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds), state.lock:
+                prepared = await self.pipeline.prepare(req, self._history_for(state))
+                result = await self.pipeline.generator.generate(prepared)
+                images = await self._images(req, prepared, result)
+                return self._save(req, state, prepared, result, started, images)
+        except TimeoutError:
+            raise TimeoutAppError() from None
 
     async def open_stream(self, req: ChatRequest) -> ChatEvents:
         """Prepare and prime provider BEFORE sending HTTP headers, then stream actual deltas."""
@@ -182,15 +196,19 @@ class LiveChatService:
         await state.lock.acquire()
         tokens = None
         try:
-            prepared = await self.pipeline.prepare(req, self._history_for(state))
-            tokens = self.pipeline.generator.stream(prepared)
-            first = await anext(tokens)
-        except BaseException:
+            # Hạn chỉ tính tới token đầu; sau đó web nhận dần và có thể tự hủy
+            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
+                prepared = await self.pipeline.prepare(req, self._history_for(state))
+                tokens = self.pipeline.generator.stream(prepared)
+                first = await anext(tokens)
+        except BaseException as exc:
             try:
                 if tokens is not None:
                     await tokens.aclose()
             finally:
                 state.lock.release()
+            if isinstance(exc, TimeoutError):
+                raise TimeoutAppError() from None
             raise
 
         closed = False

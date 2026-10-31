@@ -63,11 +63,40 @@ class FakeEngine(FakeResource):
 
 
 class FakeRedis(FakeResource):
+    """Đủ cho health check và rate-limit (pipeline().incr().expire().execute())."""
+
     async def ping(self) -> bool:
         return await self._respond()
 
+    def pipeline(self, transaction: bool = True) -> "_FakePipeline":
+        self.__dict__.setdefault("counts", {})  # dataclass cha không gọi __post_init__ của lớp con
+        return _FakePipeline(self)
+
     async def aclose(self) -> None:
         return None
+
+
+class _FakePipeline:
+    def __init__(self, redis: FakeRedis) -> None:
+        self.redis, self.key = redis, ""
+
+    async def __aenter__(self) -> "_FakePipeline":
+        return self
+
+    async def __aexit__(self, *exc) -> bool:
+        return False
+
+    def incr(self, key: str) -> "_FakePipeline":
+        self.key = key
+        return self
+
+    def expire(self, key: str, seconds: int) -> "_FakePipeline":
+        return self
+
+    async def execute(self) -> list:
+        await self.redis._respond()
+        self.redis.counts[self.key] = self.redis.counts.get(self.key, 0) + 1
+        return [self.redis.counts[self.key], True]
 
 
 class FakeQdrant(FakeResource):
