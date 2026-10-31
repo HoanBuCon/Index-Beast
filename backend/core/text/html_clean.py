@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
 from core.text.normalize import normalize_text, normalized_key
 
-VERSION = "s2-clean-2.0"
+VERSION = "s2-clean-2.1"
 UI_CLASSES = {
     "navbox",
     "toc",
@@ -100,12 +100,12 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
 
     new_section("Introduction", "article:start")
 
-    def audit(node, reason, section=None):
+    def audit(node, reason, section=None, text=None):
         key = (id(node), reason)
         if key in audited:
             return
         audited.add(key)
-        text = normalize_text(render(node))
+        text = text or normalize_text(render(node))
         if not text:
             text = normalize_text(node.get_text(" ", strip=True))
         removed.append(
@@ -146,20 +146,76 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
     def infobox(node):
         previous = active
         new_section("Infobox", positions.get(id(node), "article"), kind="infobox", node=node)
-        fields = node.select(".pi-data")
-        if not fields:
+        # Theo thứ tự DOM: trường đơn (.pi-data) và nhóm "smart" (bảng/lưới chỉ số, không có class pi-data)
+        items = node.select(".pi-data, .pi-smart-group")
+        if not items:
             add(node, render(node), "infobox", ["unstructured_infobox_requires_review"])
-        for field in fields:
-            key = (field.get("data-source") or field.get("data-item-name") or "").lower()
-            label = field.select_one(".pi-data-label")
-            value = field.select_one(".pi-data-value")
+        for item in items:
+            if "pi-smart-group" in item.get("class", []):
+                smart_group(node, item)
+                continue
+            key = (item.get("data-source") or item.get("data-item-name") or "").lower()
+            label = item.select_one(".pi-data-label")
+            value = item.select_one(".pi-data-value")
             if key in NON_LORE_FIELDS or (label and STATS.search(label.get_text(" ", strip=True))):
-                audit(field, "infobox_numeric_or_production_field")
+                audit(item, "infobox_numeric_or_production_field")
                 continue
             if value:
                 name = normalize_text(render(label)) if label else key
-                add(field, f"{name}: {normalize_text(render(value))}", "infobox")
+                add(item, f"{name}: {normalize_text(render(value))}", "infobox")
         return previous
+
+    def smart_group(box, group):
+        """Bảng hoặc lưới chỉ số (Attack Power, Attributes, Damage Negation…) thành dòng giữ nguyên giá trị nguồn."""
+        header = group.find_previous(class_="pi-header")
+        heading = [one_line(header)] if header and box in header.parents else []
+        box_title = box.select_one(".pi-title")
+        if box_title and one_line(box_title) != title:
+            heading.insert(0, one_line(box_title))  # trang nhiều infobox (vd. hai phase của boss)
+        table = group.find("table")
+        labels = [one_line(x) for x in group.select(".pi-smart-data-label")]
+        values = [one_line(x) for x in group.select(".pi-smart-data-value")]
+        if table is not None:
+            lines = infobox_table_lines(table)
+        elif labels and len(labels) == len(values):
+            lines = [", ".join(f"{label}: {value}" for label, value in zip(labels, values, strict=True))]
+        else:
+            audit(group, "infobox_unlabeled_value", text="\n".join(values))  # vd. tên tiếng Nhật không có nhãn
+            return
+        if not any(re.search(r"\d", line) for line in lines):
+            audit(group, "infobox_placeholder_stats", text="\n".join(lines))  # khung bảng chưa có số liệu
+            return
+        if heading and lines and lines[0] == heading[-1]:
+            lines = lines[1:]  # tiêu đề bảng trùng tiêu đề nhóm
+        add(group, "\n".join([*heading, *lines]), "infobox_stats")
+
+    def one_line(node):
+        return " ".join(normalize_text(render(node)).split())
+
+    def infobox_table_lines(table):
+        """Dòng tiêu đề nhóm (th colspan) ghép với từng cặp nhãn/giá trị: 'Attack Power / Physical: 73'."""
+        lines, groups = [], []
+        for row in table.find_all("tr"):
+            cells = row.find_all(["th", "td"], recursive=False)
+            texts = [one_line(c) for c in cells]
+            if not any(texts):
+                continue
+            if all(c.name == "th" for c in cells):
+                spans = [int(c.get("colspan") or 1) if str(c.get("colspan") or 1).isdigit() else 1 for c in cells]
+                groups = list(zip(texts, spans, strict=True)) if len(cells) > 1 else []
+                if len(cells) == 1 or all(span == 1 for span in spans):
+                    lines.append(" | ".join(t for t in texts if t))
+                continue
+            if any(span > 1 for _, span in groups):
+                column = 0
+                for name, span in groups:
+                    part = [t for t in texts[column : column + span] if t]
+                    column += span
+                    if len(part) > 1:
+                        lines.append(f"{name} / {' '.join(part)}")
+            else:
+                lines.append(" | ".join(t for t in texts if t))
+        return lines
 
     def table(node):
         rows = node.find_all("tr")

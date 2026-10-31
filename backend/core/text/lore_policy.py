@@ -24,6 +24,9 @@ def block_decision(section, block):
         return "keep", "literal_game_text"
     if re.search(r"(?:^| > )Boss Fight(?:$| > )", section, re.I):
         return "review", "combat_section_may_contain_lore"
+    if block["kind"] == "infobox_stats":
+        # Chỉ số trong infobox: giữ trong review.csv, chưa vào corpus cho tới khi chốt phạm vi gameplay
+        return "excluded", "infobox_stats_group"
     if GAMEPLAY.search(section):
         return "excluded", "gameplay_section"
     if block["kind"] == "table" or block.get("notes"):
