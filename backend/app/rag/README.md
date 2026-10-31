@@ -262,6 +262,23 @@ History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa
 
 ## Kiểm thử và phần cần đồng bộ riêng
 
+### Câu hỏi tổng quan / danh sách
+
+`RAG_OVERVIEW_ENABLED=true` mặc định nhận diện các yêu cầu VI/EN như “các boss trong elden ring”,
+“các loại vũ khí”, “những kiểu build”, “tổng quan cốt truyện” hoặc “Elden Ring là gì?”.
+Topic rõ ràng không bắt buộc phải có tên một nhân vật/vật phẩm; câu có tên riêng hoặc đại từ chưa rõ giữ luồng cũ.
+Đây là heuristic, không phải NER hoặc bộ phân loại ngữ nghĩa tổng quát.
+
+Nhánh overview bỏ qua paid rewrite, thêm English search cues kèm nguyên query/điều kiện gốc;
+tối đa 2 query trong budget retrieval hiện có, fusion RRF và context tối đa 5. Ưu tiên title trang tổng quan,
+section Introduction/Overview/List/Types/Categories và xen kẽ section/source; không gọi đây là semantic reranker.
+Không tạo kiến thức taxonomy từ query cues. Prompt yêu cầu dùng grouping/ví dụ có evidence, trả phần hữu ích
+khi nguồn chưa đầy đủ, không tuyên bố danh sách exhaustive hoặc số liệu current-patch nếu nguồn không xác lập.
+
+Không cần reindex hoặc sửa .env thật để dùng default. Đặt flag false rồi restart để tắt.
+Benchmark VI–EN có ghi flag overview và tính thêm query này trong upper bound; khi muốn cô lập tác dụng rewrite,
+tự tắt overview trong phiên benchmark. Xem [hướng dẫn và kiểm chứng](../../../docs/testing/2026-10-31_overview-routing.md).
+
 ### Query VI → EN và chế độ dual
 
 Rewrite vẫn tắt mặc định, không tự sửa `.env`. Khi bật, `RAG_QUERY_MODE=rewrite` dùng một query English đã validate;

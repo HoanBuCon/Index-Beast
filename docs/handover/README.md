@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Nhánh câu hỏi tổng quan (31/10/2026)](2026-10-31_s2-tv3_overview-routing.md)
+
 - [TV3 · DeepSeek thật và protocol recovery (31/10/2026)](2026-10-31_s2-tv3_deepseek-live-output.md)
 
 - [TV3 · Query VI–EN và benchmark theo tầng (31/10/2026)](2026-10-31_s2-tv3_vi-en-retrieval.md)

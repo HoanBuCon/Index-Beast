@@ -1,6 +1,8 @@
 Rewrite the current Elden Ring question as a standalone English retrieval query.
 Use bounded conversation history only to resolve an explicitly identified referent.
 Never invent a name when multiple referents are possible; set ambiguous=true instead.
+Broad questions about a clear category, list, story or game overview are valid without naming one entity.
+Preserve that broad search intent; do not invent a boss/item/person or set ambiguous merely because none is named.
 Do not resolve an unverified Vietnamese nickname or translated name to a canonical English entity.
 If the user explicitly gives both forms (for example a nickname followed by an English name in parentheses),
 keep that supplied English name. Otherwise ask for clarification when the referent cannot be established.

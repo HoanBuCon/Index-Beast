@@ -79,6 +79,7 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(default=5, ge=1, le=5)
     rag_context_chars: int = Field(default=12000, ge=256, le=64000)
     rag_rewrite_enabled: bool = False
+    rag_overview_enabled: bool = True
     rag_query_mode: Literal["rewrite", "dual"] = "rewrite"
     rag_rewrite_timeout_seconds: float = Field(default=8, gt=0, le=60)
     rag_rewrite_max_tokens: int = Field(default=512, ge=128, le=2048)

@@ -10,6 +10,7 @@ from urllib.parse import unquote, urlsplit
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.api.schemas.chat import ChatRequest
+from app.rag.overview import detect_overview
 from app.rag.pipeline import ChatPipeline
 from core.config import REPO_ROOT
 
@@ -195,6 +196,7 @@ async def benchmark(pairs, settings, llm, retriever, strategies, *, generate=Fal
     return {
         "created_at": datetime.now(UTC).isoformat(),
         "collection": settings.rag_collection,
+        "overview_enabled": settings.rag_overview_enabled,
         "notes": (
             "Source-page hit is NOT evidence recall or answer correctness. Pending labels require cross-review; "
             "semantic judgments remain manual. Direct pipeline calls do not measure HTTP API errors."
@@ -265,9 +267,12 @@ def main(argv=None):
                     "pairs": len(pairs),
                     "rows": len(pairs) * 2 * len(args.strategies),
                     "max_logical_rewrite_calls": len(pairs) * 2 * sum(value != "original" for value in args.strategies),
-                    "max_retrieval_queries": len(pairs)
-                    * 2
-                    * sum(2 if value == "dual" else 1 for value in args.strategies),
+                    "max_retrieval_queries": sum(
+                        2 if strategy == "dual" or detect_overview(pair[lang]) is not None else 1
+                        for strategy in args.strategies
+                        for pair in pairs
+                        for lang in ("vi", "en")
+                    ),
                     "generation_requested": args.generate,
                     "needs_llm_permission_on_execute": needs_llm,
                 },

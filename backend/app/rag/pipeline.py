@@ -17,6 +17,7 @@ from langsmith import tracing_context
 
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
+from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
@@ -271,10 +272,20 @@ class ChatPipeline:
                 else "I can help with Elden Ring lore, quests, equipment, mechanics and build ideas. "
                 "What would you like to explore in the game?"
             )
+        if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
+            state["overview"] = detect_overview(req.message)
+            if state["overview"] is not None:
+                prepared.trace["request_kind"] = "overview"
+                prepared.trace["overview_topic"] = state["overview"].topic
         return state
 
     async def _rewrite(self, state: dict) -> dict:
         p = state["prepared"]
+        if state.get("overview") is not None:
+            # A recognized global topic is already a valid scope, not an ambiguous referent.
+            # The bounded overview query plan supplies English search cues without a paid rewrite call.
+            p.trace["rewrite"] = {"status": "not_run", "reason": "overview_query_plan", "model_calls": 0}
+            return state
         if self.settings.rag_rewrite_enabled:
             diagnostics = {}
             rewritten, fallback = await rewrite(
@@ -318,6 +329,8 @@ class ChatPipeline:
                 }
             )
             queries = plan_queries(state["req"].message, state["query"], self.settings.rag_query_mode)
+            if state.get("overview") is not None:
+                queries = overview_queries(queries, state["overview"])
             rows, diagnostics = [], []
             for kind, query in queries:
                 started = time.perf_counter()
@@ -357,6 +370,9 @@ class ChatPipeline:
         if state["prepared"].static_answer is None:
             hits = [document_to_hit(d) for d in state["documents"]]
             ranked = await self.reranker.rank(state["query"], hits)
+            if state.get("overview") is not None:
+                ranked = prefer_overview(ranked, state["overview"])
+                state["prepared"].trace["context_ordering"] = "overview_title_section_preference"
             state["documents"] = [hit_to_document(h) for h in ranked]
         return state
 
@@ -373,11 +389,15 @@ class ChatPipeline:
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits:
                 p.static_answer = (
-                    "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
-                    "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
-                    if p.lang == "vi"
-                    else "I couldn't find evidence close enough to answer reliably. "
-                    "Could you name the equipment, boss, quest or specific detail you want to check?"
+                    no_overview_evidence(state["overview"], p.lang)
+                    if state.get("overview") is not None
+                    else (
+                        "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
+                        "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
+                        if p.lang == "vi"
+                        else "I couldn't find evidence close enough to answer reliably. "
+                        "Could you name the equipment, boss, quest or specific detail you want to check?"
+                    )
                 )
         return state
 
@@ -388,7 +408,8 @@ class ChatPipeline:
             "persona": prompt("persona"),
             "lang": p.lang,
             "spoilers": req.options.spoilers,
-            "policy": prompt("answer" if p.mode == "rag" else "llm_only"),
+            "policy": prompt("answer" if p.mode == "rag" else "llm_only")
+            + ("\n" + prompt("overview") if state.get("overview") is not None else ""),
             "history": state["history"],
             "payload": json.dumps(
                 {"question": req.message, "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)]},
