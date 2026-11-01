@@ -121,8 +121,8 @@ Trong Docker, container `api` nghe `18000` (Caddy và bot gọi `api:18000`); Po
 
 ### Thử Discord bot (Sprint 1)
 
-Điền `DISCORD_TOKEN`, `DISCORD_CLIENT_ID` (Application ID), `DISCORD_GUILD_ID` (Server ID) trong `.env`
-ở gốc repo; mời bot vào server đó với scopes `bot`, `applications.commands` và quyền xem kênh, gửi tin nhắn,
+Điền `DISCORD_TOKEN` trong `.env` ở gốc repo. `DISCORD_CLIENT_ID` và `DISCORD_GUILD_ID` không bắt buộc:
+bot tự lấy Application ID từ Discord bằng token. Mời bot vào server với scopes `bot`, `applications.commands` và quyền xem kênh, gửi tin nhắn,
 nhúng liên kết. Nếu token bị lộ, đặt lại trong Developer Portal trước khi chạy.
 
 ```bash
@@ -135,8 +135,8 @@ npm run dev
 Trong server thử nghiệm, chọn lệnh `/ping` của bot → nhận `Pong!`. S1 không cần API hay Docker để thử `/ping`.
 Giữ terminal mở để bot online; nhấn Ctrl+C để dừng. PowerShell chặn `npm.ps1` thì dùng `npm.cmd` thay `npm`.
 Đăng ký lại lệnh khi thay đổi định nghĩa lệnh, không cần đăng ký mỗi lần khởi động bot.
-Dev đăng ký vào `DISCORD_GUILD_ID`; `ENVIRONMENT=prod` đăng ký global. Lệnh deploy thay thế toàn bộ danh sách
-slash command của ứng dụng trong phạm vi đó bằng registry hiện tại (S1 chỉ có `/ping`).
+Lệnh deploy đăng ký global cho mọi server đã cài bot (Discord có thể mất vài phút để hiện lệnh mới) và
+thay thế toàn bộ danh sách slash command của ứng dụng bằng registry hiện tại (`/ping`, `/ask`).
 `npm start` dùng biến môi trường đã được nạp (ví dụ Docker Compose); chạy local dùng `npm run dev`.
 
 ### Cấu hình (`.env`)
