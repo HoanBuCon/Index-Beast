@@ -102,3 +102,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-31 | TV1 (Hoanbucon) | [Cập nhật tài liệu công nghệ sau Sprint 2](2026-10-31_s2-tv1_cap-nhat-tai-lieu-cong-nghe.md) |
 | 2026-10-31 | TV1 (Hoanbucon) | [Sửa cleaner: không còn mất bảng chỉ số infobox](2026-10-31_s2-tv1_sua-cleaner-bang-chi-so-infobox.md) |
 | 2026-10-31 | TV1 (Hoanbucon) | [Khảo sát toàn bộ dữ liệu và đề xuất xử lý](2026-10-31_s2-tv1_khao-sat-du-lieu-va-de-xuat.md) |
+| 2026-10-31 | TV1 (Hoanbucon) | [Sửa đường dẫn raw trong artifact và nạp PostgreSQL](2026-10-31_s2-tv1_sua-duong-dan-artifact-va-nap-pg.md) |
