@@ -1,4 +1,5 @@
 // Đọc biến môi trường (DISCORD_TOKEN, BOT_API_URL, API_SERVICE_TOKEN, WEB_URL), báo lỗi sớm nếu thiếu.
+// DISCORD_CLIENT_ID và DISCORD_GUILD_ID không bắt buộc: Application ID được lấy từ Discord bằng token khi cần.
 // BOT_API_URL để trống khi dev → dùng http://127.0.0.1:${API_PORT ?? 18000} (cùng cổng với `make api`).
 // Phụ trách: TV4 · [S1] Khởi tạo Discord bot
 
@@ -35,9 +36,10 @@ export function loadApiConfig(env: NodeJS.ProcessEnv = process.env) {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const token = env.DISCORD_TOKEN?.trim();
-  const clientId = env.DISCORD_CLIENT_ID?.trim();
+  const clientId = env.DISCORD_CLIENT_ID?.trim() || undefined;
   if (!token || token === "change-me") throw new Error("Cần điền DISCORD_TOKEN trong .env.");
-  if (!clientId || !/^\d{17,20}$/.test(clientId)) throw new Error("DISCORD_CLIENT_ID phải là Application ID.");
+  if (clientId && !/^\d{17,20}$/.test(clientId))
+    throw new Error("DISCORD_CLIENT_ID phải là Application ID hoặc để trống.");
   // Bot dùng chung cho mọi server đã cài đặt; không cần DISCORD_GUILD_ID.
   return { token, clientId };
 }

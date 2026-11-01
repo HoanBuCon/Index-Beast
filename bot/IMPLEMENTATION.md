@@ -36,7 +36,7 @@ npm.cmd run format:check
 
 Không cần sửa `.env.example` hoặc Docker Compose cho bước này.
 
-- `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`: thông tin Discord hiện có, không ghi vào tài liệu/log.
+- `DISCORD_TOKEN`: bắt buộc, không ghi vào tài liệu/log. `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`: không bắt buộc; thiếu Application ID thì `deploy-commands` lấy từ `GET /applications/@me` bằng token.
 - `BOT_API_URL`: để trống khi chạy bot trên máy → `http://127.0.0.1:<API_PORT>`; `API_PORT` mặc định 18000. Chấp nhận URL gốc hoặc kết thúc `/api/v1`, không ghép tiền tố hai lần.
 - Trong container, Compose hiện đặt `BOT_API_URL=http://api:18000`; `api` là tên service, không phải localhost của máy.
 - `API_SERVICE_TOKEN`: gửi `X-Service-Token` nếu được cấu hình khác `change-me`. Theo bàn giao TV1, xác thực service token thuộc S4; client không tự thêm yêu cầu bảo mật vào backend.

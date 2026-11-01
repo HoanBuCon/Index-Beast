@@ -4,12 +4,13 @@
 import { REST, Routes } from "discord.js";
 import { commands } from "./commands/index.ts";
 import { loadConfig } from "./config.ts";
+import { resolveApplicationId } from "./utils/application.ts";
 import { errorName, log } from "./utils/logger.ts";
 
 try {
   const config = loadConfig();
   const rest = new REST({ version: "10" }).setToken(config.token);
-  const route = Routes.applicationCommands(config.clientId);
+  const route = Routes.applicationCommands(await resolveApplicationId(rest, config.clientId));
   // Bulk PUT thay thế danh sách lệnh của ứng dụng trong phạm vi đã chọn.
   await rest.put(route, { body: [...commands.values()].map((command) => command.data.toJSON()) });
   log("info", "Đã đăng ký slash commands.", { scope: "global" });
