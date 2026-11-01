@@ -3,9 +3,9 @@
 | | |
 |---|---|
 | Sprint | 2 — *Pipeline dữ liệu & khung API*, 26/10 – 01/11/2026 (Bài KT 1). **Đã đóng** |
-| Ngày lập | 31/10/2026; **cập nhật 01/11/2026 sau khi đóng sprint** (Asia/Saigon) |
+| Ngày lập | 31/10/2026; cập nhật 01/11/2026 sau khi đóng sprint; **bổ sung mục 7–9 ngày 02/11** (Asia/Saigon) |
 | Người lập | TV1 (Hoanbucon), Tech Lead |
-| Căn cứ | `develop` tại `5a72bd5` (sau PR #54); Trello đọc ngày 01/11; các handover S2 trong [`docs/handover/`](README.md); GitHub (review, CI); dữ liệu `backend/data` bản sao trên máy TV1; các lệnh kiểm tra ở mục 6 |
+| Căn cứ | `develop` tại `5a72bd5` (sau PR #54), mục 7–9 tại `119f5a8` (sau PR #58); Trello đọc ngày 01/11; các handover S2 trong [`docs/handover/`](README.md); GitHub (review, CI); dữ liệu `backend/data` bản sao trên máy TV1; các lệnh kiểm tra ở mục 6 |
 
 ## 1. Tóm tắt
 
@@ -106,12 +106,90 @@ Chưa chạy: hỏi chatbot thật trên máy TV1. `.env` của máy này chưa 
 
 Trong lúc index, ổ H: còn 1,9 GB và C: còn 2,3 GB; ngày 01/11 H: còn 15 GB, C: 3,6 GB. Chưa xác định chương trình ghi vào H: (nghi ổ ảo của Docker/WSL hoặc cache model). Docker có khoảng 12,9 GB image và 2,7 GB build cache dọn được, chưa dọn.
 
-## 7. Chuẩn bị Sprint 3
+## 7. Việc TV1 đã làm từ 30/10 đến 01/11
 
-1. **Review và merge `fix/s2-tv1-duong-dan-artifact`** (đề xuất dữ liệu #4) để mọi máy nạp được dữ liệu.
-2. **Hoàn tất CHANGE-REQ:** team xác nhận, cập nhật SRS §1.2, ADR-004, `docs/AGENTS.md`.
-3. **Đo baseline Recall@5/MRR** trước khi đổi corpus, thêm câu hỏi chỉ số/gameplay vào golden set (đề xuất #6).
-4. **Nhận dữ liệu gameplay vào corpus** (đề xuất #2) và gộp infobox mỗi trang thành một chunk (#3); clean/chunk lại, index collection mới, so sánh rồi mới đổi `RAG_COLLECTION`.
-5. **TV2 sửa lỗi nội dung** đã biết (#5) và review golden set.
-6. **TV1:** lưu hội thoại vào PostgreSQL thay RAM; xử lý các lỗi review #4–#10.
-7. **Quy trình:** bắt buộc review PR trước khi merge; kiểm tra và dọn dung lượng ổ H:/C:.
+### 7.1 Theo PR (tất cả đã merge vào `develop`)
+
+| PR | Loại | Nội dung | Ảnh hưởng tới người khác |
+|---|---|---|---|
+| #48 | Code backend + bot | **Bảo vệ API khi gọi LLM thật** (`app/api/guard.py`): rate-limit Redis theo IP (web) hoặc `external_ref` (bot), mặc định 10 câu/phút; kênh `discord` bắt buộc `X-Service-Token`; Redis lỗi thì trả 503. **Bot giữ ngữ cảnh:** `LiveChatService`/`MockChatService` dùng lại hội thoại theo `(channel, external_ref)`, thải theo LRU. **Hạn thời gian:** `CHAT_TIMEOUT_SECONDS` 45 s → 504 `timeout`; timeout bot 30 → 60 s | Biến `.env` mới; mã lỗi mới 401, 504 trong OpenAPI; `FakeRedis` trong `tests/conftest.py` có `pipeline` |
+| #49, #55 | Tài liệu | Báo cáo bàn giao Sprint 2 (file này) và bản cập nhật sau khi đóng sprint | — |
+| #50 | Tài liệu | `01_TECHSTACK.md` v1.4, `04_ARCHITECTURE.md` theo code S2 | — |
+| #52 | Tài liệu | [Khảo sát toàn bộ `backend/data`](2026-10-31_s2-tv1_khao-sat-du-lieu-va-de-xuat.md): xác định bản raw/clean/chunk cuối; 7 việc xử lý dữ liệu đã duyệt | TV2, TV3 làm theo các việc #2–#7 |
+| #53 | Code ingest | [Sửa cleaner làm mất bảng chỉ số infobox](2026-10-31_s2-tv1_sua-cleaner-bang-chi-so-infobox.md): đọc `.pi-smart-group`, render `Attack Power / Physical: 73`…; lý do mới `infobox_stats_group` (hiện `excluded`), `infobox_placeholder_stats`, `infobox_unlabeled_value`; phiên bản cleaning `s2-clean-2.1` / `s2-full-clean-1.1` | TV2 chạy lại clean; chunker chấp nhận cả phiên bản cũ và mới |
+| #56 | Code ingest | [`load_full` tìm raw theo đường dẫn tương đối](2026-10-31_s2-tv1_sua-duong-dan-artifact-va-nap-pg.md) khi artifact ghi đường dẫn tuyệt đối của máy khác; hash vẫn được kiểm | Nạp PostgreSQL được trên mọi máy |
+| #57 | Tài liệu | `01_TECHSTACK.md` v1.5 (phục hồi JSON, truy vấn VI→EN, câu hỏi tổng quan của TV3); [setup và chạy thật trên máy TV1](2026-11-01_s3-tv1_techstack-rag-va-setup-may-tv1.md) | — |
+| #58 | Code bot | [`DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID` không bắt buộc](2026-11-01_s3-tv1_bot-khong-can-client-id.md): `deploy-commands` lấy Application ID qua `GET /applications/@me` | Bot chạy chỉ với `DISCORD_TOKEN` |
+
+#57 và #58 do TV1 merge theo yêu cầu người dùng ngày 01/11, sau khi CI xanh; chưa có lượt review.
+
+### 7.2 Ngoài PR
+
+- **Trello:** tạo thẻ [CHANGE-REQ phạm vi base + SotE, lore + gameplay/build](https://trello.com/c/7Bm59z2N) ở cột Sprint 3; đã tick "Mô tả thay đổi", "Ước lượng ảnh hưởng".
+- **Máy TV1 chạy đủ hệ thống với dữ liệu thật:**
+  - Nạp PostgreSQL: 4.164 document, 23.765 chunk.
+  - Index Qdrant: 18.368 point, mất 26 phút 38 giây.
+  - API, web và bot chạy cùng lúc.
+  - Chat RAG thật qua web: stream, trích dẫn, ảnh.
+  - Chat qua Discord `/ask`: 4 request đều 200, 1,6–2,5 s; câu hỏi tiếp theo giữ đúng ngữ cảnh.
+- **Kiểm thử cleaner mới trên toàn bộ dữ liệu:** `clean_runs/s2-full-v3-tv1-test` trên máy TV1 (bản kiểm thử, không bàn giao). Phần keep trùng 73.559/73.559 dòng với `s2-full-v2`.
+- **Phát hiện chưa xử lý:**
+  - Thẻ "Crawler fanapis → bảng entities" ở *Hoàn thành* nhưng `ingest/sources/fanapis.py` vẫn là khung, bảng `entities` trống.
+  - Một lần 502 `uncited_paragraph` (DeepSeek trả đoạn không trích dẫn), loại lỗi không nằm trong danh sách thử lại `RAG_FORMAT_RETRIES`.
+
+## 8. Thành viên cần làm gì để cập nhật thay đổi của TV1
+
+### Mọi thành viên
+
+1. **Kéo code mới:** `git switch develop`, rồi `git pull`.
+2. **Cài lại dependency backend** (S2 thêm LangChain): trong `backend/`, chạy `.venv/Scripts/python -m pip install -r requirements-dev.txt -c constraints.txt`.
+3. **Đồng bộ `.env` gốc với `.env.example`**, thêm các biến còn thiếu và giữ nguyên key bí mật của mình:
+   - Thêm `RATE_LIMIT_PER_MINUTE=10`, `CHAT_TIMEOUT_SECONDS=45`, các biến `CHAT_MODE`, `RAG_*` và `WEB_HOST`.
+   - Đặt `API_SERVICE_TOKEN` là một chuỗi ngẫu nhiên **khác `change-me`**, dùng chung cho API và bot (cùng file `.env`). Nếu không, bot gọi API ở chế độ `rag`/`llm_only` sẽ bị 401.
+   - `.env.example` để `CHAT_MODE=mock`. Muốn chat thật thì đổi sang `rag` (cần `DEEPSEEK_API_KEY`). Sửa `.env` xong phải **khởi động lại API**.
+4. **Chạy kiểm tra:** `make test-unit`, và `npm test` trong `web/` và `bot/`.
+5. Khi demo chế độ live, chạy API **1 worker** (`make api`), vì kho hội thoại vẫn ở RAM của từng worker.
+
+### TV2 (dữ liệu)
+
+1. **Review** các PR đụng code ingest: #53 (cleaner), #56 (`load_full`).
+2. **Chạy lại clean bằng cleaner mới** vào thư mục chính thức mới, ví dụ `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/s2-full-v3`. Kiểm `review.csv` có lý do `infobox_stats_group`, và phần lore (keep) không đổi so với `s2-full-v2`.
+3. **Cập nhật `ingest/debug/corpus_readiness.py`** nếu script đang đếm theo danh sách lý do cố định, vì có 3 lý do mới.
+4. **Ghi `source_snapshot` dạng tương đối** cho các artifact sinh mới.
+5. **Làm việc #2 và #3** của đề xuất dữ liệu (phạm vi gameplay đã chốt):
+   - Đổi `core/text/lore_policy.py` để giữ `infobox_stats_group` cùng các trường và mục gameplay (Weight, FP, Acquisition, Effects…).
+   - Gộp infobox mỗi trang thành một chunk.
+   - Chunk lại vào thư mục mới.
+6. **Sửa lỗi nội dung đã biết (#5):** trang mẫu Talisman Template, nhãn ngôn ngữ 🇧🇷/🇹🇼, markup `[[...]]`.
+7. **Review chéo golden set:** 60 câu vẫn `pending`.
+
+### TV3 (AI/RAG)
+
+1. **Lưu ý khi test với bảo vệ API mới:**
+   - Ở chế độ `rag`/`llm_only`, `/chat` và `/chat/stream` đi qua `enforce_chat_limits`.
+   - Redis giả tự viết cần có `pipeline().incr().expire().execute()`; xem `FakeRedis` trong `tests/conftest.py`.
+   - Một câu hỏi bị chặn ở 45 s, đã gồm cả rewrite (8 s) và truy xuất (20 s).
+2. **Đo baseline Recall@5/MRR** trên corpus hiện tại trước khi đổi corpus, và thêm khoảng 15 câu hỏi chỉ số/gameplay vào golden set (#6).
+3. **Khi TV2 bàn giao chunk mới:** index vào **collection mới**, so sánh, rồi mới đổi `RAG_COLLECTION`. Không index đè lên `lore_chunks`, vì `index_chunks` không xóa point cũ.
+4. **Xác nhận thẻ fanapis → entities:** mã chưa có, bảng `entities` trống. Mở lại thẻ ở S3 hoặc ghi rõ lý do.
+5. **Cân nhắc** thêm `uncited_paragraph` vào danh sách lỗi được thử lại một lần.
+
+### TV4 (web và bot)
+
+1. **Review #58**, vì PR đụng `bot/src/config.ts`, `deploy-commands.ts` và file mới `utils/application.ts`.
+2. **Bot:**
+   - `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID` giờ không bắt buộc.
+   - `make bot-deploy` đăng ký lệnh global; Discord có thể mất vài phút mới hiện lệnh.
+   - Timeout mặc định của bot là 60 s.
+   - Cần `API_SERVICE_TOKEN` thật, như ở mục "Mọi thành viên".
+3. **Web và bot:** OpenAPI có thêm mã 401 và 504 cho `/chat`, `/chat/stream`. Nên có thông báo thân thiện cho 504 ("câu hỏi xử lý quá lâu") và cho 429 (đã có `Retry-After`).
+4. **Bot:** các câu hỏi cùng `external_ref` nằm chung một hội thoại; muốn bắt đầu lại thì mở thread mới.
+
+## 9. Chuẩn bị Sprint 3
+
+1. **Hoàn tất CHANGE-REQ:** team xác nhận; cập nhật SRS §1.2, ADR-004, `docs/AGENTS.md`.
+2. **Dữ liệu gameplay:** TV3 đo baseline trước. Sau đó TV2 đưa dữ liệu gameplay vào corpus (#2 và #3), index vào collection mới, so sánh rồi mới đổi corpus đang phục vụ.
+3. **TV1:** lưu hội thoại vào PostgreSQL thay RAM; xử lý các lỗi review #4–#10 còn treo.
+4. **TV3:** crawler fanapis → `entities`.
+5. **Quy trình:** bắt buộc review PR trước khi merge. Từ #28 đến #58 chưa PR nào có lượt approve.
+6. **Hạ tầng máy TV1:** ổ C: còn khoảng 3,6 GB. Dọn Docker image và build cache không dùng (khoảng 15 GB) sau khi người dùng đồng ý.
