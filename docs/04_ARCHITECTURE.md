@@ -2,10 +2,10 @@
 
 | | |
 |---|---|
-| Trạng thái | Khung xương 2026-10-17; cập nhật 2026-10-31 theo code sau Sprint 2 |
+| Trạng thái | Khung xương 2026-10-17; cập nhật 2026-11-01 theo code cuối Sprint 2 |
 | Mục tiêu | Dễ mở rộng, dễ debug; crawl → lọc → xử lý → index tách rời từng bước |
 
-**Phạm vi:** Elden Ring base game + Shadow of the Erdtree theo ngoại lệ ADR-004 ngày 29/10 (corpus `game_scope=elden_ring`); chờ team chốt bằng CHANGE-REQ.
+**Phạm vi:** Elden Ring base game + Shadow of the Erdtree (corpus `game_scope=elden_ring`); trả lời cả lore và gameplay/build (đã chốt, thẻ CHANGE-REQ ở Sprint 3).
 
 Quy trình Git áp dụng theo [quy_uoc.md](quy_uoc.md): feature tách từ develop, PR về develop và Mentor review trước khi merge.
 
@@ -30,7 +30,7 @@ Index-Beast/
 │  │  ├─ main.py, context.py
 │  │  ├─ api/               # HTTP: routes/, schemas/, deps.py, router.py, errors.py, guard.py (token + rate-limit)
 │  │  ├─ services/          # chat (live), mock_chat, factory (chọn theo CHAT_MODE), images
-│  │  ├─ rag/               # pipeline LangChain LCEL: rewrite, retriever, reranker, generator, evidence, prompts/; web_fallback, trace (khung)
+│  │  ├─ rag/               # pipeline LangChain LCEL: rewrite, overview, query_plan, retriever, reranker, generator, output, evidence, prompts/; web_fallback, trace (khung)
 │  │  └─ adapters/          # bên ngoài: llm (DeepSeek qua langchain-deepseek), redis, web_search (DuckDuckGo, S4)
 │  │
 │  ├─ ingest/               # OFFLINE — pipeline dữ liệu
