@@ -59,15 +59,26 @@ Không clean/chunk lại: bản chính thức đã có, và sửa cleaner ở PR
 | Moonveil weight and requirements | Moonveil, Unique Skill: Transient Moonlight, nhưng **không có** Weight/thuộc tính (chưa vào corpus) |
 
 - Web (`make web`, cổng 15173): trang chat hiển thị.
-- **Chưa chạy:** chat RAG thật qua DeepSeek; bot Discord (cần `DISCORD_TOKEN` và `API_SERVICE_TOKEN` thật).
+- **Chat RAG thật qua DeepSeek** (sau khi người dùng điền key và đặt `CHAT_MODE=rag`; 4 câu, `POST /api/v1/chat`, thinking tắt):
+
+| Câu hỏi | HTTP / thời gian | Kết quả |
+|---|---|---|
+| Who are Ranni's parents? | 200 / 5,8 s | Radagon và Queen Rennala; 3 nguồn (Ranni the Witch Infobox, Background; Empyreans); 2 ảnh |
+| Ranni là ai? Cha mẹ cô là ai? | 200 / 2,2 s | Trả lời tiếng Việt, giữ tên riêng tiếng Anh; cha mẹ và hai anh Radahn, Rykard; 3 nguồn; 2 ảnh |
+| Các boss chính trong Elden Ring là ai? | 200 / 3,9 s | Đi nhánh câu hỏi tổng quan: dẫn trang Bosses (Introduction, Mandatory bosses, Remembrance base/SotE), liệt kê boss bắt buộc; 4 nguồn; 3 ảnh |
+| Moonveil nặng bao nhiêu và cần bao nhiêu Intelligence? | 200 / 1,8 s | Không bịa số: nêu rõ nguồn không có trọng lượng và yêu cầu Intelligence. Đúng với hiện trạng: chỉ số chưa vào corpus (đề xuất dữ liệu #2) |
+
+  Cả 4 câu `grounded=true`. Mình đọc lại câu trả lời so với tiêu đề/section nguồn; chưa đối chiếu từng câu với text gốc.
+- Lần chạy đầu sau khi điền key vẫn trả mock vì `.env` ghi `CHAT_MODE=mock` (giá trị mặc định của `.env.example`); người dùng đổi sang `rag` và khởi động lại API.
+- **Chưa chạy:** `/chat/stream` (SSE) qua web với DeepSeek thật; bot Discord (cần `DISCORD_TOKEN` và `API_SERVICE_TOKEN` thật).
 
 ## 5. Phát hiện
 
 1. **Thẻ "Crawler fanapis → bảng entities" (TV3) đã ở *Hoàn thành* nhưng mã chưa có:** `ingest/sources/fanapis.py` và `ingest/entities/aliases.py` vẫn là khung 4 dòng, nên bảng `entities` trống. Cần TV3 xác nhận và mở lại thẻ ở S3.
 2. Ổ C: còn 3,6 GB, H: còn 13 GB. Cần theo dõi khi index lại hoặc chạy clean/chunk mới.
 
-## 6. Việc người dùng cần làm để chat thật
+## 6. Cách chạy lại trên máy TV1
 
-1. Điền `DEEPSEEK_API_KEY` vào `.env` gốc (không gửi key trong chat).
-2. Khởi động lại API (dừng rồi `make api`).
-3. Mở http://localhost:15173, tạo hội thoại API, thử câu hỏi ở mục 4. Mỗi câu hỏi tốn credit DeepSeek; rate-limit mặc định 10 câu/phút.
+1. `make up` (Docker), sau đó `make api` và `make web` ở hai terminal (hoặc `make dev`).
+2. `.env` cần `DEEPSEEK_API_KEY` và `CHAT_MODE=rag`; sửa `.env` thì phải khởi động lại API.
+3. Mở http://localhost:15173. Mỗi câu hỏi tốn credit DeepSeek; rate-limit mặc định 10 câu/phút.
