@@ -36,7 +36,7 @@ def language(question: str, requested: str) -> str:
     if (
         any(unicodedata.combining(c) for c in normalized)
         or "đ" in question.lower()
-        or re.search(r"\b(la ai|tai sao|cho toi|nhan vat|cot truyen|o dau)\b", question.lower())
+        or re.search(r"\b(la ai|tai sao|cho toi|nhan vat|cot truyen|o dau|chao|cam on)\b", question.lower())
     ):
         return "vi"
     return "en"
@@ -54,6 +54,36 @@ def outside_scope(question: str) -> bool:
             plain,
         )
     )
+
+
+_SMALL_TALK = (
+    (
+        re.compile(
+            r"(?:xin )?chao(?: ban| cau| em| anh| chi)?|hi|hello|hey|good (?:morning|afternoon|evening)|"
+            r"(?:ban|cau|em) (?:la ai|la gi|ten gi|ten la gi)|who are you|what are you|what(?: is|'s) your name"
+        ),
+        {
+            "vi": "Chào bạn! Mình là IndexBeast, trợ lý Elden Ring của nhóm 4 Hollows. "
+            "Bạn muốn tìm hiểu cốt truyện, nhiệm vụ, trang bị, boss hay build?",
+            "en": "Hi! I'm IndexBeast, the Elden Ring assistant from team 4 Hollows. "
+            "Would you like to explore lore, quests, equipment, bosses or builds?",
+        },
+    ),
+    (
+        re.compile(r"(?:xin )?cam on(?: ban| nhe| nha)?|thanks?(?: you)?|thx"),
+        {
+            "vi": "Không có gì! Bạn cần tìm hiểu thêm gì về Elden Ring cứ hỏi nhé.",
+            "en": "You're welcome! Ask away if you want to know more about Elden Ring.",
+        },
+    ),
+)
+
+
+def small_talk(question: str, lang: str) -> str | None:
+    """Whole-message greetings/identity/thanks only; anything longer stays a game question."""
+    plain = "".join(c for c in unicodedata.normalize("NFD", question.lower()) if not unicodedata.combining(c))
+    text = " ".join(re.sub(r"[^\w\s']", " ", plain).split())
+    return next((replies[lang] for pattern, replies in _SMALL_TALK if pattern.fullmatch(text)), None)
 
 
 def unresolved_reference(question: str) -> bool:
@@ -272,6 +302,9 @@ class ChatPipeline:
                 else "I can help with Elden Ring lore, quests, equipment, mechanics and build ideas. "
                 "What would you like to explore in the game?"
             )
+        elif reply := small_talk(req.message, lang):
+            # Không cần bằng chứng nên không gọi rewrite/retrieval; rewrite sẽ coi đây là out_of_scope.
+            prepared.static_answer = reply
         if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
             state["overview"] = detect_overview(req.message)
             if state["overview"] is not None:

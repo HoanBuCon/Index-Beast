@@ -34,10 +34,15 @@ export function answerEmbed(question: string, response: ChatResponse) {
   const embed = new EmbedBuilder()
     .setColor(0xd9bc78)
     .setTitle(cut(question, 200))
-    .setDescription(cut(response.answer, 3600))
-    .setFooter({
-      text: `${response.grounded ? "Nguồn tham khảo bên dưới." : "Chưa tìm được đủ bằng chứng."}${shortened ? " Nội dung đã được rút gọn để vừa Discord." : ""}`,
-    });
+    .setDescription(cut(response.answer, 3600));
+  // grounded=false gồm cả chào hỏi và câu hỏi lại, nên không gắn nhãn "thiếu bằng chứng"; câu trả lời đã tự nói rõ.
+  const footer = [
+    response.grounded ? "Nguồn tham khảo bên dưới." : "",
+    shortened ? "Nội dung đã được rút gọn để vừa Discord." : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  if (footer) embed.setFooter({ text: footer });
   if (lines.length) embed.addFields({ name: "Nguồn tham khảo · ghi nguồn theo liên kết", value: lines.join("\n") });
   return embed;
 }
