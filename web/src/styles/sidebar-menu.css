@@ -3,8 +3,9 @@
 .workspace .sidebar .grace-menu {
   position: relative;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 8px;
+  /* Cột icon rộng bằng logo (nút thu gọn 30px) để tâm icon thẳng tâm logo; 30 + 10 đưa chữ thẳng cột "INDEX BEAST". */
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
   height: 56px;
   padding: 10px 0 0;
@@ -23,7 +24,7 @@
 .workspace .sidebar .grace-menu__label {
   min-width: 0;
   white-space: normal;
-  text-align: center;
+  text-align: left;
   text-transform: uppercase;
   font: 400 16px/1.4 var(--font-interface);
   opacity: 1;
@@ -147,7 +148,7 @@
 }
 
 .workspace .sidebar .grace-menu__icon {
-  width: 28px;
+  width: 30px;
   height: 32px;
 }
 
@@ -197,7 +198,7 @@
 /* Rail thu gọn giữ nguyên ô icon; vệt sáng nhỏ phía trên icon thay cho nhãn đang ẩn. */
 /* Mẫu mới đặt dải sáng sau icon, cùng cách đặt sau chữ khi sidebar mở. */
 .workspace.sidebar-collapsed .sidebar .grace-menu {
-  grid-template-columns: 28px;
+  grid-template-columns: 30px;
 }
 
 .workspace.sidebar-collapsed .sidebar .grace-menu__line {

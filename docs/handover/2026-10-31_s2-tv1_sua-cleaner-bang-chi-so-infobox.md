@@ -39,6 +39,6 @@
 
 ## Việc tiếp theo
 
-1. TV2 chạy lại clean vào thư mục mới, vd. `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/s2-full-v3`. Kiểm `review.csv` có lý do `infobox_stats_group`, `content_clean_all.csv` không đổi phần lore. Sau đó chunk lại. Chunk lúc này chưa khác vì chỉ số vẫn `excluded`.
+1. TV2 chạy lại clean vào thư mục mới, vd. `python -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --output-dir data/clean_runs/s2-full-v3`. Kiểm `review.csv` có lý do `infobox_stats_group`, `content_clean_all.csv` không đổi phần lore. Sau đó chunk lại. **Đính chính 02/11:** nội dung chunk không đổi (73.864/73.864 dòng thân chunk trùng khớp), nhưng 14 trang boss có thêm 1 chunk (Malenia thêm 2), tổng 23.765 → 23.780, tiếng Anh 18.368 → 18.383. Nguyên nhân: khối chỉ số `excluded` nằm chen giữa các trường infobox nên một cụm trường bị tách làm hai. Chunk ID của các trang này dịch theo, nên nếu dùng chunk mới thì phải nạp lại PostgreSQL và index lại Qdrant.
 2. Sau CHANGE-REQ gameplay: việc #2 đổi `infobox_stats_group` (và các lý do gameplay khác) thành `keep`; việc #3 gộp infobox mỗi trang thành một chunk.
 3. Đo baseline (#6) trước khi thay corpus đang phục vụ.

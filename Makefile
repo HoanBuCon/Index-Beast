@@ -14,7 +14,7 @@ API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print
 WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
 
 .PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
-.PHONY: bot bot-deploy bot-check bot-dev
+.PHONY: bot bot-deploy bot-check bot-dev data
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
@@ -81,6 +81,9 @@ bot-dev: up      ## Bật hạ tầng, API mock và bot cùng terminal; cần Do
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
 	$(MAKE) --no-print-directory -j2 api web
+
+data:            ## Pipeline dữ liệu: make data STEP=status|crawl|clean|chunk|load|index|all ARGS="--dry-run"
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.data_pipeline $(or $(STEP),status) $(ARGS)
 
 health:          ## Đọc health API đang chạy; không gọi LLM hoặc load embedding
 	@"$(PYTHON)" -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:$(API_PORT)/api/v1/health', timeout=10).read().decode())"

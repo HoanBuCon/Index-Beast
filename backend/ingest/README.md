@@ -1,3 +1,24 @@
+# Ingest
+
+## Chạy nhanh: `scripts/data_pipeline.py`
+
+Một lệnh cho mỗi bước, gọi lại đúng các CLI bên dưới với mặc định an toàn. Chạy từ `backend/`
+(Windows: `.venv\Scripts\python`; Linux/Docker: `python`), hoặc từ gốc repo bằng `make data STEP=<bước>`:
+
+| Lệnh | Việc làm |
+|---|---|
+| `python -m scripts.data_pipeline status` | Bản crawl, clean, chunk mới nhất (chỉ tính lượt chạy đủ toàn bộ trang) |
+| `python -m scripts.data_pipeline crawl` | Resume lượt crawl `s2-full-20261028` (gọi mạng, rất lâu; cần `INGEST_CONTACT_EMAIL`) |
+| `python -m scripts.data_pipeline clean` | Clean toàn bộ raw vào `data/clean_runs/clean-<thời-gian>` |
+| `python -m scripts.data_pipeline chunk` | Chunk bản clean mới nhất vào `data/chunk_runs/chunk-<thời-gian>`; tự tìm tokenizer E5 trong `models/` |
+| `python -m scripts.data_pipeline load` | Kiểm tra rồi nạp chunk mới nhất vào PostgreSQL (`--validate-only` để chỉ kiểm) |
+| `python -m scripts.data_pipeline index --dry-run` | Kiểm tra chunk trước khi index, không tải model |
+| `python -m scripts.data_pipeline index --collection lore_chunks_v2` | Embedding và ghi Qdrant (lâu, CPU); bắt buộc chỉ định collection |
+| `python -m scripts.data_pipeline all` | clean → chunk → load → index `--dry-run` |
+
+Mọi bước nhận `--input` (chọn bản khác bản mới nhất) và `--output` (đặt tên thư mục). Đầu ra luôn là thư mục mới,
+không ghi đè bản đang phục vụ. Index vào collection mới rồi mới đổi `RAG_COLLECTION`, vì index đè không xóa point cũ.
+
 # Prototype ingest Sprint 1
 
 Sprint 2 full base+SotE (người dùng duyệt): dùng `python -m ingest.chunk.full --input-dir data/clean_runs/s2-full-v2 --tokenizer <local-tokenizer.json> --output-dir data/chunk_runs/<ten-moi>`.
