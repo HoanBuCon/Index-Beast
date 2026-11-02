@@ -334,9 +334,11 @@ class ChatPipeline:
             p.trace["rewrite_fallback"] = fallback
             if rewritten.out_of_scope:
                 p.static_answer = (
-                    "Mình hỗ trợ các câu hỏi về Elden Ring, từ cốt truyện đến gameplay và build."
+                    "Câu này nằm ngoài Elden Ring nên mình không giúp được. "
+                    "Bạn muốn hỏi về cốt truyện, nhiệm vụ, trang bị, boss hay build?"
                     if p.lang == "vi"
-                    else "I help with Elden Ring questions, from lore to gameplay and builds."
+                    else "That's outside Elden Ring, so I can't help with it. "
+                    "Would you like to ask about lore, quests, equipment, bosses or builds?"
                 )
             elif rewritten.ambiguous or (fallback and not state["history"] and unresolved_reference(state["query"])):
                 p.static_answer = (

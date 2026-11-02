@@ -20,6 +20,7 @@ Không phải lỗi hệ thống. Có hai vấn đề riêng:
 ## Đã sửa
 
 - `backend/app/rag/pipeline.py`: thêm `small_talk()`, nhận câu chào, câu hỏi danh tính, câu cảm ơn tiếng Việt (có hoặc không dấu) và tiếng Anh, rồi trả lời cố định. Không gọi LLM, không truy xuất. Chỉ khớp **nguyên câu**, nên "Chào Ranni là ai?" vẫn đi luồng RAG. `language()` nhận thêm `chao`, `cam on`.
+- `backend/app/rag/pipeline.py`: viết lại câu từ chối của nhánh `out_of_scope` (VI, EN) cho tự nhiên hơn. Lời đáp vẫn cố định; LLM rewrite chỉ phân loại.
 - `web/src/components/chat/MessageList.tsx`: bỏ dòng "Chưa tìm được đủ bằng chứng trong kho nguồn."
 - `bot/src/utils/format.ts`: bỏ footer "Chưa tìm được đủ bằng chứng."; chỉ đặt footer khi còn nội dung.
 - Thêm test trong `backend/tests/unit/test_live_chat.py` và `bot/tests/ask.test.ts`.
