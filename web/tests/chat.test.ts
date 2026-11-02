@@ -77,6 +77,14 @@ test("non-JSON and provider failures remain errors rather than falling back to d
   );
 });
 
+test("502 is not reported as a connection failure", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response("private details", { status: 502 }));
+  await assert.rejects(
+    chat(request),
+    (error: unknown) => error instanceof ApiError && /câu trả lời hợp lệ/.test(error.message),
+  );
+});
+
 test("cancel aborts an in-flight JSON fetch", async (t) => {
   const abort = new AbortController();
   t.mock.method(

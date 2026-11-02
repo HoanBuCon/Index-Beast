@@ -719,7 +719,6 @@ async def test_format_retries_are_bounded_and_failed_outputs_are_not_saved(retri
         LLMError("network", reason="provider_request_failed"),
         LLMError("length", reason="incomplete_output", finish_reason="length"),
         LLMError("other", reason="unsupported_content_type"),
-        json.dumps({"answer": "Uncited claim.", "evidence": [], "insufficient": False}),
         json.dumps(
             {
                 "answer": "Ranni [1].",
@@ -735,6 +734,63 @@ async def test_transport_length_grounding_and_schema_errors_do_not_trigger_forma
     with pytest.raises(UpstreamError):
         await service("rag", llm, FakeRetriever()).answer(ChatRequest(**BODY))
     assert llm.attempts == 1
+
+
+@pytest.mark.parametrize(
+    "invalid,reason",
+    [
+        ({"answer": "Uncited claim.", "evidence": [], "insufficient": False}, "citation_evidence_indices"),
+        (
+            {"answer": "Ranni [1].", "evidence": [{"index": 1, "quote_id": "q99"}], "insufficient": False},
+            "unknown_quote_id",
+        ),
+    ],
+)
+async def test_citation_protocol_errors_are_regenerated_once(invalid, reason):
+    valid = {"answer": "Ranni [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    llm = SequenceLLM([json.dumps(invalid), json.dumps(valid)])
+    live = service("rag", llm, FakeRetriever())
+    result = await live.answer(ChatRequest(**BODY))
+    assert result.grounded and result.answer == valid["answer"] and llm.attempts == 2
+    trace = live.traces[result.message_id]
+    assert trace["generation_retry_reason"] == reason and "validation_failure" not in trace
+
+
+async def test_uncited_paragraphs_are_dropped_without_another_llm_call(caplog):
+    data = {
+        "answer": "Mở đầu không có nguồn.\n\nRanni [1].\n\nprivate kết luận không có nguồn.",
+        "evidence": [{"index": 1, "quote_id": "q0"}],
+        "insufficient": False,
+        "limitation": "Mình chưa có đủ dữ liệu về phần còn lại.",
+    }
+    llm = SequenceLLM([json.dumps(data)])
+    live = service("rag", llm, FakeRetriever())
+    result = await live.answer(ChatRequest(**BODY))
+    assert result.grounded and llm.attempts == 1
+    assert result.answer == "Ranni [1].\n\n" + data["limitation"]
+    assert live.traces[result.message_id]["dropped_uncited_paragraphs"] == 2
+    assert "private kết luận" not in caplog.text
+
+
+async def test_fully_cited_answer_keeps_its_exact_text():
+    data = {
+        "answer": "Ranni [1].\n\n\nBlaidd [1].\n",
+        "evidence": [{"index": 1, "quote_id": "q0"}],
+        "insufficient": False,
+    }
+    llm = SequenceLLM([json.dumps(data)])
+    live = service("rag", llm, FakeRetriever())
+    result = await live.answer(ChatRequest(**BODY))
+    assert result.answer == data["answer"]
+    assert "dropped_uncited_paragraphs" not in live.traces[result.message_id]
+
+
+async def test_citation_protocol_retry_is_bounded():
+    llm = SequenceLLM([json.dumps({"answer": "Uncited claim.", "evidence": [], "insufficient": False})])
+    live = service("rag", llm, FakeRetriever())
+    with pytest.raises(UpstreamError):
+        await live.answer(ChatRequest(**BODY))
+    assert llm.attempts == 2
 
 
 async def test_llm_only_does_not_retry_or_apply_rag_json_parser():
@@ -998,13 +1054,18 @@ async def test_partial_build_stream_matches_json_and_emits_limitation_only_after
         {"limitation": "Invented proof [1]."},
         {"limitation": "Check https://invented.test"},
         {"limitation": " "},
-        {"answer": "Supported [1].\n\nAn uncited gameplay fact."},
         {"evidence": [{"index": 1, "quote_id": "q999"}]},
     ],
 )
 def test_partial_answers_do_not_relax_existing_evidence_validation(updates):
     with pytest.raises(UpstreamError):
         validate_answer(Prepared("rag", "en", [], hits=[build_source()]), {**partial_build(), **updates})
+
+
+def test_uncited_gameplay_fact_is_never_shown():
+    data = {**partial_build(), "answer": "Supported [1].\n\nAn uncited gameplay fact."}
+    result = validate_answer(Prepared("rag", "en", [], hits=[build_source()]), data)
+    assert result.grounded and "uncited gameplay fact" not in result.answer
 
 
 def test_invalid_limitation_stream_is_error_without_success_done(client):

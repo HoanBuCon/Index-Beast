@@ -121,9 +121,16 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             if index > len(prepared.hits) or quote not in prepared.hits[index - 1].payload["text"]:
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence quote is not in cited text")
-        if any(not CITATION.search(p) for p in parsed.answer.split("\n\n") if p.strip()):
-            failure = "uncited_paragraph"
-            raise ValueError("Every answer paragraph needs evidence")
+        answer = parsed.answer
+        paragraphs = [p for p in answer.split("\n\n") if p.strip()]
+        cited = [p for p in paragraphs if CITATION.search(p)]
+        if len(cited) < len(paragraphs):
+            # Đoạn không có nguồn thì không hiển thị; đã chắc còn đoạn có nguồn vì used khớp evidence ở trên.
+            answer = "\n\n".join(cited)
+            prepared.trace["dropped_uncited_paragraphs"] = len(paragraphs) - len(cited)
+            logging.getLogger(__name__).warning(
+                "Dropped uncited paragraphs", extra={"data": {"count": len(paragraphs) - len(cited)}}
+            )
         if parsed.limitation is not None:
             failure = "invalid_limitation"
             if not parsed.limitation.strip() or URL.search(parsed.limitation) or CITATION.search(parsed.limitation):
@@ -140,7 +147,6 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         ]
         # Operational grounding: model supplied evidence, exact quotes and indices checked.
         # This is NOT a guarantee of semantic entailment of every claim.
-        answer = parsed.answer
         if parsed.limitation is not None:
             answer += "\n\n" + parsed.limitation.strip()
         return Generated(answer, sources, True)
@@ -179,6 +185,16 @@ def answer_prefix(raw: str) -> str:
         raise UpstreamError("Định dạng stream RAG không hợp lệ.") from None
 
 
+# Lỗi giao thức trích dẫn có thể sửa bằng cách sinh lại; lần sau vẫn qua validate_answer nên không nới kiểm chứng.
+RETRYABLE_REASONS = {
+    "invalid_json",
+    "empty_output",
+    "insufficient_with_citations",
+    "citation_evidence_indices",
+    "unknown_quote_id",
+}
+
+
 class Generator:
     def __init__(self, llm: LLM, *, thinking: bool = False, format_retries: int = 1):
         if format_retries not in (0, 1):
@@ -202,6 +218,8 @@ class Generator:
             "Use only the supplied evidence; never invent citations or change source indices."
             " If insufficient=true, answer must contain ONLY the specific gap or clarification: no related facts, "
             "source counts, source descriptions or bracketed citations. "
+            "If insufficient=false, every answer paragraph must contain [n], the set of [n] must equal the set of "
+            "evidence.index, and each quote_id must come from that source's evidence_units. "
             "Keep the response short and avoid decorative quotes."
         )
         return values
@@ -211,7 +229,7 @@ class Generator:
             prepared.mode == "rag"
             and attempt < self.format_retries
             and not emitted
-            and diagnostics.get("reason") in {"invalid_json", "empty_output", "insufficient_with_citations"}
+            and diagnostics.get("reason") in RETRYABLE_REASONS
             and diagnostics.get("json_error") not in {"output_too_large", "nesting_too_deep"}
         )
         if allowed:
