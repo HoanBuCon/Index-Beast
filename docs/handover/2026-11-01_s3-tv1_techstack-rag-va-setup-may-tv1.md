@@ -43,7 +43,7 @@ Không có nhánh/PR nào của TV3 chưa merge. Phần TV3 thêm (PR #45, #47, 
 | Ảnh | `media/blobs`, `images.csv`, manifest | Đủ đường dẫn theo cấu hình mặc định |
 | `entities` | — | **0 dòng: chưa có mã nạp** (mục 5) |
 
-Không clean/chunk lại: bản chính thức đã có, và sửa cleaner ở PR #53 chưa làm chunk khác đi (khối chỉ số vẫn `excluded`).
+Không clean/chunk lại: bản chính thức đã có. (Đính chính 02/11: cleaner mới ở PR #53 không đổi nội dung chunk nhưng tách thêm 15 chunk ở 14 trang boss, xem [handover sửa cleaner](2026-10-31_s2-tv1_sua-cleaner-bang-chi-so-infobox.md).)
 
 ## 4. Khởi chạy và thử nghiệm (01/11)
 

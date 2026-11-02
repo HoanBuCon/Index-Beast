@@ -105,3 +105,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-10-31 | TV1 (Hoanbucon) | [Sửa đường dẫn raw trong artifact và nạp PostgreSQL](2026-10-31_s2-tv1_sua-duong-dan-artifact-va-nap-pg.md) |
 | 2026-11-01 | TV1 (Hoanbucon) | [Techstack RAG của TV3 và setup hệ thống trên máy TV1](2026-11-01_s3-tv1_techstack-rag-va-setup-may-tv1.md) |
 | 2026-11-01 | TV1 (Hoanbucon) | [Bot Discord không cần DISCORD_CLIENT_ID và DISCORD_GUILD_ID](2026-11-01_s3-tv1_bot-khong-can-client-id.md) |
+| 2026-11-02 | TV1 (Hoanbucon) | [Script chạy pipeline dữ liệu: crawl, clean, chunk, load, index](2026-11-02_s3-tv1_script-pipeline-du-lieu.md) |
