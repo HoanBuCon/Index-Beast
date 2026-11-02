@@ -92,6 +92,11 @@ test("ask renders friendly API errors and hides unexpected SDK/provider details"
   }
 });
 
+test("ungrounded replies carry no evidence footer", () => {
+  const embed = answerEmbed("Chào", { ...response, answer: "Chào bạn!", grounded: false, sources: [] }).toJSON();
+  assert.equal(embed.footer, undefined);
+});
+
 test("embed stays below Discord limits for long answers and source lists; rejects unsafe links", () => {
   const sources = Array.from({ length: 40 }, (_, i) => ({
     index: i + 1,

@@ -22,7 +22,7 @@ from app.adapters.llm import DeepSeekLLM, LLMError, LLMResponse, track_provider_
 from app.api.schemas.chat import ChatRequest
 from app.main import create_app
 from app.rag.generator import Generated, Prepared, answer_prefix, validate_answer
-from app.rag.pipeline import ChatPipeline, select_context
+from app.rag.pipeline import ChatPipeline, select_context, small_talk
 from app.rag.retriever import hit_to_document
 from app.services.chat import LiveChatService
 from app.services.factory import build_chat_service
@@ -1050,6 +1050,34 @@ async def test_invalid_limitation_before_first_visible_token_raises_and_cleans_u
     with pytest.raises(UpstreamError):
         await live.open_stream(ChatRequest(message="Suggest an armor build", channel="web"))
     assert llm.closed and not live.traces
+
+
+@pytest.mark.parametrize(
+    "message,expected",
+    [
+        ("Chào", "IndexBeast"),
+        ("chao ban!", "IndexBeast"),
+        ("Bạn là ai?", "IndexBeast"),
+        ("ban la ai", "IndexBeast"),
+        ("Hello", "IndexBeast"),
+        ("Who are you?", "IndexBeast"),
+        ("Cảm ơn nhé", "Không có gì"),
+        ("Thanks!", "You're welcome"),
+    ],
+)
+async def test_small_talk_skips_rewrite_and_retrieval(message, expected):
+    llm, retriever = FakeLLM(), FakeRetriever(hits=[])
+    llm.data = {"standalone_query_en": "x", "lang": "vi", "entities": [], "out_of_scope": True, "ambiguous": False}
+    result = await service("rag", llm, retriever, rag_rewrite_enabled=True).answer(
+        ChatRequest(message=message, channel="web")
+    )
+    assert expected in result.answer
+    assert llm.calls == 0 and not retriever.calls and not result.grounded
+
+
+@pytest.mark.parametrize("message", ["Chào Ranni là ai?", "Hello Kitty ở đâu?", "Ranni là ai", "Who are you, Melina?"])
+async def test_small_talk_requires_the_whole_message(message):
+    assert small_talk(message, "vi") is None
 
 
 async def test_gameplay_rewrite_keeps_proper_names_numbers_and_goal():

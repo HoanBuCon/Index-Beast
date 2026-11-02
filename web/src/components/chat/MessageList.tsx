@@ -87,9 +87,6 @@ export default function MessageList({
               {message.incomplete && !(busy && message === messages.at(-1)) && (
                 <p className="muted">{"Câu trả lời chưa hoàn tất."}</p>
               )}
-              {message.grounded === false && !demo && (
-                <p className="muted">{"Chưa tìm được đủ bằng chứng trong kho nguồn."}</p>
-              )}
               {canShowIllustrations(message, busy && message.id === messages.at(-1)?.id) && (
                 <AnswerIllustrations
                   illustrations={
