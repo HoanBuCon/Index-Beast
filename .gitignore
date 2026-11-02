@@ -29,3 +29,6 @@ planning/.trello.env
 
 # Elden Ring data (tải/sinh lại được)
 elden-ring-data/
+
+# Cấu hình cục bộ của Claude Code (launch.json…), không thuộc dự án
+.claude/
