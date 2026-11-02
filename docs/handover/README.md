@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Sơ đồ pipeline hệ thống (02/11/2026)](2026-11-02_s3-tv3_system-pipeline.md)
+
 - [TV3 · Nhánh câu hỏi tổng quan (31/10/2026)](2026-10-31_s2-tv3_overview-routing.md)
 
 - [TV3 · DeepSeek thật và protocol recovery (31/10/2026)](2026-10-31_s2-tv3_deepseek-live-output.md)
