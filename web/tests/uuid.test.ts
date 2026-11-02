@@ -49,7 +49,7 @@ test("API request IDs work without secure-context randomUUID", async () => {
         headers: { "Content-Type": "application/json" },
       });
     };
-    await assert.rejects(chat({ message: "synthetic", channel: "web" }), /dịch vụ/);
+    await assert.rejects(chat({ message: "synthetic", channel: "web" }), /câu trả lời hợp lệ/);
     assert.ok(requested); // Request reached fetch; no real backend/LLM call.
   } finally {
     globalThis.fetch = originalFetch;

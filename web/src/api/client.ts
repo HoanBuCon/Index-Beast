@@ -30,7 +30,9 @@ async function request(path: string, init: RequestInit = {}) {
             ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
             : response.status === 401 || response.status === 403
               ? "Không có quyền truy cập. Kiểm tra token quản trị."
-              : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+              : response.status === 502
+                ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
+                : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
     throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
   }
   return response;

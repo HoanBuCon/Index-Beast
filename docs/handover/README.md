@@ -111,3 +111,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-02 | TV1 (Hoanbucon) | [Script chạy pipeline dữ liệu: crawl, clean, chunk, load, index](2026-11-02_s3-tv1_script-pipeline-du-lieu.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Căn trái chữ menu sidebar web](2026-11-02_s3-tv1_can-trai-menu-sidebar.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Sửa câu chào và câu hỏi danh tính bị từ chối khi bật rewrite](2026-11-02_s3-tv1_sua-chao-hoi-khi-bat-rewrite.md) |
+| 2026-11-02 | TV1 (Hoanbucon) | [Thử lại khi LLM trích dẫn sai giao thức và sửa thông báo 502 trên web](2026-11-02_s3-tv1_thu-lai-loi-trich-dan.md) |
