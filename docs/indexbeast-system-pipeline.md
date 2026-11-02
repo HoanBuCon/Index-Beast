@@ -16,8 +16,8 @@ graph TD
     end
 
     subgraph ASK["IndexBeast"]
-        U1["Đặt câu hỏi bằng tiếng Việt hoặc tiếng Anh"]
-        U2["Mở web hoặc dùng lệnh /ask trên Discord"]
+        U1["Mở web hoặc dùng lệnh /ask trên Discord"]
+        U2["Đặt câu hỏi bằng tiếng Việt hoặc tiếng Anh"]
         U3["IndexBeast xét câu hỏi và ngữ cảnh hội thoại"]
         U4{"Câu hỏi có phù hợp và đủ rõ?"}
         U5["Giải thích giới hạn hoặc hỏi lại để làm rõ"]
