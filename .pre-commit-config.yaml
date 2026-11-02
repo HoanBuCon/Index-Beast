@@ -1,0 +1,45 @@
+# Cài một lần:  pip install pre-commit==4.7.0 && pre-commit install
+# Chạy tay:     pre-commit run --all-files
+# Prettier dùng bản trong web/ và bot/ (cần `npm ci` ở hai thư mục đó trước).
+
+# Không đụng file sinh tự động và tài liệu nhị phân/thuyết trình
+exclude: ^(docs/export/|docs/presentation/|docs/03_SPRINT_PLAN\.md$)|\.(docx|pptx|pdf)$
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^backend/
+      - id: ruff-format
+        files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: prettier-web
+        name: prettier (web)
+        entry: npm --prefix web exec --no -- prettier --write --ignore-unknown
+        language: system
+        files: ^web/
+        exclude: ^web/package-lock\.json$
+      - id: prettier-bot
+        name: prettier (bot)
+        entry: npm --prefix bot exec --no -- prettier --write --ignore-unknown
+        language: system
+        files: ^bot/
+        exclude: ^bot/package-lock\.json$

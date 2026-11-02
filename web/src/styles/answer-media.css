@@ -1,0 +1,124 @@
+/* TV4 · Chỉ vùng ảnh trong câu trả lời và trang fixture; dùng token của theme hiện có. */
+.answer-illustrations {
+  display: grid;
+  gap: 20px;
+  margin: 24px 0;
+  min-width: 0;
+}
+
+.answer-illustration {
+  display: grid;
+  grid-template-columns: minmax(0, 224px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  margin: 0;
+}
+
+.answer-illustration__frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  min-width: 0;
+  background: var(--ui-surface);
+  color: var(--ui-muted);
+}
+
+.answer-illustration__frame img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  visibility: hidden;
+}
+
+.answer-illustration__frame img.is-ready {
+  visibility: visible;
+}
+
+.answer-illustration__frame p,
+.answer-illustration__credit,
+.answer-illustration__kind {
+  margin: 0;
+  font: 400 14px/1.6 var(--font-interface);
+  color: var(--ui-muted);
+}
+
+.answer-illustration figcaption {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.answer-illustration h3 {
+  margin: 4px 0 8px;
+  color: var(--ui-text);
+  font: 400 20px/1.4 var(--font-interface);
+}
+.answer-illustration a {
+  color: var(--ui-accent);
+  font-size: 14px;
+  text-underline-offset: 3px;
+}
+.answer-illustration__credit {
+  margin-top: 8px;
+}
+.answer-illustration__error {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.answer-illustration__error button {
+  justify-self: center;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.answer-media-preview {
+  max-width: 824px;
+  margin: auto;
+  padding: 32px;
+}
+.answer-media-preview h1 {
+  margin: 0 0 12px;
+  font: 400 28px/1.3 var(--font-interface);
+}
+.answer-media-preview > p {
+  color: var(--ui-muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.answer-media-preview__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0;
+}
+.answer-media-preview__controls label {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 180px;
+  font-size: 16px;
+}
+.answer-media-preview__controls select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  color: var(--ui-text);
+  background: var(--ui-surface);
+}
+.answer-media-preview .messages {
+  padding: 0;
+}
+
+@media (max-width: 520px) {
+  .answer-illustration {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .answer-media-preview {
+    padding: 24px 16px;
+  }
+  .answer-media-preview h1 {
+    font-size: 24px;
+  }
+}

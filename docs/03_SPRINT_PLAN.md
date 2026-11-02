@@ -11,12 +11,12 @@
 
 ## 1. Phân vai
 
-| Mã | Vai trò | Trọng tâm |
-|---|---|---|
-| TV1 | Tech Lead · Backend & DevOps | FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code |
-| TV2 | Data Engineer | Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu |
-| TV3 | AI / RAG Engineer | Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng |
-| TV4 | Frontend & Discord Bot | React web, discord.js bot, UI/UX, UAT |
+| Mã | Thành viên | Vai trò | Trọng tâm |
+|---|---|---|---|
+| TV1 | Hoanbucon | Tech Lead · Backend & DevOps | FastAPI, PostgreSQL, Docker, CI/CD, VPS, review code |
+| TV2 | UncleThing | Data Engineer | Crawl, làm sạch, chunking, metadata, bảng thực thể, cập nhật dữ liệu |
+| TV3 | MinhMuc | AI / RAG Engineer | Embedding, hybrid search, rerank, LLM, prompt, đánh giá chất lượng |
+| TV4 | QuyVuiVe | Frontend & Discord Bot | React web, discord.js bot, UI/UX, UAT |
 
 Nguyên tắc: mỗi thẻ có **một** người chịu trách nhiệm chính; thẻ `ALL` là hoạt động chung của team. Người chịu trách nhiệm có thể nhờ người khác hỗ trợ nhưng là người kéo thẻ sang Hoàn thành.
 
@@ -164,13 +164,17 @@ Biết chính xác lấy gì, ở đâu, bao nhiêu, giấy phép ra sao.
 
 #### 1.7 [TV2] Prototype crawler wiki.gg
 
-Client MediaWiki lịch sự, chịu lỗi, lưu bản thô.
+Client MediaWiki lịch sự, chịu lỗi, lưu bản thô. Phần mở rộng được TV2 duyệt ngày 23/10/2026: thu thập ảnh nội dung phục vụ RAG ảnh; không triển khai image embedding/retrieval của TV3. Ước lượng bổ sung cần review trong Sprint Review; 5 điểm gốc chưa bao gồm phần ảnh.
 
 - [ ] HTTP client có User-Agent kèm email, ≤1 req/s, retry + backoff
 - [ ] Lấy danh sách trang theo category (có phân trang continue)
 - [ ] Tải nội dung (wikitext hoặc HTML parse) + revision id
 - [ ] Lưu raw vào thư mục data/raw/ (JSON) để không phải crawl lại
 - [ ] Crawl thử 200 trang đa dạng, ghi số liệu thời gian/lỗi
+- [ ] Thu thập ảnh bài viết/infobox/gallery, loại icon giao diện và ghi lỗi riêng
+- [ ] Lưu ảnh theo SHA-256 trong data/media/blobs/ và manifest theo trang trong data/media/manifests/wikigg/
+- [ ] Metadata ảnh: URL nguồn, trang file, caption, alt, section, tác giả/giấy phép nếu có; đánh dấu khi chưa rõ
+- [ ] Kiểm tra MIME, kích thước, checksum; dùng lại ảnh trùng; kiểm tra ảnh-caption-section trên 20 trang mẫu
 
 #### 1.8 [TV2] Đề xuất chiến lược chunk (ADR-003)
 
@@ -327,7 +331,7 @@ Thu thập đầy đủ các trang lore.
 
 #### 2.5 [TV2] Làm sạch & chuẩn hoá nội dung
 
-Biến wikitext/HTML thành văn bản sạch giàu lore.
+Biến wikitext/HTML thành văn bản sạch giàu lore. Ngoại lệ Sprint 2 được người dùng duyệt 29/10/2026: clean toàn bộ 4164 raw, gồm base game và Shadow of the Erdtree; text/media nghiệm thu riêng.
 
 - [ ] Parse wikitext/HTML → text (mwparserfromhell hoặc BeautifulSoup)
 - [ ] Bỏ infobox chỉ số, navbox, bảng stats, references rác
@@ -340,7 +344,7 @@ Chia đoạn theo ADR-003 và gắn metadata.
 
 - [ ] Chunk theo heading, kích thước/overlap cấu hình được
 - [ ] Metadata: doc_id, title, section, url, source, game_scope, source_type, lang, updated_at
-- [ ] Gán game_scope=base cho chunk
+- [ ] Sprint 2: game_scope=elden_ring cho corpus base+SotE; release_scope giữ bằng chứng hoặc unknown, không ép thành base
 - [ ] Heuristic source_type (in-game text / wiki prose / speculation)
 - [ ] Ghi chunks vào PostgreSQL
 

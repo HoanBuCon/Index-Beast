@@ -1,0 +1,57 @@
+{
+  "question": "các boss trong elden ring",
+  "context_method": "manual local artifact sample; no embedding or retrieval server",
+  "thinking": true,
+  "max_tokens": 4096,
+  "transport_retries": 0,
+  "format_retries": 0,
+  "paid_completion_calls": 1,
+  "selected": [
+    {
+      "id": "4351ed8d-6902-59c2-b655-b7d063a19683",
+      "title": "Bosses"
+    },
+    {
+      "id": "8a9e72c5-eea7-54fe-b297-01e55762a859",
+      "title": "Bosses"
+    },
+    {
+      "id": "72939a6e-c747-5ccd-b0db-9e90ee0d8693",
+      "title": "Bosses"
+    },
+    {
+      "id": "98a727a5-6389-5c97-bce9-fd39dcdd553f",
+      "title": "Bosses"
+    },
+    {
+      "id": "3c32973b-24d9-55d3-9f63-3eb07d5f612f",
+      "title": "Bosses"
+    }
+  ],
+  "status": "success",
+  "answer": "Trong ELDEN RING có tổng cộng 238 boss, nằm rải rác ở overworld hoặc trong các dungeon/location khác nhau của Lands Between [1]. Một trận boss thường được nhận ra qua việc nhạc đổi sang giai điệu dữ dội hơn, thanh máu và tên boss hiện ở cuối màn hình; boss cho nhiều rune hơn và không hồi sinh khi bạn nghỉ ở Site of Grace. Với boss trong dungeon, bạn bị chặn bởi fog wall cho đến khi hạ được boss (hoặc bỏ chạy/thua thì phải vào lại qua fog gate) [2].\n\nDù có hơn hai trăm boss, chỉ một số ít là bắt buộc để hoàn thành game. Nhóm chính gồm: bất kỳ hai Shardbearer nào, Draconic Tree Sentinel hoặc Fia's Champions, Godfrey, First Elden Lord, Morgott, the Omen King, Fire Giant, Godskin Duo, Maliketh, the Black Blade, Sir Gideon Ofnir, the All-Knowing, rồi Godfrey lần nữa, Radagon of the Golden Order và Elden Beast [3]. Năm Shardbearer có thể chọn để lấy Great Rune là Godrick the Grafted, Mohg, Lord of Blood, Rennala, Queen of the Full Moon, Rykard, Lord of Blasphemy và Starscourge Radahn — cần ít nhất hai Great Rune để phá seal vào Leyndell [4].\n\nRiêng phần Shadow of the Erdtree (DLC) có danh sách boss bắt buộc khác: để vào DLC cần hạ Starscourge Radahn và Mohg, Lord of Blood; còn để hoàn thành DLC cần Messmer the Impaler, Romina, Saint of the Bud và Promised Consort Radahn [3]. Một số Shardbearer cũng có điều kiện mở đường trước khi đánh, ví dụ Godrick cần hạ Margit, the Fell Omen và đi qua Stormveil Castle, còn Radahn cần nói chuyện với Jerren ở Redmane Castle sau khi tới Altus Plateau hoặc hạ cặp Crucible Knight & Misbegotten Warrior [5].\n\nBạn muốn mình đi sâu vào nhóm nào — boss bắt buộc, Shardbearer, boss DLC, hay chiến thuật cho một boss cụ thể?",
+  "grounded": true,
+  "source_indices": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "elapsed_seconds": 4.784,
+  "provider_shape": {
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 3469,
+      "output_tokens": 768,
+      "total_tokens": 4237,
+      "input_token_details": {
+        "cache_read": 1536
+      },
+      "output_token_details": {
+        "reasoning": 110
+      }
+    },
+    "content_chars": 1874
+  }
+}

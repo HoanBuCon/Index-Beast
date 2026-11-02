@@ -1,0 +1,35 @@
+{
+  "schema_valid": true,
+  "total": 60,
+  "languages": {
+    "vi": 38,
+    "en": 22
+  },
+  "vi_ratio": 0.6333333333333333,
+  "categories": {
+    "character": 10,
+    "event": 6,
+    "location": 9,
+    "multi_hop": 8,
+    "out_of_scope": 11,
+    "insufficient_evidence": 1,
+    "mechanics": 6,
+    "equipment": 4,
+    "quest": 5
+  },
+  "difficulty": {
+    "easy": 21,
+    "medium": 26,
+    "hard": 13
+  },
+  "review_status": {
+    "pending": 60
+  },
+  "sote_cases": 10,
+  "author_evidence_cases": 24,
+  "artifact_quotes_verified": true,
+  "author_evidence_cases_verified": 24,
+  "review_gate_passed": false,
+  "accepted": true,
+  "note": "Schema/provenance validation is not semantic verification or TV2 review. No model evaluation executed."
+}

@@ -1,5 +1,13 @@
 # Index Beast — Software Requirements Specification (Living SRS)
 
+> Ngoại lệ ingestion Sprint 2, người dùng duyệt 29/10/2026: TV2 clean/chunk toàn bộ
+> 4.164 raw **Elden Ring base game + Shadow of the Erdtree**, dùng game_scope=elden_ring.
+> Release có bằng chứng/candidate/unknown được giữ trong artifact; không gán DLC thành base.
+> Ngoại lệ áp dụng FR-ING-01,03,04,05,10; text/media nghiệm thu riêng. Nightreign và
+> Tarnished Edition không được tự mở scope. TV3 cần tích hợp filter và passage-prefix
+> contract trước khi index/retrieval; phần triển khai TV3 không được sửa bởi TV2.
+> Các quy định base-only bên dưới là baseline trước ngoại lệ, chưa mô tả việc RAG đã hỗ trợ SotE.
+
 | Thuộc tính | Giá trị |
 |---|---|
 | Phiên bản | 0.6.0 (Draft) |

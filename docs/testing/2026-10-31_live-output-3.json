@@ -1,0 +1,56 @@
+{
+  "question": "các boss trong elden ring",
+  "context_method": "actual hybrid retrieval using cached E5 and read-only Qdrant; no rewrite/history",
+  "thinking": true,
+  "max_tokens": 4096,
+  "transport_retries": 0,
+  "format_retries": 0,
+  "paid_completion_calls": 1,
+  "selected": [
+    {
+      "id": "b2c14f64-77df-5c90-afba-b0ec66816690",
+      "title": "Letter for Freyja"
+    },
+    {
+      "id": "cc23a5c2-2700-527b-b674-e030f4d9c7c0",
+      "title": "Bosses"
+    },
+    {
+      "id": "ee803fb4-9838-52b2-b614-9f18c5fa40fe",
+      "title": "Bosses"
+    },
+    {
+      "id": "49120a18-12f4-578e-aba6-944d8b779205",
+      "title": "Elden Beast"
+    },
+    {
+      "id": "fb401c32-afcb-5e59-84de-080ce1fbecab",
+      "title": "Maliketh, the Black Blade"
+    }
+  ],
+  "status": "success",
+  "answer": "Theo nguồn wiki, Elden Ring có tổng cộng 238 boss, xuất hiện cả ở overworld lẫn trong các địa điểm ở Lands Between [3]. Nhóm boss \"Remembrance\" của bản gốc mà nguồn liệt kê gồm: Regal Ancestor Spirit, Astel Naturalborn of the Void, Lichdragon Fortissax, Fire Giant, Godrick the Grafted, Rennala Queen of the Full Moon, Rykard Lord of Blasphemy, Starscourge Radahn, Morgott the Omen King, Mohg Lord of Blood, Malenia Blade of Miquella, Maliketh the Black Blade, Hoarah Loux Warrior, Dragonlord Placidusax và Elden Beast [2]. Đây chỉ là một phần danh sách, không phải toàn bộ 238 boss.\n\nVài chi tiết cụ thể: Elden Beast là boss cuối, gặp bên trong Erdtree ở Leyndell, Ashen Capital [4]; Maliketh, the Black Blade nằm ở Crumbling Farum Azula và là boss bắt buộc phải đánh để mở Leyndell, Ashen Capital và tiến vào giai đoạn cuối game [5].\n\nNguồn hiện có chỉ liệt kê nhóm Remembrance boss của bản gốc, không có danh sách đầy đủ 238 boss. Bạn muốn xem boss ở khu vực nào hay loại boss nào (bắt buộc/tùy chọn)?",
+  "grounded": true,
+  "source_indices": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "elapsed_seconds": 3.127,
+  "provider_shape": {
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 3154,
+      "output_tokens": 517,
+      "total_tokens": 3671,
+      "input_token_details": {
+        "cache_read": 1536
+      },
+      "output_token_details": {
+        "reasoning": 99
+      }
+    },
+    "content_chars": 1181
+  }
+}

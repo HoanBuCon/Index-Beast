@@ -1,4 +1,10 @@
-"""Interface Source: list_pages() (id, title, revision) và fetch(page) → RawPage. Registry tên nguồn → class.
+"""Source protocol; only wiki.gg is implemented for Sprint 1."""
 
-Phụ trách: TV2 · [S1] Prototype crawler wiki.gg
-"""
+from typing import Protocol
+
+
+class Source(Protocol):
+    name: str
+
+    def list_category(self, category: str) -> list[dict]: ...
+    def fetch(self, page: dict) -> dict: ...

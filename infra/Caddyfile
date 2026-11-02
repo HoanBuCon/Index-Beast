@@ -1,9 +1,10 @@
-# DOMAIN=localhost khi chạy thử; đặt tên miền thật để Caddy tự cấp HTTPS
+# DOMAIN=localhost khi chạy thử; đặt tên miền thật để Caddy tự cấp HTTPS.
+# Caddy là ngoại lệ của quy ước cổng: phải dùng 80/443 để trình duyệt và Let's Encrypt truy cập được.
 {$DOMAIN:localhost} {
 	encode zstd gzip
 
 	handle /api/* {
-		reverse_proxy api:8000 {
+		reverse_proxy api:18000 {
 			flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm
 		}
 	}

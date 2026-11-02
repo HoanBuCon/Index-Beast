@@ -1,0 +1,5 @@
+# Notebook-only dependencies; backend runtime remains pinned by the existing lock.
+-r ../requirements.txt
+-c ../constraints.txt
+jupyterlab>=4,<5
+ipykernel>=6,<8

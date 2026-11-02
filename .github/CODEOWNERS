@@ -1,0 +1,3 @@
+# Mentor review mọi thay đổi (docs/quy_uoc.md). Bật "Require review from Code Owners"
+# trong branch protection của main và develop để GitHub bắt buộc approve.
+* @HoanBuCon

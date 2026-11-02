@@ -1,0 +1,51 @@
+{
+  "question": "boss cuối của game là con gì?",
+  "context_method": "manual local artifact sample; no embedding or retrieval server",
+  "thinking": true,
+  "max_tokens": 4096,
+  "transport_retries": 0,
+  "format_retries": 0,
+  "paid_completion_calls": 1,
+  "selected": [
+    {
+      "id": "f66f07d5-f2d4-5d40-8183-c1f6eb373faa",
+      "title": "Elden Beast"
+    },
+    {
+      "id": "4351ed8d-6902-59c2-b655-b7d063a19683",
+      "title": "Bosses"
+    },
+    {
+      "id": "13649d89-ce8f-5ccd-8973-8ba609cf20b2",
+      "title": "Letter for Freyja"
+    },
+    {
+      "id": "3b902174-ea83-577f-95ed-c9764e2121b7",
+      "title": "Claws"
+    },
+    {
+      "id": "2232e529-f638-5105-bf4b-3fdc26e3febe",
+      "title": "Demi-Human Swordmaster Onze"
+    }
+  ],
+  "status": "failed",
+  "error_type": "UpstreamError",
+  "generation_failure": null,
+  "validation_failure": "insufficient_with_citations",
+  "elapsed_seconds": 1.817,
+  "provider_shape": {
+    "finish_reason": "stop",
+    "usage": {
+      "input_tokens": 2978,
+      "output_tokens": 187,
+      "total_tokens": 3165,
+      "input_token_details": {
+        "cache_read": 1536
+      },
+      "output_token_details": {
+        "reasoning": 55
+      }
+    },
+    "content_chars": 369
+  }
+}

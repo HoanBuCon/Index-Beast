@@ -1,0 +1,169 @@
+{
+  "note": "Manually inspected source literals from the local 20-page sample. Contains expectations, not raw snapshots.",
+  "pages": [
+    {
+      "title": "Elden Remembrance",
+      "source_id": "11266",
+      "revision_id": 42394,
+      "source_literals_preserved": [
+        "Remembrance of the Elden Beast, hewn into the Erdtree."
+      ]
+    },
+    {
+      "title": "Caria Manor",
+      "source_id": "11587",
+      "revision_id": 43630,
+      "source_literals_preserved": [
+        "A large estate in the north-west of Liurnia."
+      ]
+    },
+    {
+      "title": "Beasts",
+      "source_id": "1226",
+      "revision_id": 4898,
+      "source_literals_preserved": [
+        "All non-human and non-dragon vertebrates are beasts."
+      ]
+    },
+    {
+      "title": "Ancient Dragon Cult",
+      "source_id": "14196",
+      "revision_id": 99771,
+      "source_literals_preserved": [
+        "war against the ancient dragons"
+      ]
+    },
+    {
+      "title": "Blackflame",
+      "source_id": "14226",
+      "revision_id": 66180,
+      "source_literals_preserved": [
+        "Prior to the creation of the Golden Order"
+      ]
+    },
+    {
+      "title": "Gurranq, Beast Clergyman",
+      "source_id": "14304",
+      "revision_id": 100776,
+      "source_literals_preserved": [
+        "First Deathroot given",
+        "I smell it... Death..."
+      ]
+    },
+    {
+      "title": "Ancient Hero of Zamor",
+      "source_id": "14444",
+      "revision_id": 100155,
+      "source_literals_preserved": [
+        "A clan of knights"
+      ]
+    },
+    {
+      "title": "Boc's Mother",
+      "source_id": "14578",
+      "revision_id": 54504,
+      "source_literals_preserved": [
+        "highly skilled demi-human seamstress"
+      ]
+    },
+    {
+      "title": "Cave of Knowledge",
+      "source_id": "1581",
+      "revision_id": 6058,
+      "source_literals_preserved": [
+        "cave serves as a tutorial"
+      ]
+    },
+    {
+      "title": "About Flask of Wondrous Physick",
+      "source_id": "2322",
+      "revision_id": 8862,
+      "source_literals_preserved": [
+        "mix two crystal tears"
+      ]
+    },
+    {
+      "title": "Caelid",
+      "source_id": "3167",
+      "revision_id": 68953,
+      "source_literals_preserved": [
+        "plagued by Scarlet Rot"
+      ]
+    },
+    {
+      "title": "About Stance-Breaking",
+      "source_id": "5238",
+      "revision_id": 20078,
+      "source_literals_preserved": [
+        "giving you a chance to perform a critical hit."
+      ]
+    },
+    {
+      "title": "Carian Royal Family",
+      "source_id": "5295",
+      "revision_id": 65328,
+      "source_literals_preserved": [
+        "Members of the Carian Royal Family were prolific magic users"
+      ]
+    },
+    {
+      "title": "Blaidd the Half-Wolf",
+      "source_id": "6361",
+      "revision_id": 100536,
+      "source_literals_preserved": [
+        "After using the \"Finger Snap\" gesture",
+        "Who goes there?"
+      ]
+    },
+    {
+      "title": "Alexander, Warrior Jar",
+      "source_id": "6953",
+      "revision_id": 100526,
+      "source_literals_preserved": [
+        "Calling out when the player is nearby in Limgrave",
+        "Help me! I'm stuck!"
+      ]
+    },
+    {
+      "title": "Blackguard Big Boggart",
+      "source_id": "705",
+      "revision_id": 100554,
+      "source_literals_preserved": [
+        "What are you lookin' at?"
+      ]
+    },
+    {
+      "title": "Fia, Deathbed Companion",
+      "source_id": "7625",
+      "revision_id": 100532,
+      "source_literals_preserved": [
+        "Greetings, great champion called by grace.",
+        "I am Fia."
+      ]
+    },
+    {
+      "title": "\"Champion's Song\" Painting",
+      "source_id": "820",
+      "revision_id": 3129,
+      "source_literals_preserved": [
+        "Work of a wandering artist."
+      ]
+    },
+    {
+      "title": "Altus Plateau",
+      "source_id": "8233",
+      "revision_id": 65232,
+      "source_literals_preserved": [
+        "The Altus Plateau is a northwestern region"
+      ]
+    },
+    {
+      "title": "Dragonlord Placidusax",
+      "source_id": "8548",
+      "revision_id": 99775,
+      "source_literals_preserved": [
+        "In the prehistoric era before the age of the Erdtree"
+      ]
+    }
+  ]
+}

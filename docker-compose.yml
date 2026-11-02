@@ -1,24 +1,31 @@
 # Dev:  docker compose up -d postgres qdrant redis      (api/web/bot chạy local, xem README)
 # Prod: docker compose --profile app up -d --build
 # Cổng chỉ mở trên 127.0.0.1 — ra Internet duy nhất qua Caddy (80/443).
+# Cổng phía máy = cổng gốc + 10000, lấy từ *_PORT trong .env. Bên trong mạng Docker, PostgreSQL/Qdrant/Redis
+# giữ cổng gốc (không ai bên ngoài chạm tới); api nghe 18000 (docs/quy_uoc.md → "Quy ước cổng").
+# Biến ${...} lấy từ file .env ở gốc repo; mỗi service chỉ nhận đúng biến liệt kê trong `environment:`.
 
 name: index-beast
 
-x-restart: &restart
+# Mặc định KHÔNG ghi log container xuống đĩa (driver none). Cần xem log để debug:
+#   DOCKER_LOG_DRIVER=local docker compose up -d   -> `docker compose logs` dùng được, xoay vòng 5×20MB
+x-common: &common
   restart: unless-stopped
+  logging:
+    driver: ${DOCKER_LOG_DRIVER:-none}
 
 services:
   postgres:
-    <<: *restart
+    <<: *common
     image: postgres:18.6-bookworm
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-indexbeast}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
-      POSTGRES_DB: ${POSTGRES_DB:-indexbeast}
+      POSTGRES_USER: &pg_user ${POSTGRES_USER:-indexbeast}
+      POSTGRES_PASSWORD: &pg_password ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: &pg_db ${POSTGRES_DB:-indexbeast}
     command: ["postgres", "-c", "shared_buffers=256MB"]
     volumes:
       - pgdata:/var/lib/postgresql   # PG 18: mount thư mục cha, không phải .../data
-    ports: ["127.0.0.1:5432:5432"]
+    ports: ["127.0.0.1:${POSTGRES_PORT:-15432}:5432"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -26,11 +33,11 @@ services:
     mem_limit: 1g
 
   qdrant:
-    <<: *restart
+    <<: *common
     image: qdrant/qdrant:v1.19.2
     volumes:
       - qdrant:/qdrant/storage
-    ports: ["127.0.0.1:6333:6333"]
+    ports: ["127.0.0.1:${QDRANT_PORT:-16333}:6333"]
     healthcheck:
       test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
       interval: 5s
@@ -38,10 +45,10 @@ services:
     mem_limit: 1g
 
   redis:
-    <<: *restart
+    <<: *common
     image: redis:8.10.2-alpine
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru", "--save", ""]
-    ports: ["127.0.0.1:6379:6379"]
+    ports: ["127.0.0.1:${REDIS_PORT:-16379}:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -49,14 +56,61 @@ services:
     mem_limit: 192m
 
   api:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build: ./backend
-    env_file: .env
+    # Chỉ truyền biến api cần (không nạp nguyên .env). Địa chỉ hạ tầng là tên service trong mạng Docker.
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-indexbeast}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-indexbeast}
-      QDRANT_URL: http://qdrant:6333
-      REDIS_URL: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-dev}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: *pg_user
+      POSTGRES_PASSWORD: *pg_password
+      POSTGRES_DB: *pg_db
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:15173}
+      WEB_CONCURRENCY: ${API_WORKERS:-2}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-flash}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2048}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      CHAT_TIMEOUT_SECONDS: ${CHAT_TIMEOUT_SECONDS:-45}
+      CHAT_MODE: ${CHAT_MODE:-mock}
+      CHAT_HISTORY_MESSAGES: ${CHAT_HISTORY_MESSAGES:-8}
+      CHAT_HISTORY_CHARS: ${CHAT_HISTORY_CHARS:-8000}
+      RAG_COLLECTION: ${RAG_COLLECTION:-lore_chunks}
+      RAG_CORPUS_POLICY: ${RAG_CORPUS_POLICY:-pilot}
+      RAG_LANGUAGES: ${RAG_LANGUAGES:-en}
+      RAG_PREFETCH: ${RAG_PREFETCH:-30}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      RAG_CONTEXT_CHARS: ${RAG_CONTEXT_CHARS:-12000}
+      RAG_REWRITE_ENABLED: ${RAG_REWRITE_ENABLED:-false}
+      RAG_OVERVIEW_ENABLED: ${RAG_OVERVIEW_ENABLED:-true}
+      RAG_QUERY_MODE: ${RAG_QUERY_MODE:-rewrite}
+      RAG_REWRITE_TIMEOUT_SECONDS: ${RAG_REWRITE_TIMEOUT_SECONDS:-8}
+      RAG_REWRITE_MAX_TOKENS: ${RAG_REWRITE_MAX_TOKENS:-512}
+      RAG_RETRIEVAL_TIMEOUT_SECONDS: ${RAG_RETRIEVAL_TIMEOUT_SECONDS:-20}
+      RAG_THINKING_ENABLED: ${RAG_THINKING_ENABLED:-false}
+      RAG_FORMAT_RETRIES: ${RAG_FORMAT_RETRIES:-1}
+      RAG_MODELS_DIR: ${RAG_MODELS_DIR:-models/fastembed}
+      RAG_BATCH_SIZE: ${RAG_BATCH_SIZE:-32}
+      RAG_ENCODER_THREADS: ${RAG_ENCODER_THREADS:-2}
+      RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-true}
+      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/clean_runs/s2-full-v2/images.csv}
+      RAG_IMAGES_DOCUMENTS: ${RAG_IMAGES_DOCUMENTS:-data/chunk_runs/s2-full-v1/documents.jsonl}
+      RAG_IMAGES_ROOT: ${RAG_IMAGES_ROOT:-data/media/blobs}
+      RAG_IMAGES_MANIFESTS: ${RAG_IMAGES_MANIFESTS:-data/crawl_runs/s2-full-20261028/media}
+      RAG_IMAGES_MAX_BYTES: ${RAG_IMAGES_MAX_BYTES:-20000000}
+      RAG_IMAGES_MAX_PIXELS: ${RAG_IMAGES_MAX_PIXELS:-40000000}
     volumes:
       - ./backend/data:/app/data      # dữ liệu crawl thô
     depends_on:
@@ -64,25 +118,30 @@ services:
       qdrant: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18000/api/v1/health')"]
       interval: 15s
       start_period: 60s
       retries: 5
     mem_limit: 3g
 
   bot:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build: ./bot
-    env_file: .env
+    # Bot không nhận mật khẩu DB hay key LLM: chỉ token Discord và cách gọi API
     environment:
-      BOT_API_URL: http://api:8000
+      DISCORD_TOKEN: ${DISCORD_TOKEN:-}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
+      BOT_API_URL: http://api:18000
+      WEB_URL: ${WEB_URL:-http://localhost:15173}
     depends_on:
       api: { condition: service_healthy }
     mem_limit: 192m
 
   caddy:
-    <<: *restart
+    <<: *common
     profiles: ["app"]
     build:
       context: .

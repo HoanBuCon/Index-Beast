@@ -1,0 +1,134 @@
+\majorheading{CHƯƠNG 1. CƠ SỞ LÝ THUYẾT}
+
+\section{1.1. Tổng quan về xử lý ngôn ngữ tự nhiên và hỏi đáp}
+
+\subsection{1.1.1. Khái niệm và vị trí của xử lý ngôn ngữ tự nhiên}
+
+Xử lý ngôn ngữ tự nhiên (Natural Language Processing, NLP) là lĩnh vực nghiên cứu cách để máy tính phân tích, biểu diễn và tạo ra ngôn ngữ của con người. Các nhiệm vụ điển hình gồm phân loại văn bản, gán nhãn từ loại, nhận diện thực thể, dịch máy, tóm tắt, tìm kiếm thông tin và hỏi đáp. Mỗi nhiệm vụ có dữ liệu, thước đo và giả định khác nhau, nhưng đều phải đối mặt với những đặc điểm của ngôn ngữ như tính nhập nhằng, phụ thuộc ngữ cảnh và sự đa dạng cách diễn đạt cho cùng một ý [1].
+
+
+Trong vài năm gần đây, các mô hình dựa trên kiến trúc Transformer được huấn luyện trước trên lượng văn bản rất lớn đã trở thành nền tảng của hầu hết các hệ thống NLP. Chúng có hai vai trò chính trong đề tài này. Vai trò thứ nhất là mô hình biểu diễn, biến một đoạn văn bản thành vector để so sánh ý nghĩa. Vai trò thứ hai là mô hình sinh, viết văn bản mới từ một chỉ dẫn và ngữ cảnh. Hai vai trò này được kết nối qua bước truy xuất thông tin, vốn là một lĩnh vực có lịch sử lâu đời trong khoa học máy tính [2].
+
+
+\subsection{1.1.2. Bài toán hỏi đáp}
+
+Hỏi đáp (Question Answering) là bài toán trả lời một câu hỏi bằng ngôn ngữ tự nhiên. Có thể phân biệt hai cách tiếp cận. Với hỏi đáp đóng (closed-book), mô hình trả lời chỉ dựa trên kiến thức đã học trong tham số. Cách này đơn giản nhưng khó cập nhật, khó chỉ ra nguồn và dễ đưa ra chi tiết sai khi gặp chủ đề hiếm. Với hỏi đáp dựa trên tài liệu (open-book), hệ thống tìm các đoạn văn liên quan trong một kho tri thức rồi mới trả lời từ các đoạn đó. Cách này cho phép kiểm tra câu trả lời đối chiếu với nguồn [7].
+
+
+Bài toán hỏi đáp về một thế giới hư cấu có một số đặc điểm riêng. Kiến thức nằm ở những trang wiki do cộng đồng biên soạn, có thể thay đổi theo thời gian. Một nhân vật thường có nhiều tên gọi hoặc danh hiệu. Những chi tiết mơ hồ có thể là suy đoán của người chơi chứ không phải nội dung chính thức. Hệ thống cần phân biệt những điều đó khi trình bày, và cần từ chối các câu hỏi nằm ngoài phạm vi thay vì trả lời bằng kiến thức chung.
+
+
+\section{1.2. Biểu diễn văn bản và truy xuất thông tin}
+
+\subsection{1.2.1. Từ tách token đến biểu diễn vector}
+
+Mô hình ngôn ngữ không xử lý chuỗi ký tự trực tiếp. Văn bản được tách thành các token, thường là các đơn vị con của từ, rồi ánh xạ thành vector. Số token của một đoạn văn là đại lượng quan trọng vì mô hình biểu diễn và mô hình sinh đều có giới hạn độ dài đầu vào. Độ dài tính theo ký tự hoặc theo từ chỉ là ước lượng; muốn kiểm tra giới hạn một cách chính xác cần đếm bằng đúng tokenizer của mô hình sẽ dùng.
+
+
+Mô hình embedding ánh xạ một đoạn văn thành một vector có số chiều cố định sao cho các đoạn gần nghĩa nằm gần nhau. Độ gần thường được đo bằng độ tương đồng cosine:
+\begin{equation*}
+\cos(\mathbf{q},\mathbf{d}) = \frac{\mathbf{q}\cdot\mathbf{d}}{\lVert\mathbf{q}\rVert\,\lVert\mathbf{d}\rVert}.
+\end{equation*}
+Họ mô hình E5 được huấn luyện bằng học tương phản trên các cặp văn bản liên quan [4]. Một đặc điểm cần lưu ý khi dùng là mô hình yêu cầu thêm tiền tố \texttt{query:} cho câu hỏi và \texttt{passage:} cho đoạn tài liệu; bỏ qua hoặc thêm hai lần tiền tố làm vector khác với cách mô hình được huấn luyện [4, 16]. Phiên bản đa ngôn ngữ hỗ trợ nhiều ngôn ngữ, trong đó có tiếng Việt, nên một câu hỏi tiếng Việt vẫn có thể được so sánh với tài liệu tiếng Anh, nhưng chất lượng của việc so sánh chéo ngôn ngữ cần được kiểm chứng trên dữ liệu thực tế.
+
+
+Tìm kiếm theo vector (dense retrieval) có ưu điểm là nắm bắt được các cách diễn đạt khác nhau của cùng một ý. Nhược điểm là có thể bỏ sót tên riêng hiếm hoặc từ khóa chính xác, vì các tên này ít được biểu diễn tốt trong không gian vector.
+
+
+\subsection{1.2.2. Tìm kiếm từ khóa và BM25}
+
+Tìm kiếm từ khóa xếp hạng tài liệu theo mức độ trùng khớp từ giữa truy vấn và tài liệu. BM25 là hàm xếp hạng được dùng rộng rãi, thuộc họ mô hình xác suất [3]. Điểm của tài liệu $d$ với truy vấn $q$ là
+\begin{equation*}
+\mathrm{BM25}(q,d)=\sum_{t\in q}\mathrm{IDF}(t)\cdot\frac{f(t,d)\,(k_1+1)}{f(t,d)+k_1\left(1-b+b\,\dfrac{|d|}{\mathrm{avgdl}}\right)},
+\end{equation*}
+trong đó $f(t,d)$ là số lần từ $t$ xuất hiện trong $d$, $|d|$ là độ dài tài liệu, $\mathrm{avgdl}$ là độ dài trung bình, $\mathrm{IDF}(t)$ phản ánh độ hiếm của từ trong toàn kho, còn $k_1$ và $b$ là hai tham số điều chỉnh mức bão hòa tần suất và chuẩn hóa độ dài. Từ hiếm có trọng số cao, nên BM25 thể hiện tốt với tên nhân vật hoặc địa danh. Điểm yếu của nó là không nhận ra từ đồng nghĩa và phụ thuộc vào việc truy vấn và tài liệu dùng cùng ngôn ngữ, nên với kho tài liệu tiếng Anh, truy vấn tiếng Việt cần được chuyển sang tiếng Anh trước khi tìm.
+
+
+\subsection{1.2.3. Truy xuất lai và hợp nhất thứ hạng}
+
+Hai cách tìm kiếm trên bổ sung cho nhau: vector bắt được nghĩa, từ khóa bắt được tên chính xác. Truy xuất lai (hybrid retrieval) chạy cả hai rồi hợp nhất kết quả. Điểm của hai hệ thống không cùng thang đo nên việc cộng trực tiếp là không hợp lý. Reciprocal Rank Fusion (RRF) tránh vấn đề này bằng cách chỉ dùng thứ hạng [5]:
+\begin{equation*}
+\mathrm{RRF}(d)=\sum_{r\in R}\frac{1}{k+\mathrm{rank}_r(d)},
+\end{equation*}
+với $R$ là tập các danh sách xếp hạng, $\mathrm{rank}_r(d)$ là vị trí của $d$ trong danh sách $r$ và $k$ là hằng số làm giảm ảnh hưởng của những vị trí đầu. Tài liệu xuất hiện cao trong cả hai danh sách được ưu tiên. Qdrant hỗ trợ truy vấn nhiều giai đoạn, cho phép chạy đồng thời tìm kiếm dense và sparse rồi hợp nhất bằng RRF ngay trên máy chủ trong một lần gọi [9].
+
+
+\section{1.3. Xếp hạng lại kết quả truy xuất}
+
+Các mô hình embedding mã hóa câu hỏi và tài liệu một cách độc lập, nên có thể tính trước vector của toàn bộ kho và tìm kiếm nhanh. Đổi lại, chúng không xét tương tác chi tiết giữa câu hỏi và từng đoạn. Mô hình xếp hạng lại (reranker) kiểu cross-encoder đưa cặp (câu hỏi, đoạn văn) vào cùng một mô hình và cho ra điểm liên quan trực tiếp [6]. Cách này chính xác hơn nhưng tốn tính toán hơn nhiều, vì phải chạy mô hình cho từng cặp. Thực tế thường áp dụng hai giai đoạn: truy xuất nhanh lấy một số lượng ứng viên vừa phải (chẳng hạn vài chục), rồi reranker chọn ra một số ít đoạn tốt nhất để đưa cho mô hình sinh. Độ trễ của giai đoạn này phụ thuộc vào số ứng viên, độ dài đoạn và phần cứng, nên cần được đo trên môi trường triển khai thay vì suy ra từ lý thuyết.
+
+
+Điểm của reranker cũng được dùng để quyết định hệ thống có đủ bằng chứng hay không. Nếu điểm cao nhất thấp hơn một ngưỡng, hệ thống nên thông báo chưa tìm thấy thông tin thay vì bắt mô hình sinh trả lời từ những đoạn không liên quan. Ngưỡng này không có giá trị đúng sẵn mà cần được hiệu chỉnh trên một bộ dữ liệu đánh giá.
+
+
+\section{1.4. Mô hình ngôn ngữ lớn và sinh văn bản có truy xuất}
+
+\subsection{1.4.1. Mô hình ngôn ngữ lớn}
+
+Mô hình ngôn ngữ lớn (Large Language Model, LLM) là mô hình Transformer có số tham số rất lớn, được huấn luyện để dự đoán token kế tiếp, sau đó thường được tinh chỉnh để làm theo chỉ dẫn. Khi sinh văn bản, mô hình chọn từng token dựa trên phân phối xác suất; tham số như nhiệt độ (temperature) điều chỉnh mức ngẫu nhiên của việc chọn này. Một số mô hình có chế độ suy luận (thinking), trong đó mô hình sinh thêm một chuỗi lập luận trước câu trả lời cuối cùng để cải thiện độ chính xác trên bài toán phức tạp, đổi lại tốn thêm thời gian và token. Ở chế độ này, một số tham số lấy mẫu có thể bị bỏ qua [10]. Với bài toán trả lời từ ngữ cảnh đã cho, chế độ suy luận không phải lúc nào cũng cần thiết.
+
+
+Mô hình có thể được truy cập qua API theo hình thức tính tiền theo số token vào và ra. Chi phí vì vậy phụ thuộc vào độ dài ngữ cảnh đưa vào mỗi lượt, và có thể giảm khi phần đầu của lời nhắc lặp lại giữa các lượt gọi được bộ nhớ đệm (prompt caching) của nhà cung cấp tính giá thấp hơn [10].
+
+
+\subsection{1.4.2. Sinh văn bản có truy xuất}
+
+Sinh văn bản có truy xuất (RAG) kết hợp bộ nhớ trong tham số của mô hình với bộ nhớ ngoài là một kho tài liệu [7]. Quy trình cơ bản gồm bốn bước: biến câu hỏi thành truy vấn, truy xuất các đoạn liên quan, ghép các đoạn vào lời nhắc cùng câu hỏi, rồi để mô hình sinh câu trả lời dựa trên các đoạn đó. So với việc chỉ dùng mô hình, RAG có ba lợi ích: kiến thức cập nhật bằng cách thay đổi kho tài liệu mà không cần huấn luyện lại, câu trả lời có thể kèm nguồn, và phạm vi trả lời được giới hạn trong tài liệu.
+
+
+Chất lượng của RAG bị chi phối bởi chuỗi các bước. Nếu truy xuất bỏ sót đoạn cần thiết thì mô hình sinh không thể trả lời đúng dù rất mạnh. Nếu các đoạn được chia quá nhỏ, ý bị cắt rời; nếu quá lớn, nhiễu tăng và tốn token. Với hội thoại nhiều lượt, câu hỏi như ``ông ta là con của ai'' phải được viết lại thành truy vấn độc lập có đủ tên nhân vật trước khi tìm kiếm. Bước viết lại này cũng là nơi thuận tiện để chuyển truy vấn sang ngôn ngữ của kho tài liệu và xác định câu hỏi có thuộc phạm vi hay không.
+
+
+\subsection{1.4.3. Ảo giác và trích dẫn nguồn}
+
+Ảo giác (hallucination) là hiện tượng mô hình sinh nội dung không đúng hoặc không có trong nguồn [8]. Có thể phân biệt ảo giác trái với nguồn (nội dung mâu thuẫn với đoạn được cung cấp) và ảo giác không thể kiểm chứng (nội dung không có trong nguồn dù không chắc sai). RAG giảm nhưng không loại bỏ hiện tượng này. Các biện pháp thường dùng là chỉ dẫn mô hình chỉ trả lời từ ngữ cảnh, yêu cầu trích dẫn đánh số theo từng đoạn, và cho phép trả lời ``chưa tìm thấy''.
+
+
+Cần phân biệt ba khái niệm dễ nhầm. Một trích dẫn hợp lệ nghĩa là số hiệu trỏ đến một đoạn có thật trong ngữ cảnh. Độ bám nguồn (faithfulness) nghĩa là mọi khẳng định trong câu trả lời được ngữ cảnh hỗ trợ [15]. Độ đúng (correctness) nghĩa là câu trả lời khớp với sự thật hoặc đáp án tham chiếu. Câu trả lời có thể bám nguồn nhưng sai nếu nguồn sai, và có thể đúng nhưng không bám nguồn nếu mô hình dùng kiến thức riêng. Vì vậy một trích dẫn hợp lệ không tự chứng minh câu trả lời đúng.
+
+
+Nội dung truy xuất từ kho tài liệu hoặc từ web là dữ liệu tham khảo, không phải chỉ dẫn. Một đoạn văn chứa câu như ``bỏ qua mọi quy tắc trước đó'' không được phép thay đổi hành vi của hệ thống; lời nhắc phải tách rõ phần chỉ dẫn hệ thống, phần ngữ cảnh và phần câu hỏi.
+
+
+\section{1.5. Chuẩn bị dữ liệu văn bản}
+
+\subsection{1.5.1. Thu thập và làm sạch}
+
+Dữ liệu từ wiki thường ở dạng HTML hoặc wikitext, lẫn nhiều thành phần không mang nội dung câu chuyện như khung thông tin (infobox), bảng chỉ số, thanh điều hướng, chú thích và nút chỉnh sửa. Việc làm sạch nhằm giữ lại phần văn xuôi, hội thoại và mô tả có ý nghĩa. Bỏ quá tay có thể làm mất thông tin, chẳng hạn bảng hội thoại; bỏ quá ít làm nhiễu truy xuất. Do đó cần quy tắc rõ ràng, có kiểm tra trên mẫu và lưu lý do loại bỏ để truy vết.
+
+
+Khi thu thập tự động phải tôn trọng điều khoản và hạn chế của nguồn: tốc độ yêu cầu thấp, nhận diện đúng bằng thông tin liên hệ, không vượt các cơ chế chặn, và lưu thông tin nguồn (địa chỉ, phiên bản, thời điểm) cùng dữ liệu. Giấy phép của nội dung quyết định cách được sử dụng lại; nội dung theo giấy phép CC BY-SA 4.0 cho phép chia sẻ và chuyển thể nếu ghi công tác giả, nêu rõ thay đổi và giữ cùng giấy phép khi phân phối [12].
+
+
+\subsection{1.5.2. Chia đoạn}
+
+Chia đoạn (chunking) là việc cắt tài liệu thành các đơn vị được đánh chỉ mục. Kích thước đoạn là sự đánh đổi: đoạn nhỏ cho độ chính xác truy xuất cao nhưng dễ thiếu ngữ cảnh, đoạn lớn giữ ngữ cảnh nhưng pha loãng vector và bị giới hạn bởi độ dài tối đa của mô hình embedding. Hai kỹ thuật phổ biến là chia theo cấu trúc (tiêu đề, đoạn, câu) và chia theo cửa sổ token có phần chồng lấn (overlap) để một ý nằm ở ranh giới không bị cắt mất. Mỗi đoạn nên giữ tiêu đề trang và đường dẫn các tiêu đề cha, vì một câu như ``bà ấy sinh ra đã mang bệnh'' chỉ có nghĩa khi biết đang nói về nhân vật nào. Kích thước tối ưu phụ thuộc dữ liệu và câu hỏi, nên giá trị khởi đầu cần được kiểm chứng bằng kết quả truy xuất.
+
+
+\section{1.6. Đánh giá hệ thống truy xuất và hỏi đáp}
+
+\subsection{1.6.1. Chỉ số truy xuất}
+
+Với mỗi câu hỏi có tập tài liệu liên quan đã biết, chất lượng truy xuất được đo trên $k$ kết quả đầu. Hit@$k$ là tỉ lệ câu hỏi có ít nhất một tài liệu liên quan trong $k$ kết quả đầu. Recall@$k$ là tỉ lệ tài liệu liên quan tìm được trong $k$ kết quả đầu, tính trung bình theo câu hỏi. Mean Reciprocal Rank (MRR@$k$) xét thêm vị trí của tài liệu liên quan đầu tiên:
+\begin{equation*}
+\mathrm{MRR@}k=\frac{1}{N}\sum_{i=1}^{N}\frac{1}{\mathrm{rank}_i},
+\end{equation*}
+với $\mathrm{rank}_i$ là vị trí của tài liệu liên quan đầu tiên của câu thứ $i$ và số hạng bằng 0 nếu không có trong $k$ kết quả đầu [2]. Hit@$k$ cao nhưng MRR thấp cho thấy tài liệu đúng có mặt nhưng chưa được xếp lên đầu, tức là còn chỗ cho bước xếp hạng lại.
+
+
+\subsection{1.6.2. Đánh giá câu trả lời}
+
+Chất lượng câu trả lời được xét theo hai tiêu chí chính là độ đúng và độ bám nguồn, có thể chấm theo thang điểm rời rạc, chẳng hạn 0--2, với quy ước rõ cho từng mức. Với những câu hỏi nằm ngoài phạm vi, tiêu chí là tỉ lệ từ chối đúng thay vì độ đúng. Việc chấm có thể do người thực hiện hoặc do một mô hình ngôn ngữ khác đảm nhiệm. Chấm bằng mô hình có chi phí thấp và nhất quán nhưng có thể thiên lệch, nên cần đối chiếu với một mẫu do người chấm để xác nhận [15]. Cần ghi rõ ai hoặc cái gì đã chấm khi báo cáo điểm.
+
+
+\subsection{1.6.3. Bộ dữ liệu đánh giá và độ tin cậy}
+
+Bộ câu hỏi chuẩn (golden set) gồm câu hỏi, đáp án tham chiếu, nguồn tham chiếu, nhóm câu hỏi và độ khó. Các điểm cần bảo đảm là: câu hỏi đa dạng về loại và độ khó, có cả câu ngoài phạm vi, đáp án được người khác kiểm tra chéo, và đáp án không được đưa vào chỉ mục hay lời nhắc của hệ thống. Bộ dữ liệu nhỏ cho ước lượng có độ biến thiên lớn; ví dụ một bộ 10 câu thay đổi 10 điểm phần trăm chỉ vì một câu. Nếu bộ dữ liệu được dùng để chỉnh lời nhắc hoặc tham số, nó không còn là phép thử độc lập; cần giữ riêng một tập chưa dùng để chỉnh. Kết quả cũng chỉ có ý nghĩa với đúng phạm vi dữ liệu đã đưa vào chỉ mục.
+
+
+\section{1.7. Quy trình thực hiện và trách nhiệm sử dụng}
+
+Một dự án hỏi đáp dựa trên RAG có thể được tổ chức thành các giai đoạn: xác định phạm vi và yêu cầu, thu thập dữ liệu, làm sạch và chia đoạn, lập chỉ mục, xây dựng quy trình truy xuất và sinh, đánh giá, rồi triển khai. Các giai đoạn lặp lại khi có bằng chứng mới, và mỗi thay đổi nên gắn với một vấn đề đã quan sát. Để người khác chạy lại được kết quả, cần lưu phiên bản dữ liệu, mã nguồn, cấu hình, mô hình và đầu ra của lần chạy được dùng trong báo cáo.
+
+
+Trách nhiệm sử dụng gồm ghi nguồn và giấy phép của nội dung và hình ảnh, không đưa khóa truy cập hoặc dữ liệu cá nhân vào mã nguồn và bản ghi, giới hạn chi phí và tần suất gọi dịch vụ bên ngoài, và nêu rõ cho người dùng rằng câu trả lời có thể sai và cần đối chiếu với nguồn. Với một dự án hâm mộ, cần thông báo rõ rằng sản phẩm không liên kết với nhà phát hành trò chơi.

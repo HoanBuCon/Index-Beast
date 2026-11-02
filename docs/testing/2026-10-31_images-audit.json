@@ -1,0 +1,462 @@
+{
+  "method": "Full metadata census; existence checks on eligible blobs; sorted bounded hash/Pillow sample. Three chosen actual linked chunks and local TestClient image endpoints. No remote HTTP/server/model calls.",
+  "rows": 65593,
+  "unique_occurrences": 65593,
+  "associations": {
+    "exact_section": 15642,
+    "excluded_ui": 42000,
+    "review": 7951
+  },
+  "media_status": {
+    "downloaded": 9114,
+    "excluded": 42000,
+    "cached": 14472,
+    "failed": 7
+  },
+  "license_status": {
+    "unknown_review_required": 65593
+  },
+  "catalog": {
+    "rows": 65593,
+    "eligible_occurrences": 15642,
+    "association_not_admitted": 49951,
+    "eligible_blobs": 7603
+  },
+  "eligible_blob_files_exist": 7603,
+  "chunks": 23765,
+  "linked_chunks": 7640,
+  "en_linked_chunks": 5341,
+  "chunk_image_ids": 5358,
+  "blob_validation_sample": [
+    {
+      "id": "0002e5d74f01493ad2175aace4488b7e43703d255f71f823013ebec72c242ca8",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 17303,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00086f33a8e7e2c4c1905c0338332fb53d1bad6ef0c67346796aa296041c8870",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 20955,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "0010ad80e3dfd55cc9b682847302092b8226f4b0553da8260af2717b32bc7575",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 591892,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "0010fc9e70611eadbfaa4fe00fdadb0bfce94088bf1b8b851323fb3ee4534ad6",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 24487,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "001ed4fb72bd64b6c785f13c0e4ef9ccfa63a52ff19c9bbdf0e263dd18d7ecbe",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 752386,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "002259f75b7afbdc47719328e5d453abcbd939d56e677b4eeda0ab44a527eb92",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 4268,
+      "dimensions": [
+        64,
+        64
+      ]
+    },
+    {
+      "id": "00239972f69fe144a552ef129da6b30b015db05bde442f00b1bc100fc7272e26",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 22952,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "0069a24cbaf8ca8efff6e0926c1f4c7931c315c7b2ae9039070b1b90c9be301d",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 268817,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "0069ca3a0a5cfd2a71b885b7ccb35e2dbbac82a9ea5f31338441dcab4179d99d",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 28948,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "007767fd2e612dbe14f059cdd178707648b0277ec00435154a3dbd2a4b164b6f",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 648243,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "008675cb3b4d6126dc015869645bc23033cd4577f3743a30c002b8bed1809472",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 29340,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "008f0281fa16c37511e5791dbafca2069c467035ecf994ca8a131a316a82bc87",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 183052,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "0098b570a78170079dfb7aa1ab253593d39bc0a3f02988eca4a899e6807ca7da",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 2880524,
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "id": "0099833f0717a810e8ed315746a7f387edd8ae6feafee3638a03ad5ed508f821",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 19445,
+      "dimensions": [
+        160,
+        160
+      ]
+    },
+    {
+      "id": "009c544bbab7f23ef4c2a7cb2f66c42a34b09fc7a4500e280b661b4f4259f873",
+      "valid": true,
+      "reason": null,
+      "mime": "image/jpeg",
+      "bytes": 551792,
+      "dimensions": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "id": "009d9ee2e9429124112b88f66f90ea2f5ba0a6ecf3f5d4cb60ec02abdc193353",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 1546884,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "00a6c59d3cc2b163ab7fa23b95ad0ad009dae99e6bcd0ab7a38ff94d062ddb47",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 911660,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "00b2cbe3fca0df5e1a4cb14e9dc9547109ba6010a8f7ec6ae586158997691515",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 14836,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00bf089b8ff9d56a630ecc9ddf832f42f5d5612500f467ef077ca6a8127f11e4",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 20632,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00cb1e401040ff41dd0e453902d1a0ff8a6d0e16dce2e9570b146c0232bb2922",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 12917,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00d4c8a1ef3d271e1cba7e9be797a8dfbdd8f494a7e898d11bf2b2294554a02d",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 827584,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "00d53b43a707736d45b9e398c5fcad252805522c44f052d65abc5261872f741f",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 11355,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00d902506e5aecfc4eec0cc203e43be97fc0014ea85b4b1dad981777df78d9b3",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 5668,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00da1be5e65ce9486dc5e4f9ce9369890b45513da6a7dc9437bbd4b4065877ec",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 15772,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00dc769498014e665fdac5017adca1ec87b5d5649e201cfa0f51de122349be7b",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 1047228,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "00dd0b149dd3e4aba3bf6cf6af387d93d5a9bc430bdfb9ba6c0cfb85ea0754c9",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 21745,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00e888463bf09e40b7862d546927b986de673c49d7731a483dc7b3990a48c2e9",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 10791,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00eb9ba1968419c7824394f7c5f12903e879e49c681930310cc0bb112cfc7487",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 752575,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    },
+    {
+      "id": "00f2888ce640101b8a937b0c28593dd96d3cd3e23bee1b4831aec3391d87814a",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 27627,
+      "dimensions": [
+        120,
+        120
+      ]
+    },
+    {
+      "id": "00f4fca311eec6718184e5afe141923c7659e9d53411c37c405440d1de3be9b9",
+      "valid": true,
+      "reason": null,
+      "mime": "image/png",
+      "bytes": 996908,
+      "dimensions": [
+        1024,
+        1024
+      ]
+    }
+  ],
+  "resolved_examples": [
+    {
+      "title": "Bloodhound's Fang",
+      "chunk_id": "94d78bba-4ecf-5089-88c5-c11e3875f50d",
+      "section": "Infobox",
+      "images": [
+        {
+          "id": "6545369b5499a0f38df4f4b3b54cb75159990d6901324002695d666ea4cc4c7d",
+          "url": "/api/v1/images/6545369b5499a0f38df4f4b3b54cb75159990d6901324002695d666ea4cc4c7d",
+          "caption": null,
+          "alt": "ER Icon weapon Bloodhound's Fang.png",
+          "source_url": "https://eldenring.wiki.gg/wiki/Bloodhound%27s_Fang",
+          "source_indices": [
+            1
+          ],
+          "attribution": null,
+          "license": null,
+          "license_status": "unknown_review_required",
+          "file_page_url": "https://eldenring.wiki.gg/wiki/File:ER_Icon_weapon_Bloodhound%27s_Fang.png",
+          "game_scope": "elden_ring",
+          "release_scope": "base_candidate"
+        }
+      ],
+      "excluded": {}
+    },
+    {
+      "title": "Ranni the Witch",
+      "chunk_id": "ce7705e6-233a-5424-b697-cb38da1d4d3a",
+      "section": "Infobox",
+      "images": [
+        {
+          "id": "2a2818903712b9eeaa8b32ad94fe7e0a343502834759e84c7b7cf4dd7c5d48f2",
+          "url": "/api/v1/images/2a2818903712b9eeaa8b32ad94fe7e0a343502834759e84c7b7cf4dd7c5d48f2",
+          "caption": null,
+          "alt": "ER NPC Renna (Church of Elleh) (9.16).png",
+          "source_url": "https://eldenring.wiki.gg/wiki/Ranni_the_Witch",
+          "source_indices": [
+            1
+          ],
+          "attribution": null,
+          "license": null,
+          "license_status": "unknown_review_required",
+          "file_page_url": "https://eldenring.wiki.gg/wiki/File:ER_NPC_Renna_(Church_of_Elleh)_(9.16).png",
+          "game_scope": "elden_ring",
+          "release_scope": "unknown"
+        }
+      ],
+      "excluded": {}
+    },
+    {
+      "title": "Messmer the Impaler",
+      "chunk_id": "2112d8de-4729-5965-9007-f4c8d4a5d465",
+      "section": "Overview > The Crusade",
+      "images": [
+        {
+          "id": "9d8f79ed6149de7e89af6af8ccd2e49b40919cdaa0eb87569492688af9e9af7f",
+          "url": "/api/v1/images/9d8f79ed6149de7e89af6af8ccd2e49b40919cdaa0eb87569492688af9e9af7f",
+          "caption": "Messmer conquered the hornsent",
+          "alt": null,
+          "source_url": "https://eldenring.wiki.gg/wiki/Messmer_the_Impaler#The_Crusade",
+          "source_indices": [
+            1
+          ],
+          "attribution": null,
+          "license": null,
+          "license_status": "unknown_review_required",
+          "file_page_url": "https://eldenring.wiki.gg/wiki/File:The_Sacred_Crusade.jpg",
+          "game_scope": "elden_ring",
+          "release_scope": "mixed_or_sote_candidate"
+        }
+      ],
+      "excluded": {}
+    }
+  ],
+  "local_asgi_endpoints": [
+    {
+      "id": "6545369b5499a0f38df4f4b3b54cb75159990d6901324002695d666ea4cc4c7d",
+      "status": 200,
+      "mime": "image/png",
+      "body_sha256_matches_id": true
+    },
+    {
+      "id": "2a2818903712b9eeaa8b32ad94fe7e0a343502834759e84c7b7cf4dd7c5d48f2",
+      "status": 200,
+      "mime": "image/png",
+      "body_sha256_matches_id": true
+    },
+    {
+      "id": "9d8f79ed6149de7e89af6af8ccd2e49b40919cdaa0eb87569492688af9e9af7f",
+      "status": 200,
+      "mime": "image/jpeg",
+      "body_sha256_matches_id": true
+    }
+  ],
+  "artifact_hashes": {
+    "backend/data/clean_runs/s2-full-v2/images.csv": "ffa6f7624d476ec835214a0edcf0237cebe726ef05cf27b493678ea5b5c8580e",
+    "backend/data/chunk_runs/s2-full-v1/documents.jsonl": "25fe3626f14c9d05a7fe90156cf19ef3cd091d99a9680345636c4c21882ad547",
+    "backend/data/chunk_runs/s2-full-v1/chunks.jsonl": "95794a89485e6f86ff320ee9b2a9a707a794e1bdc040162f0b41e5b2c208d03e"
+  },
+  "limitations": "Existence is not byte verification. Only the bounded sample/examples decoded; semantic image relevance beyond explicit section links and rights not certified. Unknown license remains unknown."
+}

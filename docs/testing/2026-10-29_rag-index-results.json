@@ -1,0 +1,20 @@
+{
+  "collection": "indexbeast_tv3_integration_20261029_c1871afc",
+  "model": "intfloat/multilingual-e5-small",
+  "source_sha256": "95794a89485e6f86ff320ee9b2a9a707a794e1bdc040162f0b41e5b2c208d03e",
+  "selected_records": 18368,
+  "threads": 4,
+  "batch_size": 8,
+  "resumed_at": "2026-10-29T19:01:20.870488+07:00",
+  "status": "complete",
+  "existing_points_verified": 4480,
+  "remaining_records": 13888,
+  "completed": 18368,
+  "resume_elapsed_seconds": 809.058,
+  "exact_count": 18368,
+  "idempotency_sample_records": 8,
+  "idempotency_count_unchanged": true,
+  "idempotency_payloads_including_timestamps_unchanged": true,
+  "source_unchanged": true,
+  "finished_at": "2026-10-29T19:14:51.060000+07:00"
+}

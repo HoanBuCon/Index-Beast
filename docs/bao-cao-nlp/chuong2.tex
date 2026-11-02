@@ -1,0 +1,367 @@
+\majorheading{CHƯƠNG 2. BÀI TOÁN, PHƯƠNG PHÁP VÀ MÔ HÌNH}
+
+\section{2.1. Phát biểu bài toán}
+
+Index Beast nhận một câu hỏi bằng tiếng Việt hoặc tiếng Anh về lore Elden Ring base game, kèm lịch sử hội thoại nếu có, và trả về một câu trả lời bằng ngôn ngữ của người hỏi. Câu trả lời phải dựa trên các đoạn tài liệu truy xuất được, gắn trích dẫn đánh số về tên trang, mục và địa chỉ nguồn, và phải nói rõ khi thông tin chỉ là suy đoán của cộng đồng hoặc khi không tìm thấy. Đầu vào và đầu ra có thể mô tả như sau.
+
+
+\begin{itemize}
+\item \textbf{Đầu vào:} câu hỏi, kênh gọi (web hoặc Discord), mã hội thoại, tùy chọn ngôn ngữ và bật hoặc tắt tìm kiếm web dự phòng.
+\item \textbf{Đầu ra:} văn bản trả lời, danh sách nguồn (chỉ số, tiêu đề, mục, địa chỉ, đoạn trích, nguồn kho hay nguồn web), cờ cho biết có đủ bằng chứng hay không và độ trễ.
+\item \textbf{Từ chối:} câu hỏi ngoài phạm vi (hướng dẫn xây dựng nhân vật, chỉ số vũ khí, trò chơi khác, yêu cầu không liên quan) và câu hỏi chưa có đủ bằng chứng.
+\end{itemize}
+
+
+Phạm vi nội dung được chốt tại ADR-004 là lore của bản gốc Elden Ring; các bản mở rộng, kể cả Shadow of the Erdtree, và trò chơi Elden Ring Nightreign nằm ngoài phạm vi. Quyết định này giúp nhóm tập trung vào xây dựng và đánh giá quy trình RAG thay vì xử lý các nguồn lẫn nội dung. Về điều kiện triển khai, hệ thống chạy trên một máy chủ ảo 4 vCPU và 8 GB RAM không có GPU, gọi mô hình sinh qua API, phục vụ khoảng vài trăm người dùng với tối đa khoảng 50 người đồng thời.
+
+
+\section{2.2. Mục tiêu và tiêu chí đánh giá}
+
+Mục tiêu và ngưỡng dưới đây lấy từ đặc tả yêu cầu của dự án (SRS) và tài liệu công nghệ. Các ngưỡng là giá trị mục tiêu ban đầu và sẽ được hiệu chỉnh khi có số đo thực tế. Cột cuối nêu trạng thái tại thời điểm viết báo cáo, để tránh nhầm giữa mục tiêu và kết quả.
+
+
+\tabbegin{Mục tiêu học máy và tiêu chí theo dõi}{tab:muctieu}
+\begin{longtable*}{|C{0.30}|C{0.31}|C{0.39}|}
+\hline \textbf{Mục tiêu} & \textbf{Tiêu chí} & \textbf{Trạng thái hiện tại} \\ \hline
+Truy xuất đúng tài liệu & Recall@5 $\geq$ 0,80 trên bộ câu hỏi chuẩn (NFR-QUAL-01) & Chưa đo trên bộ chuẩn. Thí nghiệm cơ sở: Hit@5 = 10/10 trên 10 câu và tập con 240 bản ghi (mục 3.2) \\ \hline
+Câu trả lời đúng và bám nguồn & Correctness $\geq$ 70\%, faithfulness $\geq$ 85\% (NFR-QUAL-02) & Chưa đo trên bộ chuẩn. Thí nghiệm cơ sở: 20/20 điểm correctness và 20/20 điểm faithfulness trên 10 câu \\ \hline
+Từ chối đúng câu ngoài phạm vi & Tỉ lệ từ chối đúng riêng, tách khỏi Recall và MRR & Chưa đo; bộ chuẩn có 6 câu ngoài phạm vi \\ \hline
+Độ trễ chấp nhận được & Token đầu $\leq$ 3,5 s, trả lời đầy đủ $\leq$ 10 s (p95); xếp hạng lại 30 đoạn $\leq$ 800 ms & Chưa đo; quy trình hoàn chỉnh chưa được nối \\ \hline
+Chi phí kiểm soát được & Chi phí gọi mô hình $\leq$ 30 USD mỗi tháng ở mức 1.000 câu mỗi ngày (NFR-COST-01) & Ước tính từ bảng giá (mục 2.8), chưa đo trên lưu lượng thật \\ \hline
+\end{longtable*}
+\tabend
+
+
+\section{2.3. Nguồn dữ liệu và từ điển dữ liệu}
+
+Nguồn chính là Elden Ring Wiki trên wiki.gg [13]. Nội dung của wiki này theo giấy phép CC BY-SA 4.0 [12], nên mọi câu trả lời cần ghi nguồn và địa chỉ trang. Wiki chạy trên MediaWiki và cung cấp giao diện lập trình cho phép liệt kê trang theo danh mục và lấy HTML kèm số phiên bản (revision) của trang [11]. Nhóm đã khảo sát thêm hai nguồn khác; kết quả được tóm tắt ở Bảng \ref{tab:nguon}.
+
+
+\tabbegin{Nguồn dữ liệu và kết quả khảo sát}{tab:nguon}
+\begin{longtable*}{|C{0.17}|C{0.25}|C{0.58}|}
+\hline \textbf{Nguồn} & \textbf{Vai trò} & \textbf{Kết quả kiểm chứng} \\ \hline
+wiki.gg & Nguồn thô chính & Liệt kê theo danh mục, lấy nội dung (parse) và thông tin ảnh đều hoạt động; footer ghi CC BY-SA 4.0 \\ \hline
+fanapis & Khảo sát dữ liệu có cấu trúc để xây bảng thực thể & 7 loại tài nguyên truy cập được, mỗi loại thử hai trang kết quả; số bản ghi: boss 106, NPC 55, địa điểm 177, vật phẩm 462, vũ khí 307, bùa 87, linh thể 64. Chưa xác minh giấy phép tái phân phối \\ \hline
+Fandom & Dự kiến đối chiếu 10 trang & Tệp robots.txt trả HTTP 403 nên dừng, không tải bài; chưa có so sánh nội dung hợp lệ \\ \hline
+Dump của wiki & Phương án thu thập khác & Trang yêu cầu dump đọc được nhưng bản hiện hành và bản đầy đủ lịch sử đều chưa được tạo; không có đường dẫn tải \\ \hline
+\end{longtable*}
+\tabend
+
+
+Dữ liệu thô của mỗi trang gồm tiêu đề, địa chỉ, số phiên bản, danh sách danh mục, HTML của nội dung, mã băm và thời điểm tải. Sau khi làm sạch và chia đoạn, mỗi đoạn dự kiến mang siêu dữ liệu ở Bảng \ref{tab:tudien}; các trường này phục vụ truy vết nguồn, lọc phạm vi và đánh giá.
+
+
+\tabbegin{Từ điển dữ liệu của một đoạn đã chia (thiết kế)}{tab:tudien}
+\begin{longtable*}{|C{0.22}|C{0.40}|C{0.38}|}
+\hline \textbf{Trường} & \textbf{Ý nghĩa} & \textbf{Ghi chú} \\ \hline
+\texttt{doc\_id}, \texttt{title}, \texttt{url} & Trang chứa đoạn, tiêu đề và địa chỉ & Dùng để trích dẫn \\ \hline
+\texttt{section} & Đường dẫn các tiêu đề cha và con & Giữ ngữ cảnh khi đoạn bị cắt \\ \hline
+\texttt{source} & Nguồn dữ liệu (wiki.gg, \ldots) & Hỗ trợ nhiều nguồn \\ \hline
+\texttt{game\_scope} & Phạm vi trò chơi & Chỉ gán base sau khi rà soát từng mục \\ \hline
+\texttt{source\_type} & Văn bản trong game, văn xuôi wiki hoặc suy đoán & Để phân biệt khi trả lời \\ \hline
+\texttt{lang}, \texttt{updated\_at} & Ngôn ngữ và thời điểm cập nhật & Hỗ trợ cập nhật tăng dần \\ \hline
+\texttt{text}, \texttt{token\_count} & Nội dung và số token & Số token đếm bằng tokenizer của mô hình embedding \\ \hline
+\end{longtable*}
+\tabend
+
+
+\section{2.4. Quy mô và phân bố dữ liệu thu thập}
+
+Bảng \ref{tab:danhmuc} cho số trang ứng viên theo danh mục khi khảo sát, đếm theo không gian tên bài viết. Cột thứ hai chỉ tính trang nằm trực tiếp trong danh mục; cột thứ ba gộp thêm danh mục con ở độ sâu một và đã loại trùng. Các nhóm giao nhau nên không cộng các hàng để suy ra số trang duy nhất. Sau khi khử trùng, khảo sát thu được 2.602 trang ứng viên, trong đó có thể lẫn nội dung bản mở rộng.
+
+
+\tabbegin{Số trang ứng viên theo danh mục}{tab:danhmuc}
+\begin{longtable*}{|C{0.28}|C{0.24}|C{0.22}|C{0.26}|}
+\hline \textbf{Danh mục} & \textbf{Trang trực tiếp} & \textbf{Danh mục con} & \textbf{Duy nhất, độ sâu 1} \\ \hline
+NPC & 117 & 3 & 129 \\ \hline
+Bosses & 115 & 3 & 141 \\ \hline
+Locations & 347 & 17 & 357 \\ \hline
+Lore & 65 & 9 & 313 \\ \hline
+Items & 489 & 19 & 1.757 \\ \hline
+Characters & 180 & 10 & 396 \\ \hline
+\end{longtable*}
+\tabend
+
+
+\begin{figure}[H]\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \def\sc{0.0042}
+  \foreach \name/\a/\b [count=\i from 0] in {Items/489/1757, Characters/180/396, Locations/347/357, Bosses/115/141, NPC/117/129, Lore/65/313} {
+    \pgfmathsetmacro{\yy}{-\i*1.05}
+    \node[anchor=east,font=\small] at (0,\yy) {\name};
+    \fill[gray!55] (0.1,\yy+0.05) rectangle ++(\a*\sc,0.38);
+    \fill[blue!45] (0.1,\yy-0.4) rectangle ++(\b*\sc,0.38);
+    \node[anchor=west,font=\scriptsize] at (0.15+\a*\sc,\yy+0.24) {\a};
+    \node[anchor=west,font=\scriptsize] at (0.15+\b*\sc,\yy-0.21) {\b};
+  }
+  \fill[gray!55] (5.0,-2.6) rectangle ++(0.4,0.25); \node[anchor=west,font=\scriptsize] at (5.5,-2.47) {Trực tiếp};
+  \fill[blue!45] (5.0,-3.15) rectangle ++(0.4,0.25); \node[anchor=west,font=\scriptsize] at (5.5,-3.02) {Duy nhất, độ sâu 1};
+\end{tikzpicture}
+\caption{Số trang ứng viên theo danh mục khi khảo sát nguồn}\label{fig:danhmuc}
+\end{figure}
+
+
+Danh mục Items có nhiều trang ứng viên nhất. Danh mục Lore tăng từ 65 lên 313 trang khi gộp danh mục con, và Characters tăng từ 180 lên 396, cho thấy nhiều trang nằm ở các danh mục con. Vì vậy việc chọn nguồn theo một danh mục duy nhất, hoặc chỉ đếm trang trực tiếp, sẽ bỏ sót nhiều trang. Cũng cần lưu ý đây là số ứng viên trước khi rà soát phạm vi và nội dung.
+
+
+Từ các ứng viên trên, crawler đã tải một tập mẫu 200 trang, chọn theo thứ tự khám phá cân bằng giữa các danh mục, đồng thời tải ảnh liên quan. Bảng \ref{tab:mau} nêu số liệu của lượt thu thập này.
+
+
+\tabbegin{Kết quả thu thập tập mẫu}{tab:mau}
+\begin{longtable*}{|C{0.45}|C{0.55}|}
+\hline \textbf{Chỉ tiêu} & \textbf{Giá trị} \\ \hline
+Số trang duy nhất, số bản ghi thô & 200 trang, đủ 200 tệp thô và tệp liệt kê ảnh \\ \hline
+Ứng viên bị loại theo không gian tên, trang chuyển hướng hoặc phạm vi & 51 \\ \hline
+Ảnh duy nhất sau khử trùng theo mã băm & 1.188 tệp, khoảng 1,67 GB, sau khi loại biểu tượng giao diện \\ \hline
+Số lần xuất hiện ảnh trong tập mẫu & 1.328 \\ \hline
+Số yêu cầu mạng và thời gian & 1.391 yêu cầu, khoảng 24 phút \\ \hline
+Kiểm tra toàn vẹn & Mã băm tệp thô, ảnh và số phiên bản đều khớp; báo cáo nghiệm thu không có lỗi \\ \hline
+\end{longtable*}
+\tabend
+
+
+\section{2.5. Quy trình thu thập và xử lý dữ liệu ngoại tuyến}
+
+Việc chuẩn bị dữ liệu được tách khỏi dịch vụ trực tuyến và chia thành năm bước độc lập (Hình \ref{fig:ingest}). Mỗi bước đọc kết quả của bước trước từ thư mục dữ liệu, ghi kết quả của mình, và có thể chạy lại riêng. Nhờ vậy khi đổi kích thước đoạn chỉ cần chia đoạn và lập chỉ mục lại mà không phải tải lại dữ liệu, và khi gặp một câu trả lời sai có thể mở từng tệp trung gian để xem sai ở bước nào.
+
+
+\begin{figure}[H]\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[blk,minimum width=2.6cm] (c) at (0,0) {\textbf{Crawl}\\ tải HTML, ảnh};
+  \node[blk,minimum width=2.6cm] (f) at (3.4,0) {\textbf{Filter}\\ giữ hoặc bỏ trang};
+  \node[blk,minimum width=2.6cm] (t) at (6.8,0) {\textbf{Transform}\\ làm sạch, siêu dữ liệu};
+  \node[blk,minimum width=2.6cm] (k) at (10.2,0) {\textbf{Chunk}\\ chia đoạn};
+  \node[model,minimum width=2.6cm] (i) at (13.6,0) {\textbf{Index}\\ embedding, BM25};
+  \foreach \a/\b in {c/f,f/t,t/k,k/i} {\draw[arr] (\a) -- (\b);}
+  \node[font=\scriptsize,align=center,text width=2.8cm] at (0,-1.5) {\texttt{raw/}\\ HTML, phiên bản, danh mục};
+  \node[font=\scriptsize,align=center,text width=2.8cm] at (3.4,-1.5) {\texttt{decisions.jsonl}\\ lý do giữ hoặc bỏ};
+  \node[font=\scriptsize,align=center,text width=2.8cm] at (6.8,-1.5) {\texttt{processed/}\\ các mục và siêu dữ liệu};
+  \node[font=\scriptsize,align=center,text width=2.8cm] at (10.2,-1.5) {\texttt{chunks/}\\ đoạn kèm số token};
+  \node[store,minimum width=2.6cm] at (13.6,-1.5) {Qdrant, PostgreSQL};
+  \node[font=\scriptsize] at (3.4,1.1) {thao tác tuần tự, chạy lại được từng bước};
+\end{tikzpicture}}
+\caption{Quy trình dữ liệu ngoại tuyến gồm năm bước}\label{fig:ingest}
+\end{figure}
+
+
+Chính sách thu thập nhằm không gây tải cho nguồn. Trình thu thập chạy tuần tự với khoảng cách tối thiểu một giây giữa mọi yêu cầu, kể cả yêu cầu tệp robots và ảnh; thử lại tối đa hai lần với thời gian chờ tăng dần, tôn trọng tiêu đề Retry-After và dừng nếu phải chờ quá 60 giây; chỉ dùng HTTPS với danh sách máy chủ cho phép; và không vượt các cơ chế chặn. Phản hồi bài viết tối đa 8 MB, ảnh tối đa 20 MB và 40 triệu điểm ảnh. Định dạng ảnh được kiểm tra bằng thư viện xử lý ảnh trên dữ liệu thực thay vì tin vào tiêu đề MIME. Địa chỉ email liên hệ đặt trong tệp cấu hình môi trường và không ghi vào báo cáo hoặc mã nguồn.
+
+
+Thu thập được thiết kế theo hướng cập nhật tăng dần: bước tải đã kiểm tra số phiên bản và mã băm để dùng lại dữ liệu sẵn có. Ở bước lập chỉ mục, dự kiến chỉ trang có mã băm nội dung đổi mới được ghi lại và các đoạn của trang bị xóa được dọn khỏi chỉ mục; phần này chưa được triển khai. Mã nguồn dùng giao diện nguồn dữ liệu chung, nên thêm một nguồn mới chỉ cần thêm một mô-đun và một mục cấu hình.
+
+
+\section{2.6. Làm sạch và chia đoạn}
+
+Làm sạch nhằm bỏ phần không mang nội dung kể chuyện: khung thông tin chỉ số, bảng điều hướng, chú thích, mục lục, nút chỉnh sửa, thư viện ảnh và các mục tham khảo. Các bảng không bị bỏ đồng loạt vì bảng hội thoại của nhân vật có thể chứa lore quan trọng. Mỗi lần giữ hay loại một trang đều ghi lại lý do để kiểm tra sau này. Hiện giai đoạn làm sạch chính thức chưa hoàn thành; các phép đo trong báo cáo dùng bộ đo thử chỉ để khảo sát cấu trúc.
+
+
+Chiến lược chia đoạn được đề xuất tại ADR-003 và đang chờ nhóm xem xét. Nội dung chính gồm: chia theo tiêu đề; mỗi chuỗi đưa vào mô hình embedding không quá 450 token, tính cả tiền tố và token đặc biệt; phần chồng lấn 50 token lấy từ cuối đoạn trước trong cùng một mục; đếm bằng tokenizer của chính mô hình embedding để không vượt giới hạn 512 token của mô hình [16]. Mỗi đoạn mở đầu bằng tiêu đề trang và đường dẫn tiêu đề, theo dạng sau.
+
+
+\begin{quote}\small\ttfamily
+passage: <tiêu đề trang>\\
+<mục cha > mục con>\\
+<nội dung đoạn>
+\end{quote}
+
+
+Các quy tắc ranh giới gồm: không ghép nội dung khác trang, khác phạm vi hoặc khác loại nguồn chỉ để đủ độ dài; ưu tiên cắt tại ranh giới đoạn và câu; giữ lời thoại cùng người nói, giữ tiêu đề bảng cùng các hàng liên quan; và cho phép mục ngắn giữ nguyên thay vì ghép bừa. Để chọn giá trị khởi đầu, nhóm đo mô phỏng cửa sổ token trên mẫu 20 trang (Bảng \ref{tab:chunk}). Mẫu được chọn trải đều theo thứ tự khám phá cân bằng danh mục, không phải mẫu thống kê đại diện cho toàn wiki, và chưa có truy vấn nào được chạy trong thí nghiệm này.
+
+
+\tabbegin{Số cửa sổ chia đoạn theo giới hạn token trên mẫu 20 trang}{tab:chunk}
+\begin{longtable*}{|C{0.28}|C{0.20}|C{0.28}|C{0.24}|}
+\hline \textbf{Giới hạn tổng token} & \textbf{Số cửa sổ} & \textbf{Phần thân dưới 300 token} & \textbf{Tiền tố không đủ chỗ} \\ \hline
+350 & 141 & 112 & 0 \\ \hline
+400 & 131 & 102 & 0 \\ \hline
+450 & 127 & 101 & 0 \\ \hline
+500 & 125 & 100 & 0 \\ \hline
+\end{longtable*}
+\tabend
+
+
+Kết quả cho thấy tăng giới hạn từ 450 lên 500 token chỉ giảm thêm hai cửa sổ, trong khi 450 để lại khoảng trống cho tiêu đề và ngữ cảnh. Phần lớn cửa sổ có thân ngắn vì nhiều mục vốn ngắn; nhóm không kéo dài chúng bằng nội dung bổ sung. Cần nhấn mạnh rằng 450 và 50 là giá trị khởi đầu, chưa được chứng minh là tối ưu cho truy xuất; chúng cần được kiểm chứng bằng bộ câu hỏi chuẩn.
+
+
+\section{2.7. Chất lượng dữ liệu và giới hạn}
+
+Quá trình khảo sát và thu thập làm lộ nhiều vấn đề về chất lượng và pháp lý. Bảng \ref{tab:vande} liệt kê các vấn đề, bằng chứng và cách xử lý hiện tại.
+
+
+\tabbegin{Vấn đề chất lượng dữ liệu và quyết định xử lý}{tab:vande}
+\begin{longtable*}{|C{0.25}|C{0.37}|C{0.38}|}
+\hline \textbf{Vấn đề} & \textbf{Bằng chứng} & \textbf{Xử lý} \\ \hline
+Danh mục lẫn nội dung bản mở rộng & Danh mục chung chứa trang thuộc nhiều phạm vi & Nhận diện sơ bộ ở phần mở đầu và khung thông tin; giữ bản thô kèm lý do; trường phạm vi để trống và gắn cờ cần rà soát từng mục, không gán base hàng loạt \\ \hline
+Không đối chiếu được với Fandom & robots.txt trả HTTP 403 cho cả 10 trang & Dừng và ghi lỗi; không dùng proxy; không kết luận hai nguồn giống hay khác \\ \hline
+Truy vấn theo phiên bản bị từ chối & Một số yêu cầu \texttt{oldid} trả HTTP 403 & Lấy theo tiêu đề và lưu số phiên bản thực tế trả về cùng HTML \\ \hline
+Thư viện giải nén Brotli lỗi & Giải mã sai nội dung trong môi trường chạy & Yêu cầu mã hóa nội dung dạng identity \\ \hline
+Ảnh khai báo sai định dạng & Một ảnh được khai báo WebP nhưng dữ liệu là PNG & Xác định bằng nội dung ảnh, lưu đuôi theo định dạng thật và ghi lại sai khác \\ \hline
+Ảnh giao diện lọt ngưỡng kích thước & Biểu tượng đánh giá 45 px được giữ lại & Thêm quy tắc loại riêng, có kiểm thử, tính lại ngữ cảnh trên dữ liệu thô không cần tải lại \\ \hline
+Giấy phép ảnh không rõ & Toàn bộ 1.328 lần xuất hiện ảnh thiếu thông tin giấy phép & Gắn nhãn cần rà soát; không suy ra giấy phép ảnh từ giấy phép bài viết; không tái phân phối \\ \hline
+Mục tiêu 200 trang chưa dùng được cho thí nghiệm & Chưa có bước làm sạch và lập chỉ mục & Thí nghiệm cơ sở dùng tập con dữ liệu khác (mục 3.1) \\ \hline
+\end{longtable*}
+\tabend
+
+
+Dữ liệu và ảnh thô có dung lượng lớn nên không đưa vào kho mã nguồn mà chuyển giữa các máy kèm mã băm kiểm tra. Số liệu thu thập phản ánh trạng thái của nguồn tại thời điểm tải, không phải trạng thái vĩnh viễn.
+
+
+\section{2.8. Lựa chọn thành phần mô hình}
+
+Hệ thống ghép nhiều thành phần; Bảng \ref{tab:thanhphan} nêu lựa chọn, lý do và mức độ đã kiểm chứng của từng thành phần.
+
+
+\tabbegin{Lựa chọn thành phần của quy trình RAG}{tab:thanhphan}
+\begin{longtable*}{|C{0.15}|C{0.25}|C{0.37}|C{0.23}|}
+\hline \textbf{Thành phần} & \textbf{Lựa chọn} & \textbf{Lý do} & \textbf{Mức kiểm chứng} \\ \hline
+Embedding & \texttt{multilingual-\allowbreak e5-small}, 384 chiều, chạy bằng ONNX trên CPU & Hỗ trợ tiếng Việt và tiếng Anh, đủ nhỏ để chạy trên máy không GPU [4, 16] & Đã dùng trong thí nghiệm cơ sở \\ \hline
+Từ khóa & BM25 dạng vector thưa trong Qdrant, bật hiệu chỉnh IDF & Bắt tên riêng chính xác; không cần thêm dịch vụ tìm kiếm riêng & Đã dùng trong thí nghiệm cơ sở \\ \hline
+Hợp nhất & RRF qua truy vấn nhiều giai đoạn của Qdrant & Không cần chuẩn hóa điểm giữa hai hệ thống [5, 9] & Đã dùng trong thí nghiệm cơ sở \\ \hline
+Xếp hạng lại & \texttt{bge-reranker-base} (ONNX); dự phòng \texttt{ms-marco-\allowbreak MiniLM-\allowbreak L-6-v2} & Cải thiện thứ hạng; mô hình nhỏ để chạy CPU [6, 18] & Đã chọn; chưa có số đo độ trễ trong kho mã; không dùng trong thí nghiệm cơ sở \\ \hline
+Mô hình sinh & DeepSeek \texttt{deepseek-flash}, tắt chế độ suy luận & Giá thấp, ngữ cảnh dài, có đầu ra JSON và truyền theo luồng [10] & Bộ chuyển đổi đã viết; dùng trong thí nghiệm cơ sở \\ \hline
+Chấm điểm ngoại tuyến & \texttt{deepseek-v4-pro} & Dùng mô hình khác mô hình sinh để chấm, tránh tự chấm bài của mình & Dự kiến; chưa triển khai \\ \hline
+Tìm web dự phòng & DuckDuckGo với danh sách miền cho phép & Bổ sung khi kho thiếu bằng chứng & Thiết kế; chưa triển khai \\ \hline
+\end{longtable*}
+\tabend
+
+
+Một số lựa chọn bị loại: chạy mô hình ngôn ngữ cục bộ vì máy chủ chỉ có bốn lõi CPU và sẽ chỉ đạt vài token mỗi giây; dùng khung điều phối lớn vì quy trình chỉ có vài bước và tự viết giúp dễ gỡ lỗi; cài đặt máy chủ tìm kiếm văn bản riêng vì Qdrant đã hỗ trợ vector thưa; và dùng thư viện học sâu đầy đủ khi chạy thật vì bản ONNX nhẹ và nhanh hơn trên CPU. Việc dùng mô hình sinh qua API làm dữ liệu câu hỏi và các đoạn nguồn được gửi ra dịch vụ bên ngoài; nhóm chỉ gửi nội dung công khai và không gửi thông tin định danh người dùng.
+
+
+Về chi phí, với bảng giá của \texttt{deepseek-flash} (0,15 USD mỗi triệu token vào khi không trúng bộ nhớ đệm, 0,003 USD khi trúng, 0,60 USD mỗi triệu token ra, trong giờ thấp điểm; gấp đôi trong giờ cao điểm) [10], nếu một lượt hỏi dùng khoảng 4.000 token vào, trong đó khoảng 1.000 token là lời nhắc hệ thống được lưu đệm, và 500 token ra, chi phí xấp xỉ 0,00075 USD ở giờ thấp điểm và gấp đôi ở giờ cao điểm. Với giả định một phần ba lượt hỏi rơi vào giờ cao điểm, mức 1.000 câu mỗi ngày tốn khoảng 30 USD mỗi tháng. Đây là ước tính từ bảng giá và giả định độ dài, chưa phải số đo.
+
+
+\section{2.9. Thiết kế hệ thống}
+
+Hệ thống gồm phần phụ trợ chung, website, bot Discord và hạ tầng lưu trữ, chạy bằng Docker Compose trên một máy chủ (Hình \ref{fig:kientruc}). Web và bot chỉ là máy khách mỏng gọi cùng một giao diện lập trình nên logic hỏi đáp chỉ nằm ở một nơi.
+
+
+\begin{figure}[H]\centering
+\resizebox{0.96\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[blk,minimum width=2.8cm] (web) at (0,6) {Trình duyệt\\ website React};
+  \node[blk,minimum width=2.8cm] (bot) at (6.5,6) {Bot Discord\\ discord.js};
+  \node[blk,minimum width=2.8cm] (caddy) at (0,4.2) {Caddy\\ HTTPS, web tĩnh};
+  \node[model,minimum width=4.6cm,minimum height=1.3cm] (api) at (3.2,2.2) {\textbf{API FastAPI}\\ truy xuất, xếp hạng lại, sinh trả lời};
+  \node[store,minimum width=2.4cm] (pg) at (-1.8,-0.4) {PostgreSQL\\ hội thoại, trace};
+  \node[store,minimum width=2.4cm] (qd) at (2.3,-0.4) {Qdrant\\ vector dense, BM25};
+  \node[store,minimum width=2.4cm] (rd) at (6.4,-0.4) {Redis\\ giới hạn tần suất, cache};
+  \node[outp,minimum width=2.8cm] (ds) at (8.6,2.9) {DeepSeek API\\ viết lại, sinh};
+  \node[opt,minimum width=2.8cm] (dd) at (8.6,1.1) {DuckDuckGo\\ tìm web dự phòng};
+  \node[blk,minimum width=2.8cm] (ing) at (2.2,-2.6) {Tiến trình dữ liệu\\ (dòng lệnh)};
+  \node[blk,minimum width=2.8cm] (wiki) at (6.2,-2.6) {wiki.gg\\ MediaWiki API};
+  \draw[arr] (web) -- (caddy);
+  \draw[arr] (caddy) -- (api);
+  \draw[arr] (bot) -- (api);
+  \draw[arr] (api) -- (pg);
+  \draw[arr] (api) -- (qd);
+  \draw[arr] (api) -- (rd);
+  \draw[arr] (api) -- (ds);
+  \draw[darr] (api) -- (dd);
+  \draw[arr] (ing) -- (qd);
+  \draw[arr] (ing) -- (pg);
+  \draw[arr] (wiki) -- (ing);
+\end{tikzpicture}}
+\caption{Kiến trúc tổng thể của Index Beast}\label{fig:kientruc}
+\end{figure}
+
+
+Giao diện lập trình được thiết kế gồm các điểm: kiểm tra sức khỏe, hỏi đáp trả về một lần, hỏi đáp truyền theo luồng (Server-Sent Events) để web hiển thị từng đoạn, gửi phản hồi, đọc lịch sử hội thoại và các điểm quản trị. Tại thời điểm báo cáo, phần phụ trợ mới triển khai điểm kiểm tra sức khỏe và một điểm thử gọi mô hình sinh dành cho môi trường phát triển; các điểm còn lại là hợp đồng dự kiến để web và bot phát triển song song. Điểm kiểm tra sức khỏe chạy song song các kiểm tra của từng dịch vụ, mỗi kiểm tra có giới hạn thời gian, và trả về 503 khi có dịch vụ lỗi để hệ thống giám sát phát hiện được. Các tài nguyên dùng chung (cơ sở dữ liệu, kho vector, bộ nhớ đệm, mô hình sinh) được đăng ký tại một nơi, nên thêm tài nguyên mới tự có trong kiểm tra sức khỏe và tự được đóng khi tắt ứng dụng.
+
+
+Bảng \ref{tab:congnghe} nêu các công nghệ chính và phiên bản được cố định. Ngoài ra, dự án áp dụng quy ước không chạy tiến trình nào trên cổng mặc định của công cụ: cổng dự án bằng cổng gốc cộng 10.000, cụ thể API 18000, website 15173, PostgreSQL 15432, Qdrant 16333 và Redis 16379, mỗi cổng khai báo ở đúng một biến cấu hình. Ngoại lệ là Caddy dùng cổng 80 và 443 để trình duyệt và dịch vụ cấp chứng chỉ truy cập được.
+
+
+\tabbegin{Công nghệ chính và phiên bản}{tab:congnghe}
+\begin{longtable*}{|C{0.30}|C{0.38}|C{0.32}|}
+\hline \textbf{Nhóm} & \textbf{Công nghệ} & \textbf{Phiên bản} \\ \hline
+Ngôn ngữ và khung phụ trợ & Python, FastAPI, Uvicorn, SQLAlchemy & 3.11.9; 0.143.3; 0.54.0; 2.1.5 \\ \hline
+Chạy mô hình trên CPU & FastEmbed (ONNX Runtime), qdrant-client & 0.9.0; 1.19.1 \\ \hline
+Lưu trữ & PostgreSQL, Qdrant, Redis & 18.6; 1.19.2; 8.10.2 \\ \hline
+Giao diện & Node.js, TypeScript, React, Vite, Tailwind CSS & 24.22.0; 6.0.3; 19.3.1; 8.3.4; 4.3.3 \\ \hline
+Bot và triển khai & discord.js, Caddy, Docker Compose & 14.27.0; 2.11.7; Compose v2 \\ \hline
+\end{longtable*}
+\tabend
+
+
+\section{2.10. Quy trình xử lý một câu hỏi}
+
+Hình \ref{fig:rag} mô tả luồng xử lý khi người dùng đặt câu hỏi. Đây là thiết kế mục tiêu; thí nghiệm cơ sở ở Chương 3 mới thực hiện các bước truy xuất lai và sinh. Thí nghiệm đó chưa có bước viết lại hay dịch truy vấn, chưa xếp hạng lại và chưa tìm web: câu hỏi tiếng Việt và tiếng Anh được đưa thẳng vào cả hai hệ thống tìm kiếm.
+
+
+\begin{figure}[H]\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}
+  \node[blk,minimum width=2.8cm] (q) at (0,0) {1. Câu hỏi\\ và lịch sử};
+  \node[model,minimum width=2.8cm] (rw) at (3.7,0) {2. Viết lại\\ truy vấn (LLM)};
+  \node[blk,minimum width=2.8cm] (hy) at (7.4,0) {3. Truy xuất lai\\ dense + BM25, RRF};
+  \node[model,minimum width=2.8cm] (rr) at (11.1,0) {4. Xếp hạng lại\\ (reranker)};
+  \node[opt,minimum width=2.8cm] (web) at (11.1,-2.2) {Tìm web\\ dự phòng};
+  \node[blk,minimum width=2.8cm] (pr) at (7.4,-2.2) {5. Chọn top-K,\\ đánh số nguồn};
+  \node[model,minimum width=2.8cm] (gen) at (3.7,-2.2) {6. Sinh trả lời\\ (LLM)};
+  \node[outp,minimum width=2.8cm] (out) at (0,-2.2) {7. Trả lời, nguồn,\\ lưu vết};
+  \node[outp,minimum width=2.8cm] (oos) at (3.7,1.9) {Ngoài phạm vi:\\ từ chối};
+  \node[outp,minimum width=2.8cm] (nf) at (11.1,-4.3) {Chưa tìm thấy:\\ thông báo};
+  \draw[arr] (q) -- (rw);
+  \draw[arr] (rw) -- (hy);
+  \draw[arr] (hy) -- (rr);
+  \draw[arr] (rr) -- node[right,font=\scriptsize] {thiếu bằng chứng} (web);
+  \draw[arr] (rr) to[bend left=30] node[above,font=\scriptsize,pos=0.75] {đủ} (pr);
+  \draw[darr] (web) -- (pr);
+  \draw[arr] (pr) -- (gen);
+  \draw[arr] (gen) -- (out);
+  \draw[arr] (rw) -- node[right,font=\scriptsize] {ngoài phạm vi} (oos);
+  \draw[darr] (web) -- node[right,font=\scriptsize] {vẫn thiếu hoặc lỗi} (nf);
+\end{tikzpicture}}
+\caption{Luồng xử lý một câu hỏi của hệ thống (thiết kế mục tiêu)}\label{fig:rag}
+\end{figure}
+
+
+Các bước chính như sau. Ở bước viết lại, mô hình sinh nhận câu hỏi và lịch sử rồi trả về một đối tượng JSON gồm truy vấn tiếng Anh độc lập, ngôn ngữ người hỏi, danh sách thực thể và cờ ngoài phạm vi; nếu bước này lỗi, hệ thống dùng câu hỏi gốc. Ở bước truy xuất lai, truy vấn được mã hóa bằng embedding với tiền tố \texttt{query:}, đồng thời tìm bằng BM25, rồi hợp nhất bằng RRF trong một lần gọi đến Qdrant, có thể lọc theo phạm vi trò chơi. Bước xếp hạng lại giữ một số ít đoạn tốt nhất và so điểm cao nhất với một ngưỡng để quyết định có đủ bằng chứng không. Nếu không đủ và tính năng được bật, hệ thống tìm trên web nhưng chỉ nhận kết quả từ các miền cho phép, chia và xếp hạng lại các đoạn mới như dữ liệu trong kho, và đánh dấu câu trả lời dùng nguồn web. Nếu vẫn thiếu, hệ thống thông báo chưa tìm thấy và không gọi mô hình sinh, nhờ đó vừa tránh bịa vừa tiết kiệm chi phí.
+
+
+Lời nhắc sinh câu trả lời tuân theo các quy tắc: chỉ dùng các đoạn được cung cấp; trích dẫn theo số của đoạn; trả lời bằng ngôn ngữ người hỏi nhưng giữ tên riêng gốc tiếng Anh; nêu rõ khi nội dung là diễn giải; trả lời ngắn, đi thẳng vào câu hỏi; và bỏ qua mọi chỉ dẫn nằm trong ngữ cảnh. Đáp án chuẩn của bộ câu hỏi không bao giờ được đưa vào chỉ mục hay lời nhắc.
+
+
+\section{2.11. Thiết kế đánh giá}
+
+Bộ câu hỏi chuẩn phiên bản đầu tiên có 30 câu, 20 tiếng Việt và 10 tiếng Anh, mã từ \texttt{IB-GS-001} đến \texttt{IB-GS-030}. Mỗi câu gồm bảy trường: mã, câu hỏi, ngôn ngữ, đáp án tham chiếu, danh sách địa chỉ nguồn, nhóm và độ khó. Bảng \ref{tab:golden} cho cơ cấu của bộ câu hỏi.
+
+
+\tabbegin{Cơ cấu bộ câu hỏi chuẩn phiên bản 0}{tab:golden}
+\begin{longtable*}{|C{0.22}|C{0.14}|C{0.34}|C{0.30}|}
+\hline \textbf{Nhóm} & \textbf{Số câu} & \textbf{Mã} & \textbf{Ví dụ} \\ \hline
+Nhân vật & 6 & 001--006 & ``Blaidd là ai và phục vụ ai?'' \\ \hline
+Sự kiện & 6 & 007--012 & Kết cục trận Malenia và Radahn tại Aeonia \\ \hline
+Địa điểm & 6 & 013--018 & Vùng và chủ nhân của Stormveil Castle \\ \hline
+Đa bước & 6 & 019--024 & Cha mẹ và lời nguyền của Malenia và Miquella \\ \hline
+Ngoài phạm vi & 6 & 025--030 & Yêu cầu giải thích cốt truyện Dark Souls III \\ \hline
+\end{longtable*}
+\tabend
+
+
+Độ khó được gán là 12 câu dễ, 12 câu trung bình và 6 câu khó. Sáu câu đa bước có ít nhất hai địa chỉ nguồn. Sáu câu ngoài phạm vi có danh sách nguồn rỗng và được chấm bằng tỉ lệ từ chối đúng, không đưa vào Recall và MRR. Nhóm đặt ra các quy tắc sử dụng: chỉ gửi câu hỏi cho hệ thống; với câu lore, chấm theo ý nghĩa và độ đủ ý chứ không khớp từng chữ; độ bám nguồn phải được đối chiếu với ngữ cảnh thực sự được truy xuất; chuẩn hóa địa chỉ chuyển hướng trước khi tính chỉ số truy xuất; không dùng bộ chuẩn toàn dự án để kết luận về một chỉ mục chỉ có một phần dữ liệu; và lưu phiên bản, cấu hình, dữ liệu và mã commit cùng mỗi lượt đánh giá. Các câu trong bộ này được soạn dựa trên nội dung wiki do công cụ tìm kiếm lập chỉ mục, chưa được kiểm tra trực tiếp từng trang và chưa được thành viên khác kiểm tra chéo, nên đáp án cần được xem xét lại trước khi dùng làm căn cứ kết luận.
+
+
+Thí nghiệm cơ sở dùng thang điểm 0, 1, 2 cho cả độ đúng và độ bám nguồn, cùng Hit@5 và MRR@5 cho truy xuất. Do thí nghiệm này khác phạm vi dữ liệu của bộ chuẩn nên được dùng riêng một bộ 10 câu (5 tiếng Việt, 5 tiếng Anh) về trang phục trong tập dữ liệu.
+
+
+\section{2.12. Quy trình phát triển và bảo đảm chất lượng}
+
+Dự án được thực hiện bởi bốn thành viên trong sáu sprint, mỗi sprint một tuần, từ 19/10/2026 đến 29/11/2026. Các thành viên phụ trách lần lượt phần phụ trợ và hạ tầng, dữ liệu, truy xuất và mô hình ngôn ngữ, và giao diện cùng bot. Bảng \ref{tab:sprint} tóm tắt mục tiêu từng sprint.
+
+
+\tabbegin{Kế hoạch sáu sprint}{tab:sprint}
+\begin{longtable*}{|C{0.10}|C{0.24}|C{0.66}|}
+\hline \textbf{Sprint} & \textbf{Thời gian} & \textbf{Mục tiêu} \\ \hline
+1 & 19/10--25/10 & Nền móng: môi trường, CI, khung API, thu thập mẫu, thí nghiệm RAG cơ sở, bộ câu hỏi chuẩn, giao diện và bot khởi đầu \\ \hline
+2 & 26/10--01/11 & Hoàn thiện dữ liệu: làm sạch, chia đoạn, lập chỉ mục, hợp đồng API \\ \hline
+3 & 02/11--08/11 & Nối RAG từ đầu đến cuối: viết lại truy vấn, xếp hạng lại, sinh trả lời có trích dẫn, truyền theo luồng \\ \hline
+4 & 09/11--15/11 & Chất lượng: bộ chấm tự động, tối ưu truy xuất, bảo vệ API, tìm web dự phòng \\ \hline
+5 & 16/11--22/11 & Triển khai thật, kiểm thử tải, giám sát và sao lưu \\ \hline
+6 & 23/11--29/11 & Kiểm thử với người dùng, sửa lỗi, đóng băng tính năng, bàn giao \\ \hline
+\end{longtable*}
+\tabend
+
+
+Về kỹ thuật, mọi thay đổi đi qua nhánh riêng và yêu cầu hợp nhất (pull request) về nhánh phát triển chung, có người rà soát phê duyệt trước khi hợp nhất, và thông điệp commit theo quy ước Conventional Commits. Trước mỗi commit, các móc kiểm tra chạy công cụ kiểm tra và định dạng mã, chặn khóa bí mật và tệp quá lớn. Quy trình tích hợp liên tục kiểm tra mã phụ trợ (lint, kiểm thử đơn vị, kiểm thử tích hợp với các dịch vụ thật), dựng website và kiểm tra kiểu của bot trên mọi yêu cầu hợp nhất. Cấu hình được gom vào một tệp môi trường ở gốc kho mã; ứng dụng ở chế độ sản xuất sẽ từ chối khởi động nếu còn giá trị mẫu, và mỗi container chỉ nhận các biến nó cần. Sau mỗi nhóm công việc, người thực hiện viết tài liệu bàn giao đặt cùng mã nguồn.
