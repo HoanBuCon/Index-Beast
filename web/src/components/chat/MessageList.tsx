@@ -6,7 +6,6 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Message, Source } from "../../api/types";
 import CitationPopover from "./CitationPopover";
-import FeedbackButtons from "./FeedbackButtons";
 import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
 import AnswerIllustrations from "./AnswerIllustrations";
 import { backendIllustrations, canShowIllustrations } from "./answerMedia";
@@ -95,7 +94,6 @@ export default function MessageList({
                   previewState={illustrationPreviewState}
                 />
               )}
-              {!message.incomplete && message.serverId && <FeedbackButtons messageId={message.serverId} demo={demo} />}
             </>
           )}
         </article>
