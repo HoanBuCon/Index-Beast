@@ -24,6 +24,7 @@ from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.rewrite import contextual_followup, rewrite
+from app.rag.web_query import web_query
 from app.rag.web_search import assess, merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
@@ -477,6 +478,10 @@ class ChatPipeline:
             search_query = state["query"]
             if state.get("overview") is not None:
                 search_query += "\nSearch focus: " + state["overview"].focus
+            search_query, query_kind = web_query(search_query)
+            p.trace["web_search"]["query_kind"] = query_kind
+            if state.get("diagnostic_queries"):
+                p.trace["web_search"]["query"] = search_query
             web, diagnostic = await self.web_search.search(search_query)
             p.trace["web_search"].update(status="ok", **diagnostic)
             state["web_hits"] = web

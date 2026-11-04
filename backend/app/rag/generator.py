@@ -195,6 +195,8 @@ RETRYABLE_REASONS = {
     "insufficient_with_citations",
     "citation_evidence_indices",
     "unknown_quote_id",
+    "model_url",
+    "invalid_limitation",
 }
 
 
