@@ -64,6 +64,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV4 · Nạp dữ liệu và chạy local (03/11/2026)](2026-11-03_s2-tv4_nap-du-lieu-va-chay-local.md)
+
 - [TV2 full chunk và PostgreSQL base/SotE](2026-10-29_s2-tv2_chunk-full-base-sote.md)
 
 - [TV2 cài Docker local — chờ reboot](2026-10-28_s2-tv2_docker-local.md)
