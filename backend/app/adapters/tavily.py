@@ -8,6 +8,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
+from app.rag.web_content import clean_markdown, select_excerpts
 from core.types import Hit
 
 
@@ -115,6 +116,8 @@ class TavilySearch:
                     "extract",
                     {
                         "urls": list(selected),
+                        "query": query[:2000],
+                        "chunks_per_source": 3,
                         "extract_depth": "basic",
                         "format": "markdown",
                         "include_images": False,
@@ -133,18 +136,11 @@ class TavilySearch:
                     if url not in selected or not isinstance(text, str) or not text.strip() or len(text) > 60000:
                         diagnostics["excluded"] += 1
                         continue
-                    # Whole markdown blocks only. Never silently slice a table or sentence.
-                    blocks, current = [], ""
-                    for block in text.split("\n\n"):
-                        if len(block) > 3500:
-                            diagnostics["excluded"] += 1
-                            continue
-                        if len(current) + len(block) + 2 > 3500:
-                            blocks.append(current)
-                            current = ""
-                        current = (current + "\n\n" + block).strip()
-                    if current:
-                        blocks.append(current)
+                    text, cleanup = clean_markdown(text)
+                    for key, value in cleanup.items():
+                        diagnostics[key] = diagnostics.get(key, 0) + value
+                    blocks, oversized = select_excerpts(text, query)
+                    diagnostics["excluded"] += oversized
                     for ordinal, block in enumerate(blocks[:3]):
                         digest = hashlib.sha256((url + "\n" + block).encode()).hexdigest()
                         if not block or digest in seen:
@@ -164,6 +160,7 @@ class TavilySearch:
                                     "source": "tavily_extract",
                                     "source_type": "unclassified_web",
                                     "source_type_evidence": "web_extraction_not_content_review",
+                                    "content_processing": "markdown-clean-excerpts-v1",
                                     "game_scope": "unknown",
                                     "release_scope": "unknown",
                                     "patch_version": "unknown",

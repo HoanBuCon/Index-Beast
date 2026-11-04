@@ -93,7 +93,7 @@ async def test_auto_sufficient_skips_search_but_unrelated_hit_searches():
     result, llm, search = await prepare("auto", "sufficient")
     assert not search.calls and result.trace["web_search"]["status"] == "local_sufficient"
     result, llm, search = await prepare("auto")
-    assert search.calls == ["Who is Ranni?"]
+    assert search.calls == ["Elden Ring\nWho is Ranni?"]
     assert any(isinstance(row, WebHit) for row in result.hits)
 
 
@@ -171,7 +171,7 @@ async def test_topic_followup_keeps_history_subject_and_invalid_rewrite_clarifie
     llm = ScriptedLLM(rewritten("Marika family tree", entities=["Marika"]))
     pipe = ChatPipeline(settings(), llm, RankedRetriever(), web_search=search)
     result = await pipe.prepare(ChatRequest(message="nói tiếp về gia phả", channel="web"), history)
-    assert search.calls == ["Marika family tree"] and llm.inputs[0]["history"] == history
+    assert search.calls == ["Elden Ring\nMarika family tree"] and llm.inputs[0]["history"] == history
     assert protected_names("Gia phả Marika") == ["Marika"]
     assert protected_names("Gia pha Marika") == ["Marika"]
     assert protected_names("Noi tiep ve gia pha") == []
@@ -344,7 +344,7 @@ async def test_web_sources_reach_json_or_sse_with_valid_citations_and_no_web_ima
     else:
         response = await live.answer(request)
         assert response.grounded and response.sources[0].origin == "web" and not response.images
-    assert search.calls == ["Moonveil Intelligence requirements"]
+    assert search.calls == ["Elden Ring\nMoonveil Intelligence requirements"]
 
 
 def test_capability_endpoint_only_exposes_availability(client):

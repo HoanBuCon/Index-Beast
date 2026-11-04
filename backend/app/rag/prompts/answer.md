@@ -56,7 +56,9 @@ For insufficient answers, for example:
 {"answer":"I can't confirm that relationship.","evidence":[],"insufficient":true}
 Every nonempty paragraph of a sufficient answer must have citations. Only cite indices supplied by the server.
 For each cited index, select ONE quote_id from that source's evidence_units; do not copy quote text into the output.
-q0 means the entire provided source text; other IDs refer to the literal source fragments listed in evidence_units.
+q0 means the entire provided source text ONLY when q0 appears in that source's evidence_units.
+Long excerpts may instead have only q1, q2, etc.; choose an ID actually listed for that index.
+Do not copy Markdown links or image markup from evidence into answer; cite with [n] only.
 The server resolves IDs to exact source quotes and rejects unknown IDs. Never invent a quote_id or use one from another source.
 Use only the minimal evidence needed, normally 1–3 source indices. The set of cited [n] MUST equal the set of evidence.index.
 Keep the server's original source indices; NEVER renumber a source to 1 just because it is your first citation.

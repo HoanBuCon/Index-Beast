@@ -2,6 +2,24 @@
 
 Ngày 04/11/2026 · TV3 MinhMuc · IndexBeast / 4 Hollows.
 
+## Cập nhật chất lượng query/excerpt
+
+Query web được giữ nguyên điều kiện và thêm phạm vi Elden Ring khi chưa có; ý hỏi class khởi đầu
+được bổ sung English search focus `starting classes list character creation`, kể cả khi rewrite lỗi.
+Không dịch/đoán tên entity mới. Query thực dùng chỉ lưu trong trace khi opt-in diagnostic_queries.
+Extract cũng nhận query và chunks_per_source=3; không chỉ lấy đầu trang.
+
+Backend làm sạch Markdown: bỏ image markup, giữ nhãn của link, bỏ menu trước H1 khi có dấu hiệu
+wiki skin; giữ heading, bảng, số liệu và thứ tự bước trong excerpt. Các nhóm block nguyên vẹn
+được xếp theo lexical overlap, không phải semantic reranker hoặc chứng minh đủ bằng chứng.
+Block quá lớn vẫn có thống kê loại. Chưa hỗ trợ chia lại bảng lớn hoặc khôi phục phần provider bỏ sót.
+
+Số Source trong response là số nguồn thật sự được mô hình trích, không phải số kết quả Search.
+Một nguồn có thể đủ cho một câu đơn; không ép thêm nguồn chưa dùng. Ảnh web vẫn chưa được nối:
+Search/Extract hiện không yêu cầu ảnh, cơ chế ảnh local vẫn hoạt động theo citation corpus.
+Để bổ sung ảnh web cần xử lý URL/metadata/liên hệ với đáp án, contract media và UI riêng;
+không dùng logo, icon điều hướng hay ảnh bất kỳ như ảnh minh họa nội dung.
+
 ## Dùng trên web
 
 Nút **Web: OFF / ON / ALWAYS** nằm trong ô chat. Mỗi lần bấm chuyển tuần tự
