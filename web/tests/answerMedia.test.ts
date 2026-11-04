@@ -59,7 +59,7 @@ test("rendering preserves safe Markdown and sources, requires opt-in media, and 
     assert.match(markup, /chưa xác minh tác giả/);
     assert.match(markup, /<strong>Trả lời<\/strong>/);
     assert.match(markup, /citation-link/);
-    assert.match(markup, /aria-label="Nguồn tham khảo"/);
+    assert.doesNotMatch(markup, /aria-label="Nguồn tham khảo"/);
     assert.match(markup, /aria-label="Hữu ích"/);
     assert.doesNotMatch(markup, /src="https:\/\/tracker|<script>/);
     for (const extra of [
