@@ -1,0 +1,18 @@
+{
+  "purpose": "Development diagnostic, not a frozen or cross-reviewed final benchmark",
+  "selection": "Gameplay-heavy subset with lore controls and behavioral negatives; no questions rewritten",
+  "ids": [
+    "IB-GS-001", "IB-GS-003", "IB-GS-007", "IB-GS-013", "IB-GS-019",
+    "IB-GS-023", "IB-GS-027", "IB-GS-031", "IB-GS-034", "IB-GS-035",
+    "IB-GS-036", "IB-GS-039", "IB-GS-041", "IB-GS-042", "IB-GS-043",
+    "IB-GS-044", "IB-GS-045", "IB-GS-046", "IB-GS-047", "IB-GS-048",
+    "IB-GS-049", "IB-GS-050", "IB-GS-052", "IB-GS-054", "IB-GS-058"
+  ],
+  "limitations": [
+    "All current source/answer cross-reviews are pending",
+    "No starting-class enumeration case in this subset or current golden set",
+    "Only an under-specified strongest-build negative case, no exact legal stat allocation case",
+    "Independent questions with empty history; not a multi-turn benchmark",
+    "25 auto-mode requests, no off/always comparison in this run"
+  ]
+}

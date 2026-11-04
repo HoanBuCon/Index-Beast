@@ -31,4 +31,5 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
     return LiveChatService(
         ChatPipeline(settings, ctx.llm, retriever, web_search=getattr(ctx, "web_search", None)),
         image_catalog=image_catalog,
+        gameplay_enabled=settings.gameplay_clarification_enabled,
     )

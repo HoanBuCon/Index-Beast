@@ -49,7 +49,8 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         if (event.type === "token") {
           content += event.token;
           changeAnswer({ content });
-        } else if (event.type === "sources") changeAnswer(answerSources(event));
+        } else if (event.type === "sources")
+          changeAnswer({ ...answerSources(event), clarification: event.clarification ?? null });
         else if (event.type === "done") {
           current = { ...current, serverId: event.data.conversation_id };
           changeAnswer({ serverId: event.data.message_id, grounded: event.data.grounded, incomplete: false });

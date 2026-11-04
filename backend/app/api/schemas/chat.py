@@ -29,6 +29,22 @@ class ChatRequest(BaseModel):
         None, description="Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô."
     )
     options: ChatOptions = ChatOptions()
+    clarification_id: UUID | None = Field(None, description="ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.")
+
+
+class ClarificationField(BaseModel):
+    key: str
+    label: str
+    input_type: Literal["text", "number", "choice"] = "text"
+    options: list[str] = Field(default_factory=list, max_length=10)
+
+
+class Clarification(BaseModel):
+    id: UUID
+    status: Literal["pending"] = "pending"
+    question: str
+    fields: list[ClarificationField] = Field(min_length=1, max_length=2)
+    expires_at: str
 
 
 class ChatImage(BaseModel):
@@ -63,6 +79,7 @@ class ChatResponse(BaseModel):
     grounded: bool = Field(description="False khi không đủ bằng chứng; khi đó sources rỗng.")
     latency_ms: float
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
+    clarification: Clarification | None = None
 
 
 class DoneEvent(BaseModel):
@@ -83,6 +100,7 @@ class TokenEvent(BaseModel):
 class SourcesEvent(BaseModel):
     sources: list[Source]
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
+    clarification: Clarification | None = None
 
 
 class ErrorEvent(BaseModel):

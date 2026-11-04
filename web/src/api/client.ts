@@ -5,6 +5,7 @@ import type { AdminStats, ChatRequest, ChatResponse, ConversationOut, FeedbackRe
 import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 import { createUuid } from "../lib/uuid.ts";
 import { readChatImages } from "./images.ts";
+import { readClarification } from "./clarification.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -26,13 +27,15 @@ async function request(path: string, init: RequestInit = {}) {
         ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
         : response.status === 404
           ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
-          : response.status === 422
-            ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
-            : response.status === 401 || response.status === 403
-              ? "Không có quyền truy cập. Kiểm tra token quản trị."
-              : response.status === 502
-                ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
-                : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+          : response.status === 400
+            ? "Câu hỏi bổ sung đã hết hạn hoặc không còn khớp. Hãy gửi lại yêu cầu."
+            : response.status === 422
+              ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
+              : response.status === 401 || response.status === 403
+                ? "Không có quyền truy cập. Kiểm tra token quản trị."
+                : response.status === 502
+                  ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
+                  : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
     throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
   }
   return response;
@@ -70,6 +73,7 @@ export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<Cha
   }
   if (result.images !== undefined)
     result.images = readChatImages(result.images, result.sources as ChatResponse["sources"]);
+  if (result.clarification !== undefined) result.clarification = readClarification(result.clarification);
   return data as ChatResponse;
 }
 
@@ -126,6 +130,7 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
         type,
         sources: data.sources,
         ...(data.images === undefined ? {} : { images: readChatImages(data.images, data.sources) }),
+        ...(data.clarification === undefined ? {} : { clarification: readClarification(data.clarification) }),
       };
     } else if (type === "error") throw new Error("Dịch vụ gặp lỗi khi sinh câu trả lời. Vui lòng thử lại.");
     else if (type === "done") {

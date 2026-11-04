@@ -2,6 +2,34 @@
 
 Ngày 04/11/2026 · TV3 MinhMuc · IndexBeast / 4 Hollows.
 
+## Hỏi lại gameplay và kết quả HTTP mới
+
+Cập nhật 05/11: có field optional clarification ở JSON/history/SSE sources và clarification_id ở request.
+Xem [contract hỏi lại và bản UI tối thiểu](gameplay-clarification-tv4.md).
+Nút off/auto/always và Discord auto giữ nguyên. Đợt mới đã gọi DeepSeek/Tavily thật,
+xem [kết quả 25 prompt](../testing/2026-11-05_gameplay-evaluation.md); các ghi chú “chưa live” bên dưới
+phản ánh thời điểm triển khai cũ, không phải kết luận của đợt kiểm này.
+
+## Cập nhật guard/evidence 05/11/2026
+
+Không đổi request, nút OFF/ON/ALWAYS, Discord auto hoặc event JSON/SSE. TV4 không cần đổi type.
+Assessor nội bộ nay nhận index → list 1–3 quote ID (string cũ chuyển lossless thành singleton list).
+Trace `evidence_assessment.decision` và `web_search.trigger` phân biệt `local_sufficient`,
+`local_partial`, `local_insufficient`, `ambiguous`, `assessment_error`.
+`status=unknown, reason=assessment_failed` nghĩa là lỗi đánh giá, không phải kết luận corpus thiếu.
+Auto chỉ bỏ search khi sufficient; ambiguous hỏi lại, partial/insufficient/error vẫn có thể search.
+Always vẫn search trước; chỉ khi tool lỗi mới đánh giá local để xét fallback.
+
+Context ưu tiên độ phủ thực thể theo section có sẵn, vẫn top-5/12000 ký tự theo cấu hình mặc định.
+Alias web cùng text/title và metadata tương đương chỉ chiếm một chỗ; tất cả URL/point ID/thời gian
+được giữ trong payload nội bộ `provenance`, public Source giữ URL đại diện và chỉ trả nguồn được trích.
+Không gộp release/patch/điều kiện khác nhau, không cộng điểm Qdrant với Tavily.
+
+Generator nội bộ hỗ trợ `quote_ids` nhiều đoạn/source, giữ `quote_id`/quote legacy.
+Public `Source.text` vẫn là string: khi nhiều đoạn, phân cách bằng `\n[…]\n`; UI hiển thị như excerpt.
+Không thêm ảnh web. Kiểm reference chính xác chưa chứng minh claim đúng ngữ nghĩa.
+Xem [báo cáo offline và cách chạy lại](../testing/2026-11-05_rag-evidence-guards.md).
+
 ## Cập nhật chất lượng query/excerpt
 
 Query web được giữ nguyên điều kiện và thêm phạm vi Elden Ring khi chưa có; ý hỏi class khởi đầu

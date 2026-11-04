@@ -1,8 +1,16 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Gỡ conflict rebase với develop (05/11/2026)](2026-11-05_s3-tv3_giai-quyet-conflict-rebase.md)
+
+- [TV3 · Golden 100, hỏi lại và test gameplay thật (05/11/2026)](2026-11-05_s3-tv3_gameplay-clarification-va-golden-100.md)
+
+- [TV3 · Guard rewrite, assessor và evidence RAG (05/11/2026)](2026-11-05_s3-tv3_rag-evidence-guards.md)
+
 - [TV4 · Bỏ đánh giá dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-gia-duoi-cau-tra-loi.md)
 
 - [TV4 · Bỏ danh sách nguồn dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-sach-nguon-duoi-cau-tra-loi.md)
+
+- [TV3 · Chẩn đoán thật 25 câu golden set (04/11/2026)](2026-11-04_s3-tv3_golden-25-diagnostic.md)
 
 - [TV3 · Query web, excerpt và chẩn đoán 502 (04/11/2026)](2026-11-04_s3-tv3_web-query-va-excerpt.md)
 

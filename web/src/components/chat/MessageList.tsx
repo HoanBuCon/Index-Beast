@@ -10,12 +10,14 @@ import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
 import AnswerIllustrations from "./AnswerIllustrations";
 import { backendIllustrations, canShowIllustrations } from "./answerMedia";
 import type { AnswerIllustration, IllustrationPreviewState } from "./answerMedia";
+import ClarificationForm from "./ClarificationForm";
 export default function MessageList({
   messages,
   busy,
   demo,
   illustrationsByMessage,
   illustrationPreviewState,
+  onClarification,
 }: {
   messages: Message[];
   busy: boolean;
@@ -23,6 +25,7 @@ export default function MessageList({
   // Explicit fixture overrides are retained for the DEV preview only.
   illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
   illustrationPreviewState?: IllustrationPreviewState;
+  onClarification?: (text: string, id: string) => void;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -94,6 +97,17 @@ export default function MessageList({
                   previewState={illustrationPreviewState}
                 />
               )}
+              {!message.incomplete &&
+                message.id === messages.at(-1)?.id &&
+                message.clarification &&
+                onClarification && (
+                  <ClarificationForm
+                    key={message.clarification.id}
+                    question={message.clarification}
+                    disabled={busy}
+                    onAnswer={onClarification}
+                  />
+                )}
             </>
           )}
         </article>

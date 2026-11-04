@@ -16,6 +16,7 @@ from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePas
 from langsmith import tracing_context
 
 from app.adapters.tavily import WebHit, WebSearchError
+from app.rag.context_policy import coverage_order
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
@@ -168,23 +169,32 @@ def unresolved_reference(question: str) -> bool:
 
 
 def select_context(
-    hits: list[Hit], limit: int, budget: int, *, policy: CorpusPolicy | None = None, spoilers: bool = True
+    hits: list[Hit],
+    limit: int,
+    budget: int,
+    *,
+    policy: CorpusPolicy | None = None,
+    spoilers: bool = True,
+    entities: list[str] | None = None,
+    query: str = "",
 ) -> list[Hit]:
     admission = policy or CorpusPolicy()
     selected, seen, seen_content, used = [], set(), set(), 0
+    eligible = []
     for hit in hits:
         p = hit.payload
-        key = content_key(hit)
-        if (
-            hit.id in seen
-            or (key is not None and key in seen_content)
-            or (not isinstance(hit, WebHit) and admission.exclusion_reason(p, spoilers=spoilers))
-            or (isinstance(hit, WebHit) and not spoilers)
+        if (not isinstance(hit, WebHit) and admission.exclusion_reason(p, spoilers=spoilers)) or (
+            isinstance(hit, WebHit) and not spoilers
         ):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
             continue
         if urlsplit(p["url"]).scheme not in {"https", "http"} or not urlsplit(p["url"]).netloc:
+            continue
+        eligible.append(hit)
+    for hit in coverage_order(eligible, entities or [], query):
+        key = content_key(hit)
+        if hit.id in seen or (key is not None and key in seen_content):
             continue
         size = len(json.dumps(context_item(hit, len(selected) + 1), ensure_ascii=False)) + 2
         if used + size > budget:
@@ -231,6 +241,8 @@ def context_item(hit: Hit, index: int) -> dict:
         "variant_context",
         "unit_kind",
         "retrieved_at",
+        "local_candidate_origin",
+        "rule_kind",
     ):
         if key in p:
             item[key] = p[key]
@@ -279,12 +291,15 @@ class ChatPipeline:
             | RunnableLambda(self._prompt, name="prepare_chat_prompt")
         )
 
-    async def prepare(self, req, history: list[dict], *, diagnostic_queries: bool = False) -> Prepared:
+    async def prepare(
+        self, req, history: list[dict], *, diagnostic_queries: bool = False, gameplay: bool = False
+    ) -> Prepared:
         state = {
             "req": req,
             "history": history,
             "started": time.perf_counter(),
             "diagnostic_queries": diagnostic_queries,
+            "gameplay": gameplay,
         }
         with tracing_context(enabled=False):
             try:
@@ -375,6 +390,7 @@ class ChatPipeline:
                 )
             else:
                 state["query"] = rewritten.standalone_query_en
+                state["entities"] = rewritten.entities
         elif contextual_followup(state["query"]) or (not state["history"] and unresolved_reference(state["query"])):
             p.static_answer = "Bạn đang hỏi nhân vật nào?" if p.lang == "vi" else "Which character do you mean?"
         return state
@@ -435,6 +451,16 @@ class ChatPipeline:
         if state["prepared"].static_answer is None:
             hits = [document_to_hit(d) for d in state["documents"]]
             ranked = await self.reranker.rank(state["query"], hits)
+            if self.settings.gameplay_knowledge_enabled and state.get("gameplay"):
+                from app.rag.gameplay_knowledge import supplements
+
+                extra = await asyncio.to_thread(
+                    supplements, state["req"].message, self.policy, state["req"].options.spoilers
+                )
+                if extra:
+                    ids = {h.id for h in extra}
+                    ranked = [*extra, *(h for h in ranked if h.id not in ids)]
+                    state["prepared"].trace["curated_supplements"] = [h.id for h in extra]
             if state.get("overview") is not None:
                 ranked = prefer_overview(ranked, state["overview"])
                 state["prepared"].trace["context_ordering"] = "overview_title_section_preference"
@@ -452,8 +478,12 @@ class ChatPipeline:
             self.settings.rag_context_chars,
             policy=self.policy,
             spoilers=state["req"].options.spoilers,
+            entities=state.get("entities"),
+            query=state["req"].message + "\n" + state["query"],
         )
         context = [context_item(hit, i + 1) for i, hit in enumerate(local)]
+        if state.get("diagnostic_queries"):
+            p.trace["local_evidence_context"] = context
         status = None
         if mode == "auto":
             status, diagnostic = await assess(
@@ -464,6 +494,7 @@ class ChatPipeline:
                 self.settings.web_search_assessment_seconds,
             )
             p.trace["evidence_assessment"] = diagnostic
+            p.trace["web_search"]["trigger"] = diagnostic["decision"]
             if status == "sufficient":
                 p.trace["web_search"]["status"] = "local_sufficient"
                 return state
@@ -496,6 +527,7 @@ class ChatPipeline:
                     self.settings.web_search_assessment_seconds,
                 )
                 p.trace["evidence_assessment"] = diagnostic
+                p.trace["web_search"]["trigger"] = diagnostic["decision"]
             if status != "sufficient":
                 raise UnavailableError("Tìm trên web đang gặp sự cố. Vui lòng thử lại sau.") from None
         return state
@@ -509,6 +541,8 @@ class ChatPipeline:
                 self.settings.rag_context_chars,
                 policy=self.policy,
                 spoilers=state["req"].options.spoilers,
+                entities=state.get("entities"),
+                query=state["req"].message + "\n" + state["query"],
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits:
