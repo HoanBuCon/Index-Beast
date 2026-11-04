@@ -1,5 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Bỏ đánh giá dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-gia-duoi-cau-tra-loi.md)
+
+- [TV4 · Bỏ danh sách nguồn dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-sach-nguon-duoi-cau-tra-loi.md)
+
 - [TV3 · Query web, excerpt và chẩn đoán 502 (04/11/2026)](2026-11-04_s3-tv3_web-query-va-excerpt.md)
 
 - [TV3 · Tavily và nút tìm web, Discord auto (04/11/2026)](2026-11-04_s3-tv3_tavily-web-search.md)
@@ -63,6 +67,8 @@ Ghi thêm các file thay đổi, cách kiểm tra và **kết quả thực tế*
 Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
+
+- [TV4 · Nạp dữ liệu và chạy local (03/11/2026)](2026-11-03_s2-tv4_nap-du-lieu-va-chay-local.md)
 
 - [TV2 full chunk và PostgreSQL base/SotE](2026-10-29_s2-tv2_chunk-full-base-sote.md)
 
