@@ -132,7 +132,7 @@ class LiveChatService:
             return []
         try:
             resolved = await self.image_catalog.resolve(
-                prepared.hits, [s.index for s in result.sources], spoilers=req.options.spoilers
+                prepared.hits, [s.index for s in result.sources if s.origin != "web"], spoilers=req.options.spoilers
             )
             prepared.trace["images"] = {"returned": len(resolved.images), "excluded": resolved.reasons}
             return resolved.images

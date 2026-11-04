@@ -23,6 +23,20 @@ const response = {
   latency_ms: 1,
 };
 
+test("search selection travels with the request without mutating history or caller options", async (t) => {
+  for (const webSearch of ["auto", "always", "off"] as const) {
+    const mock = t.mock.method(globalThis, "fetch", async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      assert.equal(body.options.web_search, webSearch);
+      assert.equal(body.options.lang, "auto");
+      return Response.json(response);
+    });
+    for await (const event of replyEvents(request, "api", new AbortController().signal, { webSearch })) void event;
+    assert.ok(!("web_search" in request.options));
+    mock.mock.restore();
+  }
+});
+
 test("JSON sends POST /chat, body and request ID, then maps answer and sources into UI events", async (t) => {
   t.mock.method(globalThis, "fetch", async (url: string, init: RequestInit) => {
     assert.equal(url, "/api/v1/chat");

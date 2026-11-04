@@ -79,6 +79,8 @@ test("web integrates with TV1 mock through the Vite proxy", { timeout: 30000 }, 
     return response;
   });
   const request: ChatRequest = { message: "Ranni là ai?", channel: "web", options: { lang: "vi", spoilers: true } };
+  const capabilities = await nativeFetch(`${origin}/api/v1/chat/capabilities`);
+  assert.deepEqual(await capabilities.json(), { web_search_available: false });
   const reply = await chat(request);
   assert.match(reply.answer, /máy chủ mock/);
   assert.equal(reply.sources.length, 2);

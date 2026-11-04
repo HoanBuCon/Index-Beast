@@ -4,6 +4,33 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { MAX_MESSAGE_CHARS } from "../../api/types";
 import enterIcon from "../../../item_/KG_Key_Enter.png";
+import { nextSearchMode, searchModeLabel } from "./searchMode";
+import type { SearchMode } from "./searchMode";
+
+// Nút tạm ba chế độ; TV4 có thể thay hình thức mà giữ nguyên mapping API.
+export function SearchModeButton({
+  mode,
+  disabled,
+  onChange,
+}: {
+  mode: SearchMode;
+  disabled: boolean;
+  onChange?: (mode: SearchMode) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="web-search-toggle"
+      data-search-mode={mode}
+      disabled={disabled}
+      aria-describedby="web-search-description"
+      aria-label={`Tìm trên web: ${searchModeLabel[mode]}. Chuyển sang ${searchModeLabel[nextSearchMode(mode)]}`}
+      onClick={() => onChange?.(nextSearchMode(mode))}
+    >
+      Web: {searchModeLabel[mode]}
+    </button>
+  );
+}
 
 // Đo cả dòng xuống hàng tự nhiên; giới hạn chiều cao rồi cuộn nội dung dài.
 function fitTextarea(element: HTMLTextAreaElement) {
@@ -19,10 +46,16 @@ export default function MessageInput({
   busy,
   onSend,
   onStop,
+  searchMode = "auto",
+  searchAvailable = false,
+  onSearchChange,
 }: {
   busy: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
+  searchMode?: SearchMode;
+  searchAvailable?: boolean;
+  onSearchChange?: (mode: SearchMode) => void;
 }) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -94,6 +127,22 @@ export default function MessageInput({
           }
         }}
       />
+      <div className="web-search-control">
+        <SearchModeButton
+          mode={searchAvailable ? searchMode : "off"}
+          disabled={busy || !searchAvailable}
+          onChange={onSearchChange}
+        />
+        <small id="web-search-description" aria-live="polite">
+          {searchAvailable
+            ? searchMode === "always"
+              ? "Tìm web cho mỗi câu hỏi"
+              : searchMode === "auto"
+                ? "Tự động tìm web khi cần"
+                : "Chỉ dùng kho kiến thức local"
+            : "Tìm web chưa khả dụng"}
+        </small>
+      </div>
       <div className="composer-bottom">
         <small>{"Enter để gửi · Shift + Enter xuống dòng"}</small>
         {busy ? (

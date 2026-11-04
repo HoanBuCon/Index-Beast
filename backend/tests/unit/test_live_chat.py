@@ -726,10 +726,9 @@ async def test_format_retries_are_bounded_and_failed_outputs_are_not_saved(retri
                 "insufficient": False,
             }
         ),
-        json.dumps({"answer": "Schema missing fields."}),
     ],
 )
-async def test_transport_length_grounding_and_schema_errors_do_not_trigger_format_retry(failure):
+async def test_transport_length_and_grounding_errors_do_not_trigger_format_retry(failure):
     llm = SequenceLLM([failure])
     with pytest.raises(UpstreamError):
         await service("rag", llm, FakeRetriever()).answer(ChatRequest(**BODY))

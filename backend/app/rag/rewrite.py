@@ -99,8 +99,27 @@ _QUESTION_WORDS = set(
 
 def protected_names(question: str) -> list[str]:
     """Conservative surface-form guard, NOT NER or a translated-name dictionary."""
+    # Strip recognized conversational phrases as units, not arbitrary capitalized words.
+    question = re.sub(
+        r"^(?:gia phả|gia pha|nói tiếp|noi tiep|nói thêm|noi them|tiếp tục|tiep tuc|"
+        r"các con|cac con|cha mẹ|cha me|tell me more|continue)\b",
+        "",
+        question,
+        flags=re.I,
+    )
     words = re.findall(r"\b[A-Z][A-Za-z]+(?:['’][A-Za-z]+)*\b", question)
     return [word for word in words if word.casefold() not in _QUESTION_WORDS]
+
+
+def contextual_followup(question: str) -> bool:
+    text = "".join(c for c in unicodedata.normalize("NFD", question.lower()) if not unicodedata.combining(c))
+    return bool(
+        re.search(
+            r"^(?:noi tiep|noi them|tiep tuc|con (?:no|ba ay|ong ay)|cac con cua (?:ba|ong)|"
+            r"tell me more|continue|what about (?:it|her|him))\b",
+            text,
+        )
+    ) and not protected_names(question)
 
 
 def _normalized(text: str) -> str:
@@ -114,6 +133,8 @@ def _contains(text: str, surface: str) -> bool:
 def rewrite_problem(question: str, query: str, entities: list[str], history: list[dict]) -> str | None:
     if not query.strip():
         return "empty_query"
+    if contextual_followup(question) and (not history or not entities):
+        return "unresolved_topic"
     if not preserves_numbers(question, query):
         return "numeric_constraint_lost"
     context = question + "\n" + "\n".join(str(row.get("content", "")) for row in history)

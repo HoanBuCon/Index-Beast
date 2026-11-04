@@ -36,6 +36,7 @@ class AppContext:
     qdrant: AsyncQdrantClient | None
     redis: Redis
     llm: DeepSeekLLM | None = None
+    web_search: object | None = None
     health_checks: dict[str, HealthCheck] = field(default_factory=dict)
     _closers: list[tuple[str, Closer]] = field(default_factory=list, repr=False)
 
@@ -113,6 +114,11 @@ def build_context(settings: Settings) -> AppContext:
         ),
     )
     register_infra(ctx)
+    if settings.web_search_available:
+        from app.adapters.tavily import TavilySearch
+
+        ctx.web_search = TavilySearch(settings)
+        ctx.register("web_search", close=ctx.web_search.aclose)
     if settings.deepseek_api_key and settings.deepseek_api_key.get_secret_value().strip():
         ctx.llm = DeepSeekLLM(settings)
         # Health check thường xuyên không gọi LLM để tránh tiêu hao API credits.

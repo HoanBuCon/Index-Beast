@@ -351,6 +351,40 @@ body {
   align-self: end;
 }
 
+.web-search-control {
+  grid-column: 1;
+  grid-row: 2;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font: 13px/1.5 var(--font-interface);
+  color: var(--ui-muted);
+}
+.web-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ui-text);
+  cursor: pointer;
+  padding: 4px 10px;
+  border: 1px solid var(--ui-muted);
+  background: transparent;
+  font: inherit;
+}
+.web-search-toggle[data-search-mode="always"] {
+  color: var(--ui-accent);
+  border-color: var(--ui-accent);
+}
+.web-search-toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.composer-bottom {
+  grid-row: 1;
+}
+
 .composer .primary {
   width: 44px;
   height: 44px;

@@ -50,6 +50,7 @@ test("ask defers before API, hashes user reference and edits an embed with sourc
     mock.calls.push("api");
     assert.equal(body.message, "Marika là ai?");
     assert.equal(body.channel, "discord");
+    assert.equal(body.options?.web_search, "auto");
     assert.match(body.external_ref!, /^discord:channel:222222222222222222:[a-f0-9]{64}$/);
     assert.ok(!body.external_ref!.includes("111111111111111111"));
     return response;

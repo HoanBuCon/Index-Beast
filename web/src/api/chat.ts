@@ -7,6 +7,7 @@ import type { DemoScenario } from "./demo";
 
 export interface ChatOptions {
   scenario?: DemoScenario;
+  webSearch?: "off" | "auto" | "always";
 }
 export async function* replyEvents(
   body: ChatRequest,
@@ -14,6 +15,7 @@ export async function* replyEvents(
   signal: AbortSignal,
   options: ChatOptions = {},
 ): AsyncGenerator<StreamEvent> {
+  if (options.webSearch) body = { ...body, options: { ...body.options, web_search: options.webSearch } };
   if (mode === "api-stream") {
     yield* chatStream(body, signal);
     return;

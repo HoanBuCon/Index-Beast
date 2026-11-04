@@ -28,4 +28,7 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
             QdrantStore(ctx.qdrant, settings.rag_collection, CorpusPolicy.from_settings(settings)),
             settings.rag_prefetch,
         )
-    return LiveChatService(ChatPipeline(settings, ctx.llm, retriever), image_catalog=image_catalog)
+    return LiveChatService(
+        ChatPipeline(settings, ctx.llm, retriever, web_search=getattr(ctx, "web_search", None)),
+        image_catalog=image_catalog,
+    )

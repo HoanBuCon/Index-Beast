@@ -1,5 +1,27 @@
 # IndexBeast: LangChain và corpus thử nghiệm
 
+### Web search và nút trên web (04/11/2026)
+
+Đã thêm Tavily Search → Extract async và assessment coverage trong RAG. Web có nút
+**Web: OFF → ON → ALWAYS → OFF**: off/auto/always tương ứng; mặc định ON (auto).
+Discord luôn auto (backend cưỡng chế).
+Có key và CHAT_MODE=rag thì tự khả dụng trừ khi operator tắt công tắc tổng; không phải
+sửa .env mỗi lần dùng nút. Request cũ/missing key giữ local. Không reindex corpus.
+Xem [contract, budget, giới hạn và smoke test](../../../docs/api/web-search-tv4.md).
+Đã kiểm offline; chưa gọi Tavily/DeepSeek thật cho tính năng này.
+
+### Cập nhật 04/11/2026: schema recovery và cách trả lời
+
+`RAG_FORMAT_RETRIES=1` nay cho phép sinh lại một lần khi JSON hợp lệ nhưng sai schema,
+ngoài các lỗi protocol đã hỗ trợ. Không ép kiểu hoặc chấp nhận output sai; lượt sau vẫn
+qua toàn bộ validation với cùng context. SSE chỉ recovery khi chưa phát text. Nếu hết budget
+hoặc quote sai, request vẫn lỗi; log `Generation failed` ghi reason tĩnh, không ghi nội dung.
+
+Prompt yêu cầu trả lời trực tiếp, không kể việc tìm kiếm hay nói “the supplied sources”.
+Citation và evidence contract giữ nguyên. Thiếu thông tin được diễn đạt như một giới hạn cụ thể.
+Không tự bật pretrained fallback trong mode RAG; web search chưa được triển khai trong cập nhật này.
+Restart API để nạp code/prompt, không cần reindex. Xem [handover](../../../docs/handover/2026-11-04_s3-tv3_schema-recovery-va-giong-tra-loi.md).
+
 TV3 — MinhMuc, nhóm 4 Hollows. Cập nhật 31/10/2026.
 
 Backend đã hỗ trợ ảnh raster local liên kết với citation: JSON/history có images, SSE đặt images trong event sources,
