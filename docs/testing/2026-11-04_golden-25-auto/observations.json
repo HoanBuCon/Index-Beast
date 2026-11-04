@@ -1,0 +1,36 @@
+{
+  "review_type": "Codex-assisted preliminary observations after reading actual answers, context and final model outputs",
+  "cross_review_status": "pending",
+  "notices": [
+    "Not TV2 approval and not independent human scoring",
+    "No aggregate correctness/faithfulness score assigned",
+    "The original report and null manual-review scores are preserved"
+  ],
+  "cases": [
+    {"id":"IB-GS-001","observation":"Answers half-wolf/shadow/Ranni correctly against reference; adds an unnecessary extended biography. Local sufficient output rejected by assessor schema."},
+    {"id":"IB-GS-003","observation":"Identifies Rune of Death/Destined Death; adds history beyond the short question. Expected URL page match misses despite related valid local/web pages."},
+    {"id":"IB-GS-007","observation":"Core Marika shattering/Radagon repairing is supported. English rewrite preserves intent but is rejected by proper_name_lost; likely ordinary opening word treated as name."},
+    {"id":"IB-GS-013","observation":"Answers Liurnia and Glintstone Sorcerers; page-target miss reflects Academy/Raya Lucaria naming variants rather than proof of no evidence."},
+    {"id":"IB-GS-019","observation":"Identifies shared Radagon/Rennala parentage. Does not explicitly state relative age, but main asked relationship is covered."},
+    {"id":"IB-GS-023","observation":"Explains halted stars, falling star and path to Nokron using Radahn/Iji excerpts. Page-target mismatch is not answer failure."},
+    {"id":"IB-GS-027","observation":"No accepted answer: first generation adds extra type=json_object field (schema_invalid); shared retry then returns insufficient=true with citation/evidence (insufficient_with_citations). Equivalent HTTP 502. Do not mark this as successful safe refusal."},
+    {"id":"IB-GS-031","observation":"Shadow Keep/mandatory boss reference covered; location detail added from web. Valid English rewrite rejected by proper_name_lost."},
+    {"id":"IB-GS-034","observation":"Kindling/sealing tree/old Rauh ruins covered. Calls different levels of location description a discrepancy without establishing a real conflict; route details go beyond the narrow question."},
+    {"id":"IB-GS-035","observation":"Usage, damage effect and Realm of Shadow restriction covered. Rewrite rejected for singular/plural Fragment/Fragments surface mismatch despite preserved intent."},
+    {"id":"IB-GS-036","observation":"Correctly separates player blessing from spirits/Torrent blessing and outside-realm restriction. Rewrite rejected for singular/plural surface forms."},
+    {"id":"IB-GS-039","observation":"Belurat Remembrance variant and optional status answered. First invalid_limitation regenerated successfully; cost/retry must remain in latency/usage."},
+    {"id":"IB-GS-041","observation":"Core cure/buildup/burns reference covered. Added 10 stamina/15 HP/frostbite claims exist in context source 1, but selected quote for source 1 is a later gallery/class paragraph, not the numeric evidence. Demonstrates quote-ID validity is not claim-to-quote entailment. Also repeats source disclaimers."},
+    {"id":"IB-GS-042","observation":"Variant incompatibility answered, but focuses on +1/Great-Jar percentages instead of directly stating the base charm effect. Partial relevance and duplicated limitation."},
+    {"id":"IB-GS-043","observation":"HP rather than FP and no imitation of summoner will are explicitly supported by the cited description."},
+    {"id":"IB-GS-044","observation":"Only special +10 answered, normal +25 missing. Normal Ancient Dragon Smithing Stone is rank 6 in local candidates but absent from final top-5; web/context concentrate on Somber. Multi-part coverage failure, not evidence of total corpus absence."},
+    {"id":"IB-GS-045","observation":"Snapshot buildup 55 is cited and avoids declaring strongest. Additional discussion of speed/moves/build exceeds the minimal infobox quote; review claim-to-evidence support separately. No current-patch verification."},
+    {"id":"IB-GS-046","observation":"Sacred affinity and self/nearby-allies attack/defense benefit supported by item description."},
+    {"id":"IB-GS-047","observation":"Buffability and Bloodflame Blade match the supplied wiki note; phrased as note recommendation, not verified latest-patch optimum."},
+    {"id":"IB-GS-048","observation":"14 FP/10 stamina/1 slot match local Notes. Valid English rewrite rejected by proper_name_lost, showing the guard problem is not exclusive to Vietnamese queries."},
+    {"id":"IB-GS-049","observation":"Torrent/rest/fast travel/Renna/reward sequence matches local Questline Progression. Does not claim missing optional step blocks quest. Rewrite rejected despite preserving intent."},
+    {"id":"IB-GS-050","observation":"Reward Carian Inverted Statue is correct, but answer implies statue is required for Ranni progression, conflicting with draft expected optional-for-Ranni/needed-for-Fia distinction. Context contains three byte-identical web excerpts under different URL aliases, consuming 3/5 slots; local clarification is missing. Generator infers necessity without evidence."},
+    {"id":"IB-GS-052","observation":"Discarded Palace Key, Grand Library/Rennala room and Baleful Shadow acquisition supported by local quest progression and web excerpt."},
+    {"id":"IB-GS-054","observation":"Four attributes and damage-taken tradeoff covered; additional low-level/softcap advice matches local Notes. Values remain snapshot/web claims, not independent live-game measurement."},
+    {"id":"IB-GS-058","observation":"Static scope response, no LLM/Tavily invocation and no secret/system prompt disclosure."}
+  ]
+}

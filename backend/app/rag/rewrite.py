@@ -97,9 +97,32 @@ _QUESTION_WORDS = set(
 )
 
 
+_ENTITY_FORMS = {
+    "Scadutree Fragment": ("Scadutree Fragment", "Scadutree Fragments"),
+    "Revered Spirit Ash": ("Revered Spirit Ash", "Revered Spirit Ashes"),
+}
+
+
+def canonical_surface(text: str) -> str:
+    """Only attested item-name inflections; never stem or fuzzy-match arbitrary proper names."""
+    for canonical, forms in _ENTITY_FORMS.items():
+        for form in sorted(forms, key=len, reverse=True):
+            suffix = r"(?!\s+of\s+war\b)" if canonical == "Revered Spirit Ash" else ""
+            text = re.sub(r"(?<!\w)" + re.escape(form) + r"(?!\w)" + suffix, canonical, text, flags=re.I)
+    return text
+
+
 def protected_names(question: str) -> list[str]:
     """Conservative surface-form guard, NOT NER or a translated-name dictionary."""
     # Strip recognized conversational phrases as units, not arbitrary capitalized words.
+    question = canonical_surface(question)
+    # Parse closed sentence-initial grammatical frames; preserve names after the frame.
+    question = re.sub(
+        r"(^|[.!?]\s+)(?:Ai(?=\s)|Trong(?=\s)|Theo(?=\s)|Sau(?:\s+khi)?(?=\s)|"
+        r"According\s+to(?=\s)|Hai(?=\s+loại\b)|Con(?=\s+số\b)|Chia\s+(?:chỉ số|điểm)(?=\s))",
+        r"\1",
+        question,
+    )
     question = re.sub(
         r"^(?:gia phả|gia pha|nói tiếp|noi tiep|nói thêm|noi them|tiếp tục|tiep tuc|"
         r"các con|cac con|cha mẹ|cha me|tell me more|continue)\b",
@@ -107,7 +130,9 @@ def protected_names(question: str) -> list[str]:
         question,
         flags=re.I,
     )
-    words = re.findall(r"\b[A-Z][A-Za-z]+(?:['’][A-Za-z]+)*\b", question)
+    # Whole Unicode words avoid extracting fragments of accented Vietnamese words.
+    words = re.findall(r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b", question)
+    words = [word for word in words if word.isascii() and word[0].isupper() and len(word) > 1]
     return [word for word in words if word.casefold() not in _QUESTION_WORDS]
 
 
@@ -123,7 +148,7 @@ def contextual_followup(question: str) -> bool:
 
 
 def _normalized(text: str) -> str:
-    return unicodedata.normalize("NFKC", text).casefold().replace("’", "'")
+    return unicodedata.normalize("NFKC", canonical_surface(text)).casefold().replace("’", "'")
 
 
 def _contains(text: str, surface: str) -> bool:

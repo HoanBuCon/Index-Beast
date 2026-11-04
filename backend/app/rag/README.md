@@ -1,5 +1,44 @@
 # IndexBeast: LangChain và corpus thử nghiệm
 
+### Gameplay, hỏi lại và test thật 05/11/2026
+
+Đã có player state/pending clarification, API JSON/SSE additive và form web tối thiểu.
+Luồng trả lời nối chủ thể với thông tin bổ sung; history bị cắt không làm mất các slot đang giữ.
+Memory vẫn RAM/TTL 30 phút, không giả persistence sau restart. Discord trả lời text, luôn auto.
+Nguồn local bổ sung nhỏ từ snapshot giúp một số quest/route/weapon; không reindex, không gán approved.
+Build số có bộ kiểm tính khả thi cho Samurai/Moonveil một tay, chưa phải optimizer hoặc damage calculator.
+Xem [contract/cách demo](../../../docs/api/gameplay-clarification-tv4.md),
+[báo cáo DeepSeek/Tavily thật](../../../docs/testing/2026-11-05_gameplay-evaluation.md)
+và [handover](../../../docs/handover/2026-11-05_s3-tv3_gameplay-clarification-va-golden-100.md).
+Golden set đã thêm đúng 40 để đạt 100; live chỉ chọn 25 prompt và các lượt so sánh/retest liên quan.
+Restart `make dev`, `make web`, không cần đổi `.env` hoặc embedding/index lại cho tính năng này.
+
+### Sửa guard và evidence (05/11/2026)
+
+Assessor dùng `evidence: {"1":["q0"]}`; string cũ tự chuyển thành list một phần tử,
+không bỏ bớt ID. `sufficient` phải có evidence hợp lệ, phần đã phủ và không còn gap.
+Trace phân biệt `local_sufficient`, `local_partial`, `local_insufficient`, `ambiguous`,
+`assessment_error`; lỗi assessor không còn được coi là chứng cứ local thiếu.
+Trong auto, sufficient bỏ qua Tavily; partial/insufficient/error có thể search; ambiguous hỏi lại.
+
+Guard rewrite hiểu các khung mở câu và hai biến thể tên vật phẩm số nhiều đã khai báo;
+vẫn giữ kiểm tên, số, phủ định, PvE/PvP, ý định và history. Đây là heuristic, chưa phải NER.
+Context ưu tiên đoạn mechanics/quest theo section và thực thể đã rewrite hợp lệ, vẫn top-5/budget cũ.
+Web alias chỉ gom khi text, title chuẩn hóa và metadata còn lại khớp; giữ mọi URL trong
+`Hit.payload.provenance`, không gộp điều kiện/release khác nhau. Public Source vẫn dùng URL đại diện.
+
+Generator nhận `quote_ids` (1–3 ID/source), tương thích `quote_id` hoặc quote nguyên văn cũ;
+chỉ dùng một dạng trong mỗi evidence, không lặp source index. `Source.text` nối đúng các đoạn
+được chọn bằng `\n[…]\n`, không tự mở rộng thành cả trang. Đây là kiểm provenance/cấu trúc,
+không phải semantic entailment. Recovery chung vẫn tối đa một lần và không retry sau text SSE.
+Build được gợi ý định tính khi có mechanics hỗ trợ, hoặc hỏi 1–2 điều kiện thiết yếu;
+không từ chối cả yêu cầu vì thiếu một chi tiết phụ, không bịa stat spread/AR/DPS.
+
+Đã kiểm offline: **684 passed**, Ruff/format, OpenAPI và pip check đạt; chưa chạy lại model/server thật.
+Restart `make dev` để nạp code/prompt; không cần reindex hay đổi `.env` cho bản sửa này.
+Xem [báo cáo và lệnh chạy lại 25 câu](../../../docs/testing/2026-11-05_rag-evidence-guards.md)
+và [handover](../../../docs/handover/2026-11-05_s3-tv3_rag-evidence-guards.md).
+
 ### Web search và nút trên web (04/11/2026)
 
 Đã thêm Tavily Search → Extract async và assessment coverage trong RAG. Web có nút

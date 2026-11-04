@@ -248,10 +248,22 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                     </button>
                   ))}
                 </div>
-                <p className="scope-note">{"Cốt truyện trò chơi gốc · Tiếng Việt · Có thể tiết lộ nội dung"}</p>
+                <p className="scope-note">
+                  {"Elden Ring · Cốt truyện, nhiệm vụ và gameplay · Có thể tiết lộ nội dung"}
+                </p>
               </section>
             ) : (
-              <MessageList messages={conversation.messages} busy={stream.busy} demo={mode === "demo"} />
+              <MessageList
+                messages={conversation.messages}
+                busy={stream.busy}
+                demo={mode === "demo"}
+                onClarification={(text, id) => {
+                  void stream.send(conversation, text, {
+                    webSearch: searchAvailable ? searchMode : "off",
+                    clarificationId: id,
+                  });
+                }}
+              />
             )}
           </div>
           {conversation.messages.length > 0 && <div className="input-area">{composer}</div>}

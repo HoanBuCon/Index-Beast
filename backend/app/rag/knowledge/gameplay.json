@@ -1,0 +1,679 @@
+{
+  "version": 1,
+  "review_status": "pending",
+  "artifact": "backend\\data\\chunk_runs\\s2-full-v1\\chunks.jsonl",
+  "artifact_sha256": "95794a89485e6f86ff320ee9b2a9a707a794e1bdc040162f0b41e5b2c208d03e",
+  "notice": "AI-assisted snapshots, technically usable in pilot; not cross-reviewed or current-patch certification.",
+  "groups": [
+    {
+      "aliases": [
+        "Ranni",
+        "Nokron",
+        "Fingerslayer Blade",
+        "Renna's Rise",
+        "Moonlight Altar"
+      ],
+      "hits": [
+        {
+          "id": "13523fe1-49f0-53be-9a0b-5d781f2fb2bb",
+          "payload": {
+            "chunk_id": "a6b4ee17-d60a-5e24-8c2e-9704a0cc1b29",
+            "source": "wikigg",
+            "source_id": "350",
+            "title": "Ranni the Witch",
+            "section": "Questline Progression",
+            "text": "Completing Ranni's questline will unlock the Age of the Stars ending.\n(Optional) Church of Elleh\nAfter meeting Melina and obtaining the Spectral Steed Whistle, use Torrent at least once. After that, rest on any Site of Grace. Then, fast travel to the Church of Elleh Site of Grace and find Ranni (using the pseudonym \"Renna\") sitting on a broken wall. Exhaust her dialogue to receive the Spirit Calling Bell and Lone Wolf Ashes.\nIf you miss this step, these items will be available for purchase at the Twin Maiden Husks in Roundtable Hold -- 200 runes for the Lone Wolf Ashes and 1,000 runes for the Spirit Calling Bell respectively.\nRanni's Rise\nRanni can next be encountered on the top floor of Ranni's Rise, accessible by clearing Caria Manor. This stage varies depending on whether you have defeated her brother, Starscourge Radahn, or given Sorcerer Rogier the Black Knifeprint.\nAgree to become one of Ranni's vassals, and then head back down the tower to speak to the projections of Iji, Blaidd, and Seluvis. After speaking to all three, return to Ranni and speak to her again. After this point, if you return to Ranni she will be sleeping, and non-responsive.\nNokron, Eternal City\nNokron can only be accessed after defeating Radahn. Proceed through the area and obtain the Fingerslayer Blade, which is in a chest north-east of the Night's Sacred Ground Site of Grace.",
+            "embedding_text": "passage: Ranni the Witch\nQuestline Progression\nLanguage: en\nCompleting Ranni's questline will unlock the Age of the Stars ending.\n(Optional) Church of Elleh\nAfter meeting Melina and obtaining the Spectral Steed Whistle, use Torrent at least once. After that, rest on any Site of Grace. Then, fast travel to the Church of Elleh Site of Grace and find Ranni (using the pseudonym \"Renna\") sitting on a broken wall. Exhaust her dialogue to receive the Spirit Calling Bell and Lone Wolf Ashes.\nIf you miss this step, these items will be available for purchase at the Twin Maiden Husks in Roundtable Hold -- 200 runes for the Lone Wolf Ashes and 1,000 runes for the Spirit Calling Bell respectively.\nRanni's Rise\nRanni can next be encountered on the top floor of Ranni's Rise, accessible by clearing Caria Manor. This stage varies depending on whether you have defeated her brother, Starscourge Radahn, or given Sorcerer Rogier the Black Knifeprint.\nAgree to become one of Ranni's vassals, and then head back down the tower to speak to the projections of Iji, Blaidd, and Seluvis. After speaking to all three, return to Ranni and speak to her again. After this point, if you return to Ranni she will be sleeping, and non-responsive.\nNokron, Eternal City\nNokron can only be accessed after defeating Radahn. Proceed through the area and obtain the Fingerslayer Blade, which is in a chest north-east of the Night's Sacred Ground Site of Grace.",
+            "url": "https://eldenring.wiki.gg/wiki/Ranni_the_Witch#Questline_Progression",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 383,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "3570715a-c8b7-5ab0-8c21-d78c7ee30911",
+            "end_char": 1374,
+            "fetched_at": "2026-10-28T11:30:58.346017+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 8,
+            "release_scope": "unknown",
+            "revision_id": 100538,
+            "section_anchor": "Questline_Progression",
+            "section_record_id": "d95bd2e7-ef7c-5d77-90ad-8aad1e82fee5",
+            "source_locations": [
+              "dom:453:p",
+              "dom:457:li",
+              "dom:461:li",
+              "dom:475:li",
+              "dom:479:li",
+              "dom:485:li",
+              "dom:490:li",
+              "dom:494:li"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\350\\100538-680639a1e475b1f85e4ea95c3fbe683686ccbc8444d834176e33c83a7cfb7c1c.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "1b797503851ee134fc7082bf3d8af0d62511ff8fb8d9dbb6ee4b1c383852abe9",
+            "trigger": null,
+            "unit_key": "blocks:0-7",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "3570715a-c8b7-5ab0-8c21-d78c7ee30911",
+            "artifact_chunk_id": "a6b4ee17-d60a-5e24-8c2e-9704a0cc1b29",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "1b797503851ee134fc7082bf3d8af0d62511ff8fb8d9dbb6ee4b1c383852abe9"
+        },
+        {
+          "id": "734fae77-7718-5330-8cc8-d0d229f71eea",
+          "payload": {
+            "chunk_id": "aecc4330-52c2-5cae-a933-3189b64a2c5e",
+            "source": "wikigg",
+            "source_id": "350",
+            "title": "Ranni the Witch",
+            "section": "Questline Progression",
+            "text": "Bring the Fingerslayer Blade to Ranni, who will give you the Carian Inverted Statue. This key item is required for Fia's questline, however it is not necessary to complete Ranni's questline.\nWARNING: This will immediately end Preceptor Seluvis's quest.\nAinsel River\nRenna's Rise will now be open after giving Ranni the Fingerslayer Blade. Enter and climb to the top, and go through the sending gate to the upper portion of Ainsel River.\nPick up the Miniature Ranni near the spawn point and rest at the Ainsel River Main Site of Grace. Use the \"Talk to miniature Ranni\" option three times to get her to speak.\n(Optional) Ranni will also have dialogue at the Nokstella, Eternal City and Nokstella Waterfall Basin Sites of Grace. These are not required to continue her questline.\nDefeat the Baleful Shadow invader just past the Nokstella Waterfall Basin Site of Grace to obtain the Discarded Palace Key. Go to Rennala's boss room in Academy of Raya Lucaria and unlock the chest to obtain the Dark Moon Ring.\nMoonlight Altar\nDefeat Astel, Naturalborn of the Void at the end of the Lake of Rot and travel up the lift. This lift only unlocks if you have obtained the Dark Moon Ring.\nTravel to the Cathedral of Manus Celes and descend through the tunnel near the altar to find Ranni sitting on the corpse of her Two Fingers. Interact with her to trigger a cutscene. After the cutscene, speak to her again and she will disappear, leaving behind the Dark Moon Greatsword.\nLeyndell, Ashen Capital\nAfter defeating the final boss, there will be a blue summon sign on the Stone Platform. Interact with it to summon Ranni, allowing you to achieve the Age of the Stars ending.",
+            "embedding_text": "passage: Ranni the Witch\nQuestline Progression\nLanguage: en\nBring the Fingerslayer Blade to Ranni, who will give you the Carian Inverted Statue. This key item is required for Fia's questline, however it is not necessary to complete Ranni's questline.\nWARNING: This will immediately end Preceptor Seluvis's quest.\nAinsel River\nRenna's Rise will now be open after giving Ranni the Fingerslayer Blade. Enter and climb to the top, and go through the sending gate to the upper portion of Ainsel River.\nPick up the Miniature Ranni near the spawn point and rest at the Ainsel River Main Site of Grace. Use the \"Talk to miniature Ranni\" option three times to get her to speak.\n(Optional) Ranni will also have dialogue at the Nokstella, Eternal City and Nokstella Waterfall Basin Sites of Grace. These are not required to continue her questline.\nDefeat the Baleful Shadow invader just past the Nokstella Waterfall Basin Site of Grace to obtain the Discarded Palace Key. Go to Rennala's boss room in Academy of Raya Lucaria and unlock the chest to obtain the Dark Moon Ring.\nMoonlight Altar\nDefeat Astel, Naturalborn of the Void at the end of the Lake of Rot and travel up the lift. This lift only unlocks if you have obtained the Dark Moon Ring.\nTravel to the Cathedral of Manus Celes and descend through the tunnel near the altar to find Ranni sitting on the corpse of her Two Fingers. Interact with her to trigger a cutscene. After the cutscene, speak to her again and she will disappear, leaving behind the Dark Moon Greatsword.\nLeyndell, Ashen Capital\nAfter defeating the final boss, there will be a blue summon sign on the Stone Platform. Interact with it to summon Ranni, allowing you to achieve the Age of the Stars ending.",
+            "url": "https://eldenring.wiki.gg/wiki/Ranni_the_Witch#Questline_Progression",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 442,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "3570715a-c8b7-5ab0-8c21-d78c7ee30911",
+            "end_char": 1661,
+            "fetched_at": "2026-10-28T11:30:58.346017+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 9,
+            "release_scope": "unknown",
+            "revision_id": 100538,
+            "section_anchor": "Questline_Progression",
+            "section_record_id": "d95bd2e7-ef7c-5d77-90ad-8aad1e82fee5",
+            "source_locations": [
+              "dom:497:li",
+              "dom:507:li",
+              "dom:511:li",
+              "dom:513:li",
+              "dom:516:li",
+              "dom:520:li",
+              "dom:526:li",
+              "dom:530:li",
+              "dom:534:li",
+              "dom:538:li",
+              "dom:542:li"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\350\\100538-680639a1e475b1f85e4ea95c3fbe683686ccbc8444d834176e33c83a7cfb7c1c.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "66e37927cdd73fdfd0b3ae57f1ec69b303f838c696f2be18fecb73ced50d80c5",
+            "trigger": null,
+            "unit_key": "blocks:8-18",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "3570715a-c8b7-5ab0-8c21-d78c7ee30911",
+            "artifact_chunk_id": "aecc4330-52c2-5cae-a933-3189b64a2c5e",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "66e37927cdd73fdfd0b3ae57f1ec69b303f838c696f2be18fecb73ced50d80c5"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Academy Glintstone Key",
+        "Thops"
+      ],
+      "hits": [
+        {
+          "id": "88a8443b-05c1-561f-9caf-3552d67b1b9d",
+          "payload": {
+            "chunk_id": "9aa16e28-03bc-560d-851f-9d35cf876ea4",
+            "source": "wikigg",
+            "source_id": "2389",
+            "title": "Academy Glintstone Key",
+            "section": "Use",
+            "text": "The first one is necessary to bypass the seals of the Academy of Raya Lucaria.\nThe second key can be given to Thops to end his questline: he'll be found dead near the Schoolhouse Classroom, holding Thops's Barrier and Thops's Bell Bearing, and an Ash of War Scarab that drops Ash of War: Thops's Barrier will appear in his original location.",
+            "embedding_text": "passage: Academy Glintstone Key\nUse\nLanguage: en\nThe first one is necessary to bypass the seals of the Academy of Raya Lucaria.\nThe second key can be given to Thops to end his questline: he'll be found dead near the Schoolhouse Classroom, holding Thops's Barrier and Thops's Bell Bearing, and an Ash of War Scarab that drops Ash of War: Thops's Barrier will appear in his original location.",
+            "url": "https://eldenring.wiki.gg/wiki/Academy_Glintstone_Key#Use",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 103,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "dd521ddb-eb8c-535c-b712-d2f3d1495359",
+            "end_char": 341,
+            "fetched_at": "2026-10-28T12:24:24.816273+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 4,
+            "release_scope": "base_candidate",
+            "revision_id": 82795,
+            "section_anchor": "Use",
+            "section_record_id": "290185ca-bc2f-54d0-9450-4b550773e86a",
+            "source_locations": [
+              "dom:179:p",
+              "dom:181:p"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\2389\\82795-659e12c9d168f19ca6c6f4e5465631f03e43aed9f61ae657883df1d0ca8c2012.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "4fac98544609a178a8f13c6b14887dcc9c5a9a59c25c0d3f1f9320ae23cf55c1",
+            "trigger": null,
+            "unit_key": "blocks:0-1",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "dd521ddb-eb8c-535c-b712-d2f3d1495359",
+            "artifact_chunk_id": "9aa16e28-03bc-560d-851f-9d35cf876ea4",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "4fac98544609a178a8f13c6b14887dcc9c5a9a59c25c0d3f1f9320ae23cf55c1"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Morgott"
+      ],
+      "hits": [
+        {
+          "id": "dd3f67b2-9af0-527a-a598-c72de398c8cc",
+          "payload": {
+            "chunk_id": "e177dde9-aa3f-59a6-a02a-3858776f2627",
+            "source": "wikigg",
+            "source_id": "8817",
+            "title": "Morgott, the Omen King",
+            "section": "Introduction",
+            "text": "Wilful traitors, all. Thy kind are all of a piece. Pillagers. Emboldened by the flame of ambition. Have it writ upon thy meagre grave: Felled by King Morgott! Last of all kings.\n- Morgott, the Omen King",
+            "embedding_text": "passage: Morgott, the Omen King\nIntroduction\nLanguage: en\nWilful traitors, all. Thy kind are all of a piece. Pillagers. Emboldened by the flame of ambition. Have it writ upon thy meagre grave: Felled by King Morgott! Last of all kings.\n- Morgott, the Omen King",
+            "url": "https://eldenring.wiki.gg/wiki/Morgott%2C_the_Omen_King",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 77,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "66c7b0e4-49b2-57a2-9daa-d393c2ed8539",
+            "end_char": 202,
+            "fetched_at": "2026-10-28T16:01:59.081356+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 0,
+            "release_scope": "base_candidate",
+            "revision_id": 101303,
+            "section_anchor": "",
+            "section_record_id": "619fa0b5-68b4-5c7a-9c54-f505b68afc38",
+            "source_locations": [
+              "dom:91:table"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\8817\\101303-30ebd0c3d56ac40be13cab0ac3d905c72fd6ce507400136c33af108cfb4dbc33.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "b197150b4db314a1f45c6c4a6d245099a5d950f2817096eb7cb4623dd42cbdf8",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "quote",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "66c7b0e4-49b2-57a2-9daa-d393c2ed8539",
+            "artifact_chunk_id": "e177dde9-aa3f-59a6-a02a-3858776f2627",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "b197150b4db314a1f45c6c4a6d245099a5d950f2817096eb7cb4623dd42cbdf8"
+        },
+        {
+          "id": "e295c717-46ac-5635-a7f3-304b08e896b7",
+          "payload": {
+            "chunk_id": "6c324b8d-9425-5430-a619-e9843e3b42a5",
+            "source": "wikigg",
+            "source_id": "8817",
+            "title": "Morgott, the Omen King",
+            "section": "Introduction",
+            "text": "Morgott, the Omen King, is a boss in ELDEN RING (2022). He is a Demigod and a Shardbearer who is encountered in Leyndell, Royal Capital. He is not an optional boss and must be defeated to unlock Mountaintops of the Giants and progress the story.",
+            "embedding_text": "passage: Morgott, the Omen King\nIntroduction\nLanguage: en\nMorgott, the Omen King, is a boss in ELDEN RING (2022). He is a Demigod and a Shardbearer who is encountered in Leyndell, Royal Capital. He is not an optional boss and must be defeated to unlock Mountaintops of the Giants and progress the story.",
+            "url": "https://eldenring.wiki.gg/wiki/Morgott%2C_the_Omen_King",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 87,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "66c7b0e4-49b2-57a2-9daa-d393c2ed8539",
+            "end_char": 245,
+            "fetched_at": "2026-10-28T16:01:59.081356+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 1,
+            "release_scope": "base_candidate",
+            "revision_id": 101303,
+            "section_anchor": "",
+            "section_record_id": "84458e34-b7c1-5a96-aa05-5caf5a8c304c",
+            "source_locations": [
+              "dom:114:p"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\8817\\101303-30ebd0c3d56ac40be13cab0ac3d905c72fd6ce507400136c33af108cfb4dbc33.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "37391f2b69f3a13f87dec2be5e929c8fb7ea2cce5c2e8836e20c3573384d1f6e",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "66c7b0e4-49b2-57a2-9daa-d393c2ed8539",
+            "artifact_chunk_id": "6c324b8d-9425-5430-a619-e9843e3b42a5",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "37391f2b69f3a13f87dec2be5e929c8fb7ea2cce5c2e8836e20c3573384d1f6e"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Fire Giant"
+      ],
+      "hits": [
+        {
+          "id": "1a1c73fb-b144-55b6-a14d-05508e7ad0b6",
+          "payload": {
+            "chunk_id": "94f8ccf4-edea-59ad-bddd-4888722471d8",
+            "source": "wikigg",
+            "source_id": "3753",
+            "title": "Fire Giant",
+            "section": "Introduction",
+            "text": "O trifling giant, mayest thou tend thy flame for eternity.\n- Queen Marika",
+            "embedding_text": "passage: Fire Giant\nIntroduction\nLanguage: en\nO trifling giant, mayest thou tend thy flame for eternity.\n- Queen Marika",
+            "url": "https://eldenring.wiki.gg/wiki/Fire_Giant",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 35,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "a3b26945-0ae3-564d-8be2-747d3179fd4b",
+            "end_char": 73,
+            "fetched_at": "2026-10-28T12:50:22.230782+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 0,
+            "release_scope": "base_candidate",
+            "revision_id": 101162,
+            "section_anchor": "",
+            "section_record_id": "96e25505-395d-5426-b9ec-463ff0e5f203",
+            "source_locations": [
+              "dom:58:table"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\3753\\101162-e87e74783b2ce0976094ad0c15ccbdb10ce672e464bd14a8de0e47a027146082.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "3b7cb226e9ed6f8856ab2e5238beb5776b6bfbe72534c176615f60b0844b906d",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "quote",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "a3b26945-0ae3-564d-8be2-747d3179fd4b",
+            "artifact_chunk_id": "94f8ccf4-edea-59ad-bddd-4888722471d8",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "3b7cb226e9ed6f8856ab2e5238beb5776b6bfbe72534c176615f60b0844b906d"
+        },
+        {
+          "id": "f5d4dca2-8427-5d7a-ab7b-326c60f6eafc",
+          "payload": {
+            "chunk_id": "0ba4cbb6-521e-5d16-bf73-3ac0bbdf6022",
+            "source": "wikigg",
+            "source_id": "3753",
+            "title": "Fire Giant",
+            "section": "Introduction",
+            "text": "The Fire Giant is a boss in ELDEN RING (2022). He is encountered at Flame Peak on the Mountaintops of the Giants. This encounter is not optional as it must be completed to unlock Crumbling Farum Azula and advance the main storyline.",
+            "embedding_text": "passage: Fire Giant\nIntroduction\nLanguage: en\nThe Fire Giant is a boss in ELDEN RING (2022). He is encountered at Flame Peak on the Mountaintops of the Giants. This encounter is not optional as it must be completed to unlock Crumbling Farum Azula and advance the main storyline.",
+            "url": "https://eldenring.wiki.gg/wiki/Fire_Giant",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 73,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "a3b26945-0ae3-564d-8be2-747d3179fd4b",
+            "end_char": 232,
+            "fetched_at": "2026-10-28T12:50:22.230782+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 1,
+            "release_scope": "base_candidate",
+            "revision_id": 101162,
+            "section_anchor": "",
+            "section_record_id": "eaa141df-6849-5a3b-9ce6-086398e5b62d",
+            "source_locations": [
+              "dom:81:p"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\3753\\101162-e87e74783b2ce0976094ad0c15ccbdb10ce672e464bd14a8de0e47a027146082.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "5e8bdcb771232a339b246d455f1d318b423fb5873bcac33ff30664c6c2ad9bac",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "a3b26945-0ae3-564d-8be2-747d3179fd4b",
+            "artifact_chunk_id": "0ba4cbb6-521e-5d16-bf73-3ac0bbdf6022",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "5e8bdcb771232a339b246d455f1d318b423fb5873bcac33ff30664c6c2ad9bac"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Maliketh"
+      ],
+      "hits": [
+        {
+          "id": "6a07a162-cec3-594f-807a-9ac2b4b19a70",
+          "payload": {
+            "chunk_id": "5354f1a5-1e51-5362-a0c6-033166921138",
+            "source": "wikigg",
+            "source_id": "7133",
+            "title": "Maliketh, the Black Blade",
+            "section": "Introduction",
+            "text": "Cower. Before Maliketh, Marika’s Black Blade.\n- Maliketh, the Black Blade",
+            "embedding_text": "passage: Maliketh, the Black Blade\nIntroduction\nLanguage: en\nCower. Before Maliketh, Marika’s Black Blade.\n- Maliketh, the Black Blade",
+            "url": "https://eldenring.wiki.gg/wiki/Maliketh%2C_the_Black_Blade",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 36,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "3ffc3662-6f24-504f-a28f-e704e236494f",
+            "end_char": 73,
+            "fetched_at": "2026-10-28T15:34:33.792928+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 0,
+            "release_scope": "base_candidate",
+            "revision_id": 101324,
+            "section_anchor": "",
+            "section_record_id": "0a61d70a-4a02-5bc4-b456-52a1071788b8",
+            "source_locations": [
+              "dom:61:table"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\7133\\101324-7198e73037fcfe8a164155047d87a158c544080e99e22f1fc6cbd76742a57981.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "4a46a90aeefa4f511355c24414d3856bcdbb25b1502dccc215cb57d923ae072a",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "quote",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "3ffc3662-6f24-504f-a28f-e704e236494f",
+            "artifact_chunk_id": "5354f1a5-1e51-5362-a0c6-033166921138",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "4a46a90aeefa4f511355c24414d3856bcdbb25b1502dccc215cb57d923ae072a"
+        },
+        {
+          "id": "fb401c32-afcb-5e59-84de-080ce1fbecab",
+          "payload": {
+            "chunk_id": "7c79183e-6e33-5800-a32f-96d8193143c3",
+            "source": "wikigg",
+            "source_id": "7133",
+            "title": "Maliketh, the Black Blade",
+            "section": "Introduction",
+            "text": "Maliketh, the Black Blade is a boss in ELDEN RING (2022), encountered in Crumbling Farum Azula. This is not an optional boss as Maliketh must be defeated to unlock Leyndell, Ashen Capital and reach the endgame of Elden Ring.",
+            "embedding_text": "passage: Maliketh, the Black Blade\nIntroduction\nLanguage: en\nMaliketh, the Black Blade is a boss in ELDEN RING (2022), encountered in Crumbling Farum Azula. This is not an optional boss as Maliketh must be defeated to unlock Leyndell, Ashen Capital and reach the endgame of Elden Ring.",
+            "url": "https://eldenring.wiki.gg/wiki/Maliketh%2C_the_Black_Blade",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 78,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "3ffc3662-6f24-504f-a28f-e704e236494f",
+            "end_char": 224,
+            "fetched_at": "2026-10-28T15:34:33.792928+00:00",
+            "image_association": "section",
+            "image_ids": [],
+            "ordinal": 1,
+            "release_scope": "base_candidate",
+            "revision_id": 101324,
+            "section_anchor": "",
+            "section_record_id": "4d9a21c8-77ce-5e4d-babd-e3facfacca3a",
+            "source_locations": [
+              "dom:84:p"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\7133\\101324-7198e73037fcfe8a164155047d87a158c544080e99e22f1fc6cbd76742a57981.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "1d3de1776fd76ecccadd576a8261928278d3ac053c1a7e1059474643eaa6acc4",
+            "trigger": null,
+            "unit_key": "blocks:0-0",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "3ffc3662-6f24-504f-a28f-e704e236494f",
+            "artifact_chunk_id": "7c79183e-6e33-5800-a32f-96d8193143c3",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "1d3de1776fd76ecccadd576a8261928278d3ac053c1a7e1059474643eaa6acc4"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Moonveil"
+      ],
+      "hits": [
+        {
+          "id": "8546bb58-82e6-57b3-a0b9-84239ed996bb",
+          "payload": {
+            "chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "source": "wikigg",
+            "source_id": "9267",
+            "title": "Moonveil",
+            "section": "Notes",
+            "text": "The Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "embedding_text": "passage: Moonveil\nNotes\nLanguage: en\nThe Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil#Notes",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 335,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "f62bee2c-240a-5848-902a-0d2f05783fa8",
+            "end_char": 1444,
+            "fetched_at": "2026-10-28T16:08:24.152245+00:00",
+            "image_association": "section",
+            "image_ids": [
+              "7a71153edfa4ea6c2e4b6a6fc13249306bea1c479ac7cdff0c18eceb9a204b23"
+            ],
+            "ordinal": 4,
+            "release_scope": "base_candidate",
+            "revision_id": 100429,
+            "section_anchor": "Notes",
+            "section_record_id": "1b02725f-379f-54f1-bcc3-c04fc5798bb0",
+            "source_locations": [
+              "dom:356:li",
+              "dom:365:li"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\9267\\100429-9840ceab349cec7c4b9eb9dfc628c5207b5955f13354143295d902a0a788f7dc.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "0cc496841e24e4aedb4db3712ad5f66057b8e607ac4b2f17eda56552fa5d36f0",
+            "trigger": null,
+            "unit_key": "blocks:0-1",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "f62bee2c-240a-5848-902a-0d2f05783fa8",
+            "artifact_chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "point_id_mapping": "artifact-point-v1"
+          },
+          "text_sha256": "0cc496841e24e4aedb4db3712ad5f66057b8e607ac4b2f17eda56552fa5d36f0"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "Moonveil"
+      ],
+      "hits": [
+        {
+          "id": "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+          "payload": {
+            "text": "Moonveil's listed one-handed requirements are Strength 12, Dexterity 18 and Intelligence 23. Requirements are distinct from scaling, recommended stats and damage; this does not establish latest-patch damage.",
+            "title": "Moonveil requirements",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "weapon_rule",
+            "image_ids": []
+          },
+          "text_sha256": "5913d1eec964230a7c4a8e2613ece5361c8929aba7512b75b74969cbcdb98633"
+        }
+      ]
+    },
+    {
+      "aliases": [
+        "stat allocation",
+        "stat spread",
+        "exact stats",
+        "chia chỉ số",
+        "phân bổ",
+        "cong diem",
+        "cộng điểm",
+        "attribute",
+        "tổng"
+      ],
+      "hits": [
+        {
+          "id": "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+          "payload": {
+            "text": "A character's level equals the sum of the eight primary attributes minus 79. Thus the target attribute sum is level + 79. Vigor affects HP; Mind affects FP; Endurance affects stamina and equip load. Arithmetic does not establish optimality.",
+            "title": "Attribute point accounting",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wikidot.com/stats",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "level_rule",
+            "image_ids": []
+          },
+          "text_sha256": "c061243a5a74ad31b277c907b676cf961c4af98dbef5f9b536272716e6a444c1"
+        },
+        {
+          "id": "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+          "payload": {
+            "text": "Samurai starts at level 9 with Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8. These are starting values, not a recommended final build.",
+            "title": "Samurai starting attributes",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://wiki.eso-ui.com/index.php/Elden_Ring:Samurai",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "class_rule",
+            "image_ids": []
+          },
+          "text_sha256": "2c46bc1fd28d244bf444cf22c6e1c80da68338f03932718332bdd15d63061359"
+        },
+        {
+          "id": "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+          "payload": {
+            "text": "Moonveil's listed one-handed requirements are Strength 12, Dexterity 18 and Intelligence 23. Requirements are distinct from scaling, recommended stats and damage; this does not establish latest-patch damage.",
+            "title": "Moonveil requirements",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "weapon_rule",
+            "image_ids": []
+          },
+          "text_sha256": "5913d1eec964230a7c4a8e2613ece5361c8929aba7512b75b74969cbcdb98633"
+        },
+        {
+          "id": "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7",
+          "payload": {
+            "text": "Respec redistributes available attributes without lowering character level. Attributes determined by the starting class cannot be reduced below their original values. All available attribute points must be spent.",
+            "title": "Respec baseline constraints",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eip.gg/elden-ring/guides/how-to-respec/",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "respec_rule",
+            "image_ids": []
+          },
+          "text_sha256": "7393b320d953bc2730541b80e9a44e5173f9687f75d9f373eba1237416a25c61"
+        }
+      ]
+    }
+  ]
+}

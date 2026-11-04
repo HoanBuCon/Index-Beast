@@ -8,6 +8,7 @@ import type { DemoScenario } from "./demo";
 export interface ChatOptions {
   scenario?: DemoScenario;
   webSearch?: "off" | "auto" | "always";
+  clarificationId?: string;
 }
 export async function* replyEvents(
   body: ChatRequest,
@@ -16,6 +17,7 @@ export async function* replyEvents(
   options: ChatOptions = {},
 ): AsyncGenerator<StreamEvent> {
   if (options.webSearch) body = { ...body, options: { ...body.options, web_search: options.webSearch } };
+  if (options.clarificationId) body = { ...body, clarification_id: options.clarificationId };
   if (mode === "api-stream") {
     yield* chatStream(body, signal);
     return;
@@ -23,7 +25,12 @@ export async function* replyEvents(
   const reply = mode === "demo" ? await demoChat(body, signal, options.scenario) : await chat(body, signal);
   signal.throwIfAborted();
   yield { type: "token", token: reply.answer };
-  yield { type: "sources", sources: reply.sources, ...(reply.images === undefined ? {} : { images: reply.images }) };
+  yield {
+    type: "sources",
+    sources: reply.sources,
+    ...(reply.images === undefined ? {} : { images: reply.images }),
+    ...(reply.clarification === undefined ? {} : { clarification: reply.clarification }),
+  };
   yield {
     type: "done",
     data: {

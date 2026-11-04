@@ -9,7 +9,7 @@ import re
 from collections.abc import AsyncIterator
 from contextlib import aclosing
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Annotated, Protocol
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
@@ -17,7 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 
 from app.adapters.llm import LLMError, LLMResponse
 from app.adapters.tavily import WebHit
-from app.api.schemas.chat import Source
+from app.api.schemas.chat import Clarification, Source
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output, stream_body_prefix
 from app.rag.prompts import generation_prompt
@@ -44,6 +44,7 @@ class Prepared:
     trace: dict = field(default_factory=dict)
     template: ChatPromptTemplate | None = None
     values: dict = field(default_factory=dict)
+    clarification: Clarification | None = None
 
 
 @dataclass
@@ -66,11 +67,16 @@ class Evidence(BaseModel):
     index: int = Field(ge=1, le=5)
     quote: str | None = Field(default=None, min_length=8, max_length=2000)
     quote_id: str | None = Field(default=None, pattern=r"^q\d{1,4}$")
+    quote_ids: list[Annotated[str, Field(pattern=r"^q\d{1,4}$")]] | None = Field(
+        default=None, min_length=1, max_length=3
+    )
 
     @model_validator(mode="after")
     def one_reference(self):
-        if (self.quote is None) == (self.quote_id is None):
-            raise ValueError("Choose exactly one quote_id or legacy quote")
+        if sum(value is not None for value in (self.quote, self.quote_id, self.quote_ids)) != 1:
+            raise ValueError("Choose exactly one quote_ids, quote_id or legacy quote")
+        if self.quote_ids is not None and len(set(self.quote_ids)) != len(self.quote_ids):
+            raise ValueError("Duplicate quote ID")
         return self
 
 
@@ -80,6 +86,7 @@ class GroundedAnswer(BaseModel):
     evidence: list[Evidence] = Field(max_length=5)
     insufficient: bool
     limitation: str | None = Field(default=None, min_length=1, max_length=1000)
+    build_allocation: dict[str, int] | None = Field(default=None, min_length=8, max_length=8)
 
 
 def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
@@ -93,19 +100,29 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         used = {int(n) for n in CITATION.findall(parsed.answer)}
         evidence = {}
         for item in parsed.evidence:
+            if item.index in evidence:
+                failure = "duplicate_evidence_index"
+                raise ValueError("Use one evidence object per source with quote_ids")
             if item.index > len(prepared.hits):
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence index is outside selected context")
             text = prepared.hits[item.index - 1].payload["text"]
-            quote = evidence_units(text).get(item.quote_id) if item.quote_id is not None else item.quote
-            if quote is None:
+            units = evidence_units(text)
+            quotes = (
+                [units.get(q) for q in item.quote_ids]
+                if item.quote_ids is not None
+                else [units.get(item.quote_id) if item.quote_id is not None else item.quote]
+            )
+            if any(quote is None for quote in quotes):
                 failure = "unknown_quote_id"
                 raise ValueError("Unknown evidence unit ID")
-            evidence[item.index] = quote
+            evidence[item.index] = quotes
         if URL.search(parsed.answer):
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
         if parsed.insufficient:
+            if parsed.build_allocation is not None:
+                raise ValueError("Insufficient answers cannot include a build allocation")
             if used or evidence or parsed.limitation is not None:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
@@ -118,11 +135,42 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 "Citation index mismatch", extra={"data": prepared.trace["citation_indices"]}
             )
             raise ValueError("Citations and explicit evidence must match")
-        for index, quote in evidence.items():
-            if index > len(prepared.hits) or quote not in prepared.hits[index - 1].payload["text"]:
+        for index, quotes in evidence.items():
+            if index > len(prepared.hits) or any(
+                quote not in prepared.hits[index - 1].payload["text"] for quote in quotes
+            ):
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence quote is not in cited text")
         answer = parsed.answer
+        if parsed.build_allocation is not None:
+            from app.rag.build_math import ATTRIBUTES, check_allocation
+            from app.rag.gameplay_knowledge import trusted_rule_kind
+            from app.services.gameplay import extract
+
+            failure = "invalid_build_allocation"
+            profile = prepared.values.get("player_profile") or extract(
+                json.loads(prepared.values["payload"])["question"]
+            )
+            required = {"level_rule", "class_rule", "weapon_rule", "respec_rule"}
+            cited_rules = {trusted_rule_kind(prepared.hits[i - 1]) for i in used}
+            if not required.issubset(cited_rules):
+                raise ValueError("Accounting sources must be present and cited")
+            prepared.trace["build_check"] = check_allocation(parsed.build_allocation, profile)
+            label = (
+                "Ví dụ phân bổ hợp lệ về điểm/requirements, chưa xác minh tối ưu:"
+                if prepared.lang == "vi"
+                else "Example allocation checked for points/requirements, not proven optimal:"
+            )
+            table = " | ".join(f"{key.title()} {parsed.build_allocation[key]}" for key in ATTRIBUTES)
+            # Server renders the checked values, never repairs arithmetic in model prose.
+            answer += (
+                "\n\n"
+                + label
+                + "\n"
+                + table
+                + " "
+                + "".join(f"[{i}]" for i in sorted(used) if prepared.hits[i - 1].payload.get("rule_kind") in required)
+            )
         paragraphs = [p for p in answer.split("\n\n") if p.strip()]
         cited = [p for p in paragraphs if CITATION.search(p)]
         if len(cited) < len(paragraphs):
@@ -142,7 +190,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 title=prepared.hits[i - 1].payload["title"],
                 section=prepared.hits[i - 1].payload.get("section"),
                 url=prepared.hits[i - 1].payload["url"],
-                text=evidence[i],
+                text="\n[…]\n".join(evidence[i]),
                 origin="web" if isinstance(prepared.hits[i - 1], WebHit) else "corpus",
             )
             for i in sorted(used)
@@ -197,6 +245,8 @@ RETRYABLE_REASONS = {
     "unknown_quote_id",
     "model_url",
     "invalid_limitation",
+    "duplicate_evidence_index",
+    "invalid_build_allocation",
 }
 
 
@@ -227,8 +277,13 @@ class Generator:
             "evidence.index, and each quote_id must come from that source's evidence_units. "
             "Keep the response short and avoid decorative quotes."
             " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
-            "Each evidence item must have integer index and exactly one string quote_id or quote. "
+            "Each evidence item must have integer index and exactly one of quote_ids (1–3 distinct ID strings), "
+            "quote_id (one ID string) or quote (legacy exact text). Do not repeat source indices. "
             "limitation is optional: omit it when unused; do not return null, empty text, or extra fields. "
+            "Do not include type, response_format, status or any other undeclared field. "
+            'For a build that needs clarification use {"answer":"Which weapon and PvE or PvP?",'
+            '"evidence":[],"insufficient":true}, translated into the reply language. '
+            "Do not mix this clarification object with supported claims, evidence or limitation. "
             "Answer directly without narrating retrieval or describing the supplied context. "
         )
         return values

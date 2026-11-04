@@ -56,6 +56,7 @@ class ConversationState:
     conversation: ConversationOut
     external_ref: str | None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    player: object = None
 
 
 def notice(lang: str) -> str:
@@ -67,9 +68,10 @@ def notice(lang: str) -> str:
 
 
 class LiveChatService:
-    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None):
+    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, gameplay_enabled=False):
         self.pipeline = pipeline
         self.image_catalog = image_catalog
+        self.gameplay_enabled = gameplay_enabled
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
         # (channel, external_ref) → hội thoại: bot không giữ conversation_id, nên mỗi thread hoặc user Discord
         # dùng lại một hội thoại
@@ -142,7 +144,40 @@ class LiveChatService:
             logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
             return []
 
-    def _save(self, req, state, prepared: Prepared, result: Generated, started: float, images=None) -> ChatResponse:
+    async def _prepare(self, req, state):
+        from app.rag.generator import Prepared
+        from app.rag.pipeline import language, outside_scope, small_talk
+        from app.services.gameplay import PlayerState, advance
+
+        if self.pipeline.llm is None:
+            raise UnavailableError("Chưa cấu hình DeepSeek API key.")
+        next_player = None
+        effective = req
+        if self.gameplay_enabled and self.pipeline.settings.chat_mode == "rag":
+            lang = language(req.message, req.options.lang)
+            if not outside_scope(req.message) and not small_talk(req.message, lang):
+                decision = advance(state.player or PlayerState(), req, lang)
+                next_player = decision.state
+                if decision.reply:
+                    prepared = Prepared("rag", decision.state.lang or lang, [], static_answer=decision.reply)
+                    prepared.clarification = decision.clarification
+                    prepared.trace["gameplay"] = {"status": decision.status, "tool_calls": 0}
+                    return prepared, next_player
+                effective = req.model_copy(update={"message": decision.query})
+                if decision.status == "resumed" and req.options.lang == "auto":
+                    effective.options = req.options.model_copy(update={"lang": decision.state.lang})
+        if self.gameplay_enabled:
+            prepared = await self.pipeline.prepare(effective, self._history_for(state), gameplay=True)
+        else:
+            prepared = await self.pipeline.prepare(effective, self._history_for(state))
+        if next_player is not None:
+            prepared.trace["gameplay"] = {"status": decision.status, "confirmed_slots": dict(next_player.slots)}
+            prepared.values["player_profile"] = dict(next_player.slots)
+        return prepared, next_player
+
+    def _save(
+        self, req, state, prepared: Prepared, result: Generated, started: float, images=None, player=None
+    ) -> ChatResponse:
         answer = (notice(prepared.lang) if prepared.mode == "llm_only" else "") + result.answer
         now = datetime.now(UTC)
         message_id = uuid4()
@@ -156,11 +191,14 @@ class LiveChatService:
                     sources=result.sources,
                     images=images or [],
                     grounded=result.grounded,
+                    clarification=prepared.clarification,
                     created_at=now,
                 ),
             ]
         )
         state.conversation.messages[:] = state.conversation.messages[-64:]
+        if player is not None:
+            state.player = player
         trace = {k: v for k, v in prepared.trace.items() if k != "result"}
         trace["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
         self.traces[message_id] = trace
@@ -174,6 +212,7 @@ class LiveChatService:
             grounded=result.grounded,
             latency_ms=trace["latency_ms"],
             images=images or [],
+            clarification=prepared.clarification,
         )
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
@@ -182,10 +221,10 @@ class LiveChatService:
         try:
             # Hạn tổng cho cả chờ khóa, LLM (kể cả retry) và ảnh: bot bỏ cuộc ở 60 s, backend phải dừng trước
             async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds), state.lock:
-                prepared = await self.pipeline.prepare(req, self._history_for(state))
+                prepared, player = await self._prepare(req, state)
                 result = await self.pipeline.generator.generate(prepared)
                 images = await self._images(req, prepared, result)
-                return self._save(req, state, prepared, result, started, images)
+                return self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
             raise TimeoutAppError() from None
 
@@ -198,7 +237,7 @@ class LiveChatService:
         try:
             # Hạn chỉ tính tới token đầu; sau đó web nhận dần và có thể tự hủy
             async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
-                prepared = await self.pipeline.prepare(req, self._history_for(state))
+                prepared, player = await self._prepare(req, state)
                 tokens = self.pipeline.generator.stream(prepared)
                 first = await anext(tokens)
         except BaseException as exc:
@@ -233,8 +272,13 @@ class LiveChatService:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
                     images = await self._images(req, prepared, result)
-                    response = self._save(req, state, prepared, result, started, images)
-                    yield "sources", SourcesEvent(sources=response.sources, images=response.images)
+                    response = self._save(req, state, prepared, result, started, images, player)
+                    yield (
+                        "sources",
+                        SourcesEvent(
+                            sources=response.sources, images=response.images, clarification=response.clarification
+                        ),
+                    )
                     yield "done", DoneEvent.model_validate(response, from_attributes=True)
             finally:
                 await cleanup()

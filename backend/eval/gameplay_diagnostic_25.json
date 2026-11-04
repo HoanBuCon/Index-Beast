@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "notice": "25 user prompts, plus 5 preselected paired-off repeats = at most 30 HTTP chat requests. Not the whole 100-question golden set.",
+  "standalone_ids": ["IB-GS-001","IB-GS-003","IB-GS-035","IB-GS-041","IB-GS-044","IB-GS-050","IB-GS-061","IB-GS-063","IB-GS-065","IB-GS-067","IB-GS-069","IB-GS-070","IB-GS-071","IB-GS-075","IB-GS-078","IB-GS-091","IB-GS-092","IB-GS-099"],
+  "scenario_ids": ["GP-01","GP-02","GP-03"],
+  "paired_off_ids": ["IB-GS-001","IB-GS-035","IB-GS-044","IB-GS-050","IB-GS-061"],
+  "sse_ids": ["IB-GS-075","GP-01:3"],
+  "discord_ids": ["IB-GS-069"],
+  "max_llm_calls": 150,
+  "max_tavily_requests": 60
+}

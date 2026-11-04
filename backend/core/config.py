@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
     chat_history_messages: int = Field(default=8, ge=0, le=32)
     chat_history_chars: int = Field(default=8000, ge=0, le=32000)
+    gameplay_clarification_enabled: bool = True
+    gameplay_knowledge_enabled: bool = True
     rag_collection: str = "lore_chunks"
     rag_corpus_policy: Literal["reviewed", "pilot"] = "pilot"
     rag_languages: Annotated[list[str], NoDecode] = ["en"]

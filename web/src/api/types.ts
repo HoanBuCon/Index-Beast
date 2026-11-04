@@ -36,6 +36,14 @@ export interface ChatRequest {
   channel: "web" | "discord";
   external_ref?: string | null;
   options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean; web_search?: "off" | "auto" | "always" };
+  clarification_id?: string;
+}
+export interface Clarification {
+  id: string;
+  status: "pending";
+  question: string;
+  expires_at: string;
+  fields: { key: string; label: string; input_type: "text" | "number" | "choice"; options: string[] }[];
 }
 export interface ChatResponse {
   conversation_id: string;
@@ -45,6 +53,7 @@ export interface ChatResponse {
   images?: ChatImage[];
   grounded: boolean;
   latency_ms: number;
+  clarification?: Clarification | null;
 }
 // Additive backend contract: legacy responses/history may omit images.
 export interface ChatImage {
@@ -77,13 +86,14 @@ export interface ConversationOut {
     sources: Source[];
     images?: ChatImage[];
     grounded?: boolean | null;
+    clarification?: Clarification | null;
     created_at: string;
   }[];
 }
 export type StreamEvent =
   | { type: "status"; status: string }
   | { type: "token"; token: string }
-  | { type: "sources"; sources: Source[]; images?: ChatImage[] }
+  | { type: "sources"; sources: Source[]; images?: ChatImage[]; clarification?: Clarification | null }
   | { type: "done"; data: Omit<ChatResponse, "answer" | "sources" | "images"> }
   | { type: "error"; message: string };
 export interface Message {
@@ -95,6 +105,7 @@ export interface Message {
   serverId?: string;
   incomplete?: boolean;
   grounded?: boolean;
+  clarification?: Clarification | null;
 }
 export interface Conversation {
   id: string;

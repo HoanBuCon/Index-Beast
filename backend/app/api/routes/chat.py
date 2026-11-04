@@ -29,7 +29,7 @@ from core.logging import request_id_var
 router = APIRouter(tags=["chat"])
 log = logging.getLogger(__name__)
 
-_ERROR_RESPONSES = {code: {"model": ErrorBody} for code in (401, 404, 422, 429, 502, 503, 504)}
+_ERROR_RESPONSES = {code: {"model": ErrorBody} for code in (400, 401, 404, 422, 429, 502, 503, 504)}
 
 
 def _sse(event: str, payload: object) -> str:

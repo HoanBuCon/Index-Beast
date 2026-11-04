@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "review_status": "AI-assisted draft; pending TV2 review",
+  "scenarios": [
+    {"id":"GP-01","turns":["Chia chỉ số Moonveil","100, Samurai","PvE"],"expected":"Ask level/class then goal; resume original Moonveil request. Never search only PvE."},
+    {"id":"GP-02","turns":["Tôi nên đi đâu tiếp?","current_location=Mistwood\nobjective=Nokron"],"expected":"Ask location/goal then retrieve a conditional route to Nokron. Never assume Radahn already defeated."},
+    {"id":"GP-03","turns":["Hướng dẫn quest Ranni","Đã giao Fingerslayer Blade, đi đâu tiếp?"],"expected":"Retain Ranni topic, distinguish sending gate/Ainsel from optional statue use and Seluvis warning."},
+    {"id":"GP-04","turns":["Chia chỉ số Moonveil","level=-1","level=100","Samurai, PvE"],"expected":"Reject negative level as slot; retain valid partial replies; ask only missing information."},
+    {"id":"GP-05","turns":["Hướng dẫn build Moonveil","Ranni là ai?"],"expected":"Switch topic, do not force answer to a pending build question."},
+    {"id":"GP-06","turns":["Tôi nên đi đâu tiếp?","hủy"],"expected":"Cancel pending request, no web/LLM call for cancellation."},
+    {"id":"GP-07","turns":["Chia chỉ số Moonveil level 100 Samurai PvE","Chia chỉ số Moonveil level 120 Samurai PvP"],"expected":"New explicit level and goal overwrite old profile. Verify feasible allocation or state exact missing evidence."},
+    {"id":"GP-08","turns":["Hướng dẫn build Moonveil","PvE"],"expected":"Preserve subject with history disabled/truncated; no repeated weapon question."},
+    {"id":"GP-09","turns":["Hướng dẫn build Moonveil","PvE"],"expected":"A different conversation or expired question ID cannot resume the pending question."},
+    {"id":"GP-10","turns":["Route tới Nokron","current_location=Mistwood\nobjective=Nokron"],"expected":"Support text on Discord and structured inputs on web; Discord remains auto. Do not claim restart-persistent RAM state."}
+  ]
+}

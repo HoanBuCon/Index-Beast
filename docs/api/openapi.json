@@ -183,6 +183,19 @@
             "title": "Channel",
             "type": "string"
           },
+          "clarification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.",
+            "title": "Clarification Id"
+          },
           "conversation_id": {
             "anyOf": [
               {
@@ -236,6 +249,16 @@
             "title": "Answer",
             "type": "string"
           },
+          "clarification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "conversation_id": {
             "format": "uuid",
             "title": "Conversation Id",
@@ -280,6 +303,82 @@
           "latency_ms"
         ],
         "title": "ChatResponse",
+        "type": "object"
+      },
+      "Clarification": {
+        "properties": {
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ClarificationField"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "status": {
+            "const": "pending",
+            "default": "pending",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "fields",
+          "expires_at"
+        ],
+        "title": "Clarification",
+        "type": "object"
+      },
+      "ClarificationField": {
+        "properties": {
+          "input_type": {
+            "default": "text",
+            "enum": [
+              "text",
+              "number",
+              "choice"
+            ],
+            "title": "Input Type",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ClarificationField",
         "type": "object"
       },
       "ConversationOut": {
@@ -582,6 +681,16 @@
       },
       "MessageOut": {
         "properties": {
+          "clarification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "content": {
             "title": "Content",
             "type": "string"
@@ -770,6 +879,16 @@
             },
             "description": "Successful Response"
           },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
           "401": {
             "content": {
               "application/json": {
@@ -890,6 +1009,16 @@
               "text/event-stream": {}
             },
             "description": "Luồng SSE. Mỗi frame: `event: <tên>` + `data: <JSON>`. Thứ tự: status, token (nhiều lần), sources, done; lỗi giữa chừng gửi `error` rồi đóng. Schema từng event: StatusEvent, TokenEvent, SourcesEvent, DoneEvent, ErrorEvent."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
