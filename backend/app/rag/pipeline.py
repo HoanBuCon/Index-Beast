@@ -15,6 +15,7 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
 from langsmith import tracing_context
 
+from app.adapters.tavily import WebHit, WebSearchError
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
@@ -22,7 +23,8 @@ from app.rag.prompts import generation_prompt, prompt
 from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
 from app.rag.retriever import document_to_hit, hit_to_document
-from app.rag.rewrite import rewrite
+from app.rag.rewrite import contextual_followup, rewrite
+from app.rag.web_search import assess, merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
 from core.errors import UnavailableError
@@ -175,7 +177,8 @@ def select_context(
         if (
             hit.id in seen
             or (key is not None and key in seen_content)
-            or admission.exclusion_reason(p, spoilers=spoilers)
+            or (not isinstance(hit, WebHit) and admission.exclusion_reason(p, spoilers=spoilers))
+            or (isinstance(hit, WebHit) and not spoilers)
         ):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
@@ -204,6 +207,7 @@ def context_item(hit: Hit, index: int) -> dict:
         "title": p["title"],
         "section": p.get("section"),
         "source_type": p["source_type"],
+        "origin": "web" if isinstance(hit, WebHit) else "corpus",
         "text": p["text"],
     }
     # Preserve provided unknown/null values, without fabricating absent metadata or wasting budget on it.
@@ -225,6 +229,7 @@ def context_item(hit: Hit, index: int) -> dict:
         "speaker",
         "variant_context",
         "unit_kind",
+        "retrieved_at",
     ):
         if key in p:
             item[key] = p[key]
@@ -242,8 +247,10 @@ class ChatPipeline:
         llm: LLM | None,
         retriever: BaseRetriever | None = None,
         reranker: Reranker | None = None,
+        web_search=None,
     ):
         self.settings, self.llm, self.retriever = settings, llm, retriever
+        self.web_search = web_search
         self.policy = CorpusPolicy.from_settings(settings)
         store = getattr(retriever, "store", None)
         if store is not None and store.policy != self.policy:
@@ -259,6 +266,7 @@ class ChatPipeline:
             RunnableLambda(self._rewrite, name="rewrite")
             | RunnableLambda(self._retrieve, name="hybrid_retrieve")
             | RunnableLambda(self._rerank, name="optional_rerank")
+            | RunnableLambda(self._web, name="optional_web_search")
             | RunnableLambda(self._context, name="select_numbered_context")
         )
         self.prepare_chain = (
@@ -294,6 +302,9 @@ class ChatPipeline:
         lang = language(req.message, req.options.lang)
         prepared = Prepared(mode, lang, [], trace={"mode": mode, "rewrite_fallback": False})
         state.update(prepared=prepared, query=req.message, documents=[])
+        requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
+        state["search_mode"] = requested if self.settings.web_search_available else "off"
+        prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
         if outside_scope(req.message):
             prepared.static_answer = (
                 "Mình có thể giúp bạn về Elden Ring: cốt truyện, nhiệm vụ, trang bị, cơ chế và hướng build. "
@@ -305,6 +316,13 @@ class ChatPipeline:
         elif reply := small_talk(req.message, lang):
             # Không cần bằng chứng nên không gọi rewrite/retrieval; rewrite sẽ coi đây là out_of_scope.
             prepared.static_answer = reply
+        if (
+            mode == "rag"
+            and prepared.static_answer is None
+            and requested == "always"
+            and not self.settings.web_search_available
+        ):
+            raise UnavailableError("Tìm trên web hiện chưa khả dụng. Chọn chế độ tự động hoặc thử lại sau.")
         if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
             state["overview"] = detect_overview(req.message)
             if state["overview"] is not None:
@@ -319,14 +337,16 @@ class ChatPipeline:
             # The bounded overview query plan supplies English search cues without a paid rewrite call.
             p.trace["rewrite"] = {"status": "not_run", "reason": "overview_query_plan", "model_calls": 0}
             return state
-        if self.settings.rag_rewrite_enabled:
+        if self.settings.rag_rewrite_enabled or state.get("search_mode", "off") != "off":
             diagnostics = {}
             rewritten, fallback = await rewrite(
                 self.llm,
                 state["query"],
                 state["history"],
                 p.lang,
-                deadline_seconds=self.settings.rag_rewrite_timeout_seconds,
+                deadline_seconds=min(self.settings.rag_rewrite_timeout_seconds, 4)
+                if state.get("search_mode", "off") != "off"
+                else self.settings.rag_rewrite_timeout_seconds,
                 max_tokens=self.settings.rag_rewrite_max_tokens,
                 diagnostics=diagnostics,
             )
@@ -340,7 +360,13 @@ class ChatPipeline:
                     else "That's outside Elden Ring, so I can't help with it. "
                     "Would you like to ask about lore, quests, equipment, bosses or builds?"
                 )
-            elif rewritten.ambiguous or (fallback and not state["history"] and unresolved_reference(state["query"])):
+            elif rewritten.ambiguous or (
+                fallback
+                and (
+                    contextual_followup(state["query"])
+                    or (not state["history"] and unresolved_reference(state["query"]))
+                )
+            ):
                 p.static_answer = (
                     "Bạn đang hỏi nhân vật, trang bị, boss hoặc nhiệm vụ nào trong Elden Ring?"
                     if p.lang == "vi"
@@ -348,7 +374,7 @@ class ChatPipeline:
                 )
             else:
                 state["query"] = rewritten.standalone_query_en
-        elif not state["history"] and unresolved_reference(state["query"]):
+        elif contextual_followup(state["query"]) or (not state["history"] and unresolved_reference(state["query"])):
             p.static_answer = "Bạn đang hỏi nhân vật nào?" if p.lang == "vi" else "Which character do you mean?"
         return state
 
@@ -373,7 +399,10 @@ class ChatPipeline:
                 if state.get("diagnostic_queries"):
                     row["query"] = query
                 try:
-                    async with asyncio.timeout(self.settings.rag_retrieval_timeout_seconds / len(queries)):
+                    timeout = self.settings.rag_retrieval_timeout_seconds
+                    if state.get("search_mode", "off") != "off":
+                        timeout = min(timeout, 5)
+                    async with asyncio.timeout(timeout / len(queries)):
                         documents = await retriever.ainvoke(query)
                     hits = [document_to_hit(d) for d in documents[: self.settings.rag_prefetch]]
                     rows.append(hits)
@@ -411,11 +440,66 @@ class ChatPipeline:
             state["documents"] = [hit_to_document(h) for h in ranked]
         return state
 
+    async def _web(self, state: dict) -> dict:
+        p = state["prepared"]
+        mode = state.get("search_mode", "off")
+        if p.static_answer is not None or mode == "off":
+            return state
+        local = select_context(
+            [document_to_hit(d) for d in state["documents"]],
+            self.settings.rag_top_k,
+            self.settings.rag_context_chars,
+            policy=self.policy,
+            spoilers=state["req"].options.spoilers,
+        )
+        context = [context_item(hit, i + 1) for i, hit in enumerate(local)]
+        status = None
+        if mode == "auto":
+            status, diagnostic = await assess(
+                self.llm,
+                state["query"],
+                state["history"],
+                context,
+                self.settings.web_search_assessment_seconds,
+            )
+            p.trace["evidence_assessment"] = diagnostic
+            if status == "sufficient":
+                p.trace["web_search"]["status"] = "local_sufficient"
+                return state
+            if status == "ambiguous":
+                p.static_answer = (
+                    "Bạn muốn hỏi cụ thể điều gì?" if p.lang == "vi" else "Could you clarify your question?"
+                )
+                return state
+        try:
+            if self.web_search is None:
+                raise WebSearchError("not_configured")
+            search_query = state["query"]
+            if state.get("overview") is not None:
+                search_query += "\nSearch focus: " + state["overview"].focus
+            web, diagnostic = await self.web_search.search(search_query)
+            p.trace["web_search"].update(status="ok", **diagnostic)
+            state["web_hits"] = web
+        except WebSearchError as exc:
+            p.trace["web_search"].update(status="error", reason=exc.reason)
+            if status is None and local:
+                status, diagnostic = await assess(
+                    self.llm,
+                    state["query"],
+                    state["history"],
+                    context,
+                    self.settings.web_search_assessment_seconds,
+                )
+                p.trace["evidence_assessment"] = diagnostic
+            if status != "sufficient":
+                raise UnavailableError("Tìm trên web đang gặp sự cố. Vui lòng thử lại sau.") from None
+        return state
+
     def _context(self, state: dict) -> dict:
         p = state["prepared"]
         if p.static_answer is None:
             p.hits = select_context(
-                [document_to_hit(d) for d in state["documents"]],
+                merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", [])),
                 self.settings.rag_top_k,
                 self.settings.rag_context_chars,
                 policy=self.policy,
@@ -427,10 +511,10 @@ class ChatPipeline:
                     no_overview_evidence(state["overview"], p.lang)
                     if state.get("overview") is not None
                     else (
-                        "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
+                        "Mình chưa thể trả lời chắc chắn chi tiết này. "
                         "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
                         if p.lang == "vi"
-                        else "I couldn't find evidence close enough to answer reliably. "
+                        else "I can't confirm this detail yet. "
                         "Could you name the equipment, boss, quest or specific detail you want to check?"
                     )
                 )

@@ -1,5 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Tavily và nút tìm web, Discord auto (04/11/2026)](2026-11-04_s3-tv3_tavily-web-search.md)
+
+- [TV3 · Schema recovery và trả lời trực tiếp (04/11/2026)](2026-11-04_s3-tv3_schema-recovery-va-giong-tra-loi.md)
+
 - [TV3 · Sơ đồ pipeline hệ thống (02/11/2026)](2026-11-02_s3-tv3_system-pipeline.md)
 
 - [TV3 · Nhánh câu hỏi tổng quan (31/10/2026)](2026-10-31_s2-tv3_overview-routing.md)

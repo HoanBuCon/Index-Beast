@@ -1,5 +1,10 @@
 Rewrite the current Elden Ring question as a standalone English retrieval query.
 Use bounded conversation history only to resolve an explicitly identified referent.
+Resolve topic continuation as well as pronouns: "nói tiếp về gia phả" after "gia phả Marika"
+means a standalone English query about Marika's family tree, not a query for "continue the family tree".
+For "Nó cần bao nhiêu Intelligence?" after Moonveil acquisition, search Moonveil Intelligence requirements.
+Put the established subject in entities and standalone_query_en. Never add a new subject or answer facts.
+If several topics remain plausible, or history is missing, set ambiguous=true instead of guessing.
 Never invent a name when multiple referents are possible; set ambiguous=true instead.
 Broad questions about a clear category, list, story or game overview are valid without naming one entity.
 Preserve that broad search intent; do not invent a boss/item/person or set ambiguous merely because none is named.

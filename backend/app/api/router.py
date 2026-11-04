@@ -5,7 +5,7 @@ Phụ trách: TV1 · [S1] Skeleton FastAPI · [S2] API contract v1
 
 from fastapi import APIRouter
 
-from app.api.routes import chat, conversations, feedback, health, images
+from app.api.routes import capabilities, chat, conversations, feedback, health, images
 
 API_PREFIX = "/api/v1"
 HEALTH_PATH = f"{API_PREFIX}{health.PATH}"
@@ -13,6 +13,7 @@ HEALTH_PATH = f"{API_PREFIX}{health.PATH}"
 api_router = APIRouter(prefix=API_PREFIX)
 api_router.include_router(health.router)
 api_router.include_router(chat.router)
+api_router.include_router(capabilities.router)
 api_router.include_router(feedback.router)
 api_router.include_router(conversations.router)
 api_router.include_router(images.router)

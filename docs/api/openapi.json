@@ -1,6 +1,19 @@
 {
   "components": {
     "schemas": {
+      "ChatCapabilities": {
+        "properties": {
+          "web_search_available": {
+            "title": "Web Search Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "web_search_available"
+        ],
+        "title": "ChatCapabilities",
+        "type": "object"
+      },
       "ChatImage": {
         "properties": {
           "alt": {
@@ -139,6 +152,22 @@
             "default": true,
             "title": "Spoilers",
             "type": "boolean"
+          },
+          "web_search": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "auto",
+                  "always"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Search"
           }
         },
         "title": "ChatOptions",
@@ -813,6 +842,27 @@
           }
         },
         "summary": "Hỏi đáp, trả một lần (bot)",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_v1_chat_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCapabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capabilities",
         "tags": [
           "chat"
         ]

@@ -233,10 +233,10 @@ def prefer_overview(hits: list[Hit], overview: Overview) -> list[Hit]:
 def no_overview_evidence(overview: Overview, lang: str) -> str:
     if lang == "vi":
         return (
-            "Mình chưa lấy được nguồn phù hợp để tổng hợp câu hỏi này. "
+            "Mình chưa thể đưa ra một tổng quan đáng tin cậy cho câu hỏi này. "
             "Bạn muốn xem các nhóm chính hay một vài ví dụ để bắt đầu?"
         )
     return (
-        "I haven't retrieved suitable evidence for this overview. "
+        "I can't give a reliable overview of this topic yet. "
         "Would you prefer the main categories or a few examples to start with?"
     )

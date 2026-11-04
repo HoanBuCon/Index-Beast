@@ -10,6 +10,7 @@ import type { Conversation } from "../api/types";
 import { useConversations } from "../hooks/useConversations";
 import { useChatStream } from "../hooks/useChatStream";
 import MessageInput from "../components/chat/MessageInput";
+import type { SearchMode } from "../components/chat/searchMode";
 import MessageList from "../components/chat/MessageList";
 import { retryInput } from "../hooks/chatState";
 import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
@@ -53,6 +54,16 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   }
   const history = useConversations();
   const [mode, setMode] = useState<Conversation["mode"]>("api");
+  const [searchMode, setSearchMode] = useState<SearchMode>("auto");
+  const [searchAvailable, setSearchAvailable] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/v1/chat/capabilities", { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setSearchAvailable(data?.web_search_available === true))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
   const [draft, setDraft] = useState(() => fresh("api"));
   const [active, setActive] = useState(draft.id);
   const conversation = history.conversations.find((c) => c.id === active) ?? draft;
@@ -67,11 +78,11 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     closeMobileSidebar();
   }
   function send(text: string) {
-    void stream.send(conversation, text);
+    void stream.send(conversation, text, { webSearch: searchAvailable ? searchMode : "off" });
   }
   function retry() {
     const input = retryInput(conversation);
-    if (input) void stream.send(input.base, input.text);
+    if (input) void stream.send(input.base, input.text, { webSearch: searchAvailable ? searchMode : "off" });
   }
   const sidebarToggle = (
     <button
@@ -114,7 +125,14 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           </button>
         </div>
       )}
-      <MessageInput busy={stream.busy} onSend={send} onStop={stream.stop} />
+      <MessageInput
+        busy={stream.busy}
+        onSend={send}
+        onStop={stream.stop}
+        searchMode={searchMode}
+        searchAvailable={searchAvailable && conversation.mode !== "demo"}
+        onSearchChange={setSearchMode}
+      />
       {/* TV4: ghi chú đặt dưới ô chat, dùng chung cả màn chào và hội thoại. */}
       <p className="chat-ai-note">AI có thể mắc sai sót.</p>
     </>

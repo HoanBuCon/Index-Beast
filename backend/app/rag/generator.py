@@ -16,6 +16,7 @@ from langchain_core.runnables import Runnable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.adapters.llm import LLMError, LLMResponse
+from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Source
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output, stream_body_prefix
@@ -142,6 +143,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 section=prepared.hits[i - 1].payload.get("section"),
                 url=prepared.hits[i - 1].payload["url"],
                 text=evidence[i],
+                origin="web" if isinstance(prepared.hits[i - 1], WebHit) else "corpus",
             )
             for i in sorted(used)
         ]
@@ -187,6 +189,7 @@ def answer_prefix(raw: str) -> str:
 
 # Lỗi giao thức trích dẫn có thể sửa bằng cách sinh lại; lần sau vẫn qua validate_answer nên không nới kiểm chứng.
 RETRYABLE_REASONS = {
+    "schema_invalid",
     "invalid_json",
     "empty_output",
     "insufficient_with_citations",
@@ -221,6 +224,10 @@ class Generator:
             "If insufficient=false, every answer paragraph must contain [n], the set of [n] must equal the set of "
             "evidence.index, and each quote_id must come from that source's evidence_units. "
             "Keep the response short and avoid decorative quotes."
+            " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
+            "Each evidence item must have integer index and exactly one string quote_id or quote. "
+            "limitation is optional: omit it when unused; do not return null, empty text, or extra fields. "
+            "Answer directly without narrating retrieval or describing the supplied context. "
         )
         return values
 
@@ -305,6 +312,7 @@ class Generator:
                 if self._retry(prepared, attempt, {"reason": exc.reason}):
                     prepared.trace.pop("validation_failure", None)
                     continue
+                self._failed(prepared, {"reason": exc.reason})
                 raise
             except (LLMError, OutputFormatError) as exc:
                 if isinstance(exc, LLMError) and exc.diagnostics.get("reason") == "empty_output":
@@ -363,6 +371,7 @@ class Generator:
                 prepared.trace.pop("validation_failure", None)
                 prepared.trace["_format_retry"] = True
                 return
+            self._failed(prepared, {"reason": exc.reason})
             raise
         except (LLMError, OutputFormatError) as exc:
             if self._retry(prepared, attempt, exc.diagnostics, emitted=emitted):

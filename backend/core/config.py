@@ -98,6 +98,39 @@ class Settings(BaseSettings):
     rag_images_max_bytes: int = Field(default=20000000, ge=1, le=20000000)
     rag_images_max_pixels: int = Field(default=40000000, ge=1, le=40000000)
 
+    # Available automatically when a key is configured; UI selects auto/always per request.
+    tavily_api_key: SecretStr | None = None
+    web_search_enabled: bool = True
+    web_search_mode: Literal["off", "auto", "always"] = "auto"
+    web_search_timeout_seconds: float = Field(default=8, gt=0, le=20)
+    web_search_assessment_seconds: float = Field(default=3, gt=0, le=8)
+    web_search_max_results: int = Field(default=3, ge=1, le=5)
+    web_search_domains: Annotated[list[str], NoDecode] = [
+        "eldenring.wiki.gg",
+        "eldenring.wiki.fextralife.com",
+        "en.bandainamcoent.eu",
+    ]
+
+    @field_validator("web_search_domains", mode="before")
+    @classmethod
+    def _web_domains(cls, value):
+        import re
+
+        items = value.split(",") if isinstance(value, str) else value
+        result = [item.strip().lower() for item in items]
+        if not result or any(not re.fullmatch(r"[a-z0-9-]+(?:\.[a-z0-9-]+)+", item) for item in result):
+            raise ValueError("Invalid web search domains")
+        return list(dict.fromkeys(result))
+
+    @property
+    def web_search_available(self) -> bool:
+        return bool(
+            self.web_search_enabled
+            and self.chat_mode == "rag"
+            and self.tavily_api_key
+            and self.tavily_api_key.get_secret_value().strip()
+        )
+
     @field_validator("rag_languages", mode="before")
     @classmethod
     def _languages(cls, value):

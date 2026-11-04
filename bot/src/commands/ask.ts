@@ -44,7 +44,7 @@ export function createAskCommand(chat?: (body: ChatRequest) => Promise<ChatRespo
           message: question,
           channel: "discord",
           external_ref: externalRef,
-          options: { lang: "auto", spoilers: true },
+          options: { lang: "auto", spoilers: true, web_search: "auto" },
         });
         await interaction.editReply({ embeds: [answerEmbed(question, response)], allowedMentions: { parse: [] } });
       } catch (error) {

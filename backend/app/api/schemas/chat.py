@@ -17,6 +17,7 @@ MAX_MESSAGE_CHARS = 2000
 class ChatOptions(BaseModel):
     spoilers: bool = True
     lang: Literal["auto", "vi", "en"] = "auto"
+    web_search: Literal["off", "auto", "always"] | None = None
 
 
 class ChatRequest(BaseModel):
