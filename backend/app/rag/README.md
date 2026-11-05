@@ -1,4 +1,41 @@
-# IndexBeast: LangChain và corpus thử nghiệm
+# IndexBeast: LangGraph, LangChain và corpus thử nghiệm
+
+## Bản tiếp theo 06/11/2026: model decisions và semantic memory PostgreSQL
+
+`CHAT_AGENT_ENABLED=true` mặc định cho RAG: DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification
+trong một decision call. Đường agent không dùng regex gameplay/lexical history làm bộ quyết định chính.
+Server giữ schema/provenance, quyền truy cập, deadline/budget, citation và calculator.
+
+Đã có code lưu conversation/working state trong PostgreSQL và dense semantic memory ở collection Qdrant riêng.
+Default persistence vẫn `memory` để không tự migrate môi trường cũ; muốn lưu bền cần setup migration 0002,
+memory collection và đặt `CHAT_PERSISTENCE=postgres` thủ công. `.env` thật chưa sửa.
+Tham khảo [agent, semantic memory, contract TV4 và setup](../../../docs/api/agent-semantic-memory.md).
+
+Sau khi hạ tầng được khôi phục, local DB đã migrate lên **0002**, collection memory đã setup.
+Runner thật hoàn tất **20/20 lượt** với DeepSeek, Tavily auto và E5 cache, dùng DB/memory collection test riêng.
+HTTP 200 cả 20 không đồng nghĩa correctness: có guard chặn nhầm và câu chưa đáp ứng đủ.
+Xem [kết quả live, giới hạn và sửa offline](../../../docs/testing/2026-11-06_agent-memory-20-live/README.md).
+Report [preflight 0 lượt trước đó](../../../docs/testing/2026-11-06_agent-memory-20/README.md) giữ nguyên làm lịch sử.
+Các mục lexical bên dưới mô tả bản triển khai trước trong cùng ngày/đường legacy.
+
+## Cập nhật 06/11/2026: graph và history liên quan
+
+Luồng chuẩn bị dùng LangGraph cho scope, gameplay clarification, chọn user memory, rewrite,
+retrieval, đánh giá bằng chứng và quyết định gọi web. Graph generation riêng điều phối sinh,
+validation và tối đa một lần sửa output. LangChain vẫn cung cấp prompt/model/retriever.
+Auth/lock trước graph; images và lưu conversation sau graph, sau khi output thành công.
+
+Không còn nạp nguyên 8 message vào mọi bước. Tìm trong tối đa 64 message RAM của **đúng conversation**,
+chọn tối đa 3 user turn liên quan, có ID/thời gian; câu hỏi độc lập không nhận lịch sử.
+Trong RAG, chỉ rewrite nhận các user turn đã chọn; assessor và generator không nhận transcript cũ.
+Ký ức không nằm trong evidence/citation. Đây là lexical recall có heuristic chủ thể, **chưa phải semantic/vector memory**.
+Player slot thuộc task đang làm; task mới không tự lấy weapon/location cũ, correction cập nhật task hiện tại.
+
+Conversation, player state và pending clarification vẫn RAM, mất sau restart/eviction.
+Không có PostgreSQL chat persistence/checkpointer mới hoặc nhớ xuyên conversation trong bản này.
+Không cần migration, setup collection hoặc reindex; `.env` thật giữ nguyên.
+Xem [hướng dẫn và sơ đồ graph](../../../docs/api/langgraph-memory.md) và
+[kiểm thử offline](../../../docs/testing/2026-11-06_langgraph-memory.md).
 
 ### Gameplay, hỏi lại và test thật 05/11/2026
 
@@ -87,12 +124,13 @@ hoặc walkthrough toàn diện. Collection hiện tại dùng tiếp, không c�
 ## Trạng thái và luồng xử lý
 
 - `CHAT_MODE=mock` vẫn là mặc định. `llm_only` dùng ChatDeepSeek, không tạo encoder/retriever/reranker/Qdrant client cho chat.
-- `rag` dùng LCEL, async BaseRetriever/Document, E5 ONNX + BM25, Qdrant RRF và context tối đa 5 chunk.
+- `rag` dùng LangGraph điều phối, LCEL prompt/model, async BaseRetriever/Document,
+  E5 ONNX + BM25, Qdrant RRF và context tối đa 5 chunk.
 - Lượt triển khai đầu chỉ kiểm offline. Sau đó người dùng cho phép sửa `.env`, chạy embedding/index và DeepSeek thật.
   Xem [báo cáo tích hợp ngày 29/10](../../../docs/testing/2026-10-29_rag-integration-report.md), gồm cả lỗi đã phát hiện.
 - API JSON/SSE/conversation/feedback giữ nguyên. Kiểm thử thật là smoke test, chưa thay benchmark chất lượng độc lập.
-- Không thêm dependency hoặc LangGraph; giữ `langchain-core==1.7.1`, `langchain-deepseek==1.1.1`,
-  `fastembed==0.9.0`, `qdrant-client==1.19.1` và constraints hiện có.
+- Thêm `langgraph==1.2.20` và các pin gián tiếp; giữ `langchain-core==1.7.1`, `langchain-deepseek==1.1.1`,
+  `fastembed==0.9.0`, `qdrant-client==1.19.1` và các pin cũ.
 
 ```mermaid
 flowchart TD
@@ -101,12 +139,12 @@ flowchart TD
     B --> D["Không được chọn: thống kê lý do"]
     B --> E["Được chọn — giữ metadata/ID"]
     E -.-> F["Người dùng tự chạy E5/BM25 và upsert Qdrant"]
-    G["Chat API + history có budget"] --> H["LCEL scope/language → optional rewrite"]
+    G["Chat API + current conversation"] --> H["LangGraph scope → gameplay → relevant user memory → rewrite"]
     H --> I["BaseRetriever → Qdrant RRF với cùng CorpusPolicy"]
     F --> I
     I --> J["Document → optional rerank → cùng policy → top-5/context budget"]
     J --> K["ChatPromptTemplate + MessagesPlaceholder → ChatDeepSeek"]
-    K --> L["Validate answer/citation/quote → JSON hoặc SSE"]
+    K --> L["LangGraph validation → bounded repair → JSON hoặc SSE"]
 ```
 
 ## Artifact và dry-run thực tế

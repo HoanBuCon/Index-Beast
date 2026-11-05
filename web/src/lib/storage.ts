@@ -2,7 +2,7 @@
 // Phụ trách: TV4 · [S4]
 
 import type { Conversation } from "../api/types";
-import { isSource } from "../api/types.ts";
+import { isSource, isConversationToken } from "../api/types.ts";
 import { readChatImages } from "../api/images.ts";
 const KEY = "indexbeast.conversations.v1";
 export function readConversations(): Conversation[] {
@@ -18,6 +18,7 @@ export function readConversations(): Conversation[] {
           typeof c.title === "string" &&
           (c.mode === "demo" || c.mode === "api" || c.mode === "api-stream") &&
           (c.serverId === null || typeof c.serverId === "string") &&
+          (c.serverToken === undefined || isConversationToken(c.serverToken)) &&
           typeof c.updatedAt === "string" &&
           Array.isArray(c.messages) &&
           c.messages.every((m: unknown) => {

@@ -14,6 +14,14 @@ For an example allocation, supplied accounting rules, starting values, requireme
 can support deriving an example; a prewritten build article is not mandatory. Do not treat that as
 proof of optimality, soft caps, AR or DPS. Arithmetic/requirements are still verified by the backend.
 For numbers require units, headers and conditions. Unknown patch is not the latest patch.
+Assess conflicts only between claims about the same subject/property under comparable explicit conditions.
+Different acquisition and quest-use statements can both be true; neither alone establishes quest necessity.
+Different per-event, per-attempt or per-time rewards, NG cycles or documented bonuses are not automatically
+contradictions. Do not infer missing conditions or multipliers to make inconsistent values agree.
+Only count a conflict as a coverage gap when it affects an aspect actually requested. A disputed optional
+reward amount does not make supported instructions insufficient when the user only asks for a method.
+An exact reward/rate or a best/fastest comparison does require applicable numeric/conditional evidence;
+do not mark it sufficient merely because multiple excerpts mention the method.
 Return JSON only: status (sufficient/partial/insufficient/ambiguous), covered (short list of supported
 question aspects), missing (short list of gaps), evidence (object mapping supplied index strings to
 NONEMPTY ARRAYS of 1–3 distinct quote ID strings from that excerpt's evidence_units).

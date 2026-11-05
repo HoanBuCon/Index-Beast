@@ -70,6 +70,13 @@ class Settings(BaseSettings):
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
+    chat_agent_enabled: bool = True
+    chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
+    chat_agent_max_calls: int = Field(default=6, ge=1, le=8)
+    chat_persistence: Literal["memory", "postgres"] = "memory"
+    chat_memory_collection: str = "conversation_memories"
+    chat_memory_candidates: int = Field(default=6, ge=1, le=12)
+    chat_memory_timeout_seconds: float = Field(default=5, gt=0, le=15)
     chat_history_messages: int = Field(default=8, ge=0, le=32)
     chat_history_chars: int = Field(default=8000, ge=0, le=32000)
     gameplay_clarification_enabled: bool = True

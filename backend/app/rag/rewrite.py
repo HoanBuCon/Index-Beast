@@ -162,7 +162,8 @@ def rewrite_problem(question: str, query: str, entities: list[str], history: lis
         return "unresolved_topic"
     if not preserves_numbers(question, query):
         return "numeric_constraint_lost"
-    context = question + "\n" + "\n".join(str(row.get("content", "")) for row in history)
+    # Assistant prose can neither authorize a new subject nor become game evidence.
+    context = question + "\n" + "\n".join(str(row.get("content", "")) for row in history if row.get("role") == "user")
     for entity in entities:
         if not entity.strip() or not _contains(context, entity):
             return "unverified_entity"
@@ -176,6 +177,14 @@ def rewrite_problem(question: str, query: str, entities: list[str], history: lis
     )
     if not preserves_numbers(query, user_context):
         return "numeric_constraint_added"
+    # Explicit corrections replace old constraints; history must not authorize both values.
+    level_pattern = r"\b(?:level|lv|cấp)\s*[:=]?\s*(\d{1,3})\b"
+    current_levels = set(re.findall(level_pattern, question, re.I))
+    if len(current_levels) == 1 and set(re.findall(level_pattern, query, re.I)) - current_levels:
+        return "superseded_constraint"
+    goals = {goal for goal in ("pve", "pvp") if re.search(r"\b" + goal + r"\b", question, re.I)}
+    if len(goals) == 1 and any(re.search(r"\b" + goal + r"\b", query, re.I) for goal in {"pve", "pvp"} - goals):
+        return "superseded_constraint"
     for goal in ("PvE", "PvP", "NG+"):
         if goal.casefold() in question.casefold() and goal.casefold() not in query.casefold():
             return "goal_lost"

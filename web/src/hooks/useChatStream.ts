@@ -21,13 +21,14 @@ export function useChatStream(update: (conversation: Conversation) => void) {
     setBusy(true);
     setError("");
     const answerId = createUuid();
+    const userId = createUuid();
     let current: Conversation = {
       ...base,
       title: base.messages.length ? base.title : text.slice(0, 60),
       updatedAt: new Date().toISOString(),
       messages: [
         ...base.messages,
-        { id: createUuid(), role: "user", content: text, sources: [] },
+        { id: userId, role: "user", content: text, sources: [] },
         { id: answerId, role: "assistant", content: "", sources: [], incomplete: true },
       ],
     };
@@ -39,6 +40,8 @@ export function useChatStream(update: (conversation: Conversation) => void) {
     try {
       const request = {
         conversation_id: base.serverId,
+        ...(base.serverToken ? { conversation_token: base.serverToken } : {}),
+        turn_id: userId,
         message: text,
         channel: "web" as const,
         options: { lang: "vi" as const, spoilers: true },
@@ -52,7 +55,11 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         } else if (event.type === "sources")
           changeAnswer({ ...answerSources(event), clarification: event.clarification ?? null });
         else if (event.type === "done") {
-          current = { ...current, serverId: event.data.conversation_id };
+          current = {
+            ...current,
+            serverId: event.data.conversation_id,
+            ...(event.data.conversation_token ? { serverToken: event.data.conversation_token } : {}),
+          };
           changeAnswer({ serverId: event.data.message_id, grounded: event.data.grounded, incomplete: false });
         }
       }

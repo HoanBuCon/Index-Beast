@@ -28,8 +28,27 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
             QdrantStore(ctx.qdrant, settings.rag_collection, CorpusPolicy.from_settings(settings)),
             settings.rag_prefetch,
         )
+    repository, memory = None, None
+    if settings.chat_persistence == "postgres":
+        if settings.chat_mode == "rag" and not settings.chat_agent_enabled:
+            from core.errors import UnavailableError
+
+            raise UnavailableError("Chat PostgreSQL ở chế độ RAG cần CHAT_AGENT_ENABLED=true.")
+        from app.services.memory_repository import MemoryRepository
+
+        repository = MemoryRepository(ctx.sessionmaker)
+        if retriever is not None:
+            from app.rag.semantic_memory import MemoryVectors, SemanticMemory
+
+            memory = SemanticMemory(
+                repository,
+                MemoryVectors(ctx.qdrant, settings.chat_memory_collection, settings.rag_collection),
+                retriever.encoder,
+                settings,
+            )
     return LiveChatService(
-        ChatPipeline(settings, ctx.llm, retriever, web_search=getattr(ctx, "web_search", None)),
+        ChatPipeline(settings, ctx.llm, retriever, web_search=getattr(ctx, "web_search", None), memory=memory),
         image_catalog=image_catalog,
         gameplay_enabled=settings.gameplay_clarification_enabled,
+        repository=repository,
     )

@@ -261,7 +261,11 @@ class DeepSeekLLM:
                             async for message in stream:
                                 if stopping.is_set():
                                     break
-                                await queue.put(message)
+                                acknowledged = asyncio.get_running_loop().create_future()
+                                await queue.put((message, acknowledged))
+                                # Do not advance the provider until the consumer resumes after a delta.
+                                # Graph scheduling must not turn priming into eager background generation.
+                                await acknowledged
                     finally:
                         for provider in reversed(streams):
                             await provider.aclose()
@@ -272,13 +276,13 @@ class DeepSeekLLM:
             finally:
                 _PROVIDER_STREAMS.reset(token)
             if not stopping.is_set():
-                await queue.put(error)
+                await queue.put((error, None))
 
         producer = asyncio.create_task(produce())
         has_content, finished = False, False
         try:
             while True:
-                message = await queue.get()
+                message, acknowledged = await queue.get()
                 if message is None:
                     break
                 if isinstance(message, Exception):
@@ -293,6 +297,8 @@ class DeepSeekLLM:
                 if isinstance(message.content, str) and message.content:
                     has_content = has_content or bool(message.content.strip())
                     yield message.content
+                if not acknowledged.done():
+                    acknowledged.set_result(None)
             if not has_content or not finished:
                 raise LLMError(
                     "DeepSeek stream ended without a complete answer.",

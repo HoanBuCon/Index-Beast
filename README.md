@@ -56,6 +56,10 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 ## Chạy local
 
 Chạy nhanh API + web + hạ tầng: `make dev`. Kiểm tra: `make health`; unit offline: `make test-unit`.
+`make dev` chờ Docker healthy, khởi động API rồi chờ `/api/v1/health` trả `status=ok` trước khi mở web.
+Mặc định chờ tối đa 60 giây; đổi bằng `make dev DEV_READY_TIMEOUT=90`. Nếu API lỗi/timeout, web không mở
+và tiến trình API vừa tạo được dừng. Ctrl+C dừng cây tiến trình API/web, giữ nguyên container và dữ liệu Docker.
+`make api` / `make web` riêng vẫn chạy độc lập; không có bước chờ backend khi chỉ chạy `make web`.
 Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local-guide.md).
 
 ### Cần cài

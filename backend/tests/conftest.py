@@ -29,6 +29,9 @@ def disable_remote_tracing(monkeypatch):
     """Offline tests must not export traces because a developer enabled tracing in their shell."""
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+    # Existing fake-provider suites describe the explicitly supported legacy planner.
+    # Agent tests pass chat_agent_enabled=True; they never inherit this compatibility setting.
+    monkeypatch.setenv("CHAT_AGENT_ENABLED", "false")
 
 
 @dataclass

@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -165,6 +166,34 @@ class Message(Base):
     )  # không dùng now(): trong một transaction mọi tin sẽ trùng giờ, mất thứ tự
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
+
+
+class ConversationRuntime(Base):
+    """Optimistic revision and user-confirmed working state; not a graph checkpoint."""
+
+    __tablename__ = "conversation_runtime"
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    state: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+
+
+class ConversationMemory(Base):
+    __tablename__ = "conversation_memories"
+    __table_args__ = (Index("ix_conversation_memories_scope_status", "conversation_id", "status"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+    source_message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(Text)
+    key: Mapped[str | None] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)
+    embedding_text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, default="active")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    indexed_revision: Mapped[int] = mapped_column(Integer, default=0)
+    index_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Feedback(Base):

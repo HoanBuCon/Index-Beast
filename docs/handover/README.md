@@ -1,5 +1,11 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Migration/setup và hoàn tất 20 lượt thật (06/11/2026)](2026-11-06_s3-tv3_migration-setup-va-live-20.md)
+
+- [TV3 · Model decisions và semantic memory lưu bền (06/11/2026)](2026-11-06_s3-tv3_agent-va-semantic-memory.md)
+
+- [TV3 · LangGraph, history liên quan và prompt trực tiếp (06/11/2026)](2026-11-06_s3-tv3_langgraph-va-history-lien-quan.md)
+
 - [TV3 · Gỡ conflict rebase với develop (05/11/2026)](2026-11-05_s3-tv3_giai-quyet-conflict-rebase.md)
 
 - [TV3 · Golden 100, hỏi lại và test gameplay thật (05/11/2026)](2026-11-05_s3-tv3_gameplay-clarification-va-golden-100.md)

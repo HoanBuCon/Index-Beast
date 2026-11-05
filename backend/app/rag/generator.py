@@ -3,26 +3,33 @@
 Phụ trách: TV3 · [S3] Generation
 """
 
+import asyncio
 import json
 import logging
 import re
-from collections.abc import AsyncIterator
-from contextlib import aclosing
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import aclosing, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Annotated, Protocol
+from typing import Annotated, Protocol, TypedDict
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import Runnable
+from langgraph.graph import END, START, StateGraph
+from langsmith import tracing_context
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app.adapters.llm import LLMError, LLMResponse
 from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Clarification, Source
+from app.rag.agent import spend
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output, stream_body_prefix
 from app.rag.prompts import generation_prompt
 from core.errors import UpstreamError
 from core.types import Hit
+
+_STREAM_EMITTER: ContextVar[Callable[[str], Awaitable[None]]] = ContextVar("indexbeast_stream_emitter")
 
 CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
@@ -45,6 +52,9 @@ class Prepared:
     template: ChatPromptTemplate | None = None
     values: dict = field(default_factory=dict)
     clarification: Clarification | None = None
+    player_state: object = None  # Request-local copy; service commits only after successful completion.
+    agent_decision: dict = field(default_factory=dict)
+    max_calls: int | None = None
 
 
 @dataclass
@@ -156,11 +166,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             if not required.issubset(cited_rules):
                 raise ValueError("Accounting sources must be present and cited")
             prepared.trace["build_check"] = check_allocation(parsed.build_allocation, profile)
-            label = (
-                "Ví dụ phân bổ hợp lệ về điểm/requirements, chưa xác minh tối ưu:"
-                if prepared.lang == "vi"
-                else "Example allocation checked for points/requirements, not proven optimal:"
-            )
+            label = "Gợi ý phân bổ chỉ số:" if prepared.lang == "vi" else "Suggested stat allocation:"
             table = " | ".join(f"{key.title()} {parsed.build_allocation[key]}" for key in ATTRIBUTES)
             # Server renders the checked values, never repairs arithmetic in model prose.
             answer += (
@@ -250,6 +256,17 @@ RETRYABLE_REASONS = {
 }
 
 
+class GenerationState(TypedDict, total=False):
+    prepared: Prepared
+    attempt: int
+    streaming: bool
+    data: object
+    result: Generated
+    diagnostics: dict | None
+    error: Exception | None
+    retry_stream: bool
+
+
 class Generator:
     def __init__(self, llm: LLM, *, thinking: bool = False, format_retries: int = 1):
         if format_retries not in (0, 1):
@@ -257,6 +274,17 @@ class Generator:
         self.llm = llm
         self.thinking = thinking
         self.format_retries = format_retries
+        graph = StateGraph(GenerationState)
+        graph.add_node("generate", self._generate_node)
+        graph.add_node("validate", self._validate_node)
+        graph.add_node("repair", self._repair_node)
+        graph.add_node("finish", self._finish_node)
+        graph.add_edge(START, "generate")
+        graph.add_edge("generate", "validate")
+        graph.add_conditional_edges("validate", self._generation_route, {"retry": "repair", "done": "finish"})
+        graph.add_edge("repair", "generate")
+        graph.add_edge("finish", END)
+        self.graph = graph.compile(name="indexbeast_generation")
 
     @staticmethod
     def _inputs(prepared: Prepared, attempt: int) -> dict:
@@ -349,52 +377,134 @@ class Generator:
         )
 
     async def generate(self, prepared: Prepared) -> Generated:
-        if prepared.static_answer is not None:
-            return Generated(prepared.static_answer)
-        for attempt in range(self.format_retries + 1):
+        with tracing_context(enabled=False):
+            state = await self.graph.ainvoke(
+                {"prepared": prepared, "attempt": 0, "streaming": False}, config={"recursion_limit": 12}
+            )
+        return state["result"]
+
+    async def _generate_node(self, state: GenerationState) -> dict:
+        p, attempt = state["prepared"], state["attempt"]
+        p.trace.setdefault("generation_graph_nodes", []).append("generate")
+        if p.static_answer is not None:
+            result = Generated(p.static_answer)
+            if state["streaming"]:
+                await _STREAM_EMITTER.get()(result.answer)
+            return {"result": result, "diagnostics": None, "retry_stream": False}
+        if state["streaming"]:
+            # Reuse the guarded incremental decoder. Validation happens before completion;
+            # no retry is possible after a visible token. The bridge enforces backpressure/cleanup.
+            async with aclosing(self._stream_attempt(p, attempt)) as tokens:
+                async for token in tokens:
+                    await _STREAM_EMITTER.get()(token)
+            retry = p.trace.pop("_format_retry", False)
+            return {"retry_stream": retry, "result": p.trace.get("result"), "diagnostics": None}
+        try:
+            spend(p.trace, "generation", p.max_calls)
+            result = await self.llm.invoke_chain(self.chain(p, recovery=attempt > 0), self._inputs(p, attempt))
+            self._usage(p, {"prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens})
             try:
-                result = await self.llm.invoke_chain(
-                    self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt)
-                )
-                self._usage(
-                    prepared, {"prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens}
-                )
-                try:
-                    data = self._decode(prepared, result.content)
-                except OutputFormatError as exc:
-                    exc.diagnostics["finish_reason"] = result.finish_reason
-                    raise
-                return validate_answer(prepared, data)
-            except RAGValidationError as exc:
-                if self._retry(prepared, attempt, {"reason": exc.reason}):
-                    prepared.trace.pop("validation_failure", None)
-                    continue
-                self._failed(prepared, {"reason": exc.reason})
+                data = self._decode(p, result.content)
+            except OutputFormatError as exc:
+                exc.diagnostics["finish_reason"] = result.finish_reason
                 raise
-            except (LLMError, OutputFormatError) as exc:
-                if isinstance(exc, LLMError) and exc.diagnostics.get("reason") == "empty_output":
-                    self._usage(prepared, exc.diagnostics)
-                if self._retry(prepared, attempt, exc.diagnostics):
-                    continue
-                raise self._failed(prepared, exc.diagnostics) from None
-            except ValueError:
-                raise self._failed(prepared, {"reason": "generation_value_error"}) from None
+            return {"data": data, "diagnostics": None, "error": None}
+        except (LLMError, OutputFormatError) as exc:
+            if isinstance(exc, LLMError) and exc.diagnostics.get("reason") == "empty_output":
+                self._usage(p, exc.diagnostics)
+            return {"diagnostics": exc.diagnostics, "error": None}
+        except ValueError:
+            raise self._failed(p, {"reason": "generation_value_error"}) from None
+
+    def _validate_node(self, state: GenerationState) -> dict:
+        p = state["prepared"]
+        p.trace["generation_graph_nodes"].append("validate")
+        if p.static_answer is not None or state["streaming"] or state.get("diagnostics"):
+            return {}
+        try:
+            return {"result": validate_answer(p, state["data"])}
+        except RAGValidationError as exc:
+            return {"diagnostics": {"reason": exc.reason}, "error": exc}
+
+    def _generation_route(self, state: GenerationState) -> str:
+        if state["streaming"]:
+            return "retry" if state.get("retry_stream") else "done"
+        diagnostics = state.get("diagnostics")
+        if not diagnostics:
+            return "done"
+        p = state["prepared"]
+        if self._retry(p, state["attempt"], diagnostics):
+            p.trace.pop("validation_failure", None)
+            return "retry"
+        failure = self._failed(p, diagnostics)
+        if state.get("error") is not None:
+            raise state["error"]
+        raise failure from None
+
+    @staticmethod
+    def _repair_node(state: GenerationState) -> dict:
+        state["prepared"].trace["generation_graph_nodes"].append("repair")
+        return {"attempt": state["attempt"] + 1, "diagnostics": None, "error": None, "retry_stream": False}
+
+    @staticmethod
+    def _finish_node(state: GenerationState) -> dict:
+        p = state["prepared"]
+        p.trace["generation_graph_nodes"].append("finish")
+        p.trace["result"] = state["result"]
+        return {}
 
     async def stream(self, prepared: Prepared) -> AsyncIterator[str]:
-        if prepared.static_answer is not None:
-            yield prepared.static_answer
-            prepared.trace["result"] = Generated(prepared.static_answer)
-            return
-        for attempt in range(self.format_retries + 1):
-            async with aclosing(self._stream_attempt(prepared, attempt)) as tokens:
-                async for token in tokens:
-                    yield token
-            if not prepared.trace.pop("_format_retry", False):
-                return
+        # A single owned graph task and one-delta handoff. Closing/cancelling this iterator
+        # always cancels AND awaits that task, including provider finally/aclose handlers.
+        # No callback/client is stored in graph state or a checkpoint.
+        queue = asyncio.Queue(maxsize=1)
+
+        async def emit(token):
+            acknowledged = asyncio.get_running_loop().create_future()
+            await queue.put(("token", token, acknowledged))
+            await acknowledged
+
+        async def run():
+            context_token = _STREAM_EMITTER.set(emit)
+            try:
+                with tracing_context(enabled=False):
+                    await self.graph.ainvoke(
+                        {"prepared": prepared, "attempt": 0, "streaming": True},
+                        config={"recursion_limit": 12},
+                    )
+            except asyncio.CancelledError:
+                with suppress(asyncio.QueueFull):
+                    queue.put_nowait(("cancelled", None, None))
+                raise
+            except Exception as exc:
+                await queue.put(("error", exc, None))
+            else:
+                await queue.put(("done", None, None))
+            finally:
+                _STREAM_EMITTER.reset(context_token)
+
+        task = asyncio.create_task(run())
+        try:
+            while True:
+                kind, value, acknowledged = await queue.get()
+                if kind == "done":
+                    return
+                if kind == "error":
+                    raise value
+                if kind == "cancelled":
+                    raise asyncio.CancelledError
+                yield value
+                if not acknowledged.done():
+                    acknowledged.set_result(None)
+        finally:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
         try:
+            spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(
                 self.llm.stream_chain(self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt))
             ) as stream:

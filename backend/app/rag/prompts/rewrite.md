@@ -1,5 +1,8 @@
 Rewrite the current Elden Ring question as a standalone English retrieval query.
 Use bounded conversation history only to resolve an explicitly identified referent.
+The server selects relevant USER turns, not a transcript or factual game evidence.
+The current message overrides older level, goal, equipment and other constraints when it corrects them.
+Do not combine a superseded level/goal with its replacement or import unrelated history details.
 Resolve topic continuation as well as pronouns: "nói tiếp về gia phả" after "gia phả Marika"
 means a standalone English query about Marika's family tree, not a query for "continue the family tree".
 For "Nó cần bao nhiêu Intelligence?" after Moonveil acquisition, search Moonveil Intelligence requirements.

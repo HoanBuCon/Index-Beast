@@ -195,10 +195,10 @@ async def test_explicit_history_reference_and_ambiguous_nickname():
 @pytest.mark.parametrize("question", ["Cô ấy ở đâu?", "Lấy nó ở đâu?", "Where can I obtain it?"])
 async def test_rewrite_failure_does_not_guess_missing_referent(question):
     retriever = RankedRetriever()
-    prepared = await pipeline(ScriptedLLM("broken JSON"), retriever).prepare(
-        ChatRequest(message=question, channel="web"), []
-    )
-    assert not retriever.calls and prepared.static_answer and prepared.trace["rewrite_fallback"]
+    llm = ScriptedLLM("broken JSON")
+    prepared = await pipeline(llm, retriever).prepare(ChatRequest(message=question, channel="web"), [])
+    assert not retriever.calls and prepared.static_answer
+    assert prepared.trace["memory"]["reason"] == "missing_subject" and not llm.inputs
 
 
 def test_query_plans_and_rank_fusion_ignore_native_scores_and_duplicate_ids():
