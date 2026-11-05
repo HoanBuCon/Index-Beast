@@ -22,6 +22,8 @@ class ChatOptions(BaseModel):
 
 class ChatRequest(BaseModel):
     conversation_id: UUID | None = Field(None, description="Bỏ trống để tạo hội thoại mới.")
+    conversation_token: str | None = Field(default=None, min_length=32, max_length=128, repr=False)
+    turn_id: UUID | None = None
     # strip trước khi kiểm tra độ dài: câu hỏi toàn khoảng trắng bị từ chối, không tới LLM
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_CHARS)]
     channel: Literal["web", "discord"]
@@ -80,6 +82,7 @@ class ChatResponse(BaseModel):
     latency_ms: float
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
     clarification: Clarification | None = None
+    conversation_token: str | None = Field(default=None, repr=False, exclude_if=lambda value: value is None)
 
 
 class DoneEvent(BaseModel):
@@ -87,6 +90,7 @@ class DoneEvent(BaseModel):
     message_id: UUID
     grounded: bool
     latency_ms: float
+    conversation_token: str | None = Field(default=None, repr=False, exclude_if=lambda value: value is None)
 
 
 class StatusEvent(BaseModel):

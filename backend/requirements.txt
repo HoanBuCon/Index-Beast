@@ -9,6 +9,7 @@ fastembed==0.9.0
 openai==3.33.0
 langchain-core==1.7.1
 langchain-deepseek==1.1.1
+langgraph==1.2.20
 redis==8.1.0
 ddgs==9.16.0
 httpx==0.28.1

@@ -5,14 +5,15 @@ Phụ trách: TV3 · [S3] Chat integration
 
 import asyncio
 import logging
+import secrets
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import aclosing
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel
 
@@ -20,7 +21,9 @@ from app.api.schemas.chat import ChatImage, ChatRequest, ChatResponse, DoneEvent
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
-from core.errors import NotFoundError, TimeoutAppError, UnavailableError
+from app.rag.semantic_memory import MemoryScope
+from app.services.memory_repository import MemoryRepository, Snapshot, owner_hash
+from core.errors import BadRequestError, NotFoundError, TimeoutAppError, UnauthorizedError, UnavailableError
 
 ChatEvents = AsyncIterator[tuple[str, BaseModel]]
 
@@ -57,6 +60,9 @@ class ConversationState:
     external_ref: str | None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     player: object = None
+    owner: str = ""
+    revision: int = 0
+    token: str | None = field(default=None, repr=False)
 
 
 def notice(lang: str) -> str:
@@ -68,10 +74,12 @@ def notice(lang: str) -> str:
 
 
 class LiveChatService:
-    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, gameplay_enabled=False):
+    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, gameplay_enabled=False, repository=None):
         self.pipeline = pipeline
         self.image_catalog = image_catalog
         self.gameplay_enabled = gameplay_enabled
+        self.repository: MemoryRepository | None = repository
+        self._registry_lock = asyncio.Lock()
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
         # (channel, external_ref) → hội thoại: bot không giữ conversation_id, nên mỗi thread hoặc user Discord
         # dùng lại một hội thoại
@@ -116,18 +124,112 @@ class LiveChatService:
             self._by_ref[ref] = conv.id
         return state
 
-    def _history_for(self, state: ConversationState) -> list[dict]:
-        settings = self.pipeline.settings
-        rows, size = [], 0
-        candidates = (
-            state.conversation.messages[-settings.chat_history_messages :] if settings.chat_history_messages else []
+    async def _load_state(self, req):
+        if self.repository is None:
+            return self._state(req)
+        if req.channel == "web" and req.external_ref is not None:
+            raise BadRequestError("Web dùng conversation token, không dùng external_ref làm danh tính.")
+        async with self._registry_lock:
+            stored = await self.repository.load(
+                req.conversation_id, channel=req.channel, external_ref=req.external_ref, token=req.conversation_token
+            )
+            if stored:
+                if stored.conversation.id not in self._conversations:
+                    if len(self._conversations) >= 500:
+                        victim = next(
+                            (key for key, value in self._conversations.items() if not value.lock.locked()), None
+                        )
+                        if victim is None:
+                            raise UnavailableError("Có quá nhiều hội thoại đang hoạt động.")
+                        evicted = self._conversations.pop(victim)
+                        if evicted.external_ref:
+                            self._by_ref.pop((evicted.conversation.channel, evicted.external_ref), None)
+                    self._conversations[stored.conversation.id] = ConversationState(
+                        stored.conversation,
+                        stored.external_ref,
+                        player=stored.working,
+                        owner=stored.owner,
+                        revision=stored.revision,
+                    )
+                state = self._conversations[stored.conversation.id]
+                state.token = req.conversation_token
+                return state
+            # A new durable conversation receives a random capability. Only its hash enters PostgreSQL.
+            state = self._state(req)
+            if not state.owner:
+                if req.channel == "web":
+                    state.token = secrets.token_urlsafe(32)
+                    state.owner = owner_hash(state.token)
+                else:
+                    if not req.external_ref:
+                        raise BadRequestError("Discord cần external_ref cho hội thoại lưu bền.")
+                    state.owner = owner_hash(req.external_ref)
+                    old_id = state.conversation.id
+                    state.conversation.id = uuid5(NAMESPACE_URL, "indexbeast:" + state.owner)
+                    self._conversations.pop(old_id, None)
+                    self._conversations[state.conversation.id] = state
+                    self._by_ref[(req.channel, req.external_ref)] = state.conversation.id
+            return state
+
+    async def _refresh(self, state, req):
+        if self.repository is None or state.revision == 0:
+            return
+        stored = await self.repository.load(
+            state.conversation.id, channel=req.channel, external_ref=req.external_ref, token=req.conversation_token
         )
-        for msg in reversed(candidates):
-            if size + len(msg.content) > settings.chat_history_chars:
-                break
-            rows.append({"role": msg.role, "content": msg.content})
-            size += len(msg.content)
-        return list(reversed(rows))
+        state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
+
+    async def stored_history(self, conversation_id, *, token=None, trusted_service=False):
+        if self.repository is None:
+            return self.history(conversation_id)
+        # Read the channel/ref by ID internally, but never return messages before capability/service auth.
+        from core.db.models import Conversation
+
+        try:
+            async with self.repository.sessions() as session:
+                conv = await session.get(Conversation, conversation_id)
+                if conv is None:
+                    raise NotFoundError("Không tìm thấy hội thoại.")
+                channel, external_ref = conv.channel, conv.external_ref
+        except NotFoundError:
+            raise
+        except Exception:
+            raise UnavailableError("Không đọc được hội thoại.") from None
+        if channel == "discord" and not trusted_service:
+            raise UnauthorizedError("Cần service token để đọc hội thoại Discord.")
+        stored = await self.repository.load(conversation_id, channel=channel, external_ref=external_ref, token=token)
+        return stored.conversation
+
+    async def stored_has_message(self, message_id, *, token=None, trusted_service=False):
+        if self.repository is None:
+            return self.has_message(message_id)
+        from core.db.models import Message
+
+        try:
+            async with self.repository.sessions() as session:
+                row = await session.get(Message, message_id)
+                if row is None or row.role != "assistant":
+                    return False
+                conversation_id = row.conversation_id
+        except Exception:
+            raise UnavailableError("Không kiểm tra được câu trả lời đã lưu.") from None
+        await self.stored_history(conversation_id, token=token, trusted_service=trusted_service)
+        return True
+
+    def _history_for(self, state: ConversationState) -> list[dict]:
+        # Search the bounded conversation BEFORE applying model-input budgets.
+        # Existing channel/external_ref routing checks remain in _state. No global or
+        # cross-conversation lookup; a web conversation UUID is NOT verified account ownership.
+        return [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "message_id": str(msg.id),
+                "created_at": msg.created_at.isoformat(),
+                "conversation_id": str(state.conversation.id),
+            }
+            for msg in state.conversation.messages[-64:]
+        ]
 
     async def _images(self, req, prepared, result) -> list[ChatImage]:
         if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
@@ -145,60 +247,60 @@ class LiveChatService:
             return []
 
     async def _prepare(self, req, state):
-        from app.rag.generator import Prepared
-        from app.rag.pipeline import language, outside_scope, small_talk
-        from app.services.gameplay import PlayerState, advance
+        kwargs = {"gameplay": True, "handle_gameplay": True, "player": state.player} if self.gameplay_enabled else {}
+        if self.repository is not None:
+            kwargs["memory_scope"] = MemoryScope(state.conversation.id, state.owner)
+            kwargs["player"] = state.player
+        prepared = await self.pipeline.prepare(req, self._history_for(state), **kwargs)
+        return prepared, prepared.player_state
 
-        if self.pipeline.llm is None:
-            raise UnavailableError("Chưa cấu hình DeepSeek API key.")
-        next_player = None
-        effective = req
-        if self.gameplay_enabled and self.pipeline.settings.chat_mode == "rag":
-            lang = language(req.message, req.options.lang)
-            if not outside_scope(req.message) and not small_talk(req.message, lang):
-                decision = advance(state.player or PlayerState(), req, lang)
-                next_player = decision.state
-                if decision.reply:
-                    prepared = Prepared("rag", decision.state.lang or lang, [], static_answer=decision.reply)
-                    prepared.clarification = decision.clarification
-                    prepared.trace["gameplay"] = {"status": decision.status, "tool_calls": 0}
-                    return prepared, next_player
-                effective = req.model_copy(update={"message": decision.query})
-                if decision.status == "resumed" and req.options.lang == "auto":
-                    effective.options = req.options.model_copy(update={"lang": decision.state.lang})
-        if self.gameplay_enabled:
-            prepared = await self.pipeline.prepare(effective, self._history_for(state), gameplay=True)
-        else:
-            prepared = await self.pipeline.prepare(effective, self._history_for(state))
-        if next_player is not None:
-            prepared.trace["gameplay"] = {"status": decision.status, "confirmed_slots": dict(next_player.slots)}
-            prepared.values["player_profile"] = dict(next_player.slots)
-        return prepared, next_player
-
-    def _save(
+    async def _save(
         self, req, state, prepared: Prepared, result: Generated, started: float, images=None, player=None
     ) -> ChatResponse:
         answer = (notice(prepared.lang) if prepared.mode == "llm_only" else "") + result.answer
         now = datetime.now(UTC)
-        message_id = uuid4()
-        state.conversation.messages.extend(
-            [
-                MessageOut(id=uuid4(), role="user", content=req.message, created_at=now),
-                MessageOut(
-                    id=message_id,
-                    role="assistant",
-                    content=answer,
-                    sources=result.sources,
-                    images=images or [],
-                    grounded=result.grounded,
-                    clarification=prepared.clarification,
-                    created_at=now,
-                ),
+        user_id = uuid5(state.conversation.id, f"user:{req.turn_id}") if req.turn_id else uuid4()
+        message_id = uuid5(state.conversation.id, f"assistant:{req.turn_id}") if req.turn_id else uuid4()
+        pair = [
+            MessageOut(id=user_id, role="user", content=req.message, created_at=now),
+            MessageOut(
+                id=message_id,
+                role="assistant",
+                content=answer,
+                sources=result.sources,
+                images=images or [],
+                grounded=result.grounded,
+                clarification=prepared.clarification,
+                created_at=now + timedelta(microseconds=1),
+            ),
+        ]
+        if self.repository is not None:
+            working = dict(player) if isinstance(player, dict) else {}
+            working["constraints"] = [
+                {**c, "source_id": str(user_id) if c["source_id"] == "current" else c["source_id"]}
+                for c in working.get("constraints", [])
             ]
-        )
+            snapshot = Snapshot(state.conversation, state.external_ref, state.owner, state.revision, working)
+            created = await self.repository.save(snapshot, pair, working, prepared.agent_decision)
+            if not created:
+                replay = await self._replay(req, state, started)
+                if replay is None:
+                    raise UnavailableError("Không khôi phục được lượt hỏi trùng.")
+                return replay
+            state.revision += 1
+            player = working
+        state.conversation.messages.extend(pair)
         state.conversation.messages[:] = state.conversation.messages[-64:]
         if player is not None:
             state.player = player
+        if self.repository is not None and self.pipeline.memory is not None:
+            try:
+                async with asyncio.timeout(self.pipeline.settings.chat_memory_timeout_seconds):
+                    prepared.trace["memory_sync"] = await self.pipeline.memory.sync(
+                        MemoryScope(state.conversation.id, state.owner)
+                    )
+            except TimeoutError:
+                prepared.trace["memory_sync"] = {"status": "pending"}
         trace = {k: v for k, v in prepared.trace.items() if k != "result"}
         trace["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
         self.traces[message_id] = trace
@@ -213,39 +315,60 @@ class LiveChatService:
             latency_ms=trace["latency_ms"],
             images=images or [],
             clarification=prepared.clarification,
+            conversation_token=state.token if self.repository is not None and req.channel == "web" else None,
         )
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
         started = time.perf_counter()
-        state = self._state(req)
         try:
             # Hạn tổng cho cả chờ khóa, LLM (kể cả retry) và ảnh: bot bỏ cuộc ở 60 s, backend phải dừng trước
-            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds), state.lock:
-                prepared, player = await self._prepare(req, state)
-                result = await self.pipeline.generator.generate(prepared)
-                images = await self._images(req, prepared, result)
-                return self._save(req, state, prepared, result, started, images, player)
+            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
+                state = await self._load_state(req)
+                async with state.lock:
+                    await self._refresh(state, req)
+                    if replay := await self._replay(req, state, started):
+                        return replay
+                    prepared, player = await self._prepare(req, state)
+                    result = await self.pipeline.generator.generate(prepared)
+                    images = await self._images(req, prepared, result)
+                    return await self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
             raise TimeoutAppError() from None
 
     async def open_stream(self, req: ChatRequest) -> ChatEvents:
         """Prepare and prime provider BEFORE sending HTTP headers, then stream actual deltas."""
         started = time.perf_counter()
-        state = self._state(req)
-        await state.lock.acquire()
+        deadline = asyncio.get_running_loop().time() + self.pipeline.settings.chat_timeout_seconds
+        owns_lock = False
         tokens = None
         try:
-            # Hạn chỉ tính tới token đầu; sau đó web nhận dần và có thể tự hủy
-            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
-                prepared, player = await self._prepare(req, state)
-                tokens = self.pipeline.generator.stream(prepared)
-                first = await anext(tokens)
+            async with asyncio.timeout_at(deadline):
+                state = await self._load_state(req)
+                await state.lock.acquire()
+                owns_lock = True
+                await self._refresh(state, req)
+                replay = await self._replay(req, state, started)
+                if replay is not None:
+
+                    async def replay_tokens():
+                        yield replay.answer
+
+                    prepared = Prepared(self.pipeline.settings.chat_mode, "vi", [], static_answer=replay.answer)
+                    prepared.trace["result"] = Generated(replay.answer, replay.sources, replay.grounded)
+                    player = state.player
+                    tokens = replay_tokens()
+                    first = await anext(tokens)
+                else:
+                    prepared, player = await self._prepare(req, state)
+                    tokens = self.pipeline.generator.stream(prepared)
+                    first = await anext(tokens)
         except BaseException as exc:
             try:
                 if tokens is not None:
                     await tokens.aclose()
             finally:
-                state.lock.release()
+                if owns_lock:
+                    state.lock.release()
             if isinstance(exc, TimeoutError):
                 raise TimeoutAppError() from None
             raise
@@ -263,7 +386,7 @@ class LiveChatService:
 
         async def events():
             try:
-                async with aclosing(tokens):
+                async with asyncio.timeout_at(deadline), aclosing(tokens):
                     yield "status", StatusEvent(status="generating")
                     if prepared.mode == "llm_only":
                         yield "token", TokenEvent(token=notice(prepared.lang))
@@ -272,7 +395,7 @@ class LiveChatService:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
                     images = await self._images(req, prepared, result)
-                    response = self._save(req, state, prepared, result, started, images, player)
+                    response = replay or await self._save(req, state, prepared, result, started, images, player)
                     yield (
                         "sources",
                         SourcesEvent(
@@ -280,7 +403,35 @@ class LiveChatService:
                         ),
                     )
                     yield "done", DoneEvent.model_validate(response, from_attributes=True)
+            except TimeoutError:
+                raise TimeoutAppError() from None
             finally:
                 await cleanup()
 
         return ManagedEvents(events(), cleanup)
+
+    async def _replay(self, req, state, started):
+        if self.repository is None or req.turn_id is None:
+            return None
+        user_id = uuid5(state.conversation.id, f"user:{req.turn_id}")
+        user = await self.repository.message(state.conversation.id, user_id)
+        if user is None:
+            return None
+        if user.content != req.message:
+            raise BadRequestError("Mã lượt hỏi đã dùng cho nội dung khác.")
+        row = await self.repository.message(
+            state.conversation.id, uuid5(state.conversation.id, f"assistant:{req.turn_id}")
+        )
+        if row is None:
+            raise UnavailableError("Lượt hỏi đã lưu chưa hoàn chỉnh.")
+        return ChatResponse(
+            conversation_id=state.conversation.id,
+            message_id=row.id,
+            answer=row.content,
+            sources=row.sources,
+            grounded=bool(row.grounded),
+            latency_ms=(time.perf_counter() - started) * 1000,
+            images=(row.trace or {}).get("images", []),
+            clarification=(row.trace or {}).get("clarification"),
+            conversation_token=state.token if req.channel == "web" else None,
+        )

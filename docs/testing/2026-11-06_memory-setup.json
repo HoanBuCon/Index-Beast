@@ -1,0 +1,47 @@
+{
+  "verified_at": "2026-11-05T19:18:25.851509+00:00",
+  "database": "indexbeast",
+  "revision_before": null,
+  "revision_after": "0002",
+  "tables": [
+    "alembic_version",
+    "chunks",
+    "conversation_memories",
+    "conversation_runtime",
+    "conversations",
+    "documents",
+    "entities",
+    "eval_runs",
+    "feedback",
+    "ingestion_jobs",
+    "messages"
+  ],
+  "row_counts": {
+    "conversations": 0,
+    "messages": 0,
+    "conversation_runtime": 0,
+    "conversation_memories": 0,
+    "documents": 0,
+    "chunks": 0
+  },
+  "memory_collection": "conversation_memories",
+  "memory_points": 0,
+  "memory_vectors": {
+    "dense": {
+      "size": 384,
+      "distance": "Cosine"
+    }
+  },
+  "payload_indexes": [
+    "conversation_id",
+    "embedding_model",
+    "embedding_version",
+    "owner",
+    "status"
+  ],
+  "corpus_collection": "indexbeast_tv3_integration_20261029_c1871afc",
+  "corpus_points_before": 18368,
+  "corpus_points_after": 18368,
+  "effective_chat_persistence": "memory",
+  "env_modified": false
+}

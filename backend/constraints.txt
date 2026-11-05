@@ -130,3 +130,10 @@ tiktoken==0.14.0
 uuid-utils==0.19.0
 xxhash==4.0.2
 zstandard==0.25.0
+
+# LangGraph orchestration; resolved against existing pins without upgrading LangChain.
+langgraph==1.2.20
+langgraph-checkpoint==4.3.1
+langgraph-prebuilt==1.1.1
+langgraph-sdk==0.4.13
+ormsgpack==1.13.0

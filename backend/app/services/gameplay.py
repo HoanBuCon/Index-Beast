@@ -130,22 +130,38 @@ def advance(current, req, lang, *, now=None):
     supplied = extract(text)
     pending = state.pending
     # Explicit new questions/topics supersede pending work. A slot-only reply continues it.
-    new_question = bool(re.search(r"\?|\b(?:who|what|where|how)\b|là ai|ở đâu|làm gì|giải thích|kể về", text, re.I))
-    continuing = pending is not None and not new_intent and not new_question
+    new_question = bool(
+        re.search(r"\?|\b(?:who|what|where|how)\b|là ai|ở đâu|làm gì|giải thích|kể về|gia phả|family tree", text, re.I)
+    )
+    correction = bool(
+        state.intent
+        and supplied
+        and re.search(
+            r"^(?:level|lv|goal|weapon|starting_class|current_location|objective)\s*[:=]?|^(?:PvE|PvP)\b|^đổi\b",
+            text,
+            re.I,
+        )
+    )
+    continuing = (pending is not None or correction) and not new_intent and not new_question
     if continuing:
         lang = state.lang if req.options.lang == "auto" else lang
-        keys = [f.key for f in pending.fields]
+        keys = [f.key for f in pending.fields] if pending else []
         if "level" in keys and re.match(r"^\d{1,3}(?:\s*[,;]|$)", text):
             number = int(re.match(r"\d+", text)[0])
             if 1 <= number <= 713:
                 supplied["level"] = str(number)
         # Only a single text field accepts a bare reply. Choice/number fields use strict parsing.
-        text_fields = [f.key for f in pending.fields if f.input_type == "text" and f.key not in supplied]
+        text_fields = (
+            [f.key for f in pending.fields if f.input_type == "text" and f.key not in supplied] if pending else []
+        )
         if len(text_fields) == 1 and not supplied and len(text) <= 120:
             supplied[text_fields[0]] = text
     else:
         state.original, state.pending, state.intent = text, None, new_intent
         state.lang = lang
+        # Slots belong to an active task, not a verified account-wide player profile.
+        # An explicit new task starts with its own details; slot-only replies keep the pending task.
+        state.slots = {}
     # An informational question about Samurai/Moonveil is not confirmation of the player's class/gear.
     explicit_profile = re.search(r"(?:^|\n)(?:level|starting_class|goal|weapon|current_location|objective)\s*=", text)
     if continuing or new_intent or explicit_profile:
@@ -186,5 +202,20 @@ def advance(current, req, lang, *, now=None):
         return Decision(state, text, clarification, question, "pending")
     state.pending = None
     details = "; ".join(f"{key}={value}" for key, value in state.slots.items())
-    query = state.original + "\nplayer-confirmed details (preferences, not factual evidence): " + details
+    # A correction must replace stale literals in the working question too; appending a new
+    # slot to "level 100 ... PvE" would otherwise ask the rewriter to preserve both old and new.
+    question = state.original
+    if continuing:
+        if level := state.slots.get("level"):
+            question = re.sub(
+                r"\b(?:level|lv|cấp|cap)\s*[:=]?\s*\d{1,3}\b", lambda _: "level " + level, question, flags=re.I
+            )
+        if goal := state.slots.get("goal"):
+            question = re.sub(r"\bPv[EP]\b", lambda _: goal, question, flags=re.I)
+        original_slots = extract(state.original)
+        for key in ("weapon", "starting_class", "current_location", "objective"):
+            old, new = original_slots.get(key), state.slots.get(key)
+            if old and new and old != new:
+                question = re.sub(re.escape(old), lambda _, value=new: value, question, flags=re.I)
+    query = question + "\nplayer-confirmed details (preferences, not factual evidence): " + details
     return Decision(state, query, status="resumed" if continuing else "ready")

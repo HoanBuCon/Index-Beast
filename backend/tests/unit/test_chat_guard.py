@@ -91,7 +91,9 @@ async def test_same_external_ref_reuses_conversation_and_history():
 
     assert second.conversation_id == first.conversation_id
     assert other.conversation_id != first.conversation_id
-    assert any("Ranni is an Empyrean" in str(m.get("content", "")) for m in llm.seen[1])  # có lịch sử lượt trước
+    # Recall the user's subject, not the assistant's earlier unverified answer.
+    assert {"role": "user", "content": BOT["message"]} in llm.seen[1]
+    assert all(m["role"] != "assistant" for m in llm.seen[1])
 
 
 async def test_mock_service_also_reuses_by_external_ref():

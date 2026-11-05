@@ -1,5 +1,9 @@
 # Hỏi lại và trợ lý gameplay — contract cho TV4
 
+> Cập nhật tiếp 06/11: đường agent mặc định dùng mô hình chọn intent/slot/clarification, không dùng parser
+> cố định bên dưới làm quyết định chính. Schema clarification giữ nguyên; PostgreSQL mode thêm capability
+> transport. Xem [contract/setup agent và semantic memory](agent-semantic-memory.md).
+
 05/11/2026 · TV3 MinhMuc · IndexBeast / 4 Hollows.
 
 ## Cách chạy và thử
@@ -61,14 +65,18 @@ Không lấy câu hỏi “Samurai có spell không?” làm xác nhận class n
 Parser hiện có grammar/tên mẫu có giới hạn, chưa phải NER; tên chưa nhận có thể nhập field weapon bằng text.
 Không tự ánh xạ nickname hoặc tên gần giống. Lỗi/mơ hồ slot giữ câu hỏi, không đoán.
 
-Profile độc lập với history nên có thể giữ level/class/weapon khi history bị cắt.
+Working state độc lập history nên giữ level/class/weapon trong task đang làm khi history bị cắt.
+Từ 06/11, task mới bắt đầu bằng thông tin của task mới; không tự mang weapon/location từ task trước.
+Correction ngắn như `level 120` hoặc `PvP` cập nhật task còn hiệu lực, thay literal cũ trong query.
 **Vẫn là RAM**, cùng kho hội thoại dev hiện có: restart, nhiều worker/process hoặc eviction có thể mất state.
 Không triển khai PostgreSQL/checkpointer cho feature này. Chi tiết milestone/quest dài vẫn cần history/evidence;
 chưa có world-state đầy đủ hay quản lý mọi quest flag. Không tuyên bố memory lâu dài đã hoàn thiện.
 
 Service factory bật feature theo setting. Constructor LiveChatService mặc định giữ compatibility cho caller cũ;
 caller tự tạo service muốn dùng tính năng phải truyền `gameplay_enabled=True`.
-LangChain/LCEL được giữ; không cần LangGraph, không giữ HTTP request mở chờ người dùng.
+LangChain/LCEL prompt/model được giữ; từ 06/11 LangGraph điều phối gameplay/memory và RAG.
+Không giữ HTTP request mở chờ người dùng; pending question vẫn ở RAM của conversation.
+Xem [luồng graph và giới hạn memory](langgraph-memory.md). API JSON/SSE không đổi.
 
 ## Nguồn bổ sung và build chỉ số
 

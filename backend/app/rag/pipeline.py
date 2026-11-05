@@ -1,25 +1,33 @@
-"""One orchestration path; explicit llm_only/rag, no hidden fallback or automatic web search.
+"""LangGraph request preparation; clients stay outside invocation state/checkpoints.
 
 Phụ trách: TV3 · [S2–S3] Pipeline
 """
 
 import asyncio
+import inspect
 import json
 import re
 import time
 import unicodedata
+from datetime import UTC, datetime
+from typing import TypedDict
 from urllib.parse import urlsplit
+from uuid import uuid4
 
+from langchain_core.documents import Document
 from langchain_core.messages import convert_to_openai_messages
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
+from langgraph.graph import END, START, StateGraph
 from langsmith import tracing_context
 
 from app.adapters.tavily import WebHit, WebSearchError
+from app.api.schemas.chat import ChatRequest, Clarification
+from app.rag.agent import decide, spend
 from app.rag.context_policy import coverage_order
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
-from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
+from app.rag.history import dependent, select_history
+from app.rag.overview import Overview, detect_overview, no_overview_evidence, overview_queries, prefer_overview
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
@@ -29,8 +37,36 @@ from app.rag.web_query import web_query
 from app.rag.web_search import assess, merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
-from core.errors import UnavailableError
+from core.errors import AppError, BadRequestError, UnavailableError
 from core.types import Hit
+
+
+class PreparationState(TypedDict, total=False):
+    req: ChatRequest
+    history: list[dict]
+    selected_memories: list[dict]
+    original_question: str
+    resolved_question: str
+    query: str  # Retrieval query; never used to change the answer language.
+    answer_language: str
+    started: float
+    prepared: Prepared
+    diagnostic_queries: bool
+    gameplay: bool
+    handle_gameplay: bool
+    player: object
+    next_player: object
+    documents: list[Document]
+    web_hits: list[WebHit]
+    entities: list[str]
+    overview: Overview | None
+    search_mode: str
+    assessment_status: str | None
+    needs_web: bool
+    local: list[Hit]
+    local_context: list[dict]
+    memory_scope: object
+    memory_candidates: list[dict]
 
 
 def language(question: str, requested: str) -> str:
@@ -261,9 +297,11 @@ class ChatPipeline:
         retriever: BaseRetriever | None = None,
         reranker: Reranker | None = None,
         web_search=None,
+        memory=None,
     ):
         self.settings, self.llm, self.retriever = settings, llm, retriever
         self.web_search = web_search
+        self.memory = memory
         self.policy = CorpusPolicy.from_settings(settings)
         store = getattr(retriever, "store", None)
         if store is not None and store.policy != self.policy:
@@ -275,24 +313,66 @@ class ChatPipeline:
             else None
         )
         self.template = generation_prompt()
-        rag_steps = (
-            RunnableLambda(self._rewrite, name="rewrite")
-            | RunnableLambda(self._retrieve, name="hybrid_retrieve")
-            | RunnableLambda(self._rerank, name="optional_rerank")
-            | RunnableLambda(self._web, name="optional_web_search")
-            | RunnableLambda(self._context, name="select_numbered_context")
+        graph = StateGraph(PreparationState)
+        for name, node in (
+            ("scope", self._scope),
+            ("gameplay", self._gameplay),
+            ("memory", self._memory),
+            ("agent_decision", self._agent),
+            ("rewrite", self._rewrite),
+            ("retrieve", self._retrieve),
+            ("rerank", self._rerank),
+            ("assess", self._assess),
+            ("web", self._search_web),
+            ("context", self._context),
+            ("prompt", self._prompt_node),
+        ):
+            graph.add_node(name, self._guarded(name, node))
+        graph.add_edge(START, "scope")
+        graph.add_conditional_edges("scope", lambda s: self._agent_active(s), {True: "memory", False: "gameplay"})
+        graph.add_edge("gameplay", "memory")
+        graph.add_conditional_edges(
+            "memory",
+            lambda s: "agent" if self._agent_active(s) else self._rag_route(s),
+            {"agent": "agent_decision", "rag": "rewrite", "answer": "prompt"},
         )
-        self.prepare_chain = (
-            RunnableLambda(self._scope, name="scope_and_language")
-            | RunnableBranch(
-                (lambda state: state["prepared"].mode == "rag" and state["prepared"].static_answer is None, rag_steps),
-                RunnablePassthrough(),
-            )
-            | RunnableLambda(self._prompt, name="prepare_chat_prompt")
-        )
+        graph.add_conditional_edges("agent_decision", self._rag_route, {"rag": "rewrite", "answer": "prompt"})
+        graph.add_conditional_edges("rewrite", self._rag_route, {"rag": "retrieve", "answer": "prompt"})
+        graph.add_edge("retrieve", "rerank")
+        graph.add_edge("rerank", "assess")
+        graph.add_conditional_edges("assess", lambda s: s["needs_web"], {True: "web", False: "context"})
+        graph.add_edge("web", "context")
+        graph.add_edge("context", "prompt")
+        graph.add_edge("prompt", END)
+        # Invocation-local state, overwrite semantics, no MessagesState/append reducer or shared checkpointer.
+        self.prepare_graph = graph.compile(name="indexbeast_prepare")
+
+    @staticmethod
+    def _guarded(name, node):
+        async def run(state: PreparationState):
+            try:
+                result = node(state)
+                if inspect.isawaitable(result):
+                    result = await result
+                state["prepared"].trace.setdefault("graph_nodes", []).append(name)
+                return result
+            except AppError as exc:
+                if state.get("diagnostic_queries") and "prepared" in state:
+                    exc.rag_diagnostics = dict(state["prepared"].trace)
+                raise
+
+        return run
 
     async def prepare(
-        self, req, history: list[dict], *, diagnostic_queries: bool = False, gameplay: bool = False
+        self,
+        req,
+        history: list[dict],
+        *,
+        diagnostic_queries: bool = False,
+        gameplay: bool = False,
+        handle_gameplay: bool = False,
+        player=None,
+        memory_scope=None,
     ) -> Prepared:
         state = {
             "req": req,
@@ -300,15 +380,15 @@ class ChatPipeline:
             "started": time.perf_counter(),
             "diagnostic_queries": diagnostic_queries,
             "gameplay": gameplay,
+            "handle_gameplay": handle_gameplay,
+            "player": player,
+            "memory_scope": memory_scope,
+            "original_question": req.message,
+            "resolved_question": req.message,
         }
         with tracing_context(enabled=False):
-            try:
-                return await self.prepare_chain.ainvoke(state)
-            except UnavailableError as exc:
-                if diagnostic_queries and "prepared" in state:
-                    # Opt-in local benchmark data only; API error schema/loggers remain unchanged.
-                    exc.rag_diagnostics = dict(state["prepared"].trace)
-                raise
+            result = await self.prepare_graph.ainvoke(state, config={"recursion_limit": 24})
+            return result["prepared"]
 
     def _scope(self, state: dict) -> dict:
         req = state["req"]
@@ -317,10 +397,13 @@ class ChatPipeline:
         mode = self.settings.chat_mode
         lang = language(req.message, req.options.lang)
         prepared = Prepared(mode, lang, [], trace={"mode": mode, "rewrite_fallback": False})
-        state.update(prepared=prepared, query=req.message, documents=[])
+        state.update(prepared=prepared, query=req.message, documents=[], answer_language=lang)
         requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
+        if self._agent_active(state):
+            prepared.max_calls = self.settings.chat_agent_max_calls
+            return state
         if outside_scope(req.message):
             prepared.static_answer = (
                 "Mình có thể giúp bạn về Elden Ring: cốt truyện, nhiệm vụ, trang bị, cơ chế và hướng build. "
@@ -332,13 +415,6 @@ class ChatPipeline:
         elif reply := small_talk(req.message, lang):
             # Không cần bằng chứng nên không gọi rewrite/retrieval; rewrite sẽ coi đây là out_of_scope.
             prepared.static_answer = reply
-        if (
-            mode == "rag"
-            and prepared.static_answer is None
-            and requested == "always"
-            and not self.settings.web_search_available
-        ):
-            raise UnavailableError("Tìm trên web hiện chưa khả dụng. Chọn chế độ tự động hoặc thử lại sau.")
         if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
             state["overview"] = detect_overview(req.message)
             if state["overview"] is not None:
@@ -346,14 +422,183 @@ class ChatPipeline:
                 prepared.trace["overview_topic"] = state["overview"].topic
         return state
 
+    @staticmethod
+    def _rag_route(state: PreparationState) -> str:
+        p = state["prepared"]
+        return "rag" if p.mode == "rag" and p.static_answer is None else "answer"
+
+    def _agent_active(self, state):
+        return self.settings.chat_agent_enabled and state["prepared"].mode == "rag"
+
+    async def _agent(self, state):
+        p, req = state["prepared"], state["req"]
+        working = state.get("player") if isinstance(state.get("player"), dict) else {}
+        shared_thread = req.channel == "discord" and (req.external_ref or "").startswith("discord:thread:")
+        if shared_thread:
+            working = {}  # No verified actor identity in the shared-thread transport.
+        if time.time() - working.get("updated", 0) > 1800:
+            working = {}
+        pending = working.get("pending")
+        if req.clarification_id and (not pending or str(req.clarification_id) != pending["id"]):
+            raise BadRequestError("Câu hỏi bổ sung đã hết hạn hoặc không thuộc hội thoại này.")
+        decision = await decide(
+            self.llm,
+            req.message,
+            state.get("memory_candidates", []),
+            working,
+            p.lang,
+            self.settings,
+            p.trace,
+            shared_thread=shared_thread,
+            requested_lang=req.options.lang,
+        )
+        if decision is None:
+            # Explicit degraded result, never a hidden return to heuristic intent/slot parsing.
+            p.static_answer = (
+                "Bạn có thể nói rõ yêu cầu và chủ thể cần hỏi không?"
+                if p.lang == "vi"
+                else "Could you clarify the request and subject?"
+            )
+            return state
+        p.agent_decision = decision.model_dump()
+        if req.options.lang == "auto" and decision.answer_language:
+            p.lang = state["answer_language"] = decision.answer_language
+        p.player_state = {
+            "constraints": [c.model_dump() for c in decision.constraints],
+            "original": decision.resolved_question if decision.action == "retrieve" else req.message,
+            "intent": decision.intent,
+            "lang": p.lang,
+            "pending": None,
+            "updated": time.time(),
+        }
+        state["next_player"] = p.player_state
+        state["history"] = []
+        state["entities"] = decision.entities
+        state["query"] = decision.search_query if decision.rewrite else req.message
+        state["resolved_question"] = decision.resolved_question or req.message
+        state["gameplay"] = decision.intent in {"build", "route", "quest", "mechanics", "acquisition"}
+        p.trace["rewrite"] = {
+            "status": "accepted" if decision.rewrite else "not_run",
+            "reason": "agent_decision",
+            "model_calls": 0,
+        }
+        p.trace["memory"]["selected_ids"] = decision.selected_memory_ids
+        if decision.action == "clarify":
+            clarification = Clarification(
+                id=uuid4(),
+                question=decision.reply,
+                fields=decision.missing,
+                expires_at=datetime.fromtimestamp(time.time() + 1800, UTC).isoformat(),
+            )
+            p.clarification = clarification
+            p.player_state["pending"] = clarification.model_dump(mode="json")
+        if decision.action != "retrieve":
+            p.static_answer = decision.reply
+        return state
+
+    def _gameplay(self, state: PreparationState) -> dict:
+        from app.services.gameplay import PlayerState, advance
+
+        p = state["prepared"]
+        if not state.get("handle_gameplay") or self._rag_route(state) != "rag":
+            return state
+        decision = advance(state.get("player") or PlayerState(), state["req"], p.lang)
+        state["next_player"] = decision.state
+        p.player_state = decision.state
+        p.trace["gameplay"] = {"status": decision.status, "confirmed_slots": dict(decision.state.slots)}
+        if decision.reply:
+            p.static_answer, p.clarification = decision.reply, decision.clarification
+            p.trace["gameplay"]["tool_calls"] = 0
+        else:
+            state["req"] = state["req"].model_copy(update={"message": decision.query})
+            state["query"] = state["resolved_question"] = decision.query
+            # The resolved request already carries confirmed working state; do not search old topics.
+            if decision.status == "resumed" and state["req"].options.lang == "auto":
+                p.lang = decision.state.lang
+                state["answer_language"] = p.lang
+            state["overview"] = detect_overview(decision.query) if self.settings.rag_overview_enabled else None
+        return state
+
+    async def _memory(self, state: PreparationState) -> dict:
+        p = state["prepared"]
+        if self._agent_active(state):
+            if not self.settings.chat_history_messages or not self.settings.chat_history_chars:
+                rows, diagnostic = [], {"method": "disabled", "status": "disabled"}
+            elif self.memory is not None and state.get("memory_scope") is not None:
+                rows, diagnostic = await self.memory.recall(state["memory_scope"], state["req"].message)
+            else:
+                # Legacy RAM mode has no claim of durable/semantic memory. Supply only two user anchors.
+                users = [r for r in state["history"] if r.get("role") == "user"][-2:]
+                rows = [
+                    {
+                        "id": r.get("message_id", str(i)),
+                        "source_id": r.get("message_id", str(i)),
+                        "text": r["content"],
+                        "kind": "topic",
+                        "recent": True,
+                    }
+                    for i, r in enumerate(users)
+                ]
+                diagnostic = {"method": "ram_recent", "status": "limited", "candidates": len(rows)}
+            # Candidate count and chars are budgets, not semantic relevance decisions.
+            bounded, used = [], 0
+            for row in rows[: self.settings.chat_history_messages]:
+                if used + len(row["text"]) <= self.settings.chat_history_chars:
+                    bounded.append(row)
+                    used += len(row["text"])
+            rows = bounded
+            if state["req"].channel == "discord" and (state["req"].external_ref or "").startswith("discord:thread:"):
+                rows = [row for row in rows if row.get("kind") != "fact"]
+            state["memory_candidates"] = rows
+            state["history"] = []
+            p.trace["memory"] = diagnostic
+            return state
+        if p.static_answer is not None:
+            state["history"] = []
+            return state
+        if state.get("overview") is not None:
+            state["history"] = state["selected_memories"] = []
+            p.trace["memory"] = {"method": "lexical_user_turns", "reason": "standalone_overview", "selected": 0}
+            return state
+        selection = select_history(
+            state["query"],
+            state["history"],
+            max_messages=self.settings.chat_history_messages,
+            max_chars=self.settings.chat_history_chars,
+        )
+        state["history"] = selection.rows
+        state["selected_memories"] = selection.rows
+        p.trace["memory"] = {
+            "method": "lexical_user_turns",
+            "reason": selection.reason,
+            "selected": len(selection.rows),
+            "provenance": selection.provenance,
+        }
+        if selection.ambiguous:
+            p.static_answer = (
+                "Bạn muốn nói tiếp về nhân vật, trang bị hoặc chủ đề nào trong Elden Ring?"
+                if p.lang == "vi"
+                else "Which Elden Ring character, equipment or topic would you like to continue?"
+            )
+        return state
+
+    def _prompt_node(self, state: PreparationState) -> dict:
+        return {"prepared": self._prompt(state)}
+
     async def _rewrite(self, state: dict) -> dict:
         p = state["prepared"]
+        # A clarification does not need a configured web provider. Check forced-search
+        # availability only after working state/memory have resolved or asked the user.
+        if p.trace["web_search"]["requested"] == "always" and not self.settings.web_search_available:
+            raise UnavailableError("Tìm trên web hiện chưa khả dụng. Chọn chế độ tự động hoặc thử lại sau.")
+        if self._agent_active(state):
+            return state  # Decision model already chose and validated rewrite in the same call.
         if state.get("overview") is not None:
             # A recognized global topic is already a valid scope, not an ambiguous referent.
             # The bounded overview query plan supplies English search cues without a paid rewrite call.
             p.trace["rewrite"] = {"status": "not_run", "reason": "overview_query_plan", "model_calls": 0}
             return state
-        if self.settings.rag_rewrite_enabled or state.get("search_mode", "off") != "off":
+        if self.settings.rag_rewrite_enabled or state.get("search_mode", "off") != "off" or state["history"]:
             diagnostics = {}
             rewritten, fallback = await rewrite(
                 self.llm,
@@ -376,11 +621,12 @@ class ChatPipeline:
                     else "That's outside Elden Ring, so I can't help with it. "
                     "Would you like to ask about lore, quests, equipment, bosses or builds?"
                 )
-            elif rewritten.ambiguous or (
-                fallback
-                and (
-                    contextual_followup(state["query"])
-                    or (not state["history"] and unresolved_reference(state["query"]))
+            elif (
+                rewritten.ambiguous
+                or (state["history"] and not rewritten.entities)
+                or (
+                    fallback
+                    and (dependent(state["query"]) or (not state["history"] and unresolved_reference(state["query"])))
                 )
             ):
                 p.static_answer = (
@@ -391,6 +637,8 @@ class ChatPipeline:
             else:
                 state["query"] = rewritten.standalone_query_en
                 state["entities"] = rewritten.entities
+                if state["history"]:
+                    state["resolved_question"] = rewritten.standalone_query_en
         elif contextual_followup(state["query"]) or (not state["history"] and unresolved_reference(state["query"])):
             p.static_answer = "Bạn đang hỏi nhân vật nào?" if p.lang == "vi" else "Which character do you mean?"
         return state
@@ -406,7 +654,10 @@ class ChatPipeline:
                     "limit": self.settings.rag_prefetch,
                 }
             )
-            queries = plan_queries(state["req"].message, state["query"], self.settings.rag_query_mode)
+            original = state.get("resolved_question", state["req"].message)
+            if state["prepared"].agent_decision.get("turn_type") == "new":
+                original = state["req"].message
+            queries = plan_queries(original, state["query"], self.settings.rag_query_mode)
             if state.get("overview") is not None:
                 queries = overview_queries(queries, state["overview"])
             rows, diagnostics = [], []
@@ -455,7 +706,10 @@ class ChatPipeline:
                 from app.rag.gameplay_knowledge import supplements
 
                 extra = await asyncio.to_thread(
-                    supplements, state["req"].message, self.policy, state["req"].options.spoilers
+                    supplements,
+                    state.get("resolved_question", state["req"].message) + "\n" + state["req"].message,
+                    self.policy,
+                    state["req"].options.spoilers,
                 )
                 if extra:
                     ids = {h.id for h in extra}
@@ -468,8 +722,15 @@ class ChatPipeline:
         return state
 
     async def _web(self, state: dict) -> dict:
+        """Compatibility entry for callers testing the combined policy; graph uses separate nodes."""
+        await self._assess(state)
+        return await self._search_web(state) if state["needs_web"] else state
+
+    async def _assess(self, state: dict) -> dict:
         p = state["prepared"]
         mode = state.get("search_mode", "off")
+        state["needs_web"] = False
+        state["assessment_status"] = None
         if p.static_answer is not None or mode == "off":
             return state
         local = select_context(
@@ -482,18 +743,22 @@ class ChatPipeline:
             query=state["req"].message + "\n" + state["query"],
         )
         context = [context_item(hit, i + 1) for i, hit in enumerate(local)]
+        state["local"], state["local_context"] = local, context
         if state.get("diagnostic_queries"):
             p.trace["local_evidence_context"] = context
         status = None
         if mode == "auto":
+            if context:
+                spend(p.trace, "assessment", p.max_calls)
             status, diagnostic = await assess(
                 self.llm,
                 state["query"],
-                state["history"],
+                [],  # Conversation memory resolves intent; it cannot make evidence sufficient.
                 context,
                 self.settings.web_search_assessment_seconds,
             )
             p.trace["evidence_assessment"] = diagnostic
+            state["assessment_status"] = status
             p.trace["web_search"]["trigger"] = diagnostic["decision"]
             if status == "sufficient":
                 p.trace["web_search"]["status"] = "local_sufficient"
@@ -503,6 +768,13 @@ class ChatPipeline:
                     "Bạn muốn hỏi cụ thể điều gì?" if p.lang == "vi" else "Could you clarify your question?"
                 )
                 return state
+        state["needs_web"] = True
+        return state
+
+    async def _search_web(self, state: dict) -> dict:
+        p = state["prepared"]
+        local, context = state["local"], state["local_context"]
+        status = state.get("assessment_status")
         try:
             if self.web_search is None:
                 raise WebSearchError("not_configured")
@@ -519,10 +791,11 @@ class ChatPipeline:
         except WebSearchError as exc:
             p.trace["web_search"].update(status="error", reason=exc.reason)
             if status is None and local:
+                spend(p.trace, "assessment", p.max_calls)
                 status, diagnostic = await assess(
                     self.llm,
                     state["query"],
-                    state["history"],
+                    [],
                     context,
                     self.settings.web_search_assessment_seconds,
                 )
@@ -568,12 +841,24 @@ class ChatPipeline:
             "spoilers": req.options.spoilers,
             "policy": prompt("answer" if p.mode == "rag" else "llm_only")
             + ("\n" + prompt("overview") if state.get("overview") is not None else ""),
-            "history": state["history"],
+            # In RAG, old turns cannot bias generation or masquerade as new evidence.
+            # In llm_only, selected USER context remains explicitly conversational, never assistant claims.
+            "history": [] if p.mode == "rag" else state["history"],
             "payload": json.dumps(
-                {"question": req.message, "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)]},
+                {
+                    "question": state.get("resolved_question", req.message),
+                    "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
+                },
                 ensure_ascii=False,
             ),
         }
+        if state.get("next_player") is not None:
+            player = state["next_player"]
+            p.values["player_profile"] = (
+                {c["key"]: c["value"] for c in player.get("constraints", [])}
+                if isinstance(player, dict)
+                else dict(player.slots)
+            )
         p.messages = convert_to_openai_messages(self.template.invoke(p.values).to_messages())
         p.trace["prepare_ms"] = round((time.perf_counter() - state["started"]) * 1000, 2)
         return p

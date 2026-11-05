@@ -162,7 +162,9 @@ async def test_llm_only_has_no_retrieval_or_grounding_and_history_is_bounded():
     assert "chưa được đối chiếu" in first.answer
     assert "IndexBeast" in llm.seen[0][0]["content"]
     assert "Language: vi" in llm.seen[0][0]["content"]
-    assert len(llm.seen[1]) == 4
+    # A repeated standalone question needs no old transcript, including in llm_only.
+    assert len(llm.seen[1]) == 2
+    assert live.traces[first.message_id]["memory"]["selected"] == 0
     assert live.has_message(first.message_id)
     assert len(live.history(first.conversation_id).messages) == 4
     with pytest.raises(NotFoundError):
@@ -308,10 +310,10 @@ async def test_role_aware_prompt_keeps_braces_history_and_sources_as_data():
     # The real LCEL prompt → fake BaseChatModel path, rather than a dict-only mock.
     await pipeline.generator.generate(prepared)
     messages = llm.seen[-1]
-    assert [m["role"] for m in messages] == ["system", "user", "assistant", "user"]
-    assert messages[1:3] == history
+    assert [m["role"] for m in messages] == ["system", "user"]
+    assert prepared.values["history"] == []
     assert raw not in messages[0]["content"]
-    assert "Unverified earlier lore claim." not in messages[0]["content"]
+    assert "Unverified earlier lore claim." not in str(messages)
     assert json.loads(messages[-1]["content"])["evidence"][0]["text"] == raw
 
 
@@ -1184,7 +1186,9 @@ async def test_rewrite_scope_refusal_is_distinct_from_ambiguity(out_of_scope, am
         "ambiguous": ambiguous,
     }
     result = await service("rag", llm, retriever, rag_rewrite_enabled=True).answer(
-        ChatRequest(message="Tell me more", channel="web")
+        # A missing referent now exits at memory without a paid rewrite. Use a standalone
+        # unfamiliar request to test the two model-rewrite dispositions independently.
+        ChatRequest(message="Unfamiliar request", channel="web")
     )
     assert not retriever.calls and not result.grounded
     assert ("Which Elden Ring" in result.answer) is ambiguous

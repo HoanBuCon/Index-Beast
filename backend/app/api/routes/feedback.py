@@ -3,10 +3,11 @@
 Phụ trách: TV1 · [S2] API contract v1
 """
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.deps import get_chat_service
 from app.api.errors import ErrorBody
+from app.api.guard import _trusted_service
 from app.api.schemas.feedback import FeedbackRequest
 from app.services.chat import ChatService
 from core.errors import NotFoundError
@@ -17,10 +18,26 @@ router = APIRouter(tags=["feedback"])
 @router.post(
     "/feedback",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses={404: {"model": ErrorBody}, 422: {"model": ErrorBody}},
+    responses={
+        401: {"model": ErrorBody},
+        404: {"model": ErrorBody},
+        422: {"model": ErrorBody},
+        503: {"model": ErrorBody},
+    },
     summary="Gửi 👍/👎 cho message_id",
 )
-async def feedback(body: FeedbackRequest, service: ChatService = Depends(get_chat_service)) -> Response:
-    if not service.has_message(body.message_id):
+async def feedback(
+    body: FeedbackRequest, request: Request, service: ChatService = Depends(get_chat_service)
+) -> Response:
+    exists = (
+        await service.stored_has_message(
+            body.message_id,
+            token=request.headers.get("X-Conversation-Token"),
+            trusted_service=_trusted_service(request),
+        )
+        if hasattr(service, "stored_has_message")
+        else service.has_message(body.message_id)
+    )
+    if not exists:
         raise NotFoundError("Không tìm thấy câu trả lời để đánh giá.")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

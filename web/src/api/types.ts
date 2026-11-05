@@ -30,7 +30,12 @@ export function isSource(value: unknown): value is Source {
     (source.origin === undefined || source.origin === "web" || source.origin === "corpus")
   );
 }
+export function isConversationToken(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(value);
+}
 export interface ChatRequest {
+  conversation_token?: string;
+  turn_id?: string;
   conversation_id?: string | null;
   message: string;
   channel: "web" | "discord";
@@ -46,6 +51,7 @@ export interface Clarification {
   fields: { key: string; label: string; input_type: "text" | "number" | "choice"; options: string[] }[];
 }
 export interface ChatResponse {
+  conversation_token?: string;
   conversation_id: string;
   message_id: string;
   answer: string;
@@ -108,6 +114,7 @@ export interface Message {
   clarification?: Clarification | null;
 }
 export interface Conversation {
+  serverToken?: string;
   id: string;
   title: string;
   mode: "demo" | "api" | "api-stream";

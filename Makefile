@@ -12,6 +12,10 @@ PYTHON ?= $(if $(wildcard backend/.venv/Scripts/python.exe),$(CURDIR)/backend/.v
 API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('API_PORT') or '')"),18000)
 # Đọc host chia sẻ web từ .env; override: make web WEB_HOST=<IP-LAN-hoac-VPN>.
 WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
+# Giới hạn chờ API sẵn sàng trước khi mở web; không cần sửa .env để ghi đè.
+DEV_READY_TIMEOUT ?= 60
+# Gián tiếp qua biến này để `make -n dev` chỉ in lệnh, không thực thi launcher.
+DEV_MAKE ?= $(MAKE)
 
 .PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
 .PHONY: bot bot-deploy bot-check bot-dev data
@@ -80,7 +84,7 @@ bot-dev: up      ## Bật hạ tầng, API mock và bot cùng terminal; cần Do
 	$(MAKE) --no-print-directory -j2 api bot
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
-	$(MAKE) --no-print-directory -j2 api web
+	"$(PYTHON)" -X utf8 backend/scripts/dev.py --make "$(DEV_MAKE)" --api-port "$(API_PORT)" --web-host "$(WEB_HOST)" --timeout "$(DEV_READY_TIMEOUT)"
 
 data:            ## Pipeline dữ liệu: make data STEP=status|crawl|clean|chunk|load|index|all ARGS="--dry-run"
 	cd backend && "$(PYTHON)" -X utf8 -m scripts.data_pipeline $(or $(STEP),status) $(ARGS)

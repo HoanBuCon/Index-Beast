@@ -34,6 +34,7 @@ export async function* replyEvents(
   yield {
     type: "done",
     data: {
+      ...(reply.conversation_token === undefined ? {} : { conversation_token: reply.conversation_token }),
       conversation_id: reply.conversation_id,
       message_id: reply.message_id,
       grounded: reply.grounded,
