@@ -311,12 +311,12 @@ async def test_agent_bypasses_legacy_regex_and_selects_no_unnecessary_clarificat
     assert llm.plans[0]["memories"] == []
 
 
-async def test_invalid_model_output_asks_in_degraded_mode_without_legacy_guess():
+async def test_invalid_model_output_is_provider_failure_not_fake_clarification():
     llm = AgentLLM([{"wrong": "schema"}])
     live = service(llm=llm)
-    result = await live.answer(req("Nó ở đâu?"))
-    assert not result.grounded and result.sources == [] and len(llm.plans) == 1
-    assert live.traces[result.message_id]["agent"]["status"] == "error"
+    with pytest.raises(UpstreamError, match="quyết định hợp lệ"):
+        await live.answer(req("Nó ở đâu?"))
+    assert len(llm.plans) == 1
     assert not live.pipeline.retriever.calls
 
 
@@ -667,3 +667,133 @@ async def test_dense_memory_mode_has_one_prefix_and_never_initializes_bm25(monke
         await encoder.encode_dense(["passage: passage: Ranni"])
     with pytest.raises(ValueError):
         await encoder.encode_dense(["oversize"])
+
+
+async def test_free_text_multiple_rounds_keep_root_without_memory_or_rules(monkeypatch):
+    import app.services.gameplay as legacy
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Agent must not call the legacy classifier")
+
+    monkeypatch.setattr(legacy, "advance", forbidden)
+    ask = plan(
+        intent="build",
+        action="clarify",
+        entities=["Moonveil"],
+        reply="Level và class của bạn?",
+        missing=[{"key": "profile", "label": "Thông tin nhân vật"}],
+        reason="missing_player_details",
+    )
+
+    def second(payload):
+        assert payload["working_state"]["request_text"] == "Chia chỉ số Moonveil"
+        assert payload["question"] == "level 100"
+        return {
+            **ask,
+            "turn_type": "clarification_reply",
+            "reply": "Bạn bắt đầu với class nào?",
+            "constraints": [{"key": "level", "value": "100", "source_id": "current"}],
+        }
+
+    def resume(payload):
+        assert not payload["memories"]
+        assert payload["working_state"]["original"] == "Chia chỉ số Moonveil"
+        level = payload["working_state"]["constraints"][0]
+        assert level["source_id"] != "current"
+        return plan(
+            intent="build",
+            turn_type="clarification_reply",
+            entities=["Moonveil", "Samurai"],
+            resolved_question="Moonveil stat allocation level 100 Samurai PvE",
+            search_query="Moonveil stat allocation level 100 Samurai PvE",
+            constraints=[
+                level,
+                {"key": "class", "value": "Samurai", "source_id": "current"},
+                {"key": "goal", "value": "PvE", "source_id": "current"},
+            ],
+        )
+
+    live = service(llm=AgentLLM([ask, second, resume]), chat_history_messages=0)
+    first = await live.answer(req("Chia chỉ số Moonveil"))
+    second_answer = await live.answer(
+        req("level 100", conversation_id=first.conversation_id, clarification_id=first.clarification.id)
+    )
+    result = await live.answer(
+        req(
+            "Samurai, chủ yếu PvE",
+            conversation_id=first.conversation_id,
+            clarification_id=second_answer.clarification.id,
+        )
+    )
+    assert result.clarification is None
+    assert live.pipeline.retriever.calls[0][0] == "Moonveil stat allocation level 100 Samurai PvE"
+    assert [
+        m.content for m in live._conversations[first.conversation_id].conversation.messages if m.role == "user"
+    ] == ["Chia chỉ số Moonveil", "level 100", "Samurai, chủ yếu PvE"]
+
+
+async def test_pending_ids_expiration_and_foreign_conversation_do_not_call_model():
+    ask = plan(
+        action="clarify",
+        reply="Bạn muốn hỏi gì về Ranni?",
+        missing=[{"key": "topic", "label": "Chủ đề"}],
+        reason="ambiguous_subject",
+    )
+    llm = AgentLLM([ask])
+    live = service(llm=llm)
+    first = await live.answer(req())
+    for conv, ident in [(first.conversation_id, uuid4()), (None, first.clarification.id)]:
+        with pytest.raises(BadRequestError):
+            await live.answer(req("Lore", conversation_id=conv, clarification_id=ident))
+    state = live._conversations[first.conversation_id]
+    state.player["pending"]["expires_at"] = "2000-01-01T00:00:00+00:00"
+    with pytest.raises(BadRequestError):
+        await live.answer(req("Lore", conversation_id=first.conversation_id, clarification_id=first.clarification.id))
+    assert len(llm.plans) == 1
+
+
+async def test_model_cancel_clears_pending_and_old_id_cannot_resume():
+    ask = plan(
+        action="clarify",
+        reply="Bạn muốn hỏi gì?",
+        missing=[{"key": "topic", "label": "Chủ đề"}],
+        reason="ambiguous_subject",
+    )
+    cancel = plan(
+        intent="cancel",
+        action="respond",
+        turn_type="followup",
+        entities=[],
+        reply="Đã hủy yêu cầu.",
+        reason="conversation_control",
+    )
+    live = service(llm=AgentLLM([ask, cancel]))
+    first = await live.answer(req())
+    result = await live.answer(
+        req("Hủy yêu cầu đang chờ.", conversation_id=first.conversation_id, clarification_id=first.clarification.id)
+    )
+    assert result.answer == "Đã hủy yêu cầu."
+    assert live._conversations[first.conversation_id].player.get("pending") is None
+    with pytest.raises(BadRequestError):
+        await live.answer(req("Lore", conversation_id=first.conversation_id, clarification_id=first.clarification.id))
+
+
+async def test_clarification_round_budget_prevents_infinite_questions():
+    ask = plan(
+        action="clarify",
+        reply="Bạn muốn hỏi gì?",
+        missing=[{"key": "topic", "label": "Chủ đề"}],
+        reason="ambiguous_subject",
+    )
+    llm = AgentLLM([ask, {**ask, "turn_type": "clarification_reply"}])
+    live = service(llm=llm)
+    result = await live.answer(req())
+    for _ in range(2):
+        result = await live.answer(
+            req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
+        )
+    with pytest.raises(UnavailableError, match="giới hạn hỏi bổ sung"):
+        await live.answer(
+            req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
+        )
+    assert not live.pipeline.retriever.calls

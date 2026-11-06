@@ -25,7 +25,7 @@ export default function MessageList({
   // Explicit fixture overrides are retained for the DEV preview only.
   illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
   illustrationPreviewState?: IllustrationPreviewState;
-  onClarification?: (text: string, id: string) => void;
+  onClarification?: (text: string, id: string) => Promise<boolean> | void;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -98,7 +98,9 @@ export default function MessageList({
                 />
               )}
               {!message.incomplete &&
-                message.id === messages.at(-1)?.id &&
+                (message.id === messages.at(-1)?.id ||
+                  (messages.at(-1)?.incomplete &&
+                    messages.findLast((m) => m.role === "user")?.clarificationId === message.clarification?.id)) &&
                 message.clarification &&
                 onClarification && (
                   <ClarificationForm

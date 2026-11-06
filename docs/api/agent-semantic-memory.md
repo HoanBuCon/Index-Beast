@@ -39,7 +39,7 @@ Server kiểm tra constraint value xuất hiện trong nguồn user đã cấp; 
 Đây là kiểm tra provenance/literal, không phải chứng minh mô hình hiểu đúng nghĩa hay quan hệ canon.
 Guard không dùng lại classifier tên/intent cũ làm allowlist. Những quyết định sai về nghĩa vẫn cần review thực tế.
 
-Planner trả schema không hợp lệ: trace `invalid_decision`, hỏi rõ lại có giới hạn. Provider lỗi/timeout thật
+Planner trả schema không hợp lệ: trace `invalid_decision`, trả upstream error; không giả lỗi model thành câu hỏi clarification. Provider lỗi/timeout thật
 trả lỗi upstream/unavailable, không giả làm câu hỏi thành công. Conversation-control reply không được bịa URL/citation.
 
 ## Luồng hệ thống

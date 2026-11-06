@@ -103,6 +103,7 @@ export type StreamEvent =
   | { type: "done"; data: Omit<ChatResponse, "answer" | "sources" | "images"> }
   | { type: "error"; message: string };
 export interface Message {
+  clarificationId?: string;
   id: string;
   role: "user" | "assistant";
   content: string;

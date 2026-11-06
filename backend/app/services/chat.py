@@ -274,12 +274,15 @@ class LiveChatService:
                 created_at=now + timedelta(microseconds=1),
             ),
         ]
-        if self.repository is not None:
-            working = dict(player) if isinstance(player, dict) else {}
+        working = dict(player) if isinstance(player, dict) else None
+        if working is not None:
             working["constraints"] = [
                 {**c, "source_id": str(user_id) if c["source_id"] == "current" else c["source_id"]}
                 for c in working.get("constraints", [])
             ]
+            player = working
+        if self.repository is not None:
+            working = working or {}
             snapshot = Snapshot(state.conversation, state.external_ref, state.owner, state.revision, working)
             created = await self.repository.save(snapshot, pair, working, prepared.agent_decision)
             if not created:
