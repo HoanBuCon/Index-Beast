@@ -288,11 +288,22 @@ class Generator:
 
     @staticmethod
     def _inputs(prepared: Prepared, attempt: int) -> dict:
+        # The server-selected reply language wins over stale model/template values and English retrieval.
+        values = dict(prepared.values)
+        values["lang"] = prepared.lang
+        target = "Vietnamese (tiếng Việt)" if prepared.lang == "vi" else "English"
+        language_policy = (
+            f"\nAUTHORITATIVE RESPONSE LANGUAGE: Write all explanatory prose in {target}, "
+            "including answer, clarification and limitation. The request may have been rewritten into English "
+            "for search and the evidence may be English; neither changes the response language. "
+            "Keep proper names, exact quotations, citation markers, JSON keys and technical identifiers unchanged. "
+            "Do not copy the language of JSON examples. Check the language before returning the response.\n"
+        )
         if not attempt:
-            return prepared.values
+            values["policy"] = values.get("policy", "") + language_policy
+            return values
         # Retry with the SAME evidence/question/history and a fixed protocol reminder.
         # Never feed malformed output or private reasoning back into the prompt.
-        values = dict(prepared.values)
         values["policy"] = values.get("policy", "") + (
             '\nFORMAT RETRY: Return ONLY one valid JSON object, with "answer" first, '
             '"evidence" array and "insufficient" boolean. No Markdown or prose outside JSON. '
@@ -314,6 +325,7 @@ class Generator:
             "Do not mix this clarification object with supported claims, evidence or limitation. "
             "Answer directly without narrating retrieval or describing the supplied context. "
         )
+        values["policy"] += language_policy
         return values
 
     def _retry(self, prepared: Prepared, attempt: int, diagnostics: dict, *, emitted: str = "") -> bool:

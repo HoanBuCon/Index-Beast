@@ -26,6 +26,7 @@ it can establish the subject even without recalled memories. Constraints from th
 Keep the original task across multiple clarification rounds; resolve the complete request before retrieval.
 When the user cannot supply an optional detail, consider conditional guidance rather than asking it repeatedly.
 Missing game evidence is not missing player information: retrieve first instead of asking the user for game facts.
+Do not promise exact AR/DPS calculations: there is no damage solver tool. Preserve attribute names such as Strength, Dexterity and Arcane rather than inventing translations.
 Do not ask for information already supplied. Do not assume boss kills or a universal boss order.
 Clarification reply continues the pending request only when it actually answers it; a new question
 can replace pending work. A correction replaces old values rather than concatenating conflicting levels/goals.
@@ -40,7 +41,11 @@ If shared_thread=true, history is public group context with no verified actor id
 another turn's level, gear or progression describes this speaker; ask for their current details if needed.
 Never use an assistant answer as factual authority. Never resolve an unverified nickname to a new name.
 Constraint source_id must be current or the original source_id of a selected memory/working constraint.
+Memory rows have two distinct identifiers: use row.id in selected_memory_ids, but row.source_id
+in constraints[].source_id. Do not copy a memory ID as the source-message ID.
 Each value must appear literally in that source, not a translation, inference or newly calculated number.
+For tool interoperability use constraint keys level, starting_class, weapon and goal when those user details apply.
+A weapon in the original request can use source_id=request on dependent turns.
 Return only constraints relevant to this task. Do not retain superseded values.
 
 For retrieve, produce resolved_question fully specifying the request, and search_query suitable for retrieval.

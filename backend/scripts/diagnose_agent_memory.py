@@ -49,6 +49,25 @@ def save(directory, report, secrets=()):
     temporary.replace(directory / "report.json")
 
 
+def remaining_cases(report, cases):
+    spent = report["attempted_turns"]
+    if (
+        type(spent) is not int
+        or not 0 <= spent <= len(cases)
+        or len(report["rows"]) != spent
+        or [r["id"] for r in report["rows"]] != [c["id"] for c in cases[:spent]]
+    ):
+        raise ValueError("Invalid checkpoint; do not replay uncertain/spent turns")
+    return cases[spent:]
+
+
+def private_state(path, groups):
+    temp = path.with_suffix(".tmp")
+    temp.write_text(json.dumps(groups), encoding="utf-8")
+    temp.chmod(0o600)
+    temp.replace(path)
+
+
 async def execute(args, manifest, cases):
     # Set before importing model-related modules; no missing-cache downloads are allowed.
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -79,8 +98,9 @@ async def execute(args, manifest, cases):
         "created_at": datetime.now(UTC).isoformat(),
         "status": "preflight",
         "manifest": manifest,
-        "manifest_sha256": hashlib.sha256(MANIFEST.read_bytes()).hexdigest(),
-        "planned_turns": 20,
+        "cases": cases,
+        "manifest_sha256": hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest(),
+        "planned_turns": len(cases),
         "attempted_turns": 0,
         "rows": [],
         "preflight": [],
@@ -96,7 +116,26 @@ async def execute(args, manifest, cases):
             "SSE usage may be unavailable",
         ],
     }
-    args.output.mkdir(parents=True, exist_ok=False)
+    resume = getattr(args, "resume", False)
+    import tempfile
+
+    state_path = Path(tempfile.gettempdir()) / (
+        "indexbeast-run-" + hashlib.sha256(str(args.output.resolve()).encode()).hexdigest() + ".json"
+    )
+    if resume:
+        previous = json.loads((args.output / "report.json").read_text(encoding="utf-8"))
+        if previous["manifest_sha256"] != report["manifest_sha256"] or previous["planned_turns"] != len(cases):
+            raise ValueError("Resume manifest/budget differs")
+        remaining_cases(previous, cases)
+        report = previous
+        database, collection = report["test_database"], report["test_memory_collection"]
+        suffix = database.rsplit("_", 1)[-1]
+        groups = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+        if report["attempted_turns"] and any(c.get("group") for c in cases) and not groups:
+            raise ValueError("Private resume state missing; do not replay spent turns")
+    else:
+        groups = {}
+        args.output.mkdir(parents=True, exist_ok=False)
     save(args.output, report, secret_values)
     client = AsyncQdrantClient(url=base.qdrant_url, timeout=3)
     redis = Redis.from_url(base.redis_url, socket_timeout=3, socket_connect_timeout=3)
@@ -124,7 +163,11 @@ async def execute(args, manifest, cases):
         await redis.ping()
         report["preflight"].append({"resource": stage, "status": "ok"})
         stage = "isolated resources"
-        if not re.fullmatch(r"indexbeast_agent_test_[a-f0-9]{10}", database) or database == base.postgres_db:
+        if (
+            not re.fullmatch(r"indexbeast_agent_test_[a-f0-9]{10}", database)
+            or collection != f"ib_agent_test_{suffix}"
+            or database == base.postgres_db
+        ):
             raise ValueError("Unsafe test resource name")
         admin = await asyncpg.connect(
             host=base.postgres_host,
@@ -135,7 +178,10 @@ async def execute(args, manifest, cases):
             timeout=3,
         )
         try:
-            await admin.execute(f'CREATE DATABASE "{database}"')
+            if not resume or not report.get("resources_created"):
+                await admin.execute(f'CREATE DATABASE "{database}"')
+                report["resources_created"] = True
+                save(args.output, report, secret_values)
         finally:
             await admin.close()
         settings = base.model_copy(
@@ -166,9 +212,12 @@ async def execute(args, manifest, cases):
                 row = super().start(inputs, streaming)
                 if inputs.get("policy", "").startswith("You are IndexBeast's request decision"):
                     row["phase"] = "decision"
+                elif inputs.get("policy", "").startswith("You are IndexBeast's bounded tool"):
+                    row["phase"] = "tool_decision"
                 return row
 
-        counted = CountedAgent(ctx.llm, 120)
+        counted = CountedAgent(ctx.llm, len(cases) * 6)
+        counted.calls = list(report["logical_model_calls"])
         ctx.llm = counted
         original_post = ctx.web_search._post
         tool_counts = Counter()
@@ -202,7 +251,6 @@ async def execute(args, manifest, cases):
             )
         }
         app = create_app(settings, context=ctx)
-        groups = {}
         stage = "live requests"
         async with (
             app.router.lifespan_context(app),
@@ -215,8 +263,8 @@ async def execute(args, manifest, cases):
             # Warm only the cached encoder; this is not a hidden model/API diagnostic question.
             await app.state.chat_service.pipeline.retriever.encoder.encode_dense(["Ranni"], query=True)
             report["status"] = "running"
-            for case in cases:
-                if report["attempted_turns"] >= 20:
+            for case in cases[report["attempted_turns"] :]:
+                if report["attempted_turns"] >= len(cases):
                     raise RuntimeError("Turn limit exceeded")
                 group = groups.get(case["group"], {}) if case["group"] else {}
                 if case.get("restart_before"):
@@ -286,6 +334,7 @@ async def execute(args, manifest, cases):
                                 "conversation_id": data["conversation_id"],
                                 "conversation_token": data.get("conversation_token"),
                             }
+                        await asyncio.to_thread(private_state, state_path, groups)
                         data.pop("conversation_token", None)
                         row.update(status="ok", response=data)
                     prepared = observed.get("prepared")
@@ -327,7 +376,7 @@ async def execute(args, manifest, cases):
         json.dumps(
             {
                 "status": report["status"],
-                "planned": 20,
+                "planned": len(cases),
                 "attempted": report["attempted_turns"],
                 "report": str(args.output / "report.json"),
             },

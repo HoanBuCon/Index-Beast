@@ -71,6 +71,9 @@ class Settings(BaseSettings):
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
     chat_agent_enabled: bool = True
+    chat_tool_agent_enabled: bool = True
+    chat_tool_steps: int = Field(default=3, ge=1, le=4)
+    chat_tool_queries: int = Field(default=2, ge=1, le=3)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int = Field(default=6, ge=1, le=8)
     chat_persistence: Literal["memory", "postgres"] = "memory"
