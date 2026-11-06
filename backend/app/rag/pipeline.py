@@ -37,7 +37,7 @@ from app.rag.web_query import web_query
 from app.rag.web_search import assess, merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
-from core.errors import AppError, BadRequestError, UnavailableError
+from core.errors import AppError, BadRequestError, UnavailableError, UpstreamError
 from core.types import Hit
 
 
@@ -439,6 +439,9 @@ class ChatPipeline:
         if time.time() - working.get("updated", 0) > 1800:
             working = {}
         pending = working.get("pending")
+        if pending and datetime.fromisoformat(pending["expires_at"]).timestamp() <= time.time():
+            working = {}
+            pending = None
         if req.clarification_id and (not pending or str(req.clarification_id) != pending["id"]):
             raise BadRequestError("Câu hỏi bổ sung đã hết hạn hoặc không thuộc hội thoại này.")
         decision = await decide(
@@ -453,25 +456,29 @@ class ChatPipeline:
             requested_lang=req.options.lang,
         )
         if decision is None:
-            # Explicit degraded result, never a hidden return to heuristic intent/slot parsing.
-            p.static_answer = (
-                "Bạn có thể nói rõ yêu cầu và chủ thể cần hỏi không?"
-                if p.lang == "vi"
-                else "Could you clarify the request and subject?"
-            )
-            return state
+            raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
         p.agent_decision = decision.model_dump()
         if req.options.lang == "auto" and decision.answer_language:
             p.lang = state["answer_language"] = decision.answer_language
+        continuing = decision.turn_type != "new" and decision.intent != "cancel"
+        rounds = working.get("clarification_rounds", 0) if continuing else 0
+        if decision.action == "clarify" and rounds >= 3:
+            raise UnavailableError(
+                "Đã đạt giới hạn hỏi bổ sung. Bạn có thể gửi yêu cầu cụ thể hơn hoặc hủy yêu cầu này."
+            )
         p.player_state = {
             "constraints": [c.model_dump() for c in decision.constraints],
-            "original": decision.resolved_question if decision.action == "retrieve" else req.message,
+            "original": working.get("original", req.message) if continuing else req.message,
+            "request_text": working.get("request_text", req.message) if continuing else req.message,
+            "clarification_rounds": rounds + 1 if decision.action == "clarify" else 0,
             "intent": decision.intent,
             "lang": p.lang,
             "pending": None,
             "updated": time.time(),
         }
         state["next_player"] = p.player_state
+        if decision.intent == "cancel":
+            p.player_state = state["next_player"] = {"updated": time.time(), "constraints": [], "pending": None}
         state["history"] = []
         state["entities"] = decision.entities
         state["query"] = decision.search_query if decision.rewrite else req.message

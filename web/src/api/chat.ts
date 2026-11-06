@@ -9,6 +9,7 @@ export interface ChatOptions {
   scenario?: DemoScenario;
   webSearch?: "off" | "auto" | "always";
   clarificationId?: string;
+  turnId?: string;
 }
 export async function* replyEvents(
   body: ChatRequest,

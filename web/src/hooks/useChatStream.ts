@@ -15,20 +15,21 @@ export function useChatStream(update: (conversation: Conversation) => void) {
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
   async function send(base: Conversation, text: string, options: ChatOptions = {}) {
-    if (controller.current) return;
+    if (controller.current) return false;
     const abort = new AbortController();
     controller.current = abort;
     setBusy(true);
     setError("");
     const answerId = createUuid();
-    const userId = createUuid();
+    const userId = options.turnId ?? createUuid();
+    let completed = false;
     let current: Conversation = {
       ...base,
       title: base.messages.length ? base.title : text.slice(0, 60),
       updatedAt: new Date().toISOString(),
       messages: [
         ...base.messages,
-        { id: userId, role: "user", content: text, sources: [] },
+        { id: userId, role: "user", content: text, sources: [], clarificationId: options.clarificationId },
         { id: answerId, role: "assistant", content: "", sources: [], incomplete: true },
       ],
     };
@@ -55,6 +56,7 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         } else if (event.type === "sources")
           changeAnswer({ ...answerSources(event), clarification: event.clarification ?? null });
         else if (event.type === "done") {
+          completed = true;
           current = {
             ...current,
             serverId: event.data.conversation_id,
@@ -63,6 +65,7 @@ export function useChatStream(update: (conversation: Conversation) => void) {
           changeAnswer({ serverId: event.data.message_id, grounded: event.data.grounded, incomplete: false });
         }
       }
+      if (!completed) throw new Error("Câu trả lời chưa hoàn tất. Vui lòng thử lại.");
     } catch (cause) {
       if (abort.signal.aborted) setError("Đã dừng. Câu trả lời chưa hoàn tất.");
       else if (cause instanceof Error && cause.name === "TimeoutError")
@@ -79,6 +82,7 @@ export function useChatStream(update: (conversation: Conversation) => void) {
       controller.current = null;
       setBusy(false);
     }
+    return completed;
   }
   return { send, busy, error, stop: () => controller.current?.abort(), clearError: () => setError("") };
 }

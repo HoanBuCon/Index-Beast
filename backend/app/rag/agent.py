@@ -96,11 +96,16 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
         raise ValueError("Unprovided memory reference")
     selected = [available[key] for key in decision.selected_memory_ids]
     sources = {"current": question}
+    # Server-retained raw user request anchors pending work even when recall is empty/disabled.
+    request_text = working.get("request_text", "") if decision.turn_type != "new" else ""
+    if request_text:
+        sources["request"] = request_text
     for row in selected:
         sources[row["source_id"]] = sources.get(row["source_id"], "") + "\n" + row["text"]
     # Working state contains only previously validated user constraints, with original provenance.
     for item in working.get("constraints", []):
-        sources[item["source_id"]] = sources.get(item["source_id"], "") + "\n" + item["value"]
+        if item["source_id"] != "current":
+            sources[item["source_id"]] = sources.get(item["source_id"], "") + "\n" + item["value"]
     for item in decision.constraints:
         if item.source_id not in sources or not _contains(sources[item.source_id], item.value):
             raise ValueError("Constraint not present in its user source")
@@ -116,6 +121,7 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
         ):
             raise ValueError("Superseded constraint")
     context = question + "\n" + "\n".join(row["text"] for row in selected)
+    context += "\n" + request_text
     context += "\n" + "\n".join(c.value for c in decision.constraints)
     if any(not name.strip() or not _contains(context, name) for name in decision.entities):
         raise ValueError("Entity has no supplied user provenance")

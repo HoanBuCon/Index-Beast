@@ -5,6 +5,8 @@ import { replyEvents } from "../src/api/chat.ts";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createServer } from "vite";
+import { retryInput } from "../src/hooks/chatState.ts";
+import type { Conversation } from "../src/api/types.ts";
 
 const clarification = {
   id: "33333333-3333-4333-8333-333333333333",
@@ -48,14 +50,55 @@ test("JSON carries structured question and follow-up ID without changing old req
   assert.equal(frames.at(-1)?.type, "done");
 });
 
-test("temporary question card renders choices, a continue button and expiration state", async () => {
+test("failed free-text reply retains raw text, clarification and the same turn ID on retry", async (t) => {
+  const raw = "Samurai level 100, chủ yếu PvE\nTôi thích cận chiến.";
+  const turn = "44444444-4444-4444-8444-444444444444";
+  const conversation: Conversation = {
+    id: "local",
+    title: "Moonveil",
+    mode: "api",
+    serverId: "11111111-1111-4111-8111-111111111111",
+    updatedAt: "2026-11-06",
+    messages: [
+      { id: "question", role: "assistant", content: clarification.question, sources: [], clarification },
+      { id: turn, role: "user", content: raw, sources: [], clarificationId: clarification.id },
+      { id: "failed", role: "assistant", content: "", sources: [], incomplete: true },
+    ],
+  };
+  const retry = retryInput(conversation)!;
+  assert.equal(retry.text, raw);
+  assert.equal(retry.turnId, turn);
+  assert.equal(retry.clarificationId, clarification.id);
+  assert.equal(retry.base.messages.length, 1);
+  t.mock.method(globalThis, "fetch", async (_url: string, init: RequestInit) => {
+    const body = JSON.parse(String(init.body));
+    assert.equal(body.message, raw);
+    assert.equal(body.clarification_id, clarification.id);
+    assert.equal(body.turn_id, turn);
+    return new Response(null, { status: 503 });
+  });
+  await assert.rejects(async () => {
+    for await (const event of replyEvents(
+      { message: retry.text, channel: "web", turn_id: retry.turnId },
+      "api",
+      new AbortController().signal,
+      { clarificationId: retry.clarificationId },
+    ))
+      void event;
+  });
+  assert.equal(conversation.messages[1].content, raw);
+});
+
+test("inline question accepts free text without dropdowns and retains expiration state", async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false }, appType: "custom" });
   try {
     const { default: Form } = await server.ssrLoadModule("/src/components/chat/ClarificationForm.tsx");
     const { default: MessageList } = await server.ssrLoadModule("/src/components/chat/MessageList.tsx");
     const html = renderToStaticMarkup(createElement(Form, { question: clarification, disabled: false, onAnswer() {} }));
-    assert.match(html, /<select/);
-    assert.match(html, /PvE/);
+    assert.match(html, /<textarea/);
+    assert.doesNotMatch(html, /<select|type="number"/);
+    assert.match(html, /Hủy yêu cầu/);
+    assert.match(html, /Trả lời bổ sung/);
     assert.match(html, /Tiếp tục/);
     const expired = renderToStaticMarkup(
       createElement(Form, {

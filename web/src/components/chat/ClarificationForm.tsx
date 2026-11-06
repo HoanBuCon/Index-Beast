@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Clarification } from "../../api/types";
+import { MAX_MESSAGE_CHARS } from "../../api/types";
 
 export default function ClarificationForm({
   question,
@@ -8,62 +9,58 @@ export default function ClarificationForm({
 }: {
   question: Clarification;
   disabled: boolean;
-  onAnswer: (text: string, id: string) => void;
+  onAnswer: (text: string, id: string) => Promise<boolean> | void;
 }) {
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [text, setText] = useState("");
   const [expired, setExpired] = useState(() => Date.parse(question.expires_at) <= Date.now());
+  const sending = useRef(false);
   useEffect(() => {
     const timer = setTimeout(() => setExpired(true), Math.max(0, Date.parse(question.expires_at) - Date.now()));
     return () => clearTimeout(timer);
   }, [question.expires_at]);
+  async function submit(value = text) {
+    if (disabled || expired || sending.current || !value.trim()) return;
+    sending.current = true;
+    try {
+      if (await onAnswer(value, question.id)) setText("");
+    } finally {
+      sending.current = false;
+    }
+  }
   return (
     <form
       className="clarification-form"
       aria-label="Bổ sung thông tin"
       onSubmit={(event) => {
         event.preventDefault();
-        if (disabled || expired) return;
-        const text = question.fields
-          .filter((f) => values[f.key]?.trim())
-          .map((f) => `${f.key}=${values[f.key].trim()}`)
-          .join("\n");
-        if (text) onAnswer(text, question.id);
+        void submit();
       }}
     >
-      {question.fields.map((field) => (
-        <label key={field.key} style={{ display: "block", marginBlock: "0.5rem" }}>
-          {field.label}
-          {field.input_type === "choice" ? (
-            <select
-              value={values[field.key] ?? ""}
-              disabled={disabled || expired}
-              onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
-            >
-              <option value="">Chọn hoặc trả lời bằng ô chat</option>
-              {field.options.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              aria-label={field.label}
-              type={field.input_type === "number" ? "number" : "text"}
-              min={field.key === "level" ? 1 : undefined}
-              max={field.key === "level" ? 713 : undefined}
-              maxLength={120}
-              value={values[field.key] ?? ""}
-              disabled={disabled || expired}
-              onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
-            />
-          )}
-        </label>
-      ))}
-      <button disabled={disabled || expired || !Object.values(values).some((v) => v.trim())} type="submit">
-        {expired ? "Đã hết hạn — gửi lại yêu cầu" : "Tiếp tục"}
+      <label htmlFor={`clarification-${question.id}`}>Trả lời bổ sung</label>
+      <div className="composer">
+        <textarea
+          id={`clarification-${question.id}`}
+          value={text}
+          rows={2}
+          placeholder="Nhập câu trả lời của bạn…"
+          maxLength={MAX_MESSAGE_CHARS}
+          disabled={disabled || expired}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              void submit();
+            }
+          }}
+        />
+        <button disabled={disabled || expired || !text.trim()} type="submit">
+          {expired ? "Đã hết hạn — gửi lại yêu cầu" : disabled ? "Đang xử lý…" : "Tiếp tục"}
+        </button>
+      </div>
+      <button type="button" disabled={disabled || expired} onClick={() => void submit("Hủy yêu cầu đang chờ.")}>
+        Hủy yêu cầu
       </button>
-      <small> Bạn cũng có thể trả lời trực tiếp trong ô chat hoặc nhập “hủy”.</small>
+      <small> Enter để gửi, Shift+Enter xuống dòng. Bạn cũng có thể gửi câu hỏi mới trong ô chat chính.</small>
     </form>
   );
 }

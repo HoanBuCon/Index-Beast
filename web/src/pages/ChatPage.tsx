@@ -82,7 +82,12 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   }
   function retry() {
     const input = retryInput(conversation);
-    if (input) void stream.send(input.base, input.text, { webSearch: searchAvailable ? searchMode : "off" });
+    if (input)
+      void stream.send(input.base, input.text, {
+        webSearch: searchAvailable ? searchMode : "off",
+        clarificationId: input.clarificationId,
+        turnId: input.turnId,
+      });
   }
   const sidebarToggle = (
     <button
@@ -258,9 +263,12 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 busy={stream.busy}
                 demo={mode === "demo"}
                 onClarification={(text, id) => {
-                  void stream.send(conversation, text, {
+                  const failed = retryInput(conversation);
+                  const retry = stream.error && failed?.clarificationId === id && failed.text === text ? failed : null;
+                  return stream.send(retry?.base ?? conversation, text, {
                     webSearch: searchAvailable ? searchMode : "off",
                     clarificationId: id,
+                    turnId: retry?.turnId,
                   });
                 }}
               />
