@@ -94,6 +94,7 @@ def settings(**kwargs):
         **{
             "chat_mode": "rag",
             "chat_agent_enabled": True,
+            "chat_tool_agent_enabled": False,
             "chat_persistence": "postgres",
             "gameplay_knowledge_enabled": False,
             **kwargs,
@@ -797,3 +798,51 @@ async def test_clarification_round_budget_prevents_infinite_questions():
             req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
         )
     assert not live.pipeline.retriever.calls
+
+
+async def test_build_resume_accepts_selected_memory_handle_and_persists_message_provenance(repo, memory):
+    ask = plan(
+        intent="build",
+        action="clarify",
+        entities=["Moonveil"],
+        reply="Level và class của bạn?",
+        missing=[{"key": "profile", "label": "Thông tin nhân vật"}],
+        reason="missing_player_details",
+    )
+    selected = {}
+
+    def resume(payload):
+        row = next(m for m in payload["memories"] if "Moonveil" in m["text"])
+        selected.update(row)
+        return plan(
+            intent="build",
+            turn_type="clarification_reply",
+            entities=["Moonveil", "Samurai"],
+            resolved_question="Moonveil stat allocation level 100 Samurai PvE",
+            search_query="Moonveil stat allocation level 100 Samurai PvE",
+            selected_memory_ids=[row["id"]],
+            constraints=[
+                {"key": "weapon", "value": "Moonveil", "source_id": row["id"]},
+                {"key": "level", "value": "100", "source_id": "current"},
+                {"key": "starting_class", "value": "Samurai", "source_id": "current"},
+                {"key": "goal", "value": "PvE", "source_id": "current"},
+            ],
+        )
+
+    llm = AgentLLM([ask, resume])
+    live = service(repo, memory, llm)
+    first = await live.answer(req("Chia chỉ số Moonveil giúp tôi."))
+    result = await live.answer(
+        req(
+            "Samurai level 100, chủ yếu PvE.",
+            conversation_id=first.conversation_id,
+            conversation_token=first.conversation_token,
+            clarification_id=first.clarification.id,
+        )
+    )
+    stored = await repo.load(first.conversation_id, channel="web", external_ref=None, token=first.conversation_token)
+    assert stored.working["pending"] is None and len(llm.plans) == 2
+    assert selected["id"] != selected["source_id"]
+    assert stored.working["constraints"][0]["source_id"] == selected["source_id"]
+    assert live.traces[result.message_id]["agent"]["normalized_source_refs"] == 1
+    assert live.pipeline.retriever.calls[-1][0] == "Moonveil stat allocation level 100 Samurai PvE"

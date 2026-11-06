@@ -119,6 +119,32 @@ async def test_exact_provenance_cited_only_dedup_and_limit(media):
     assert len(result.images) == 1 and result.images[0].source_indices == [1, 2]
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("source_url", "https://eldenring.wiki.gg/images/ER_Main_Menu_Icon_Messages.png?1feaaf"),
+        ("description_url", "https://eldenring.wiki.gg/wiki/File:ER_Main_Menu_Icon_Messages.png"),
+        ("alt", "ER Main Menu Icon Messages.png"),
+        ("source_url", "https://eldenring.wiki.gg/images/ER%20Custom%20Stat%20Icon%20Intelligence.png"),
+    ],
+)
+async def test_ui_decorations_are_not_served_even_with_exact_section_provenance(media, field, value):
+    media.rows[0][field] = value
+    media.write()
+    result = await media.catalog.resolve(media.hits, [1, 2], spoilers=True)
+    assert [image.id for image in result.images] == [media.rows[1]["image_id"]]
+    assert media.catalog.counts["ui_image_excluded"] == 1
+    assert media.catalog.read_blob(media.rows[0]["image_id"])[1] == "unknown_image"
+
+
+@pytest.mark.parametrize("name", ["ER Icon weapon Moonveil.png", "ER Custom Icon Unalloyed Gold.png"])
+async def test_content_icons_remain_eligible(media, name):
+    media.rows[0]["alt"] = name
+    media.write()
+    result = await media.catalog.resolve(media.hits, [1], spoilers=True)
+    assert [image.id for image in result.images] == [media.rows[0]["image_id"]]
+
+
 @pytest.mark.parametrize("change", ["revision", "section", "scope", "release", "source", "association", "unrelated_id"])
 async def test_never_borrows_same_hash_from_wrong_provenance(media, change):
     p = media.hits[0].payload

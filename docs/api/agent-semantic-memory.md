@@ -2,6 +2,9 @@
 
 06/11/2026 · TV3 — MinhMuc · IndexBeast / 4 Hollows.
 
+> Cập nhật sau trong ngày: agent có vòng model chọn tool theo observation khi CHAT_TOOL_AGENT_ENABLED=true.
+> Xem [runtime, chuyển đổi legacy và CLI mới](bounded-tool-agent.md); graph bên dưới mô tả milestone trước/tool-agent=false.
+
 ## Trạng thái
 
 Sau khi người dùng khôi phục hạ tầng và yêu cầu chạy setup, PostgreSQL local đã lên revision **0002**,

@@ -319,6 +319,7 @@ class ChatPipeline:
             ("gameplay", self._gameplay),
             ("memory", self._memory),
             ("agent_decision", self._agent),
+            ("tool_agent", self._tool_agent),
             ("rewrite", self._rewrite),
             ("retrieve", self._retrieve),
             ("rerank", self._rerank),
@@ -336,7 +337,14 @@ class ChatPipeline:
             lambda s: "agent" if self._agent_active(s) else self._rag_route(s),
             {"agent": "agent_decision", "rag": "rewrite", "answer": "prompt"},
         )
-        graph.add_conditional_edges("agent_decision", self._rag_route, {"rag": "rewrite", "answer": "prompt"})
+        graph.add_conditional_edges(
+            "agent_decision",
+            lambda s: (
+                "tools" if self.settings.chat_tool_agent_enabled and self._rag_route(s) == "rag" else self._rag_route(s)
+            ),
+            {"tools": "tool_agent", "rag": "rewrite", "answer": "prompt"},
+        )
+        graph.add_edge("tool_agent", "context")
         graph.add_conditional_edges("rewrite", self._rag_route, {"rag": "retrieve", "answer": "prompt"})
         graph.add_edge("retrieve", "rerank")
         graph.add_edge("rerank", "assess")
@@ -502,6 +510,11 @@ class ChatPipeline:
         if decision.action != "retrieve":
             p.static_answer = decision.reply
         return state
+
+    async def _tool_agent(self, state):
+        from app.rag.tool_agent import run_tools
+
+        return await run_tools(self, state)
 
     def _gameplay(self, state: PreparationState) -> dict:
         from app.services.gameplay import PlayerState, advance
@@ -825,7 +838,7 @@ class ChatPipeline:
                 query=state["req"].message + "\n" + state["query"],
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            if not p.hits:
+            if not p.hits and not (self._agent_active(state) and self.settings.chat_tool_agent_enabled):
                 p.static_answer = (
                     no_overview_evidence(state["overview"], p.lang)
                     if state.get("overview") is not None
@@ -854,6 +867,8 @@ class ChatPipeline:
             "payload": json.dumps(
                 {
                     "question": state.get("resolved_question", req.message),
+                    "original_user_message": req.message,
+                    "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
                 },
                 ensure_ascii=False,

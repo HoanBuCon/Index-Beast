@@ -32,3 +32,5 @@ elden-ring-data/
 
 # Cấu hình cục bộ của Claude Code (launch.json…), không thuộc dự án
 .claude/
+# TV4 notes
+TV*.txt

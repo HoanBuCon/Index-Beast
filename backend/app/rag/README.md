@@ -1,5 +1,13 @@
 # IndexBeast: LangGraph, LangChain và corpus thử nghiệm
 
+## Bounded tool agent — 06/11/2026
+
+Khi `CHAT_AGENT_ENABLED=true`, default `CHAT_TOOL_AGENT_ENABLED=true` bổ sung vòng model chọn tool theo observation,
+không đi theo thứ tự local→assess→web cứng. Xem [kiểm kê, cấu hình và CLI](../../../docs/api/bounded-tool-agent.md).
+Legacy và workflow agent cũ được giữ cho compatibility, không bị xóa trước khi caller/test đã migrate.
+[Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
+không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
+
 ## Bản tiếp theo 06/11/2026: model decisions và semantic memory PostgreSQL
 
 `CHAT_AGENT_ENABLED=true` mặc định cho RAG: DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification

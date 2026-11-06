@@ -35,6 +35,16 @@ FORMATS = {
 }
 
 
+def ui_image(row):
+    """Wiki UI decorations can be attached to exact sections; they are not answer illustrations."""
+    return any(
+        re.search(
+            r"\bER[ _]+(?:Main[ _]+Menu[ _]+Icon|Custom[ _]+Stat[ _]+Icon)[ _]", unquote(row.get(key) or ""), re.I
+        )
+        for key in ("alt", "source_url", "description_url")
+    )
+
+
 def http_url(value):
     if not isinstance(value, str):
         return None
@@ -131,6 +141,9 @@ class ImageCatalog:
                         self.counts["rows"] += 1
                         if None in row or any(v is None for v in row.values()):
                             raise ValueError("Image catalog column mismatch")
+                        if ui_image(row):
+                            self.counts["ui_image_excluded"] += 1
+                            continue
                         if row["association"] != "exact_section" or any(
                             section.strip().casefold() in {"gallery", "references"}
                             for section in row["section"].split(">")

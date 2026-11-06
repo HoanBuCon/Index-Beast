@@ -90,6 +90,26 @@ class AgentDecision(BaseModel):
         return self
 
 
+def normalize_sources(decision: AgentDecision, candidates: list[dict], working: dict):
+    """Resolve a selected memory handle to its canonical user message, never invent provenance."""
+    selected = [row for row in candidates if row["id"] in decision.selected_memory_ids]
+    canonical = {"current", "request", *(row["source_id"] for row in selected)}
+    canonical.update(c["source_id"] for c in working.get("constraints", []))
+    normalized = decision.model_copy(deep=True)
+    count = 0
+    for constraint in normalized.constraints:
+        aliases = [row for row in selected if row["id"] == constraint.source_id]
+        if aliases and any(row["source_id"] != constraint.source_id for row in aliases):
+            if len(aliases) != 1 or constraint.source_id in canonical:
+                raise ValueError("Ambiguous memory/source reference")
+            row = aliases[0]
+            if not _contains(row["text"], constraint.value):
+                raise ValueError("Constraint absent from selected memory")
+            constraint.source_id = row["source_id"]
+            count += 1
+    return normalized, count
+
+
 def check_decision(decision: AgentDecision, question: str, candidates: list[dict], working: dict):
     available = {row["id"]: row for row in candidates}
     if any(key not in available for key in decision.selected_memory_ids):
@@ -181,7 +201,9 @@ async def decide(
             )
         data, _ = decode_output(result.content)
         decision = AgentDecision.model_validate(data)
+        decision, normalized = normalize_sources(decision, candidates, working)
         check_decision(decision, question, candidates, working)
+        diagnostic["normalized_source_refs"] = normalized
         diagnostic.update(
             status="ok",
             action=decision.action,
