@@ -44,6 +44,9 @@ migrate:         ## Chạy migration database
 openapi:         ## Xuất hợp đồng API v1 ra docs/api/openapi.json
 	cd backend && python -m scripts.export_openapi
 
+trace:           ## Xem trace RAG của một câu trả lời: make trace ID=<message_id>
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.trace $(ID)
+
 test:            ## Chạy test backend
 	cd backend && pytest
 

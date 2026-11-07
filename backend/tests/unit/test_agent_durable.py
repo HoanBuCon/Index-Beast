@@ -846,3 +846,36 @@ async def test_build_resume_accepts_selected_memory_handle_and_persists_message_
     assert stored.working["constraints"][0]["source_id"] == selected["source_id"]
     assert live.traces[result.message_id]["agent"]["normalized_source_refs"] == 1
     assert live.pipeline.retriever.calls[-1][0] == "Moonveil stat allocation level 100 Samurai PvE"
+
+
+async def test_repository_stores_trace_and_measures_on_the_assistant_message_only(repo):
+    conv = ConversationOut(id=uuid4(), channel="web", created_at=datetime.now(UTC), messages=[])
+    snap = Snapshot(conv, None, owner_hash("secret"), 0, {})
+    now = datetime.now(UTC)
+    pair = [
+        MessageOut(id=uuid4(), role="user", content="Ranni là ai?", created_at=now),
+        MessageOut(id=uuid4(), role="assistant", content="OK", created_at=now),
+    ]
+    record = {
+        "trace": {"retrieved": [{"id": "p1", "score": 0.9}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}},
+        "rewritten_query": "Who is Ranni?",
+        "latency_ms": 12.5,
+        "tokens_in": 10,
+        "tokens_out": 5,
+    }
+    await repo.save(snap, pair, {}, plan(), record)
+    stored = await repo.trace(pair[1].id)
+    assert stored["rewritten_query"] == "Who is Ranni?" and stored["latency_ms"] == 12.5
+    assert (stored["tokens_in"], stored["tokens_out"]) == (10, 5) and stored["source"] == "postgres"
+    assert stored["trace"]["retrieved"] == [{"id": "p1", "score": 0.9}]
+    assert await repo.trace(pair[0].id) is None and await repo.trace(uuid4()) is None
+
+
+async def test_durable_service_persists_a_sanitized_trace_that_survives_restart(repo):
+    live = service(repo)
+    first = await live.answer(req())
+    stored = await repo.trace(first.message_id)
+    assert stored["rewritten_query"] and stored["latency_ms"] > 0 and stored["tokens_in"] is not None
+    assert stored["trace"]["retrieved"] and "result" not in stored["trace"]
+    restarted = service(repo)  # RAM trống: chỉ còn bản trong PostgreSQL
+    assert (await restarted.trace(first.message_id))["source"] == "postgres"
