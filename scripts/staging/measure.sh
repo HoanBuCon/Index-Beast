@@ -2,13 +2,19 @@
 # Đo RAM/CPU của từng container khi trả lời 1 câu hỏi RAG thật (chạy trên VPS sau deploy.sh).
 # CẢNH BÁO: gọi DeepSeek (và Tavily nếu bật) nên tốn một ít phí API.
 # Dùng:  STAGING_PASS='mật-khẩu' scripts/staging/measure.sh ["câu hỏi"]
-# Biến: STAGING_URL (mặc định https://localhost), STAGING_USER (mặc định staging), SAMPLE_SECONDS (mặc định 1)
+# Biến: STAGING_URL (mặc định https://$STAGING_HOST, đọc từ .env: Caddy chỉ phục vụ đúng host đó),
+#       STAGING_USER (mặc định lấy từ .env, rồi "staging"), SAMPLE_SECONDS (mặc định 1)
 # Phụ trách: TV1 · [S3] Staging trên VPS
 set -euo pipefail
+cd "$(dirname "$0")/../.."
+
+env_value() { sed -n "s/^$1=//p" .env 2>/dev/null | head -1; }
 
 QUESTION=${1:-"Marika là ai?"}
-URL=${STAGING_URL:-https://localhost}
-USER_NAME=${STAGING_USER:-staging}
+HOST=${STAGING_HOST:-$(env_value STAGING_HOST)}
+URL=${STAGING_URL:-https://${HOST:-localhost}}
+USER_NAME=${STAGING_USER:-$(env_value STAGING_USER)}
+USER_NAME=${USER_NAME:-staging}
 PASS=${STAGING_PASS:?Đặt STAGING_PASS (mật khẩu basic auth)}
 INTERVAL=${SAMPLE_SECONDS:-1}
 SAMPLES=$(mktemp)

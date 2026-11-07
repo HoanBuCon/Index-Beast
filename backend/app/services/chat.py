@@ -293,10 +293,11 @@ class LiveChatService:
                 for c in working.get("constraints", [])
             ]
             player = working
+        # Một giá trị cho DB, trace và phản hồi; đồng bộ bộ nhớ ngữ nghĩa bên dưới nằm ngoài độ trễ này
+        latency_ms = round((time.perf_counter() - started) * 1000, 2)
         if self.repository is not None:
             working = working or {}
             snapshot = Snapshot(state.conversation, state.external_ref, state.owner, state.revision, working)
-            latency_ms = round((time.perf_counter() - started) * 1000, 2)
             tokens_in, tokens_out = token_usage(prepared.trace)
             record = {
                 "trace": public_trace(prepared.trace, latency_ms=latency_ms),
@@ -326,7 +327,7 @@ class LiveChatService:
             except TimeoutError:
                 prepared.trace["memory_sync"] = {"status": "pending"}
         trace = {k: v for k, v in prepared.trace.items() if k != "result"}
-        trace["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
+        trace["latency_ms"] = latency_ms
         self.traces[message_id] = trace
         if len(self.traces) > 1000:
             self.traces.popitem(last=False)
@@ -336,7 +337,7 @@ class LiveChatService:
             answer=answer,
             sources=result.sources,
             grounded=result.grounded,
-            latency_ms=trace["latency_ms"],
+            latency_ms=latency_ms,
             images=images or [],
             clarification=prepared.clarification,
             conversation_token=state.token if self.repository is not None and req.channel == "web" else None,

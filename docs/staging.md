@@ -42,7 +42,7 @@ ssh-keygen -t ed25519 -f ~/.ssh/indexbeast-staging -C "staging-deploy"
 scp ~/.ssh/indexbeast-staging.pub root@<ip-vps>:/root/deploy.pub
 ```
 
-**Trên VPS (root):** chạy script cài đặt. Script cài Docker, tạo user `deploy` (không có sudo), tắt đăng nhập SSH bằng mật khẩu và bằng root, bật `ufw` chỉ mở 22/80/443, thêm 2 GB swap.
+**Trên VPS (root):** chạy script cài đặt. Script cài Docker, tạo user `deploy` (không có sudo, nhưng thuộc nhóm `docker` nên **tương đương root trên VPS**: giữ kín khóa SSH), bật `ufw` chỉ mở 22/80/443, tắt đăng nhập SSH bằng mật khẩu và bằng root, thêm 2 GB swap.
 
 ```bash
 git clone https://github.com/HoanBuCon/Index-Beast.git /tmp/ib && bash /tmp/ib/scripts/staging/bootstrap.sh /root/deploy.pub

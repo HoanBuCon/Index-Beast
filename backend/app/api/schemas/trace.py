@@ -4,7 +4,7 @@ Phụ trách: TV1 · [S3] Trace từng bước RAG
 """
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -20,4 +20,6 @@ class TraceOut(BaseModel):
     tokens_in: int | None = None
     tokens_out: int | None = None
     trace: dict[str, Any] | None = Field(default=None, description="Dấu vết từng bước RAG, đã che secret.")
-    source: str = Field(description="postgres (đã lưu) hoặc memory (chỉ còn trong RAM, mất khi khởi động lại).")
+    source: Literal["postgres", "memory"] = Field(
+        description="postgres (đã lưu) hoặc memory (chỉ còn trong RAM, mất khi khởi động lại)."
+    )

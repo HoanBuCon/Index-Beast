@@ -29,7 +29,7 @@ if ! command -v docker >/dev/null; then
 fi
 apt-get install -y git ufw >/dev/null
 
-echo "==> 2/5 User $DEPLOY_USER (không có sudo, chỉ thuộc nhóm docker)"
+echo "==> 2/5 User $DEPLOY_USER (không có sudo, nhưng nhóm docker tương đương root trên VPS: giữ kín khóa SSH)"
 id "$DEPLOY_USER" >/dev/null 2>&1 || adduser --disabled-password --gecos "" "$DEPLOY_USER"
 usermod -aG docker "$DEPLOY_USER"
 home=$(getent passwd "$DEPLOY_USER" | cut -d: -f6)
@@ -39,22 +39,24 @@ grep -qxF "$(cat "$PUBKEY_FILE")" "$home/.ssh/authorized_keys" || cat "$PUBKEY_F
 chown "$DEPLOY_USER:$DEPLOY_USER" "$home/.ssh/authorized_keys"
 chmod 600 "$home/.ssh/authorized_keys"
 
-echo "==> 3/5 SSH: chỉ đăng nhập bằng khóa, tắt root và mật khẩu"
-cat >/etc/ssh/sshd_config.d/10-staging.conf <<'EOF'
-PasswordAuthentication no
-PermitRootLogin no
-PubkeyAuthentication yes
-EOF
-sshd -t
-systemctl reload ssh
-
-echo "==> 4/5 Tường lửa ufw: chỉ mở 22, 80, 443"
+echo "==> 3/5 Tường lửa ufw: chỉ mở 22, 80, 443 (làm trước SSH để lỗi ở bước sau không bỏ sót tường lửa)"
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+
+echo "==> 4/5 SSH: chỉ đăng nhập bằng khóa, tắt root và mật khẩu"
+cat >/etc/ssh/sshd_config.d/10-staging.conf <<'EOF'
+PasswordAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
+EOF
+sshd -t
+# Ubuntu 24.04 chạy sshd theo ssh.socket: `reload ssh` báo lỗi khi ssh.service chưa chạy
+systemctl try-reload-or-restart ssh || systemctl restart ssh.socket
+sshd -T | grep -E '^(passwordauthentication|permitrootlogin) '
 
 echo "==> 5/5 Swap ${SWAP_GB} GB (build ảnh web và nạp model cần đỉnh RAM ngắn hạn)"
 if ! swapon --show | grep -q .; then

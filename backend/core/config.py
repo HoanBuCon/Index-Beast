@@ -20,6 +20,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 from sqlalchemy import URL
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# Trong container mã nằm ở /app/core nên REPO_ROOT là "/": model, dữ liệu và ảnh phải tính từ BACKEND_ROOT (/app)
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = REPO_ROOT / ".env"
 PLACEHOLDER = "change-me"
 

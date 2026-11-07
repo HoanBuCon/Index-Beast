@@ -160,7 +160,9 @@ class Message(Base):
     latency_ms: Mapped[float | None] = mapped_column(Float)
     tokens_in: Mapped[int | None] = mapped_column(Integer)
     tokens_out: Mapped[int | None] = mapped_column(Integer)
-    trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # dấu vết RAG cho trang admin (S5)
+    trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # ảnh và câu hỏi lại, nạp lại cùng lịch sử mỗi lượt
+    # Dấu vết RAG (tới 64 KB): deferred để nạp lịch sử không kéo theo, chỉ nạp khi xem trace (undefer)
+    rag_trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB, deferred=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.clock_timestamp()
     )  # không dùng now(): trong một transaction mọi tin sẽ trùng giờ, mất thứ tự

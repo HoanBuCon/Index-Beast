@@ -57,10 +57,13 @@ def _count(*values: Any) -> int | None:
 
 
 def token_usage(trace: dict) -> tuple[int | None, int | None]:
-    """Token vào/ra của các lượt gọi LLM trong trace (sinh câu trả lời + viết lại truy vấn)."""
-    generation = trace.get("usage") or {}
-    rewrite = (trace.get("rewrite") or {}).get("usage") or {}
+    """Token vào/ra của các lượt gọi LLM trong trace: sinh câu trả lời, quyết định của agent, viết lại truy vấn."""
+    usages = [
+        trace.get("usage") or {},
+        (trace.get("agent") or {}).get("usage") or {},
+        (trace.get("rewrite") or {}).get("usage") or {},
+    ]
     return (
-        _count(generation.get("prompt_tokens"), rewrite.get("prompt_tokens")),
-        _count(generation.get("completion_tokens"), rewrite.get("completion_tokens")),
+        _count(*(u.get("prompt_tokens") for u in usages)),
+        _count(*(u.get("completion_tokens") for u in usages)),
     )
