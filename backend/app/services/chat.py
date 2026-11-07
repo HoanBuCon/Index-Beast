@@ -22,6 +22,7 @@ from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
 from app.rag.semantic_memory import MemoryScope
+from app.rag.trace import public_trace, token_usage
 from app.services.memory_repository import MemoryRepository, Snapshot, owner_hash
 from core.errors import BadRequestError, NotFoundError, TimeoutAppError, UnauthorizedError, UnavailableError
 
@@ -52,6 +53,7 @@ class ChatService(Protocol):
     async def open_stream(self, req: ChatRequest) -> ChatEvents: ...
     def history(self, conversation_id: UUID) -> ConversationOut: ...
     def has_message(self, message_id: UUID) -> bool: ...
+    async def trace(self, message_id: UUID) -> dict: ...
 
 
 @dataclass
@@ -85,6 +87,16 @@ class LiveChatService:
         # dùng lại một hội thoại
         self._by_ref: dict[tuple[str, str], UUID] = {}
         self.traces: OrderedDict[UUID, dict] = OrderedDict()
+
+    async def trace(self, message_id: UUID) -> dict:
+        """Trace của một câu trả lời: ưu tiên bản đã lưu trong PostgreSQL, không có DB thì lấy bản trong RAM."""
+        if self.repository is not None:
+            stored = await self.repository.trace(message_id)
+            if stored is not None:
+                return stored
+        if (live := self.traces.get(message_id)) is not None:
+            return {"message_id": message_id, "trace": public_trace(live), "source": "memory"}
+        raise NotFoundError("Không tìm thấy trace của câu trả lời này.")
 
     def history(self, conversation_id: UUID) -> ConversationOut:
         if conversation_id not in self._conversations:
@@ -284,7 +296,16 @@ class LiveChatService:
         if self.repository is not None:
             working = working or {}
             snapshot = Snapshot(state.conversation, state.external_ref, state.owner, state.revision, working)
-            created = await self.repository.save(snapshot, pair, working, prepared.agent_decision)
+            latency_ms = round((time.perf_counter() - started) * 1000, 2)
+            tokens_in, tokens_out = token_usage(prepared.trace)
+            record = {
+                "trace": public_trace(prepared.trace, latency_ms=latency_ms),
+                "rewritten_query": prepared.trace.get("rewritten_query"),
+                "latency_ms": latency_ms,
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+            }
+            created = await self.repository.save(snapshot, pair, working, prepared.agent_decision, record)
             if not created:
                 replay = await self._replay(req, state, started)
                 if replay is None:

@@ -82,7 +82,30 @@ class MemoryRepository:
         except SQLAlchemyError:
             raise UnavailableError("Không đọc được hội thoại đã lưu.") from None
 
-    async def save(self, snapshot: Snapshot, pair: list[MessageOut], working: dict, decision: dict):
+    async def trace(self, message_id: UUID) -> dict | None:
+        """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu."""
+        async with self.sessions() as session:
+            row = await session.get(Message, message_id)
+        if row is None or row.role != "assistant":
+            return None
+        return {
+            "message_id": row.id,
+            "conversation_id": row.conversation_id,
+            "created_at": row.created_at,
+            "grounded": row.grounded,
+            "rewritten_query": row.rewritten_query,
+            "latency_ms": row.latency_ms,
+            "tokens_in": row.tokens_in,
+            "tokens_out": row.tokens_out,
+            "trace": (row.trace or {}).get("rag"),
+            "source": "postgres",
+        }
+
+    async def save(
+        self, snapshot: Snapshot, pair: list[MessageOut], working: dict, decision: dict, record: dict | None = None
+    ):
+        """`record` (trace + số đo) chỉ gắn vào tin nhắn assistant, tin cuối của `pair`."""
+        record = record or {}
         try:
             async with self.sessions() as session, session.begin():
                 existing = await session.get(Message, pair[0].id)
@@ -115,18 +138,24 @@ class MemoryRepository:
                     if changed.rowcount != 1:
                         raise UnavailableError("Hội thoại vừa được cập nhật ở lượt khác. Vui lòng thử lại.")
                 for m in pair:
+                    extra = record if m.role == "assistant" else {}
                     session.add(
                         Message(
                             id=m.id,
                             conversation_id=conv.id,
                             role=m.role,
                             content=m.content,
+                            rewritten_query=extra.get("rewritten_query"),
                             sources=[s.model_dump() for s in m.sources],
                             grounded=m.grounded,
+                            latency_ms=extra.get("latency_ms"),
+                            tokens_in=extra.get("tokens_in"),
+                            tokens_out=extra.get("tokens_out"),
                             created_at=m.created_at,
                             trace={
                                 "images": [i.model_dump() for i in m.images],
                                 "clarification": m.clarification.model_dump(mode="json") if m.clarification else None,
+                                **({"rag": extra["trace"]} if "trace" in extra else {}),
                             },
                         )
                     )

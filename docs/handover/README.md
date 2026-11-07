@@ -149,3 +149,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-02 | TV1 (Hoanbucon) | [Sửa câu chào và câu hỏi danh tính bị từ chối khi bật rewrite](2026-11-02_s3-tv1_sua-chao-hoi-khi-bat-rewrite.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Thử lại khi LLM trích dẫn sai giao thức và sửa thông báo 502 trên web](2026-11-02_s3-tv1_thu-lai-loi-trich-dan.md) |
 | 2026-11-08 | TV1 (Hoanbucon) | [Staging trên VPS: compose, Caddy bảo vệ, script cài đặt, deploy và đo tài nguyên](2026-11-08_s3-tv1_staging-vps.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Lưu trace và số đo từng câu trả lời vào PostgreSQL, endpoint xem trace](2026-11-08_s3-tv1_trace-rag-postgres-va-admin.md) |

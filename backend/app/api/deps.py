@@ -5,6 +5,7 @@ get_ctx, get_session; xác thực và rate-limit thêm ở S4.
 Phụ trách: TV1 · [S1] Skeleton FastAPI · [S4] Xác thực client, CORS, bảo vệ admin
 """
 
+import hmac
 from collections.abc import AsyncIterator
 from typing import Annotated
 
@@ -13,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import AppContext
 from app.services.chat import ChatService
+from core.config import PLACEHOLDER
+from core.errors import NotFoundError, UnauthorizedError
 
 
 def get_ctx(request: Request) -> AppContext:
@@ -33,3 +36,17 @@ SessionDep = Annotated[AsyncSession, Depends(get_session, scope="function")]
 
 def get_chat_service(request: Request) -> ChatService:
     return request.app.state.chat_service
+
+
+ADMIN_TOKEN_HEADER = "X-Admin-Token"
+
+
+def require_admin(request: Request) -> None:
+    """Chưa cấu hình ADMIN_TOKEN thì /admin/* trả 404 như chưa tồn tại; sai token trả 401."""
+    configured = request.app.state.ctx.settings.admin_token
+    secret = configured.get_secret_value().strip() if configured else ""
+    if not secret or secret == PLACEHOLDER:
+        raise NotFoundError("Không tìm thấy tài nguyên.")
+    sent = request.headers.get(ADMIN_TOKEN_HEADER, "")
+    if not hmac.compare_digest(sent.encode(), secret.encode()):
+        raise UnauthorizedError("Token quản trị không hợp lệ.")
