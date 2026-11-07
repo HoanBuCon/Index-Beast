@@ -99,7 +99,14 @@ test("inline question accepts free text without dropdowns and retains expiration
     assert.doesNotMatch(html, /<select|type="number"/);
     assert.match(html, /Hủy yêu cầu/);
     assert.match(html, /Trả lời bổ sung/);
-    assert.match(html, /Tiếp tục/);
+    assert.match(html, /aria-keyshortcuts="Enter"/);
+    assert.match(html, />OK<\/button>/);
+    assert.doesNotMatch(html, /class="composer"|>E<|Tiếp tục/);
+    const pending = renderToStaticMarkup(
+      createElement(Form, { question: clarification, disabled: true, onAnswer() {} }),
+    );
+    assert.match(pending, /Đang xử lý…/);
+    assert.match(pending, /role="status"/);
     const expired = renderToStaticMarkup(
       createElement(Form, {
         question: { ...clarification, expires_at: "2000-01-01T00:00:00Z" },
@@ -126,7 +133,7 @@ test("inline question accepts free text without dropdowns and retains expiration
         onClarification() {},
       }),
     );
-    assert.match(message, /Tiếp tục/);
+    assert.match(message, />OK<\/button>/);
     assert.match(message, /class="citation-link"/);
     assert.doesNotMatch(message, /Dấu vết trong kho lưu trữ|Câu trả lời có hữu ích/);
   } finally {

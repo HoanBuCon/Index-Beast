@@ -368,14 +368,13 @@ body {
   gap: 8px;
   color: var(--ui-text);
   cursor: pointer;
-  padding: 4px 10px;
-  border: 1px solid var(--ui-muted);
+  padding: 5px 11px;
+  border: 0;
   background: transparent;
   font: inherit;
 }
 .web-search-toggle[data-search-mode="always"] {
   color: var(--ui-accent);
-  border-color: var(--ui-accent);
 }
 .web-search-toggle:disabled {
   opacity: 0.6;

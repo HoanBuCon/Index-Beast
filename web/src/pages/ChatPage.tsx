@@ -183,7 +183,13 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         <Header sidebarToggle={<span className="sidebar-toggle-space" aria-hidden="true" />} />
         <nav className="sidebar-rail" aria-label="Điều hướng chính">
           <GraceMenuItem icon="new" label="TRÒ CHUYỆN MỚI" disabled={stream.busy} onClick={() => reset()} />
-          <GraceMenuItem icon="about" label="VỀ DỰ ÁN" to="/about" onClick={closeMobileSidebar} />
+          <GraceMenuItem
+            icon="about"
+            label="VỀ DỰ ÁN"
+            to="/about"
+            disabled={stream.busy}
+            onClick={closeMobileSidebar}
+          />
         </nav>
 
         {history.conversations.length > 0 && (
@@ -231,6 +237,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           to="/admin"
           icon="admin"
           label="QUẢN TRỊ"
+          disabled={stream.busy}
           onClick={closeMobileSidebar}
         />
       </aside>
