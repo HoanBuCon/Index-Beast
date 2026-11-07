@@ -1,5 +1,15 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Khóa điều hướng sidebar khi đang trả lời (07/11/2026)](2026-11-07_s3-tv4_khoa-dieu-huong-khi-dang-tra-loi.md)
+
+- [TV4 · Bỏ viền nút Web trong ô chat (07/11/2026)](2026-11-07_s3-tv4_bo-vien-nut-web.md)
+
+- [TV4 · Khung trả lời bổ sung kiểu menu Elden Ring (07/11/2026)](2026-11-07_s3-tv4_khung-tra-loi-bo-sung-menu.md)
+
+- [TV4 · Cấu hình key Tavily local (07/11/2026)](2026-11-07_s3-tv4_cau-hinh-tavily-local.md)
+
+- [TV4 · Cập nhật venv local sau khi pull LangGraph (07/11/2026)](2026-11-07_s3-tv4_cap-nhat-venv-langgraph.md)
+
 - [TV3 · Migration/setup và hoàn tất 20 lượt thật (06/11/2026)](2026-11-06_s3-tv3_migration-setup-va-live-20.md)
 
 - [TV3 · Model decisions và semantic memory lưu bền (06/11/2026)](2026-11-06_s3-tv3_agent-va-semantic-memory.md)

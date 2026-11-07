@@ -1,0 +1,203 @@
+/* TV4 · Bảng trả lời bổ sung lấy cảm hứng từ thông báo nhận vật phẩm.
+   Texture hi_01 được giữ nguyên trong item_; không ảnh hưởng composer chính. */
+.clarification-group {
+  width: 100%;
+  max-width: var(--ui-chat-width, 760px);
+  min-width: 0;
+  margin: 20px 0 12px;
+}
+
+.clarification-form {
+  /* Khung ngoài cùng chiều ngang với composer chính, bao cả nhãn và hai thao tác.
+     Vùng nhập bên trong tự giãn; toàn bộ cụm không khóa chiều cao. */
+  --clarification-frame-height: 114.3px;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  max-width: var(--ui-chat-width, 760px);
+  min-width: 0;
+  margin: 0;
+  padding: 20px 18px 6px;
+  color: var(--ui-text, #e6dfcf);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--font-interface);
+}
+
+/* Khung nhận vật phẩm hi_01 đã có trong item_: dùng nền đen trung tính,
+   bỏ ánh tím; trang trí không chặn nhập hoặc bấm nút. */
+.clarification-form::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  /* Bù vùng alpha rộng của texture để nền tối phủ cả chữ và vùng nhập bên trái. */
+  background: #090b09e6 url("../../item_/MENU_FL_Itemlog_1.png") center / 100% 100% no-repeat;
+  mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent);
+  opacity: 0.96;
+  pointer-events: none;
+}
+
+/* Giữ hai mép trên/dưới đủ rõ, mờ dần ở đầu nét thay vì mất hẳn trong nền. */
+.clarification-form::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(90deg, transparent, #a9a18a80 16%, #d8d2be99 50%, #a9a18a80 84%, transparent),
+    linear-gradient(90deg, transparent, #a9a18a80 16%, #d8d2be99 50%, #a9a18a80 84%, transparent);
+  background-position:
+    center top,
+    center bottom;
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.clarification-panel {
+  min-height: var(--clarification-frame-height);
+  padding: 12px 26px;
+}
+
+.clarification-title {
+  display: block;
+  margin: 0;
+  color: #d8d1b8;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.clarification-divider {
+  height: 12px;
+  margin: 2px 0 8px;
+  background: url("../../item_/MENU_FL_RuneLine.png") center / 100% 8px no-repeat;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.clarification-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: calc(var(--clarification-frame-height) - 24px);
+  max-height: 224px;
+  padding: 8px 0;
+  resize: none;
+  overflow-y: auto;
+  color: #e7e1d0;
+  caret-color: var(--ui-accent, #d9bc78);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  box-shadow: none;
+  font: 18px/1.7 var(--font-interface);
+  scrollbar-color: #847655 #151610;
+}
+
+.clarification-input::placeholder {
+  color: #b3ad9e;
+  opacity: 1;
+}
+
+.clarification-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.clarification-input:disabled {
+  opacity: 0.7;
+}
+
+.clarification-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 56px;
+  margin-top: 5px;
+  padding: 4px 24px;
+  background: url("../../item_/MENU_FL_Itemlog_1.png") center / 100% 100% no-repeat;
+}
+
+.clarification-confirm {
+  width: min(240px, 100%);
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 28px;
+  color: #e1dbc6;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: 20px/1.4 var(--font-interface);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  text-shadow: none;
+  transition: none;
+}
+
+.clarification-confirm:is(:hover, :focus-visible):not(:disabled) {
+  color: #e1dbc6;
+  background: transparent;
+  border: 0;
+}
+
+.clarification-confirm:focus-visible {
+  outline: 1px solid #d9bc78;
+  outline-offset: 2px;
+}
+
+.clarification-status {
+  min-height: 22px;
+  margin: 5px 0 0;
+  color: var(--ui-muted, #b3ad9e);
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* Không chừa hàng trạng thái rỗng giữa Hủy và viền dưới. */
+.clarification-status:empty {
+  display: none;
+}
+
+.clarification-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin-top: 8px;
+  padding: 0 16px;
+}
+
+.clarification-help small {
+  flex: 1 1 240px;
+  min-width: 0;
+  color: var(--ui-muted, #b3ad9e);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+@media (max-width: 520px) {
+  .clarification-form {
+    --clarification-frame-height: 107.5px;
+    padding: 16px 10px 2px;
+  }
+
+  .clarification-panel {
+    padding: 12px 20px;
+  }
+
+  .clarification-input {
+    font-size: 17px;
+  }
+
+  .clarification-help {
+    padding-inline: 12px;
+  }
+}

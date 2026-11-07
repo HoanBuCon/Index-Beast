@@ -12,11 +12,12 @@ type SharedProps = {
   label: string;
   icon: "new" | "about" | "admin";
   className?: string;
+  disabled?: boolean;
 };
 type GraceMenuItemProps = SharedProps &
   (
-    | { to: string; onClick?: MouseEventHandler<HTMLAnchorElement>; disabled?: never }
-    | { to?: never; onClick?: MouseEventHandler<HTMLButtonElement>; disabled?: boolean }
+    | { to: string; onClick?: MouseEventHandler<HTMLAnchorElement> }
+    | { to?: never; onClick?: MouseEventHandler<HTMLButtonElement> }
   );
 
 const icons = { new: newIcon, about: aboutIcon, admin: adminIcon };
@@ -34,6 +35,14 @@ export default function GraceMenuItem(props: GraceMenuItemProps) {
   );
 
   if (props.to !== undefined) {
+    // Khi đang trả lời, dùng button disabled để chặn cả click, bàn phím và mở link ở tab mới.
+    if (props.disabled) {
+      return (
+        <button type="button" className={className} disabled title={props.label} aria-label={props.label}>
+          {content}
+        </button>
+      );
+    }
     return (
       <NavLink
         to={props.to}
