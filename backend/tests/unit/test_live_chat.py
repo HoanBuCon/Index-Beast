@@ -1192,3 +1192,14 @@ async def test_rewrite_scope_refusal_is_distinct_from_ambiguity(out_of_scope, am
     )
     assert not retriever.calls and not result.grounded
     assert ("Which Elden Ring" in result.answer) is ambiguous
+
+
+async def test_trace_without_a_database_is_served_from_memory_and_sanitized():
+    live = service("rag", FakeLLM(), FakeRetriever())
+    result = await live.answer(ChatRequest(**BODY))
+    live.traces[result.message_id]["api_key"] = "do-not-leak"
+    found = await live.trace(result.message_id)
+    assert found["source"] == "memory" and found["trace"]["api_key"] == "[redacted]"
+    assert found["trace"]["rewritten_query"] and "result" not in found["trace"]
+    with pytest.raises(NotFoundError):
+        await live.trace(UUID(int=1))
