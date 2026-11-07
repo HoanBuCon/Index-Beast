@@ -1,0 +1,27 @@
+# Staging: cùng cấu trúc với infra/Caddyfile, thêm basic auth và danh sách IP được phép.
+# STAGING_HOST là IP của VPS khi chưa có tên miền: Caddy tự dùng CA nội bộ cho IP (trình duyệt cảnh báo một lần,
+# nhưng mật khẩu vẫn đi qua HTTPS). Có tên miền thì đặt STAGING_HOST=<tên miền>, Caddy tự xin chứng chỉ Let's Encrypt.
+# STAGING_PASSWORD_HASH rỗng thì Caddy không khởi động: staging không bao giờ mở không mật khẩu.
+{$STAGING_HOST:localhost} {
+	encode zstd gzip
+
+	# Mặc định cho mọi IP; thu hẹp bằng STAGING_ALLOW_IPS="1.2.3.4 10.0.0.0/8"
+	@denied not remote_ip {$STAGING_ALLOW_IPS:0.0.0.0/0 ::/0}
+	respond @denied 403
+
+	basic_auth {
+		{$STAGING_USER:staging} {$STAGING_PASSWORD_HASH}
+	}
+
+	handle /api/* {
+		reverse_proxy api:18000 {
+			flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm
+		}
+	}
+
+	handle {
+		root * /srv/web
+		try_files {path} /index.html
+		file_server
+	}
+}
