@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Cập nhật venv local sau khi pull LangGraph (07/11/2026)](2026-11-07_s3-tv4_cap-nhat-venv-langgraph.md)
+
 - [TV3 · Migration/setup và hoàn tất 20 lượt thật (06/11/2026)](2026-11-06_s3-tv3_migration-setup-va-live-20.md)
 
 - [TV3 · Model decisions và semantic memory lưu bền (06/11/2026)](2026-11-06_s3-tv3_agent-va-semantic-memory.md)
