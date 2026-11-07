@@ -9,7 +9,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from core.config import REPO_ROOT, get_settings
+from core.config import BACKEND_ROOT, get_settings
 from core.corpus import ADMISSION_KEY, CorpusPolicy
 from core.types import ChunkRecord, Encoder
 from core.vector.schema import ensure_collection
@@ -205,7 +205,7 @@ def run_cli(
         try:
             count = await index_chunks(
                 result.chunks,
-                FastEmbedEncoder(REPO_ROOT / "backend" / settings.rag_models_dir, threads=settings.rag_encoder_threads),
+                FastEmbedEncoder(BACKEND_ROOT / settings.rag_models_dir, threads=settings.rag_encoder_threads),
                 QdrantStore(client, target, admission),
                 settings.rag_batch_size,
             )

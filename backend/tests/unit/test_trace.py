@@ -49,6 +49,8 @@ def test_public_trace_is_json_safe_and_bounded():
 def test_token_usage_sums_generation_and_rewrite_and_tolerates_missing_values():
     trace = {"usage": {"prompt_tokens": 100, "completion_tokens": 20}, "rewrite": {"usage": {"prompt_tokens": 7}}}
     assert token_usage(trace) == (107, 20)
+    agent = {"usage": {"prompt_tokens": 5, "completion_tokens": 2}}
+    assert token_usage({**trace, "agent": agent}) == (112, 22)  # quyết định của agent cũng tốn token
     assert token_usage({}) == (None, None)
     assert token_usage({"usage": {"prompt_tokens": None, "completion_tokens": None}}) == (None, None)
 
@@ -102,3 +104,27 @@ def test_admin_trace_unknown_message_and_bad_id(admin_client):
     headers = {"X-Admin-Token": "s3cret-token"}
     assert client.get(f"/api/v1/admin/trace/{uuid4()}", headers=headers).status_code == 404
     assert client.get("/api/v1/admin/trace/not-a-uuid", headers=headers).status_code == 422
+
+
+def test_rag_trace_column_is_deferred_so_history_loads_do_not_read_it():
+    from core.db.models import Message
+
+    assert Message.__mapper__.column_attrs["rag_trace"].deferred is True
+    assert Message.__mapper__.column_attrs["trace"].deferred is False  # ảnh và câu hỏi lại vẫn nạp cùng lịch sử
+
+
+async def test_repository_trace_maps_database_errors_to_unavailable():
+    from sqlalchemy.exc import OperationalError
+
+    from app.services.memory_repository import MemoryRepository
+    from core.errors import UnavailableError
+
+    class Down:
+        async def __aenter__(self):
+            raise OperationalError("select", {}, ConnectionError("db down"))
+
+        async def __aexit__(self, *args):
+            return False
+
+    with pytest.raises(UnavailableError):
+        await MemoryRepository(lambda: Down()).trace(uuid4())

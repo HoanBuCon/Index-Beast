@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from app.main import create_app
-from core.config import ENV_FILE, REPO_ROOT, Settings, UnsafeConfigError, ensure_safe_for_environment
+from core.config import BACKEND_ROOT, ENV_FILE, REPO_ROOT, Settings, UnsafeConfigError, ensure_safe_for_environment
 
 
 def make(**overrides) -> Settings:
@@ -91,3 +91,9 @@ def test_service_urls_are_built_from_host_and_port():
 
     assert settings.qdrant_url == "http://qdrant:6333"
     assert settings.redis_url == "redis://redis:6379/2"
+
+
+def test_backend_root_is_the_code_directory_not_derived_from_the_repo_layout():
+    """Trong container mã ở /app và REPO_ROOT là "/": model và dữ liệu phải tính từ thư mục chứa `core/`."""
+    assert (BACKEND_ROOT / "core" / "config.py").is_file()
+    assert (BACKEND_ROOT / "migrations").is_dir()

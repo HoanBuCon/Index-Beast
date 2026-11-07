@@ -7,6 +7,7 @@ from uuid import UUID, uuid5
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import undefer
 
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Message
@@ -84,8 +85,12 @@ class MemoryRepository:
 
     async def trace(self, message_id: UUID) -> dict | None:
         """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu."""
-        async with self.sessions() as session:
-            row = await session.get(Message, message_id)
+        try:
+            async with self.sessions() as session:
+                stmt = select(Message).options(undefer(Message.rag_trace)).where(Message.id == message_id)
+                row = (await session.scalars(stmt)).first()
+        except SQLAlchemyError:
+            raise UnavailableError("Không đọc được trace đã lưu.") from None
         if row is None or row.role != "assistant":
             return None
         return {
@@ -97,7 +102,7 @@ class MemoryRepository:
             "latency_ms": row.latency_ms,
             "tokens_in": row.tokens_in,
             "tokens_out": row.tokens_out,
-            "trace": (row.trace or {}).get("rag"),
+            "trace": row.rag_trace,
             "source": "postgres",
         }
 
@@ -155,8 +160,8 @@ class MemoryRepository:
                             trace={
                                 "images": [i.model_dump() for i in m.images],
                                 "clarification": m.clarification.model_dump(mode="json") if m.clarification else None,
-                                **({"rag": extra["trace"]} if "trace" in extra else {}),
                             },
+                            rag_trace=extra.get("trace"),
                         )
                     )
                 await session.flush()

@@ -909,6 +909,10 @@
           },
           "source": {
             "description": "postgres (đã lưu) hoặc memory (chỉ còn trong RAM, mất khi khởi động lại).",
+            "enum": [
+              "postgres",
+              "memory"
+            ],
             "title": "Source",
             "type": "string"
           },

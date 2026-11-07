@@ -23,7 +23,7 @@ from urllib.parse import unquote, urlsplit
 from PIL import Image, UnidentifiedImageError
 
 from app.api.schemas.chat import ChatImage
-from core.config import REPO_ROOT
+from core.config import BACKEND_ROOT
 from core.corpus import CorpusPolicy
 
 IDENTIFIER = re.compile(r"^[0-9a-f]{64}$")
@@ -89,7 +89,7 @@ class ImageCatalog:
     def __init__(self, settings):
         self.enabled = settings.rag_images_enabled
         self.policy = CorpusPolicy.from_settings(settings)
-        base = REPO_ROOT / "backend"
+        base = BACKEND_ROOT
         self.catalog_path = base / settings.rag_images_catalog
         self.documents_path = base / settings.rag_images_documents
         self.root = base / settings.rag_images_root

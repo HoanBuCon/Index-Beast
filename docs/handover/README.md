@@ -151,3 +151,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-08 | TV1 (Hoanbucon) | [Cập nhật SRS và TechStack theo công nghệ, pipeline cuối Sprint 3](2026-11-08_s3-tv1_cap-nhat-srs-techstack.md) |
 | 2026-11-08 | TV1 (Hoanbucon) | [Staging trên VPS: compose, Caddy bảo vệ, script cài đặt, deploy và đo tài nguyên](2026-11-08_s3-tv1_staging-vps.md) |
 | 2026-11-08 | TV1 (Hoanbucon) | [Lưu trace và số đo từng câu trả lời vào PostgreSQL, endpoint xem trace](2026-11-08_s3-tv1_trace-rag-postgres-va-admin.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Sửa 9 lỗi tìm thấy khi review phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review.md) |
