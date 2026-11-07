@@ -50,6 +50,9 @@ class Clarification(BaseModel):
 
 
 class ChatImage(BaseModel):
+    association: Literal["exact_section", "entity_page", "web_result"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     id: str = Field(pattern=r"^[0-9a-f]{64}$")
     url: str
     caption: str | None = None

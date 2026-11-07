@@ -97,9 +97,12 @@ class TavilySearch:
                         "include_domains": self.settings.web_search_domains,
                         "include_answer": False,
                         "include_raw_content": False,
+                        "include_images": True,
+                        "include_image_descriptions": True,
                     },
                 )
                 selected = {}
+                page_images = {}
                 for item in data["results"][: self.settings.web_search_max_results]:
                     if not isinstance(item, dict):
                         raise WebSearchError("schema")
@@ -107,6 +110,15 @@ class TavilySearch:
                     title = item.get("title")
                     if url and isinstance(title, str) and title.strip():
                         selected.setdefault(url, title[:300])
+                        page_images[url] = (
+                            [
+                                im
+                                for im in item.get("images", [])[:8]
+                                if isinstance(im, dict) and isinstance(im.get("url"), str)
+                            ]
+                            if isinstance(item.get("images"), list)
+                            else []
+                        )
                     else:
                         diagnostics["excluded"] += 1
                 diagnostics["selected_urls"] = len(selected)
@@ -167,6 +179,7 @@ class TavilySearch:
                                     "lang": "unknown",
                                     "review_status": "unreviewed",
                                     "image_ids": [],
+                                    "web_images": page_images.get(url, []),
                                 },
                             )
                         )

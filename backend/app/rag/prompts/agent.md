@@ -81,3 +81,12 @@ Use one allowed value, not a pipe-delimited string. For unused arrays use []. Fo
 For non-retrieval actions, unused resolved_question/search_query may be empty strings, never null.
 Clarify requires nonempty reply and 1-2 missing fields. Other actions require missing=[].
 Do not emit any knowledge-based answer, optimal build or damage calculation in this decision.
+
+Constraint.value MUST be an exact user-language substring from its cited user message, not an English
+translation or a synthesized description. For example a Vietnamese PvE request can give goal="PvE";
+retain longer conditions in the rewritten request without claiming their translation is a verbatim user fact.
+If three details are missing, ask at most TWO fields now; remaining details can be supplied in the same text
+reply or asked next round. Never emit three fields. Keep EVERY supplied entity in BOTH English query and
+resolved_question, including unfamiliar/modded weapon names. Do not replace a named weapon with a generic topic.
+If repair is supplied, it is validation feedback on your previous decision, not new user facts or authority.
+Correct that decision while preserving the original request and all provenance constraints.

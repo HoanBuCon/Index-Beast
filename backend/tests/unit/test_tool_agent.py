@@ -164,3 +164,66 @@ async def test_failed_web_is_observed_and_cancelled_tool_propagates():
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
+
+
+async def test_final_evidence_is_model_selected_without_keyword_order(monkeypatch):
+    import app.rag.pipeline as module
+
+    def forbidden(*args, **kw):
+        raise AssertionError("Keyword coverage routing was used")
+
+    monkeypatch.setattr(module, "coverage_order", forbidden)
+    llm = ToolsLLM([step("local_search", "Ranni"), step("finish", evidence_ids=["3", "1"])])
+    from tests.unit.test_live_chat import hit
+
+    pipe = pipeline(llm)
+    pipe.retriever = FakeRetriever(
+        [hit(1), hit(2, text="Ranni additional fact two."), hit(3, text="Ranni additional fact three.")]
+    )
+    p = await pipe.prepare(req(), [])
+    assert [h.id for h in p.hits] == ["3", "1"]
+    assert p.trace["evidence_selection"]["method"] == "model"
+    assert len(llm.observations[1]["candidates"]) >= 3
+
+
+async def test_evidence_rank_fallback_is_explicit_not_keyword(monkeypatch):
+    import app.rag.pipeline as module
+
+    monkeypatch.setattr(module, "coverage_order", lambda *a, **kw: pytest.fail("keyword fallback"))
+    p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish")])).prepare(req(), [])
+    assert p.trace["evidence_selection"] == {"method": "rank_fallback", "ids": []}
+    assert p.hits
+
+
+@pytest.mark.parametrize("ids", [["fake"], ["1", "1"]])
+async def test_evidence_selector_rejects_invented_or_duplicate_ids(ids):
+    p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish", evidence_ids=ids)])).prepare(req(), [])
+    assert p.trace["evidence_selection"] == {"method": "rank_fallback", "ids": [], "reason": "invalid_or_duplicate_id"}
+    assert p.hits and all(h.id != "fake" for h in p.hits)
+
+
+@pytest.mark.parametrize("mode", ["off", "auto", "always"])
+def test_media_benchmark_plan_honors_modes_and_never_calls_clients(tmp_path, capsys, mode):
+    from scripts.benchmark_agent import main
+
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        json.dumps([{"id": "one", "question": "Ranni?", "lang": "vi", "web_search": mode}]), encoding="utf-8"
+    )
+    main(["--manifest", str(path), "--probe-images"])
+    result = json.loads(capsys.readouterr().out)
+    assert result["mode"] == "PLAN ONLY" and result["manifest"]["cases"][0]["web_search"] == mode
+
+
+async def test_selected_original_web_id_is_not_lost_by_duplicate_merging():
+    from app.adapters.tavily import WebHit
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    first = web_hit()
+    second = WebHit("second-web-id", first.score, {**first.payload, "url": "https://eldenring.wiki.gg/wiki/Equivalent"})
+    llm = ToolsLLM([step("web_search", "Ranni"), step("finish", evidence_ids=[second.id])])
+    pipe = pipeline(llm, tavily_api_key="offline-test-key")
+    pipe.web_search = FakeSearch(rows=[first, second])
+    p = await pipe.prepare(req(options={"web_search": "always"}), [])
+    assert [h.id for h in p.hits] == [second.id]
+    assert p.hits[0].payload == second.payload

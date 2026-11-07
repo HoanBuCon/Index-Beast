@@ -35,3 +35,9 @@ elden-ring-data/
 .claude/
 # TV4 notes
 TV*.txt
+
+# Validated runtime web image cache
+backend/.cache/
+
+# Generated benchmark rasters stay local; preserve original hashes.
+/docs/testing/2026-11-07_evidence-media-build-10/images/

@@ -211,6 +211,22 @@
             ],
             "title": "Alt"
           },
+          "association": {
+            "anyOf": [
+              {
+                "enum": [
+                  "exact_section",
+                  "entity_page",
+                  "web_result"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Association"
+          },
           "attribution": {
             "anyOf": [
               {

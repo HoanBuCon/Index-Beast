@@ -180,41 +180,62 @@ async def decide(
     diagnostic = {"status": "error", "reason": "invalid_decision"}
     trace["agent"] = diagnostic
     try:
+        payload = {
+            "question": question,
+            "answer_language": lang,
+            "requested_language": requested_lang,
+            "memories": candidates,
+            "working_state": working,
+            "shared_thread": shared_thread,
+        }
         async with asyncio.timeout(settings.chat_agent_timeout_seconds):
-            result = await llm.invoke_chain(
-                rewrite_prompt() | llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=1536),
-                {
-                    "policy": prompt("agent"),
-                    "history": [],
-                    "question": json.dumps(
-                        {
-                            "question": question,
-                            "answer_language": lang,
-                            "requested_language": requested_lang,
-                            "memories": candidates,
-                            "working_state": working,
-                            "shared_thread": shared_thread,
-                        },
-                        ensure_ascii=False,
-                    ),
-                },
-            )
-        data, _ = decode_output(result.content)
-        decision = AgentDecision.model_validate(data)
-        decision, normalized = normalize_sources(decision, candidates, working)
-        check_decision(decision, question, candidates, working)
-        diagnostic["normalized_source_refs"] = normalized
-        diagnostic.update(
-            status="ok",
-            action=decision.action,
-            intent=decision.intent,
-            turn_type=decision.turn_type,
-            rewrite=decision.rewrite,
-            reason=decision.reason,
-            selected_memory_ids=decision.selected_memory_ids,
-            usage={"prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens},
-        )
-        return decision
+            for attempt in range(2):
+                result = await llm.invoke_chain(
+                    rewrite_prompt() | llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=1536),
+                    {"policy": prompt("agent"), "history": [], "question": json.dumps(payload, ensure_ascii=False)},
+                )
+                data, _ = decode_output(result.content)
+                try:
+                    decision = AgentDecision.model_validate(data)
+                    decision, normalized = normalize_sources(decision, candidates, working)
+                    check_decision(decision, question, candidates, working)
+                except ValueError as exc:
+                    required = {k for k, v in AgentDecision.model_fields.items() if v.is_required()}
+                    # Repair only a complete, recognizable decision; never turn arbitrary JSON into a fake success.
+                    if (
+                        attempt
+                        or not isinstance(data, dict)
+                        or not required <= data.keys()
+                        or data.keys() - AgentDecision.model_fields.keys()
+                        or len(trace.get("model_calls", [])) >= settings.chat_agent_max_calls - 1
+                    ):
+                        raise
+                    from pydantic import ValidationError
+
+                    issue = (
+                        [
+                            {"field": list(e["loc"]), "type": e["type"]}
+                            for e in exc.errors(include_input=False, include_url=False)
+                        ]
+                        if isinstance(exc, ValidationError)
+                        else str(exc)
+                    )
+                    payload["repair"] = {"previous_decision": data, "validation_error": issue}
+                    diagnostic["repair_attempts"] = 1
+                    spend(trace, "decision_repair", settings.chat_agent_max_calls)
+                    continue
+                diagnostic["normalized_source_refs"] = normalized
+                diagnostic.update(
+                    status="ok",
+                    action=decision.action,
+                    intent=decision.intent,
+                    turn_type=decision.turn_type,
+                    rewrite=decision.rewrite,
+                    reason=decision.reason,
+                    selected_memory_ids=decision.selected_memory_ids,
+                    usage={"prompt_tokens": result.prompt_tokens, "completion_tokens": result.completion_tokens},
+                )
+                return decision
     except LLMError:
         diagnostic["reason"] = "provider_error"
         raise UpstreamError("Dịch vụ mô hình đang gặp sự cố. Vui lòng thử lại.") from None
