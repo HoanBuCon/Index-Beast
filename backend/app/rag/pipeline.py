@@ -677,6 +677,7 @@ class ChatPipeline:
             original = state.get("resolved_question", state["req"].message)
             if state["prepared"].agent_decision.get("turn_type") == "new":
                 original = state["req"].message
+            state["prepared"].trace["rewritten_query"] = state["query"]
             queries = plan_queries(original, state["query"], self.settings.rag_query_mode)
             if state.get("overview") is not None:
                 queries = overview_queries(queries, state["overview"])
