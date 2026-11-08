@@ -11,6 +11,7 @@ import AnswerIllustrations from "./AnswerIllustrations";
 import { backendIllustrations, canShowIllustrations } from "./answerMedia";
 import type { AnswerIllustration, IllustrationPreviewState } from "./answerMedia";
 import ClarificationForm from "./ClarificationForm";
+import SourceList from "./SourceList";
 export default function MessageList({
   messages,
   busy,
@@ -18,6 +19,7 @@ export default function MessageList({
   illustrationsByMessage,
   illustrationPreviewState,
   onClarification,
+  autoScroll = true,
 }: {
   messages: Message[];
   busy: boolean;
@@ -26,12 +28,13 @@ export default function MessageList({
   illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
   illustrationPreviewState?: IllustrationPreviewState;
   onClarification?: (text: string, id: string) => Promise<boolean> | void;
+  autoScroll?: boolean;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "nearest" });
-  }, [messages]);
+    if (autoScroll) bottom.current?.scrollIntoView({ block: "nearest" });
+  }, [messages, autoScroll]);
   return (
     <div className="messages" aria-busy={busy}>
       {messages.map((message) => (
@@ -77,7 +80,7 @@ export default function MessageList({
             <>
               {!message.content && busy && message.id === messages.at(-1)?.id && (
                 <div role="status" className="thinking-bubble">
-                  <span className="sr-only">Đang chờ câu trả lời…</span>
+                  <span className="thinking-label">Đang tìm trong lore…</span>
                   <span className="thinking-dots" aria-hidden="true">
                     <span />
                     <span />
@@ -88,6 +91,8 @@ export default function MessageList({
               {message.incomplete && !(busy && message === messages.at(-1)) && (
                 <p className="muted">{"Câu trả lời chưa hoàn tất."}</p>
               )}
+              {/* S3: hiện lại nguồn sau khi hoàn tất theo yêu cầu mới, giữ citation trong Markdown. */}
+              {!message.incomplete && <SourceList sources={message.sources} onSelect={setSelected} />}
               {canShowIllustrations(message, busy && message.id === messages.at(-1)?.id) && (
                 <AnswerIllustrations
                   illustrations={

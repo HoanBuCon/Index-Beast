@@ -106,6 +106,7 @@ test("inline question accepts free text without dropdowns and retains expiration
       createElement(Form, { question: clarification, disabled: true, onAnswer() {} }),
     );
     assert.match(pending, /Đang xử lý…/);
+    assert.match(pending, /class="clarification-group" hidden=""/);
     assert.match(pending, /role="status"/);
     const expired = renderToStaticMarkup(
       createElement(Form, {
@@ -135,7 +136,8 @@ test("inline question accepts free text without dropdowns and retains expiration
     );
     assert.match(message, />OK<\/button>/);
     assert.match(message, /class="citation-link"/);
-    assert.doesNotMatch(message, /Dấu vết trong kho lưu trữ|Câu trả lời có hữu ích/);
+    assert.match(message, /aria-label="Nguồn tham khảo"/);
+    assert.doesNotMatch(message, /Câu trả lời có hữu ích/);
   } finally {
     await server.close();
   }

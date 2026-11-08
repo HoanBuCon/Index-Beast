@@ -5,6 +5,7 @@ import { Route, Routes, Link } from "react-router";
 import ChatPage from "./pages/ChatPage";
 import AboutPage from "./pages/AboutPage";
 import AdminPage from "./pages/AdminPage";
+import SharedAnswerPage from "./pages/SharedAnswerPage";
 import { lazy, Suspense } from "react";
 // TV4: chỉ mở fixture khi DEV và truy cập URL rõ ràng; không đóng gói fixture vào production.
 const AnswerMediaPreviewPage = import.meta.env.DEV ? lazy(() => import("./pages/AnswerMediaPreviewPage")) : null;
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/" element={null} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/answer" element={<SharedAnswerPage />} />
           {AnswerMediaPreviewPage && (
             <Route
               path="/preview/answer-images"

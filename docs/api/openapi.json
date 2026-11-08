@@ -1,6 +1,46 @@
 {
   "components": {
     "schemas": {
+      "AnswerShareCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "AnswerShareCreated",
+        "type": "object"
+      },
+      "AnswerShareRequest": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "message_id"
+        ],
+        "title": "AnswerShareRequest",
+        "type": "object"
+      },
       "ChatCapabilities": {
         "properties": {
           "web_search_available": {
@@ -786,6 +826,47 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "SharedAnswer": {
+        "properties": {
+          "answer": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "grounded": {
+            "title": "Grounded",
+            "type": "boolean"
+          },
+          "question": {
+            "maxLength": 2000,
+            "title": "Question",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "maxItems": 100,
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "question",
+          "answer",
+          "sources",
+          "grounded",
+          "expires_at"
+        ],
+        "title": "SharedAnswer",
+        "type": "object"
+      },
       "Source": {
         "properties": {
           "index": {
@@ -1067,6 +1148,154 @@
         "summary": "Trace RAG của một câu trả lời",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/answer-shares": {
+      "get": {
+        "operationId": "read_answer_share_api_v1_answer_shares_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Answer-Share-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Answer-Share-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Read Answer Share",
+        "tags": [
+          "answer-shares"
+        ]
+      },
+      "post": {
+        "operationId": "create_answer_share_api_v1_answer_shares_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerShareCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Answer Share",
+        "tags": [
+          "answer-shares"
         ]
       }
     },

@@ -47,12 +47,20 @@ Lệnh không tự chạy backend; mở terminal khác chạy `make api` nếu m
 
 - `/`: chat, Enter/Shift+Enter, dừng sinh, thử lại, Markdown không render HTML thô, nguồn và hộp trích dẫn.
 - Lịch sử khách: localStorage, tối đa 30 cuộc trò chuyện, xóa từng cuộc; lỗi lưu trữ không làm hỏng trang.
-- Cuộc trò chuyện mới mặc định gọi POST `/api/v1/chat` theo luồng Sprint 2: dùng dịch vụ mock của TV1,
-  chờ JSON hoàn chỉnh và kiểm tra schema trước khi render. Không còn bộ chọn chế độ hoặc tình huống thử trên sidebar.
-  Timeout 30 giây, có nút Dừng, báo lỗi và Thử lại. Không tự gửi lại request hoặc chuyển sang dữ liệu giả.
+- Sprint 3: cuộc trò chuyện mới mặc định gọi POST `/api/v1/chat/stream` qua fetch + ReadableStream,
+  kiểm tra sự kiện SSE và hiện token dần. Lượt gửi/thử lại/bổ sung trong hội thoại JSON cũ cũng chuyển sang SSE,
+  giữ ID/token và lịch sử. Không còn bộ chọn chế độ trên sidebar, không tự chuyển sang mock khi lỗi.
+  Có nút Dừng/Esc khi focus ở composer, báo lỗi và Thử lại; lỗi/ngắt trước done giữ nội dung dở dang.
 - Các cuộc trò chuyện demo cũ vẫn mở được và giữ nhãn minh họa; tạo mới luôn dùng API.
   Demo cục bộ giữ trong `src/api/demo.ts` để kiểm thử; feedback demo không gửi server.
-- Client SSE `/api/v1/chat/stream` giữ cho Sprint 3, chưa bật cho cuộc trò chuyện mới. Câu trả lời bị ngắt được đánh dấu chưa hoàn tất.
+- Trạng thái “Đang tìm trong lore…” xuất hiện ngay khi gửi, cùng ba chấm chờ, biến mất khi nhận nội dung.
+  Đo fixture trình duyệt 1440/768/360 lần lượt 49/13,7/31,2 ms (DOM xuất hiện), chưa phải benchmark backend thật.
+  Ngày 08/11 người dùng yêu cầu hiện lại danh sách nguồn sau khi câu trả lời hoàn tất: [n], tiêu đề,
+  xem trích đoạn và link mở nguồn HTTP(S). Giữ citation/popover và không hiện khung nguồn rỗng.
+- `/answer#<token>`: bản chia sẻ chỉ đọc một câu trả lời Discord, có nguồn và thời hạn 24 giờ.
+  Token trong fragment chỉ được gửi qua header `X-Answer-Share-Token` tới GET `/api/v1/answer-shares`,
+  không đưa vào path/query API, không lưu localStorage và không dùng service token trên trình duyệt.
+  Sai/hết hạn hiện thông báo và nút thử lại, không chuyển sang dữ liệu giả.
 - Ô nhập tự giãn, tối đa 2.000 ký tự theo OpenAPI; lý do phản hồi tối đa 500 ký tự. Gửi `options.lang=vi` cho giao diện tiếng Việt.
 - `/about`: phạm vi, nguồn, CC BY-SA, nhóm, lưu trữ trên trình duyệt và disclaimer.
 - `/admin`: form token, danh sách hội thoại, tra cứu trace, feedback xấu, ingestion, eval. Token chỉ nằm trong memory.

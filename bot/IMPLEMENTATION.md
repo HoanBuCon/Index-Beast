@@ -1,5 +1,8 @@
 # TV4 · Bot Sprint 2: API client và `/ask`
 
+Ghi chú Sprint 2 bên dưới được giữ để truy vết. Xem phần **Bot TV4 · Sprint 3** cuối file để biết cập nhật ngày 08/11/2026;
+các mục chia câu trả lời và `/help`/`/about` đã có code ở Sprint 3, còn nghiệm thu Discord thật và link đọc đầy đủ trên web chưa hoàn tất.
+
 Mã phía bot đã có kiểm thử độc lập bằng dữ liệu giả. **Chưa nghiệm thu tích hợp Discord → backend thật**, không đồng nghĩa đã đăng ký `/ask` trên Discord.
 
 ## Phạm vi
@@ -78,3 +81,54 @@ Trong Discord gọi `/ask question:Marika là ai?`; kiểm tra defer, embed và 
 Chưa làm lưu ngữ cảnh theo channel/user, chia nhiều tin, `/help`/`/about`, nút feedback/hỏi tiếp, cấu hình guild hay mention. Các mục đó thuộc S3–S5, không tự triển khai trong S2.
 
 Bàn giao: [Bot ask và API mock TV4](../docs/handover/2026-10-30_s2-tv4_bot-ask-api-mock.md).
+
+---
+
+# Bot TV4 · Sprint 3
+
+## Hành vi
+
+- `/ping`: kiểm tra bot online.
+- `/ask question:<câu hỏi>`: deferReply trước I/O, gọi `/api/v1/chat` với service token và X-Request-ID.
+  Backend giữ ngữ cảnh bằng external_ref theo kênh/người dùng hoặc thread. Đây là luồng thật; dùng mock hay RAG do cấu hình backend quyết định.
+- Câu trả lời dài được chia đủ thành các embed riêng, mỗi mô tả tối đa 3.600 UTF-16 code units, không tách đôi emoji.
+  Phần đầu dùng editReply và có nguồn; các phần sau dùng followUp, đánh số phần. Không bật mentions.
+- `/help`, `/about`: hướng dẫn/nguồn và CC BY-SA, trả riêng cho người gọi, không gọi backend/LLM.
+- Script deploy đăng ký toàn cục toàn bộ bốn lệnh trong registry. Đã chạy ngày 08/11/2026 và đọc lại từ Discord xác nhận đủ bốn lệnh.
+  Gateway chẩn đoán và hai lượt handler → backend thật đạt. Sau phản ánh và ảnh mới ngày 08/11/2026,
+  `/help` và `/about` ban đầu chưa được xác nhận hiển thị/chạy ở client dù REST có đủ bốn lệnh;
+  sau đó người dùng đã gửi ảnh hai lệnh trả lời thành công trên Discord.
+  Chưa kiểm tra trực tiếp câu trả lời dài trên Discord.
+
+## Chạy và kiểm tra thủ công
+
+Từ thư mục gốc, mở Docker Desktop rồi chạy `make up` và `make api` ở terminal thứ nhất;
+terminal thứ hai chạy `make bot`. Chọn CHAT_MODE của backend theo nhu cầu; không dùng `make bot-dev` để đánh giá RAG thật vì lệnh đó ép mock.
+
+Khi muốn xuất bản định nghĩa lệnh mới lên Discord, tự chạy:
+
+```powershell
+make bot-deploy
+```
+
+Lệnh này cập nhật global commands, cần Discord token hợp lệ trong `.env`. Không đưa token vào Git.
+Sau khi lệnh xuất hiện, thử `/help`, `/about`, `/ask` ngắn, hỏi tiếp cùng kênh/người dùng và câu trả lời dài.
+Kiểm tra cả nguồn và thứ tự các phần. Cần dùng server test để xác nhận end-to-end thật.
+
+## Kiểm tra local và giới hạn
+
+Trong `bot/`: `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run format:check`.
+Các test giả lập interaction/fetch; không cần Discord/backend hoặc gọi model.
+
+Ngày 08/11 người dùng cho phép bổ sung API chia sẻ giới hạn vào backend: bot tạo bản chụp một câu trả lời qua
+POST `/api/v1/answer-shares` có service auth, nhận mã ngẫu nhiên 24 giờ và gắn nút “Xem đầy đủ trên web”.
+Người có link chỉ đọc bản chụp đó; không được quyền đọc cả hội thoại. Không đưa API_SERVICE_TOKEN vào URL hoặc frontend.
+Bot vẫn trả đủ văn bản qua các phần; nếu tạo link lỗi, chỉ ghi loại lỗi và giữ câu trả lời, không tự retry LLM.
+Nguồn dài vẫn bị giới hạn theo dung lượng field Discord; bản chia sẻ lấy toàn bộ danh sách nguồn trong câu trả lời lưu ở backend.
+
+Đặt `WEB_URL` thành URL gốc của web mà người nhận truy cập được, không kèm path/query/fragment hoặc thông tin đăng nhập.
+URL local hiện dùng Radmin VPN; người nhận cần truy cập được mạng đó. Production dùng URL HTTPS của dự án.
+Sau đổi `.env`, dừng rồi chạy lại `make bot` để nhận cấu hình mới. Không cần deploy slash command lại vì không đổi định nghĩa lệnh.
+Link chỉ có trong câu trả lời mới sau cập nhật, không tự sửa các tin Discord cũ. Xem `docs/api/answer-shares-tv4.md`.
+
+Ghi nguồn CC BY-SA dựa theo khảo sát `docs/data-sources.md`; không áp giấy phép văn bản cho toàn bộ ảnh/font hoặc nội dung bên ngoài.

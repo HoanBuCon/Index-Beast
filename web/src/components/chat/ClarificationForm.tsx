@@ -23,20 +23,21 @@ export default function ClarificationForm({
   onAnswer: (text: string, id: string) => Promise<boolean> | void;
 }) {
   const [text, setText] = useState("");
+  const [submitted, setSubmitted] = useState(false);
   const [expired, setExpired] = useState(() => Date.parse(question.expires_at) <= Date.now());
   const sending = useRef(false);
   const input = useRef<HTMLTextAreaElement>(null);
   // TV4: ô phụ tự giãn theo nội dung, không dùng lưới/nút gửi của composer chính.
   useLayoutEffect(() => {
-    if (input.current) fitSupplement(input.current);
-  }, [text]);
+    if (!submitted && !disabled && input.current) fitSupplement(input.current);
+  }, [text, submitted, disabled]);
   useLayoutEffect(() => {
     const element = input.current;
     if (!element) return;
     let width = element.getBoundingClientRect().width;
     const observer = new ResizeObserver(() => {
       const nextWidth = element.getBoundingClientRect().width;
-      if (nextWidth !== width) {
+      if (nextWidth > 0 && nextWidth !== width) {
         width = nextWidth;
         fitSupplement(element);
       }
@@ -51,14 +52,19 @@ export default function ClarificationForm({
   async function submit(value = text) {
     if (disabled || expired || sending.current || !value.trim()) return;
     sending.current = true;
+    // Đóng bảng ngay khi gửi, giữ textarea mounted để khôi phục nguyên văn nếu thất bại.
+    setSubmitted(true);
     try {
       if (await onAnswer(value, question.id)) setText("");
+      else setSubmitted(false);
+    } catch {
+      setSubmitted(false);
     } finally {
       sending.current = false;
     }
   }
   return (
-    <div className="clarification-group">
+    <div className="clarification-group" hidden={submitted || disabled}>
       <form
         className="clarification-form"
         aria-label="Bổ sung thông tin"

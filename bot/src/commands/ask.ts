@@ -2,15 +2,23 @@
 // Phụ trách: TV4 · [S2] Bot /ask · [S3] Bot: câu trả lời thật
 
 import { createHash, randomUUID } from "node:crypto";
-import { SlashCommandBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from "discord.js";
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
 import { MAX_MESSAGE_CHARS } from "../api/types.ts";
-import { answerEmbed } from "../utils/format.ts";
+import { answerEmbeds } from "../utils/format.ts";
 import { errorName, log } from "../utils/logger.ts";
 import type { Command } from "./index.ts";
+import { loadWebUrl } from "../config.ts";
+import type { AnswerShareCreated } from "../api/types.ts";
 
-export function createAskCommand(chat?: (body: ChatRequest) => Promise<ChatResponse>): Command {
+export function createAskCommand(
+  chat?: (body: ChatRequest) => Promise<ChatResponse>,
+  sharing: {
+    webUrl?: string;
+    createShare?: (conversationId: string, messageId: string) => Promise<AnswerShareCreated>;
+  } = {},
+): Command {
   return {
     data: new SlashCommandBuilder()
       .setName("ask")
@@ -46,7 +54,36 @@ export function createAskCommand(chat?: (body: ChatRequest) => Promise<ChatRespo
           external_ref: externalRef,
           options: { lang: "auto", spoilers: true, web_search: "auto" },
         });
-        await interaction.editReply({ embeds: [answerEmbed(question, response)], allowedMentions: { parse: [] } });
+        const [first, ...remaining] = answerEmbeds(question, response);
+        const components: ActionRowBuilder<ButtonBuilder>[] = [];
+        const webUrl = loadWebUrl({ WEB_URL: sharing.webUrl ?? process.env.WEB_URL });
+        const createShare =
+          sharing.createShare ?? (!chat ? createApiClient(undefined, { requestId }).createAnswerShare : undefined);
+        if (webUrl && createShare) {
+          try {
+            const share = await createShare(response.conversation_id, response.message_id);
+            if (!/^[A-Za-z0-9_-]{43}$/.test(share.token)) throw new Error("Invalid share token");
+            const url = new URL("/answer", webUrl);
+            url.hash = share.token;
+            components.push(
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setStyle(ButtonStyle.Link)
+                  .setLabel("Xem đầy đủ trên web · 24 giờ")
+                  .setURL(url.href),
+              ),
+            );
+            const footer = first.data.footer?.text;
+            first.setFooter({ text: `${footer ? `${footer} ` : ""}Ai có link có thể đọc câu trả lời trong 24 giờ.` });
+          } catch (error) {
+            // Link phụ lỗi không được làm mất câu trả lời đã nhận từ backend.
+            log("warn", "Chưa tạo được link xem đầy đủ.", { request_id: requestId, error: errorName(error) });
+          }
+        }
+        await interaction.editReply({ embeds: [first], components, allowedMentions: { parse: [] } });
+        for (const embed of remaining) {
+          await interaction.followUp({ embeds: [embed], allowedMentions: { parse: [] } });
+        }
       } catch (error) {
         log("error", "Lệnh ask chưa hoàn tất.", {
           request_id: requestId,

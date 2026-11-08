@@ -5,7 +5,7 @@ import type { ChatInputCommandInteraction, InteractionEditReplyOptions } from "d
 import { createAskCommand } from "../src/commands/ask.ts";
 import { commands } from "../src/commands/index.ts";
 import { ApiError } from "../src/api/client.ts";
-import { answerEmbed } from "../src/utils/format.ts";
+import { answerEmbed, answerEmbeds } from "../src/utils/format.ts";
 
 const response = {
   conversation_id: "12345678-1234-4234-8234-123456789012",
@@ -118,4 +118,36 @@ test("embed stays below Discord limits for long answers and source lists; reject
     embed.fields!.reduce((n, f) => n + f.name.length + f.value.length, 0);
   assert.ok(total <= 6000);
   assert.match(embed.footer!.text, /rút gọn/);
+});
+
+test("long answer parts reconstruct every character without cutting emoji or exceeding per-message limits", () => {
+  const answer = "Một câu trả lời có dấu 😀 và trích dẫn [1].\n".repeat(500);
+  const embeds = answerEmbeds("Câu hỏi", { ...response, answer }).map((embed) => embed.toJSON());
+  assert.ok(embeds.length > 1);
+  assert.equal(embeds.map((embed) => embed.description).join(""), answer);
+  for (const [index, embed] of embeds.entries()) {
+    assert.ok(embed.description!.length <= 4096);
+    assert.ok(!/[\uD800-\uDBFF]$/.test(embed.description!));
+    const size =
+      (embed.title?.length ?? 0) +
+      embed.description!.length +
+      (embed.footer?.text.length ?? 0) +
+      (embed.fields?.reduce((sum, field) => sum + field.name.length + field.value.length, 0) ?? 0);
+    assert.ok(size <= 6000);
+    assert.match(embed.footer!.text, new RegExp(`Phần ${index + 1}/${embeds.length}`));
+  }
+});
+
+test("ask posts continuation embeds after the initial deferred reply, with mentions disabled", async () => {
+  const mock = interaction("Câu hỏi dài");
+  const following: InteractionEditReplyOptions[] = [];
+  mock.value.followUp = (async (payload: InteractionEditReplyOptions) => {
+    following.push(payload);
+  }) as typeof mock.value.followUp;
+  const answer = "Cốt truyện 😀\n".repeat(900);
+  await createAskCommand(async () => ({ ...response, answer })).execute(mock.value);
+  const embeds = [...mock.replies, ...following].flatMap((reply) => reply.embeds ?? []);
+  assert.equal(embeds.map((embed) => JSON.parse(JSON.stringify(embed)).description).join(""), answer);
+  assert.ok(following.length > 0);
+  for (const reply of following) assert.deepEqual(reply.allowedMentions, { parse: [] });
 });

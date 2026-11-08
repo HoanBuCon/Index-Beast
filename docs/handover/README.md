@@ -1,5 +1,17 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
+
+- [TV4 · Đăng ký global và kiểm tra backend thật (08/11/2026)](2026-11-08_s3-tv4_dang-ky-global-va-thu-backend-that.md)
+
+- [TV4 · Sprint 3: SSE web, bot và About (08/11/2026)](2026-11-08_s3-tv4_web-sse-bot-va-about.md)
+
+- [TV4 · Đóng bảng trả lời bổ sung khi gửi (08/11/2026)](2026-11-08_s3-tv4_dong-bang-bo-sung-khi-gui.md)
+
+- [TV4 · Bấm khung chat để nhập (08/11/2026)](2026-11-08_s3-tv4_bam-khung-chat-de-nhap.md)
+
+- [TV4 · Đổi biểu tượng dừng trả lời (08/11/2026)](2026-11-08_s3-tv4_icon-dung-tra-loi.md)
+
 - [TV4 · Khóa điều hướng sidebar khi đang trả lời (07/11/2026)](2026-11-07_s3-tv4_khoa-dieu-huong-khi-dang-tra-loi.md)
 
 - [TV4 · Bỏ viền nút Web trong ô chat (07/11/2026)](2026-11-07_s3-tv4_bo-vien-nut-web.md)

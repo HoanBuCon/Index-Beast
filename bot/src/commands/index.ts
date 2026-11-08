@@ -4,6 +4,8 @@
 import type { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import { ping } from "./ping.ts";
 import { ask } from "./ask.ts";
+import { help } from "./help.ts";
+import { about } from "./about.ts";
 
 export interface Command {
   data: Pick<SlashCommandBuilder, "name" | "toJSON">;
@@ -13,4 +15,6 @@ export interface Command {
 export const commands: ReadonlyMap<string, Command> = new Map([
   [ping.data.name, ping],
   [ask.data.name, ask],
+  [help.data.name, help],
+  [about.data.name, about],
 ]);
