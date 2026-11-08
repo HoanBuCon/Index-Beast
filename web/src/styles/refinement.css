@@ -414,6 +414,12 @@ body {
 .web-search-toggle[data-search-mode="always"] {
   color: var(--ui-accent);
 }
+/* TV4: nút Web không đổi nền khi rê chuột; vẫn giữ focus bàn phím và màu chế độ. */
+.composer .web-search-toggle:hover:not(:disabled) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
 .web-search-toggle:disabled {
   opacity: 0.6;
   cursor: default;
@@ -615,7 +621,7 @@ body {
 
 .source-list .source-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -631,22 +637,8 @@ body {
   flex-shrink: 0;
   white-space: nowrap;
 }
-.source-item a {
-  padding: 12px 8px;
-  font-size: 14px;
-  color: var(--ui-accent);
-}
 .source-list .eyebrow {
   font-size: 11px;
-}
-@media (max-width: 520px) {
-  .source-list .source-item {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .source-item a {
-    justify-self: start;
-    padding: 4px 14px 8px;
-  }
 }
 
 .input-area:not(.welcome-input) {
