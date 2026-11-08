@@ -25,15 +25,27 @@ export default function SharedAnswerPage() {
     return () => controller.abort();
   }, [hash, attempt]);
   return (
-    <main id="main" className="document shared-answer">
-      <h1>Câu trả lời từ Discord</h1>
-      <p className="muted">
-        Bản chia sẻ chỉ đọc một câu trả lời. Người có link có thể xem cho tới khi hết hạn; link không mở toàn bộ hội
-        thoại.
-      </p>
-      {!answer && !error && <p role="status">Đang tải câu trả lời…</p>}
+    <main id="main" className="chat-content shared-answer">
+      {/* TV4: cùng nền/cột chữ với chat, giữ thông tin chỉ đọc bên ngoài MessageList. */}
+      <header className="shared-answer-heading">
+        <h1>Câu trả lời từ Discord</h1>
+        <p>
+          Bản chia sẻ chỉ đọc một câu trả lời. Người có link có thể xem cho tới khi hết hạn; link không mở toàn bộ hội
+          thoại.
+        </p>
+        {answer && (
+          <p>
+            Hết hạn: <time dateTime={answer.expires_at}>{new Date(answer.expires_at).toLocaleString("vi-VN")}</time>
+          </p>
+        )}
+      </header>
+      {!answer && !error && (
+        <p className="shared-answer-status" role="status">
+          Đang tải câu trả lời…
+        </p>
+      )}
       {error && (
-        <div role="alert">
+        <div className="shared-answer-status error-box" role="alert">
           <p>{error}</p>
           <button type="button" onClick={() => setAttempt((n) => n + 1)}>
             Thử lại
@@ -42,7 +54,6 @@ export default function SharedAnswerPage() {
       )}
       {answer && (
         <>
-          <p className="muted">Hết hạn: {new Date(answer.expires_at).toLocaleString("vi-VN")}</p>
           <MessageList
             autoScroll={false}
             busy={false}
@@ -58,10 +69,12 @@ export default function SharedAnswerPage() {
               },
             ]}
           />
-          <p>AI có thể mắc sai sót. Hãy kiểm tra các nguồn được dẫn.</p>
         </>
       )}
-      <Link to="/">Trở về trò chuyện</Link>
+      <footer className="shared-answer-footer">
+        {answer && <p className="chat-ai-note">AI có thể mắc sai sót. Hãy kiểm tra các nguồn được dẫn.</p>}
+        <Link to="/">Trở về trò chuyện</Link>
+      </footer>
     </main>
   );
 }
