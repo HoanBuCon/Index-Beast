@@ -11,9 +11,10 @@ from tokenizers import Tokenizer
 
 from core.ids import chunk_id, document_id
 from core.text.chunking import chunk_section, prepare_units
+from core.text.structured_tables import row_metadata
 from ingest.artifacts import now, read, save, sha256
 
-VERSION = "s2-full-chunk-1.0"
+VERSION = "s3-full-chunk-2.0"
 
 
 def build_chunks(doc, tokenizer, cap=450, overlap=50):
@@ -65,13 +66,25 @@ def build_chunks(doc, tokenizer, cap=450, overlap=50):
                     release_scope=section["release_scope"],
                     source_type=section["source_type"],
                     source_type_evidence=section.get("source_type_evidence"),
+                    content_type="equipment_stats" if unit["kind"] == "infobox_stats" else unit["kind"],
+                    table_header=unit.get("table_header"),
+                    table_id=unit.get("table_id"),
+                    fact_ids=unit.get("fact_ids", []),
+                    row_key=unit.get("row_key"),
+                    table_type=unit.get("table_type"),
+                    level=row_metadata(unit.get("row_key"))["level"],
+                    row_kind=row_metadata(unit.get("row_key"))["row_kind"] if unit.get("table_id") else None,
+                    affinity=(section.get("variant_context") or {}).get("label")
+                    if unit.get("table_type") == "upgrade_stats"
+                    else None,
+                    language_evidence=unit.get("language_evidence"),
                     image_ids=list(dict.fromkeys(section["image_ids"])),
                     image_association="section",
                     fetched_at=doc["fetched_at"],
                     source_updated_at=doc.get("source_updated_at"),
                     text_hash=sha256(item["text"].encode()),
                     cleaning_version=doc["cleaning_version"],
-                    chunking_version=VERSION,
+                    chunking_version=VERSION if doc["cleaning_version"].startswith("s3-") else "s2-full-chunk-1.1",
                 )
             )
         reviews.extend(
@@ -85,7 +98,15 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
     if output.exists():
         raise ValueError("Use a new output directory")
     report = read(input_dir / "report.json")
-    if report["cleaning_version"] not in {"s2-full-clean-1.0", "s2-full-clean-1.1"}:
+    if report["cleaning_version"] not in {
+        "s2-full-clean-1.0",
+        "s2-full-clean-1.1",
+        "s2-full-clean-1.2",
+        "s3-full-clean-1.0",
+        "s3-full-clean-1.1",
+        "s3-full-clean-1.2",
+        "s3-full-clean-2.0",
+    }:
         raise ValueError("Full clean version required")
     for name, info in report["csv_validation"].items():
         if sha256((input_dir / name).read_bytes()) != info["sha256"]:
@@ -213,7 +234,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
         raise ValueError("Input changed")
     result = {
         "created_at": created,
-        "chunking_version": VERSION,
+        "chunking_version": VERSION if report["cleaning_version"].startswith("s3-") else "s2-full-chunk-1.1",
         "clean_input": str(input_dir.resolve()),
         "source_job": report["source_job"],
         "game_scope": "elden_ring",

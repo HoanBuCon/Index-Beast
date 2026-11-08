@@ -1,5 +1,17 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV2 · Commit và PR structured tables (09/11/2026)](2026-11-09_s3-tv2_commit-va-pr-structured-tables.md)
+
+- [TV2 · Tái tạo facts/clean/chunk từ raw cuối (09/11/2026)](2026-11-09_s3-tv2_tai-tao-facts-clean-chunk-tu-raw.md)
+
+- [TV2 · Khảo sát bảng raw và đề xuất chờ duyệt (08/11/2026)](2026-11-08_s3-tv2_khao-sat-bang-raw-va-de-xuat.md)
+
+- [TV2 · Lọc bảng text nhập nhằng và xuất clean-only (08/11/2026)](2026-11-08_s3-tv2_loc-bang-text-va-xuat-clean-only.md)
+
+- [TV2 · Bản cuối raw/clean/chunk và dọn dữ liệu cũ (08/11/2026)](2026-11-08_s3-tv2_ban-cuoi-va-don-du-lieu-cu.md)
+
+- [TV2 · Chất lượng dữ liệu và RAG readiness offline (08/11/2026)](2026-11-08_s3-tv2_chat-luong-du-lieu-va-rag-readiness.md)
+
 - [TV4 · Bỏ nền hover nút Web (08/11/2026)](2026-11-08_s3-tv4_bo-hover-nut-web.md)
 
 - [TV4 · Đổi nhãn chờ thành Đang suy nghĩ (08/11/2026)](2026-11-08_s3-tv4_doi-nhan-dang-suy-nghi.md)
@@ -7,6 +19,7 @@
 - [TV4 · Bỏ link mở nguồn trùng bên ngoài (08/11/2026)](2026-11-08_s3-tv4_bo-link-nguon-trung.md)
 
 - [TV4 · Đồng bộ giao diện trang chia sẻ Discord (08/11/2026)](2026-11-08_s3-tv4_giao-dien-chia-se-discord.md)
+
 
 - [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
 

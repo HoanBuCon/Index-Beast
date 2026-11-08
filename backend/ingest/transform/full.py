@@ -7,13 +7,15 @@ from pathlib import Path
 
 from core.ids import document_id
 from core.text.html_clean import clean_html
-from core.text.lore_policy import block_decision, block_metadata, context_groups
+from core.text.lore_policy import block_decision, block_metadata, context_groups, editorial_template
 from ingest.artifacts import now, read, save, sha256
 from ingest.filter.rules import page_evidence
 from ingest.settings import load_settings
 from ingest.transform.document import csv_write, inside, stable_id
+from ingest.transform.table_artifacts import attach as attach_tables
+from ingest.transform.table_artifacts import export as export_tables
 
-VERSION = "s2-full-clean-1.1"
+VERSION = "s3-full-clean-1.2"
 SAMPLE = [
     "Elden Remembrance",
     "Scadutree Fragment",
@@ -62,7 +64,10 @@ HEADERS = [
 ]
 
 
-def run(run_dir, output, limit=None):
+def run(run_dir, output, limit=None, *, gameplay=False, structured_tables=False, sample_ids=None):
+    if structured_tables and not gameplay:
+        raise ValueError("Structured tables requires --gameplay")
+    policy_version = "s3-full-clean-2.0" if structured_tables else VERSION if gameplay else "s2-full-clean-1.2"
     config = load_settings()
     root = config["data_dir"]
     if output.exists():
@@ -73,7 +78,12 @@ def run(run_dir, output, limit=None):
     cohort = read(run_dir / "checkpoint.json")
     cohort.update({p["id"]: p for p in crawl["pages"]})
     pages = sorted(cohort.values(), key=lambda p: int(p["id"]))
-    if limit == 20:
+    if sample_ids:
+        wanted = set(map(str, sample_ids))
+        pages = [p for p in pages if p["id"] in wanted]
+        if len(pages) != len(wanted):
+            raise ValueError("Sample IDs outside final cohort")
+    elif limit == 20:
         lookup = {p["title"]: p for p in pages}
         pages = [lookup[t] for t in SAMPLE]
     elif limit:
@@ -95,6 +105,7 @@ def run(run_dir, output, limit=None):
     }
     save(output / "manifest.json", manifest)
     rows, reviews, images, examples = [], [], [], []
+    table_records, table_facts = [], []
     for ordinal, page in enumerate(pages):
         row_start = len(rows)
         path = inside(root, page["path"])
@@ -106,8 +117,17 @@ def run(run_dir, output, limit=None):
         inputs[str(path)] = sha256(path.read_bytes())
         # Filter artifact precedes metadata transformation; scope never drops SotE.
         parsed = clean_html(
-            raw["content"], title=raw["title"], skip_sections=config["clean"]["skip_sections"], capture_context=True
+            raw["content"],
+            title=raw["title"],
+            skip_sections=config["clean"]["skip_sections"],
+            capture_context=True,
+            preserve_gameplay=gameplay,
+            structured_tables=structured_tables,
         )
+        if structured_tables:
+            inventory, facts = attach_tables(parsed, raw, path, policy_version)
+            table_records.extend(inventory)
+            table_facts.extend(facts)
         evidence = page_evidence(raw, config["clean"])
         release = (
             "sote_candidate"
@@ -129,14 +149,16 @@ def run(run_dir, output, limit=None):
         }
         for s in filtered["sections"]:
             for b in s["blocks"]:
-                b["decision"], b["reason"] = block_decision(s["section"], b)
+                b["decision"], b["reason"] = block_decision(s["section"], b, gameplay=gameplay)
+                if gameplay and editorial_template(raw["title"], raw["content"]):
+                    b["decision"], b["reason"] = "excluded", "editorial_template_page"
         save(output / "filtered" / ("" + page["id"] + ".json"), filtered)
         filtered = read(output / "filtered" / (page["id"] + ".json"))
         doc_id = str(document_id(raw["source"], page["id"]))
         sections = []
         for s in filtered["sections"]:
             # One context/type/language run per processed section; retain all non-excluded blocks.
-            for index, blocks in enumerate(context_groups(s, parsed["html_lang"])):
+            for index, blocks in enumerate(context_groups(s, parsed["html_lang"], gameplay=gameplay)):
                 b = blocks[0]
                 text = "\n".join(block["text"] for block in blocks)
                 decision, reason = b["decision"], b["reason"]
@@ -159,7 +181,7 @@ def run(run_dir, output, limit=None):
                     image_ids=[],
                 )
                 section["anchor"] = (variant or {}).get("anchor") or s.get("anchor") or ""
-                section["record_id"] = stable_id(doc_id, s["location"], index, b["location"], VERSION)
+                section["record_id"] = stable_id(doc_id, s["location"], index, b["location"], policy_version)
                 record = {
                     "record_id": section["record_id"],
                     "doc_id": doc_id,
@@ -178,7 +200,7 @@ def run(run_dir, output, limit=None):
                     "image_ids": "[]",
                     "source_snapshot": str(path),
                     "content_hash": sha256(text.encode()),
-                    "cleaning_version": VERSION,
+                    "cleaning_version": policy_version,
                     "decision": decision,
                     "reason": reason,
                     "location": b["location"],
@@ -276,7 +298,7 @@ def run(run_dir, output, limit=None):
             "release_scope": release,
             "release_evidence": evidence,
             "sections": sections,
-            "cleaning_version": VERSION,
+            "cleaning_version": policy_version,
         }
         save(output / "processed" / "wikigg" / (page["id"] + ".json"), doc)
         counts["pages_in"] += 1
@@ -288,6 +310,8 @@ def run(run_dir, output, limit=None):
         if ordinal % 100 == 0:
             print(f"CLEAN {ordinal + 1}/{len(pages)} {raw['title']}", flush=True)
     expected = {"content_clean_all.csv": rows, "review.csv": reviews, "images.csv": images}
+    if gameplay:
+        expected["content_clean.csv"] = [r for r in rows if r["decision"] == "keep" and r["chunk_eligible"]]
     import csv
 
     checks = {}
@@ -305,7 +329,7 @@ def run(run_dir, output, limit=None):
         raise ValueError("Input changed")
     report = {
         "created_at": now(),
-        "cleaning_version": VERSION,
+        "cleaning_version": policy_version,
         "game_scope": "elden_ring",
         "scope_policy": "base+sote S2 approved",
         "source_job": crawl["job_id"],
@@ -319,6 +343,8 @@ def run(run_dir, output, limit=None):
         "encoder_calls": 0,
         "database_writes": 0,
     }
+    if structured_tables:
+        report["structured_tables"] = export_tables(output / "tables", table_records, table_facts)
     save(output / "input-fingerprints.json", inputs)
     save(output / "report.json", report)
     if examples:
@@ -331,8 +357,24 @@ def main():
     p.add_argument("--run-dir", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
     p.add_argument("--limit", type=int)
+    p.add_argument("--gameplay", action="store_true", help="Opt in to S3 gameplay trial; legacy runner stays lore-only")
+    p.add_argument(
+        "--structured-tables", action="store_true", help="Source-labelled table facts; unresolved cells go to review"
+    )
+    p.add_argument("--sample-ids", help="Comma-separated source IDs from final cohort")
     a = p.parse_args()
-    print(json.dumps(run(a.run_dir.resolve(), a.output_dir.resolve(), a.limit)["counts"]))
+    print(
+        json.dumps(
+            run(
+                a.run_dir.resolve(),
+                a.output_dir.resolve(),
+                a.limit,
+                gameplay=a.gameplay,
+                structured_tables=a.structured_tables,
+                sample_ids=a.sample_ids.split(",") if a.sample_ids else None,
+            )["counts"]
+        )
+    )
 
 
 if __name__ == "__main__":
