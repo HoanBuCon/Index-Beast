@@ -42,27 +42,27 @@ ps:              ## Trạng thái container
 	$(COMPOSE) ps
 
 migrate:         ## Chạy migration database
-	cd backend && alembic upgrade head
+	cd backend && "$(PYTHON)" -X utf8 -m alembic upgrade head
 
 openapi:         ## Xuất hợp đồng API v1 ra docs/api/openapi.json
-	cd backend && python -m scripts.export_openapi
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.export_openapi
 
 trace:           ## Xem trace RAG của một câu trả lời: make trace ID=<message_id>
 	cd backend && "$(PYTHON)" -X utf8 -m scripts.trace $(ID)
 
 test:            ## Chạy test backend
-	cd backend && pytest
+	cd backend && "$(PYTHON)" -X utf8 -m pytest
 
 test-unit:       ## Chỉ test unit offline, không gọi LLM hoặc index corpus thật
 	cd backend && "$(PYTHON)" -X utf8 -m pytest -c pyproject.toml tests/unit -q
 
 lint:            ## Kiểm tra lint/format cho backend, web, bot
-	cd backend && ruff check . && ruff format --check .
+	cd backend && "$(PYTHON)" -X utf8 -m ruff check . && "$(PYTHON)" -X utf8 -m ruff format --check .
 	cd web && npm run format:check && npm run typecheck
 	cd bot && npm run format:check && npm run typecheck
 
 format:          ## Tự format code
-	cd backend && ruff check --fix . && ruff format .
+	cd backend && "$(PYTHON)" -X utf8 -m ruff check --fix . && "$(PYTHON)" -X utf8 -m ruff format .
 	cd web && npm run format
 	cd bot && npm run format
 
