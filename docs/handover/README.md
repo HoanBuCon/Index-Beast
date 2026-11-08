@@ -1,5 +1,13 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Bỏ nền hover nút Web (08/11/2026)](2026-11-08_s3-tv4_bo-hover-nut-web.md)
+
+- [TV4 · Đổi nhãn chờ thành Đang suy nghĩ (08/11/2026)](2026-11-08_s3-tv4_doi-nhan-dang-suy-nghi.md)
+
+- [TV4 · Bỏ link mở nguồn trùng bên ngoài (08/11/2026)](2026-11-08_s3-tv4_bo-link-nguon-trung.md)
+
+- [TV4 · Đồng bộ giao diện trang chia sẻ Discord (08/11/2026)](2026-11-08_s3-tv4_giao-dien-chia-se-discord.md)
+
 - [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
 
 - [TV4 · Đăng ký global và kiểm tra backend thật (08/11/2026)](2026-11-08_s3-tv4_dang-ky-global-va-thu-backend-that.md)

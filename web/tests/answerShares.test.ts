@@ -41,10 +41,11 @@ test("expired/unavailable/malformed shares fail without a demo fallback", async 
   }
 });
 
-test("source block has numbered titles and links; untrusted protocols and credentials are not navigable", async () => {
+test("source block opens excerpts without duplicate links; only the popover links safe source URLs", async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
   try {
     const { default: SourceList } = await server.ssrLoadModule("/src/components/chat/SourceList.tsx");
+    const { default: CitationPopover } = await server.ssrLoadModule("/src/components/chat/CitationPopover.tsx");
     const html = renderToStaticMarkup(
       createElement(SourceList, {
         sources: [
@@ -56,10 +57,15 @@ test("source block has numbered titles and links; untrusted protocols and creden
       }),
     );
     assert.match(html, /\[1\]/);
-    assert.match(html, /href="https:\/\/example.test\/source"/);
+    assert.doesNotMatch(html, /<a\b/);
     assert.match(html, /Xem trích đoạn/);
     assert.doesNotMatch(html, /href="javascript:|href="https:\/\/user:pass/);
     assert.equal(renderToStaticMarkup(createElement(SourceList, { sources: [], onSelect() {} })), "");
+    const popover = (url: string) =>
+      renderToStaticMarkup(createElement(CitationPopover, { source: { ...snapshot.sources[0], url }, onClose() {} }));
+    assert.match(popover(snapshot.sources[0].url), /href="https:\/\/example.test\/source"/);
+    assert.doesNotMatch(popover("javascript:alert(1)"), /<a\b/);
+    assert.doesNotMatch(popover("https://user:pass@example.test"), /<a\b/);
   } finally {
     await server.close();
   }

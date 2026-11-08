@@ -84,7 +84,7 @@ export default function MessageList({
             <>
               {!message.content && busy && message.id === messages.at(-1)?.id && (
                 <div role="status" className="thinking-bubble">
-                  <span className="thinking-label">Đang tìm trong lore…</span>
+                  <span className="thinking-label">Đang suy nghĩ</span>
                   <span className="thinking-dots" aria-hidden="true">
                     <span />
                     <span />

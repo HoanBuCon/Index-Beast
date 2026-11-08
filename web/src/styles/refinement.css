@@ -215,6 +215,44 @@ body {
   scrollbar-gutter: stable both-edges;
 }
 
+/* TV4 · Link Discord dùng cùng chat-panel, MessageList và cột 760 px của chat chính.
+   Không dùng .document: quy tắc paragraph 14 px của trang tài liệu làm chữ trả lời bị nhỏ. */
+.shared-answer-heading,
+.shared-answer-status,
+.shared-answer-footer {
+  width: 100%;
+  max-width: calc(var(--ui-chat-width) + 64px);
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.shared-answer-heading h1 {
+  margin: 0 0 10px;
+  color: var(--ui-text);
+  font: 400 20px/1.4 var(--font-interface);
+}
+
+.shared-answer-heading p {
+  margin: 6px 0 0;
+  color: var(--ui-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.shared-answer-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 32px;
+  font-size: 16px;
+}
+
+.shared-answer-panel .shared-answer-footer .chat-ai-note {
+  margin: 0;
+}
+
 .chat-empty .chat-content {
   display: flex;
   align-items: flex-start;
@@ -375,6 +413,12 @@ body {
 }
 .web-search-toggle[data-search-mode="always"] {
   color: var(--ui-accent);
+}
+/* TV4: nút Web không đổi nền khi rê chuột; vẫn giữ focus bàn phím và màu chế độ. */
+.composer .web-search-toggle:hover:not(:disabled) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 .web-search-toggle:disabled {
   opacity: 0.6;
@@ -577,7 +621,7 @@ body {
 
 .source-list .source-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -593,22 +637,8 @@ body {
   flex-shrink: 0;
   white-space: nowrap;
 }
-.source-item a {
-  padding: 12px 8px;
-  font-size: 14px;
-  color: var(--ui-accent);
-}
 .source-list .eyebrow {
   font-size: 11px;
-}
-@media (max-width: 520px) {
-  .source-list .source-item {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .source-item a {
-    justify-self: start;
-    padding: 4px 14px 8px;
-  }
 }
 
 .input-area:not(.welcome-input) {

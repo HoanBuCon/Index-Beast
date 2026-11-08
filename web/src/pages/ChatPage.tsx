@@ -30,7 +30,8 @@ function fresh(mode: Conversation["mode"]): Conversation {
 }
 export default function ChatPage({ children }: { children?: ReactNode }) {
   // Sidebar dùng chung cho chat, About và Admin; nội dung hội thoại vẫn thuộc hooks hiện có.
-  const isChat = useLocation().pathname === "/";
+  const { pathname } = useLocation();
+  const isChat = pathname === "/";
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [smallScreen, setSmallScreen] = useState(false);
@@ -293,7 +294,10 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           {conversation.messages.length > 0 && <div className="input-area">{composer}</div>}
         </section>
       ) : (
-        <div className="document-panel" inert={smallScreen && sidebarOpen}>
+        <div
+          className={`document-panel${pathname === "/answer" ? " chat-panel shared-answer-panel" : ""}`}
+          inert={smallScreen && sidebarOpen}
+        >
           {children}
         </div>
       )}

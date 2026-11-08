@@ -19,7 +19,7 @@ test("waiting status is visible and About credits the corpus without assigning t
       }),
     );
     assert.match(waiting, /role="status"/);
-    assert.match(waiting, /class="thinking-label">Đang tìm trong lore…/);
+    assert.match(waiting, /class="thinking-label">Đang suy nghĩ/);
     const started = renderToStaticMarkup(
       createElement(MessageList, {
         busy: true,
