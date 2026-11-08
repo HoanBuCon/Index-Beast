@@ -78,6 +78,7 @@ Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local
 git clone https://github.com/HoanBuCon/Index-Beast.git && cd Index-Beast
 git switch develop
 cp .env.example .env                      # điền giá trị thật khi cần (xem mục Cấu hình)
+# về sau, mỗi lần pull mà .env.example có biến mới: `make env` (thêm biến thiếu, hỏi khi có biến thừa)
 
 # Backend
 cd backend

@@ -17,11 +17,14 @@ DEV_READY_TIMEOUT ?= 60
 # Gián tiếp qua biến này để `make -n dev` chỉ in lệnh, không thực thi launcher.
 DEV_MAKE ?= $(MAKE)
 
-.PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
+.PHONY: help env up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
 .PHONY: bot bot-deploy bot-check bot-dev data
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
+
+env:             ## Đồng bộ .env với .env.example: thêm biến thiếu, hỏi khi có biến thừa (ARGS="--dry-run")
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.sync_env $(ARGS)
 
 up:              ## Bật PostgreSQL, Qdrant, Redis và chờ healthy
 	$(COMPOSE) up -d --wait $(INFRA)
