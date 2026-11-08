@@ -106,6 +106,7 @@ test("inline question accepts free text without dropdowns and retains expiration
       createElement(Form, { question: clarification, disabled: true, onAnswer() {} }),
     );
     assert.match(pending, /Đang xử lý…/);
+    assert.match(pending, /class="clarification-group" hidden=""/);
     assert.match(pending, /role="status"/);
     const expired = renderToStaticMarkup(
       createElement(Form, {

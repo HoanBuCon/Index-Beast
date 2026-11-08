@@ -6,7 +6,7 @@ import { SlashCommandBuilder } from "discord.js";
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
 import { MAX_MESSAGE_CHARS } from "../api/types.ts";
-import { answerEmbed } from "../utils/format.ts";
+import { answerEmbeds } from "../utils/format.ts";
 import { errorName, log } from "../utils/logger.ts";
 import type { Command } from "./index.ts";
 
@@ -46,7 +46,11 @@ export function createAskCommand(chat?: (body: ChatRequest) => Promise<ChatRespo
           external_ref: externalRef,
           options: { lang: "auto", spoilers: true, web_search: "auto" },
         });
-        await interaction.editReply({ embeds: [answerEmbed(question, response)], allowedMentions: { parse: [] } });
+        const [first, ...remaining] = answerEmbeds(question, response);
+        await interaction.editReply({ embeds: [first], allowedMentions: { parse: [] } });
+        for (const embed of remaining) {
+          await interaction.followUp({ embeds: [embed], allowedMentions: { parse: [] } });
+        }
       } catch (error) {
         log("error", "Lệnh ask chưa hoàn tất.", {
           request_id: requestId,

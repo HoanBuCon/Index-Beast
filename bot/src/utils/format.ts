@@ -1,10 +1,11 @@
 // Cắt câu trả lời theo giới hạn embed (4.096 ký tự), field nguồn, link 'xem đầy đủ trên web'.
 // Phụ trách: TV4 · [S3] Bot: câu trả lời thật, chia nhỏ
+// S3: chia đủ nội dung bằng answerEmbeds; link xem đầy đủ trên web còn chờ cơ chế cấp quyền của TV1.
 
 import { EmbedBuilder, escapeMarkdown } from "discord.js";
 import type { ChatResponse } from "../api/types.ts";
 
-// S2 chỉ rút gọn một embed; lưu ngữ cảnh, chia nhiều tin và link xem đầy đủ thuộc S3.
+// S2 rút gọn một embed; S3 dùng answerEmbeds bên dưới để chia đủ nội dung thành nhiều phần.
 function cut(text: string, limit: number) {
   if (text.length <= limit) return text;
   let end = limit - 1;
@@ -45,4 +46,30 @@ export function answerEmbed(question: string, response: ChatResponse) {
   if (footer) embed.setFooter({ text: footer });
   if (lines.length) embed.addFields({ name: "Nguồn tham khảo · ghi nguồn theo liên kết", value: lines.join("\n") });
   return embed;
+}
+
+// Mỗi phần ở một tin riêng để không vượt tổng 6.000 ký tự embed/tin.
+export function answerEmbeds(question: string, response: ChatResponse) {
+  const parts: string[] = [];
+  let rest = response.answer;
+  while (rest.length > 3600) {
+    let end = 3600;
+    const boundary = rest.lastIndexOf("\n", end);
+    if (boundary > 2400) end = boundary + 1;
+    if (/[\uD800-\uDBFF]/.test(rest[end - 1] ?? "")) end -= 1;
+    parts.push(rest.slice(0, end));
+    rest = rest.slice(end);
+  }
+  if (rest || !parts.length) parts.push(rest);
+  return parts.map((part, index) => {
+    const embed =
+      index === 0
+        ? answerEmbed(question, { ...response, answer: part })
+        : new EmbedBuilder().setColor(0xd9bc78).setTitle("INDEX BEAST · Tiếp theo").setDescription(part);
+    if (parts.length > 1) {
+      const footer = embed.data.footer?.text;
+      embed.setFooter({ text: `${footer ? `${footer} ` : ""}Phần ${index + 1}/${parts.length}` });
+    }
+    return embed;
+  });
 }

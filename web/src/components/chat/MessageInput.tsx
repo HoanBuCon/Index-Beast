@@ -4,6 +4,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { MAX_MESSAGE_CHARS } from "../../api/types";
 import enterIcon from "../../../item_/KG_Key_Enter.png";
+import stopIcon from "../../../item_/KG_Key_Esc.png";
 import { nextSearchMode, searchModeLabel } from "./searchMode";
 import type { SearchMode } from "./searchMode";
 
@@ -89,6 +90,20 @@ export default function MessageInput({
   return (
     <form
       className="composer"
+      onClick={(e) => {
+        // Bấm nền/viền khung cũng nhập được; không lấy focus của các nút hoặc đổi vị trí con trỏ trong textarea.
+        if (!(e.target instanceof Element) || e.target.closest("textarea, button, a, input, select, label")) return;
+        if (window.getSelection()?.toString()) return;
+        textareaRef.current?.focus();
+      }}
+      onKeyDown={(e) => {
+        // Phím Esc chỉ hủy khi đang xử lý và focus nằm trong composer, không chặn IME.
+        if (busy && e.key === "Escape" && !e.repeat && !composing.current && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          e.stopPropagation();
+          onStop();
+        }
+      }}
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -146,9 +161,16 @@ export default function MessageInput({
       <div className="composer-bottom">
         <small>{"Enter để gửi · Shift + Enter xuống dòng"}</small>
         {busy ? (
-          <button type="button" className="primary" onClick={onStop}>
-            <span aria-hidden="true">■</span>
-            <span className="sr-only">{"■ Dừng"}</span>
+          <button
+            type="button"
+            className="primary stop-button"
+            onClick={onStop}
+            title="Dừng trả lời (Esc khi đang chọn ô chat)"
+            aria-label="Dừng trả lời"
+            aria-keyshortcuts="Escape"
+          >
+            {/* TV4: phím Esc từ hi_01 đồng bộ phím Enter, chỉ dừng yêu cầu hiện tại. */}
+            <img className="stop-answer-icon" src={stopIcon} width={40} height={28} alt="" draggable={false} />
           </button>
         ) : (
           <button

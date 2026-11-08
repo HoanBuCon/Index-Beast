@@ -53,7 +53,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     }
   }
   const history = useConversations();
-  const [mode, setMode] = useState<Conversation["mode"]>("api");
+  const [mode, setMode] = useState<Conversation["mode"]>("api-stream");
   const [searchMode, setSearchMode] = useState<SearchMode>("auto");
   const [searchAvailable, setSearchAvailable] = useState(false);
   useEffect(() => {
@@ -64,11 +64,11 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
       .catch(() => {});
     return () => controller.abort();
   }, []);
-  const [draft, setDraft] = useState(() => fresh("api"));
+  const [draft, setDraft] = useState(() => fresh("api-stream"));
   const [active, setActive] = useState(draft.id);
   const conversation = history.conversations.find((c) => c.id === active) ?? draft;
   const stream = useChatStream(history.update);
-  function reset(nextMode: Conversation["mode"] = "api") {
+  function reset(nextMode: Conversation["mode"] = "api-stream") {
     setMode(nextMode);
     const next = fresh(nextMode);
     setDraft(next);
@@ -78,12 +78,15 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     closeMobileSidebar();
   }
   function send(text: string) {
-    void stream.send(conversation, text, { webSearch: searchAvailable ? searchMode : "off" });
+    // S3: hội thoại API cũ cũng nhận SSE từ lượt gửi mới; giữ nguyên ID/token và lịch sử.
+    void stream.send(conversation.mode === "api" ? { ...conversation, mode: "api-stream" } : conversation, text, {
+      webSearch: searchAvailable ? searchMode : "off",
+    });
   }
   function retry() {
     const input = retryInput(conversation);
     if (input)
-      void stream.send(input.base, input.text, {
+      void stream.send(input.base.mode === "api" ? { ...input.base, mode: "api-stream" } : input.base, input.text, {
         webSearch: searchAvailable ? searchMode : "off",
         clarificationId: input.clarificationId,
         turnId: input.turnId,
@@ -272,7 +275,8 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 onClarification={(text, id) => {
                   const failed = retryInput(conversation);
                   const retry = stream.error && failed?.clarificationId === id && failed.text === text ? failed : null;
-                  return stream.send(retry?.base ?? conversation, text, {
+                  const base = retry?.base ?? conversation;
+                  return stream.send(base.mode === "api" ? { ...base, mode: "api-stream" } : base, text, {
                     webSearch: searchAvailable ? searchMode : "off",
                     clarificationId: id,
                     turnId: retry?.turnId,

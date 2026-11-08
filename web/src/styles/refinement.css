@@ -380,6 +380,11 @@ body {
   opacity: 0.6;
   cursor: default;
 }
+
+.thinking-label {
+  color: var(--ui-muted);
+  font: 14px/1.5 var(--font-interface);
+}
 .composer-bottom {
   grid-row: 1;
 }
@@ -413,7 +418,26 @@ body {
   opacity: 1;
 }
 
-/* TV4: biểu tượng Messenger cũ thay bằng phím Enter từ item_; nút dừng giữ kiểu hiện có. */
+/* TV4: biểu tượng Messenger cũ thay bằng phím Enter từ item_; nút dừng dùng phím Esc cùng bộ. */
+.composer .primary.stop-button {
+  display: grid;
+  place-items: center;
+  background: transparent;
+}
+
+.composer .primary.stop-button:hover:not(:disabled) {
+  background: #d9bc7814;
+}
+
+.stop-answer-icon {
+  display: block;
+  width: 40px;
+  height: 28px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
 .composer .primary.send-button {
   color: #141610;
   background: transparent;
@@ -558,6 +582,8 @@ body {
 }
 
 .thinking-bubble {
+  gap: 12px;
+  flex-wrap: wrap;
   background: var(--ui-surface);
   box-shadow: none;
 }

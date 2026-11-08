@@ -20,7 +20,7 @@ export default function AboutPage() {
         <h2>{"Từ câu hỏi đến bằng chứng"}</h2>
         <p>
           {
-            "Thiết kế RAG kết hợp tìm kiếm ngữ nghĩa và từ khóa, chấm lại độ liên quan rồi sinh câu trả lời có trích dẫn. Website và Discord bot dùng chung backend. Pipeline đang được các thành viên phát triển; chế độ xem thử chỉ minh họa giao diện."
+            "Index Beast kết hợp tìm kiếm ngữ nghĩa và từ khóa, chấm lại độ liên quan rồi tổng hợp câu trả lời có trích dẫn. Website và Discord bot dùng chung backend. Câu trả lời trên web xuất hiện dần; bạn có thể dừng hoặc thử lại khi kết nối gặp lỗi. AI có thể mắc sai sót."
           }
         </p>
       </section>
@@ -36,13 +36,14 @@ export default function AboutPage() {
             <a href="https://eldenring.wiki.gg/" target="_blank" rel="noreferrer">
               Elden Ring Wiki (wiki.gg)
             </a>{" "}
-            — nguồn lore dự kiến theo tài liệu dự án; cần xác minh giấy phép khi thu thập.
+            — nguồn văn bản chính của kho tri thức, do cộng đồng wiki đóng góp. Theo khảo sát nguồn của dự án, footer
+            các trang mẫu ghi nhận giấy phép CC BY-SA 4.0. Hãy theo liên kết trích dẫn để xem trang gốc.
           </li>
           <li>
             <a href="https://en.wikipedia.org/wiki/Elden_Ring" target="_blank" rel="noreferrer">
               Wikipedia: Elden Ring
             </a>{" "}
-            — nội dung văn bản theo{" "}
+            — tài liệu đọc thêm; nội dung văn bản theo{" "}
             <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">
               CC BY-SA 4.0
             </a>
@@ -52,13 +53,25 @@ export default function AboutPage() {
             <a href="https://eldenring.fanapis.com/" target="_blank" rel="noreferrer">
               Elden Ring Fan APIs
             </a>{" "}
-            — nguồn thực thể dự kiến.
+            — nguồn thực thể đã được nhóm khảo sát; không mặc định áp dụng giấy phép của mã nguồn cho dữ liệu hoặc ảnh.
           </li>
         </ul>
         <p>
           {
-            "Nội dung được trích hoặc biến đổi cần ghi công tác giả/nguồn và tuân thủ giấy phép tương ứng. Website không xác nhận bản quyền hình ảnh của các nguồn bên ngoài."
+            "Câu trả lời là bản tổng hợp do AI tạo, không phải văn bản được cộng đồng wiki xác nhận. Trích dẫn trong câu trả lời dẫn tới nguồn và trích đoạn để bạn kiểm chứng. Hình ảnh và tài nguyên giao diện có điều kiện riêng; không mặc định áp dụng giấy phép văn bản cho hình ảnh."
           }
+        </p>
+      </section>
+      <section>
+        <h2>Giấy phép văn bản</h2>
+        <p>
+          Với nội dung nguồn được cấp phép theo{" "}
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noreferrer">
+            Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)
+          </a>
+          , khi trích hoặc chuyển thể, cần ghi công tác giả/cộng đồng, liên kết trang nguồn và giấy phép, nêu rõ thay
+          đổi, đồng thời chia sẻ phần đóng góp phái sinh theo cùng giấy phép. Việc tổng hợp hoặc dịch bằng AI là thay
+          đổi so với bản nguồn. Xem điều kiện cụ thể tại từng trang nguồn trước khi tái sử dụng.
         </p>
       </section>
       <section>
