@@ -17,6 +17,7 @@ from app.api.deps import get_chat_service
 from app.context import AppContext, register_infra
 from app.main import create_app
 from app.rag.trace import MAX_TRACE_BYTES, public_trace, token_usage
+from core.config import REPO_ROOT
 from core.errors import NotFoundError
 
 
@@ -211,3 +212,46 @@ def test_admin_enabled_and_trace_capability_follow_the_token(admin_client, token
     client, _ = admin_client(token)
     assert client.app.state.ctx.settings.admin_enabled is enabled
     assert client.get("/api/v1/chat/capabilities").json()["trace_available"] is enabled
+
+
+def test_wrong_admin_tokens_are_throttled_per_ip_even_for_the_right_token_afterwards(admin_client):
+    client, service = admin_client("s3cret-token")
+    url = f"/api/v1/admin/trace/{service.known}"
+    limit = client.app.state.ctx.settings.rate_limit_per_minute
+    codes = [client.get(url, headers={"X-Admin-Token": f"guess-{i}"}).status_code for i in range(limit)]
+    assert codes == [401] * limit
+    blocked = client.get(url, headers={"X-Admin-Token": "s3cret-token"})
+    assert blocked.status_code == 429 and blocked.json()["code"] == "rate_limited"
+    assert 1 <= int(blocked.headers["Retry-After"]) <= 60
+    assert client.get(url, headers={"X-Admin-Token": "guess-again"}).status_code == 429
+
+
+def test_correct_admin_requests_are_never_counted_as_failures(admin_client):
+    client, service = admin_client("s3cret-token")
+    headers = {"X-Admin-Token": "s3cret-token"}
+    limit = client.app.state.ctx.settings.rate_limit_per_minute
+    codes = {client.get(f"/api/v1/admin/trace/{service.known}", headers=headers).status_code for _ in range(limit * 3)}
+    assert codes == {200}
+
+
+def test_admin_throttle_fails_closed_when_redis_is_down(admin_client, fakes):
+    client, service = admin_client("s3cret-token")
+    fakes["redis"].fail = True
+    response = client.get(f"/api/v1/admin/trace/{service.known}", headers={"X-Admin-Token": "s3cret-token"})
+    assert response.status_code == 503
+
+
+def test_disabled_admin_does_not_touch_redis_and_stays_404(admin_client, fakes):
+    client, service = admin_client(None)
+    fakes["redis"].fail = True  # nếu có đụng tới Redis thì sẽ ra 503
+    assert client.get(f"/api/v1/admin/trace/{service.known}", headers={"X-Admin-Token": "x"}).status_code == 404
+
+
+def test_staging_caddyfile_denies_through_a_handle_block_that_runs_first():
+    """`respond` rời xếp sau `handle` trong thứ tự directive của Caddy: allowlist IP sẽ không bao giờ có tác dụng."""
+    text = (REPO_ROOT / "infra" / "Caddyfile.staging").read_text(encoding="utf-8")
+    code = "\n".join(line for line in text.splitlines() if not line.strip().startswith("#"))
+    deny = code.index("handle @denied {")
+    assert deny < code.index("handle /api/*") and deny < code.rindex("handle {")
+    assert "respond @denied" not in code
+    assert "basic_auth {" in code  # mật khẩu vẫn bắt buộc; Caddy xếp basic_auth trước mọi handle, bất kể thứ tự viết

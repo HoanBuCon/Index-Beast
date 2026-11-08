@@ -5,9 +5,13 @@
 {$STAGING_HOST:localhost} {
 	encode zstd gzip
 
-	# Mặc định cho mọi IP; thu hẹp bằng STAGING_ALLOW_IPS="1.2.3.4 10.0.0.0/8"
+	# Mặc định cho mọi IP; thu hẹp bằng STAGING_ALLOW_IPS="1.2.3.4 10.0.0.0/8".
+	# Phải là khối `handle` đặt trước các `handle` bên dưới: một `respond` rời xếp SAU `handle` theo thứ tự directive
+	# của Caddy nên không bao giờ chạy và allowlist không có tác dụng (đã kiểm bằng Caddy 2.8).
 	@denied not remote_ip {$STAGING_ALLOW_IPS:0.0.0.0/0 ::/0}
-	respond @denied 403
+	handle @denied {
+		respond 403
+	}
 
 	basic_auth {
 		{$STAGING_USER:staging} {$STAGING_PASSWORD_HASH}

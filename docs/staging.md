@@ -63,7 +63,7 @@ docker run --rm caddy:2.11.7-alpine caddy hash-password
 nano .env
 ```
 
-**Model E5 (~465 MB):** `.dockerignore` không đưa model vào ảnh, nên chép từ máy bạn (hoặc để lần chạy đầu tự tải từ Internet):
+**Model E5 (~465 MB):** `.dockerignore` không đưa model vào ảnh và container chỉ đọc thư mục model, nên phải chép sẵn từ máy bạn (không tự tải được trên VPS):
 
 ```bash
 rsync -a backend/models/ deploy@<ip-vps>:~/Index-Beast/backend/models/
