@@ -22,8 +22,11 @@ git checkout "$REF"
 if git show-ref --verify --quiet "refs/remotes/origin/$REF"; then git merge --ff-only "origin/$REF"; fi
 git log -1 --format='    %h %s'
 
-# Bind mount phải tồn tại và thuộc uid 10001 (user app trong image) để nạp model và ghi dữ liệu
+# Bind mount phải tồn tại. Container (uid 10001) chỉ ĐỌC model và dữ liệu nên chỉ cần quyền đọc cho "other";
+# không đổi chủ thư mục để user deploy vẫn rsync được dữ liệu mới.
 mkdir -p backend/data backend/models
+find backend/data backend/models -type d ! -perm -o+rx -exec chmod o+rx {} +
+find backend/data backend/models -type f ! -perm -o+r -exec chmod o+r {} +
 
 echo "==> Build image"
 "${COMPOSE[@]}" build
@@ -31,8 +34,7 @@ echo "==> Build image"
 echo "==> Hạ tầng (PostgreSQL, Qdrant, Redis)"
 "${COMPOSE[@]}" up -d --wait postgres qdrant redis
 
-echo "==> Quyền thư mục và migration"
-"${COMPOSE[@]}" run --rm --no-deps --user root api chown -R 10001:10001 /app/data /app/models
+echo "==> Migration"
 "${COMPOSE[@]}" run --rm api alembic upgrade head
 
 SCALE=()

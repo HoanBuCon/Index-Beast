@@ -12,6 +12,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.guard import ensure_admin_not_blocked, record_admin_failure
 from app.context import AppContext
 from app.services.chat import ChatService
 from core.errors import NotFoundError, UnauthorizedError
@@ -40,11 +41,14 @@ def get_chat_service(request: Request) -> ChatService:
 ADMIN_TOKEN_HEADER = "X-Admin-Token"
 
 
-def require_admin(request: Request) -> None:
-    """Chưa cấu hình ADMIN_TOKEN thì /admin/* trả 404 như chưa tồn tại; sai token trả 401."""
+async def require_admin(request: Request) -> None:
+    """Chưa cấu hình ADMIN_TOKEN thì /admin/* trả 404 như chưa tồn tại; sai token trả 401 và bị đếm theo IP,
+    quá `rate_limit_per_minute` lần sai trong một phút thì trả 429 (chống dò token)."""
     settings = request.app.state.ctx.settings
     if not settings.admin_enabled:
         raise NotFoundError("Không tìm thấy tài nguyên.")
+    await ensure_admin_not_blocked(request)
     sent = request.headers.get(ADMIN_TOKEN_HEADER, "")
     if not hmac.compare_digest(sent.encode(), settings.admin_token.get_secret_value().strip().encode()):
+        await record_admin_failure(request)
         raise UnauthorizedError("Token quản trị không hợp lệ.")

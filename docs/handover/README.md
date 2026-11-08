@@ -167,3 +167,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-08 | TV1 (Hoanbucon) | [`make env`: đồng bộ `.env` với `.env.example`](2026-11-08_s3-tv1_make-env.md) |
 | 2026-11-08 | TV1 (Hoanbucon) | [Sửa `make migrate`, `test`, `lint`, `format`, `openapi` khi chưa kích hoạt venv](2026-11-08_s3-tv1_make-dung-python-venv.md) |
 | 2026-11-08 | TV1 (Hoanbucon) | [`/admin/stats` và xem trace từ giao diện web](2026-11-08_s3-tv1_admin-stats-va-xem-trace-tren-web.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Sửa 3 lỗi tìm thấy ở lần review thứ hai phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review-lan-2.md) |

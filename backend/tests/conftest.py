@@ -66,10 +66,14 @@ class FakeEngine(FakeResource):
 
 
 class FakeRedis(FakeResource):
-    """Đủ cho health check và rate-limit (pipeline().incr().expire().execute())."""
+    """Đủ cho health check và rate-limit (get, pipeline().incr().expire().execute())."""
 
     async def ping(self) -> bool:
         return await self._respond()
+
+    async def get(self, key: str):
+        await self._respond()
+        return self.__dict__.setdefault("counts", {}).get(key)
 
     def pipeline(self, transaction: bool = True) -> "_FakePipeline":
         self.__dict__.setdefault("counts", {})  # dataclass cha không gọi __post_init__ của lớp con
