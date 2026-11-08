@@ -1,0 +1,1517 @@
+{
+  "created_at": "2026-11-08T20:21:17.252301+00:00",
+  "status": "complete",
+  "manifest": {
+    "cases": [
+      {
+        "id": "ADV01",
+        "lang": "vi",
+        "web_search": "off",
+        "question": "Theo cốt truyện Elden Ring, Marika là ai?",
+        "expected": "Trả lời theo bằng chứng, giữ trích dẫn cho các khẳng định lore.",
+        "group": null
+      },
+      {
+        "id": "ADV02",
+        "lang": "vi",
+        "web_search": "off",
+        "question": "Theo lore Elden Ring, cha ruột của Marika là ai?",
+        "expected": "Nếu không có bằng chứng trực tiếp, nêu khoảng trống và không đoán tên.",
+        "group": null
+      },
+      {
+        "id": "ADV03",
+        "lang": "vi",
+        "web_search": "off",
+        "endpoint": "chat/stream",
+        "question": "Mới chơi Elden Ring, tôi nên tập né hay đỡ đòn trước?",
+        "expected": "Tư vấn theo điều kiện, không bịa số khung hình hay ngưỡng chính xác.",
+        "group": null
+      },
+      {
+        "id": "ADV04",
+        "lang": "vi",
+        "web_search": "auto",
+        "question": "class tốt nhất đầu game",
+        "expected": "So sánh lựa chọn theo lối chơi hoặc nói rõ giả định khi gợi ý.",
+        "group": null
+      },
+      {
+        "id": "ADV05",
+        "lang": "vi",
+        "web_search": "off",
+        "question": "Giả sử trong Elden Ring tôi đang level 40, lên level 55, mỗi cấp được 1 điểm. Tính giúp tôi số điểm thêm theo đúng giả định này.",
+        "expected": "15 điểm, nêu phép tính từ dữ kiện người chơi đưa.",
+        "group": null
+      }
+    ],
+    "maximum": 5
+  },
+  "cases": [
+    {
+      "id": "ADV01",
+      "lang": "vi",
+      "web_search": "off",
+      "question": "Theo cốt truyện Elden Ring, Marika là ai?",
+      "expected": "Trả lời theo bằng chứng, giữ trích dẫn cho các khẳng định lore.",
+      "group": null
+    },
+    {
+      "id": "ADV02",
+      "lang": "vi",
+      "web_search": "off",
+      "question": "Theo lore Elden Ring, cha ruột của Marika là ai?",
+      "expected": "Nếu không có bằng chứng trực tiếp, nêu khoảng trống và không đoán tên.",
+      "group": null
+    },
+    {
+      "id": "ADV03",
+      "lang": "vi",
+      "web_search": "off",
+      "endpoint": "chat/stream",
+      "question": "Mới chơi Elden Ring, tôi nên tập né hay đỡ đòn trước?",
+      "expected": "Tư vấn theo điều kiện, không bịa số khung hình hay ngưỡng chính xác.",
+      "group": null
+    },
+    {
+      "id": "ADV04",
+      "lang": "vi",
+      "web_search": "auto",
+      "question": "class tốt nhất đầu game",
+      "expected": "So sánh lựa chọn theo lối chơi hoặc nói rõ giả định khi gợi ý.",
+      "group": null
+    },
+    {
+      "id": "ADV05",
+      "lang": "vi",
+      "web_search": "off",
+      "question": "Giả sử trong Elden Ring tôi đang level 40, lên level 55, mỗi cấp được 1 điểm. Tính giúp tôi số điểm thêm theo đúng giả định này.",
+      "expected": "15 điểm, nêu phép tính từ dữ kiện người chơi đưa.",
+      "group": null
+    }
+  ],
+  "manifest_sha256": "672722e4cf4d7ad683654e4c0ffc3afc4ff692899f033235b66f9c75bf919cd6",
+  "planned_turns": 5,
+  "attempted_turns": 5,
+  "rows": [
+    {
+      "id": "ADV01",
+      "question": "Theo cốt truyện Elden Ring, Marika là ai?",
+      "lang": "vi",
+      "group": null,
+      "expected": "Trả lời theo bằng chứng, giữ trích dẫn cho các khẳng định lore.",
+      "status": "ok",
+      "manual_correctness": null,
+      "manual_faithfulness": null,
+      "http_status": 200,
+      "response": {
+        "conversation_id": "fcf95d70-b563-4176-82a1-6c425e064d1c",
+        "message_id": "1952ac89-d0e5-5738-bc4d-33b670f9b4e5",
+        "answer": "Marika là nữ thần hiện tại và là bình chứa của Elden Ring, đồng thời là người cai trị Golden Order ở Lands Between [1]. Bà từng là một phụ nữ Numen, một Empyrean, và theo các nội dung gắn với Shadow of the Erdtree, bà xuất thân từ Shaman Village ở Hinterland rồi lên đến Gate of Divinity trên Enir-Ilim để thành thần; bà cũng là mẹ hoặc mẹ kế của các demigod, là người trồng nên Erdtree và là vợ của các Elden Lord là Godfrey và Radagon [2]. Sau khi Godwyn chết trong Night of Black Knives, Marika dùng búa đập vỡ Elden Ring; Radagon cố sửa lại nhưng bất thành, và bà bị giam trong Erdtree như hình phạt [5]. Enia cũng nói rõ bà là bình chứa của Elden Ring, một vị thần, và bị giam sau khi Elden Ring bị đập vỡ [4].\n\nTrước đó, Marika đã lấy Rune of Death ra khỏi Elden Ring và giao cho bóng của mình là Maliketh phong ấn, nhờ đó bà và những người được Grace ban phước có thể bất tử — danh hiệu \"Queen Marika the Eternal\" gắn với điều này. Cũng chính Grace ấy bị tước khỏi Godfrey cùng đoàn quân của ông, những người trở thành Tarnished, và theo lời hứa của Marika, Grace được trả lại để họ trở về Lands Between sửa chữa Elden Ring đã vỡ [3].",
+        "sources": [
+          {
+            "index": 1,
+            "title": "Queen Marika the Eternal",
+            "section": "Introduction",
+            "url": "https://eldenring.wiki.gg/wiki/Queen_Marika_the_Eternal",
+            "text": "Queen Marika the Eternal is the current goddess and vessel of the Elden Ring in the Lands Between, as well as ruler of the Golden Order.",
+            "origin": "corpus"
+          },
+          {
+            "index": 2,
+            "title": "Gods",
+            "section": "List of gods > Queen Marika the Eternal",
+            "url": "https://eldenring.wiki.gg/wiki/Gods#Queen_Marika_the_Eternal",
+            "text": "Main article: Queen Marika the Eternal\nQueen Marika the Eternal is the divine sovereign of the Lands Between. She was a Numen woman hailing from a Shaman Village in the Hinterland. As an Empyrean, Marika traveled to the Gate of Divinity atop Enir-Ilim where she ascended to godhood and became the vessel of the Elden Ring. Marika is further known as the mother or step-mother of the demigods, grower of the Erdtree, founder of the Golden Order, slayer of the Fell God as well as the spouse of the Elden Lords Godfrey and Radagon. Although she vanished after the Shattering, Marika influences the Tarnished and her chosen through the golden Guidance of Grace.",
+            "origin": "corpus"
+          },
+          {
+            "index": 3,
+            "title": "Lore",
+            "section": "Story",
+            "url": "https://eldenring.wiki.gg/wiki/Lore#Story",
+            "text": "Long ago, in The Lands Between, Queen Marika became a vessel for the Elden Ring. And so, in the name of the Erdtree, Marika conquered the Lands with the aid of her husband Godfrey — a mighty warrior and first Elden Lord — who fought alongside his warriors in the name of the Queen until his very last worthy enemy was defeated and Marika's reign was absolute.\nMarika removed the Rune of Death from the Elden Ring and commanded her loyal shadow, Maliketh, to seal it away. Thus, she and everyone blessed by her Grace would live forever, granting her the title of Queen Marika the Eternal. However, this very same Grace was taken away from Godfrey and his army, whom she instructed to wage war and die abroad, with the promise that life and Grace would be returned to them when needed.\nAll those who were stripped of their Grace, as well as their descendants, became known as the Tarnished. True to Marika's promise, their Grace was returned to them after their deaths, and they were called back to the Lands Between to repair the shattered Elden Ring.\nWill the new Tarnished heed the call, or perish and be forgotten?",
+            "origin": "corpus"
+          },
+          {
+            "index": 4,
+            "title": "Finger Reader Enia",
+            "section": "Dialogue",
+            "url": "https://eldenring.wiki.gg/wiki/Finger_Reader_Enia#EN-0",
+            "text": "\"About Queen Marika\"\nQueen Marika is the vessel of the Elden Ring, carrier of its vision.\nA god, in truth.\nBut after the Elden Ring's shattering, she was imprisoned in the Erdtree.\nA grim punishment for shattering the Order, despite her godhood.\nThe Fingers speak...\n\"Marika's trespass demanded a heavy sentence.\"\n\"But even in shackles, she remains a god, and the vision's vessel.\"\n\"Confer Great Runes to become Elden Lord, and join Queen Marika as her consort.\"\n\"The Fingers have willed it so.\"\nNow, you may go.",
+            "origin": "corpus"
+          },
+          {
+            "index": 5,
+            "title": "The Shattering",
+            "section": "The Shattering of the Elden Ring",
+            "url": "https://eldenring.wiki.gg/wiki/The_Shattering#The_Shattering_of_the_Elden_Ring",
+            "text": "Queen Marika shattering the Elden Ring\nRadagon repairing the Elden Ring\nThe Night of Black Knives became the catalyst for the Shattering. In response to Godwyn's death, Queen Marika the Eternal used her hammer to shatter the Elden Ring. Elden Lord Radagon, her alter ego, attempted in vain to repair the Elden Ring. As punishment for her offense, the goddess Marika was imprisoned within the Erdtree.\nConsequently, the shattering of the Elden Ring corrupted the Golden Order, and lead to a Shattering War that would leave the Lands Between in ruin.",
+            "origin": "corpus"
+          }
+        ],
+        "grounded": true,
+        "latency_ms": 11483.8,
+        "images": [
+          {
+            "association": "entity_page",
+            "id": "301d02a235d6d359384d6581371f44c771184cc3c356916e4757c63322904d94",
+            "url": "/api/v1/images/301d02a235d6d359384d6581371f44c771184cc3c356916e4757c63322904d94",
+            "caption": null,
+            "alt": "Queen Marika the Eternal.jpg",
+            "source_url": "https://eldenring.wiki.gg/wiki/Queen_Marika_the_Eternal",
+            "source_indices": [
+              1
+            ],
+            "attribution": null,
+            "license": null,
+            "license_status": "unknown_review_required",
+            "file_page_url": "https://eldenring.wiki.gg/wiki/File:Queen_Marika_the_Eternal.jpg",
+            "game_scope": "elden_ring",
+            "release_scope": "unknown"
+          },
+          {
+            "association": "entity_page",
+            "id": "522a414ee2dce8be922929098241d4859eeeb212af063726fb3a85ca7db99d25",
+            "url": "/api/v1/images/522a414ee2dce8be922929098241d4859eeeb212af063726fb3a85ca7db99d25",
+            "caption": "Marika shattered the Elden Ring",
+            "alt": null,
+            "source_url": "https://eldenring.wiki.gg/wiki/Queen_Marika_the_Eternal",
+            "source_indices": [
+              1
+            ],
+            "attribution": null,
+            "license": null,
+            "license_status": "unknown_review_required",
+            "file_page_url": "https://eldenring.wiki.gg/wiki/File:Elden_Ring_Screenshot_05.jpg",
+            "game_scope": "elden_ring",
+            "release_scope": "unknown"
+          },
+          {
+            "association": "entity_page",
+            "id": "0d5d4c2f55fc883ae33263e878e78eb4f6918a0e36a0deb7db8daabe1fb3fb3f",
+            "url": "/api/v1/images/0d5d4c2f55fc883ae33263e878e78eb4f6918a0e36a0deb7db8daabe1fb3fb3f",
+            "caption": "Marika shattered and imprisoned inside the Erdtree",
+            "alt": null,
+            "source_url": "https://eldenring.wiki.gg/wiki/Queen_Marika_the_Eternal",
+            "source_indices": [
+              1
+            ],
+            "attribution": null,
+            "license": null,
+            "license_status": "unknown_review_required",
+            "file_page_url": "https://eldenring.wiki.gg/wiki/File:ER_Queen_Marika_Panorama.png",
+            "game_scope": "elden_ring",
+            "release_scope": "unknown"
+          }
+        ],
+        "clarification": null
+      },
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "off",
+          "mode": "off",
+          "status": "not_run"
+        },
+        "graph_nodes": [
+          "scope",
+          "memory",
+          "agent_decision",
+          "tool_agent",
+          "context",
+          "prompt"
+        ],
+        "memory": {
+          "method": "semantic",
+          "status": "empty",
+          "selected": 0,
+          "selected_ids": []
+        },
+        "model_calls": [
+          {
+            "phase": "decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "generation"
+          },
+          {
+            "phase": "image_selection"
+          }
+        ],
+        "agent": {
+          "status": "ok",
+          "reason": "ready",
+          "normalized_source_refs": 0,
+          "action": "retrieve",
+          "intent": "lore",
+          "turn_type": "new",
+          "rewrite": true,
+          "selected_memory_ids": [],
+          "usage": {
+            "prompt_tokens": 1861,
+            "completion_tokens": 101
+          },
+          "elapsed_ms": 1481.29
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "agent_decision",
+          "model_calls": 0
+        },
+        "tool_actions": [
+          {
+            "action": "local_search",
+            "reason": "initial",
+            "status": "ok",
+            "query": "Elden Ring lore Queen Marika the Eternal story",
+            "returned": 30,
+            "elapsed_ms": 206.68
+          },
+          {
+            "action": "finish",
+            "reason": "sufficient",
+            "status": "ok",
+            "query": ""
+          }
+        ],
+        "evidence_selection": {
+          "method": "model",
+          "ids": [
+            "cd52b0a2-e259-512d-bf4d-062627258c4b",
+            "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b",
+            "220f1311-d051-5a80-b5b2-dd62970d59e0",
+            "eeb9e541-e7b8-52b4-936e-efbc1f2591ec",
+            "f3e56375-38f3-5654-87ea-4b5dfa37ead4"
+          ]
+        },
+        "tool_stop": "finish",
+        "selected_ids": [
+          "cd52b0a2-e259-512d-bf4d-062627258c4b",
+          "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b",
+          "220f1311-d051-5a80-b5b2-dd62970d59e0",
+          "eeb9e541-e7b8-52b4-936e-efbc1f2591ec",
+          "f3e56375-38f3-5654-87ea-4b5dfa37ead4"
+        ],
+        "prepare_ms": 4381.04,
+        "generation_graph_nodes": [
+          "generate",
+          "validate",
+          "finish"
+        ],
+        "generation_usage": [
+          {
+            "prompt_tokens": 5744,
+            "completion_tokens": 637
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 5744,
+          "completion_tokens": 637
+        },
+        "images": {
+          "returned": 3,
+          "selection": "model_metadata",
+          "candidates": 60
+        },
+        "memory_sync": {
+          "indexed": 1,
+          "deleted": 0,
+          "skipped": 0,
+          "failed": 0
+        }
+      },
+      "resolved_question": "In Elden Ring's story and lore, who is Marika?",
+      "evidence_ids": [
+        "cd52b0a2-e259-512d-bf4d-062627258c4b",
+        "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b",
+        "220f1311-d051-5a80-b5b2-dd62970d59e0",
+        "eeb9e541-e7b8-52b4-936e-efbc1f2591ec",
+        "f3e56375-38f3-5654-87ea-4b5dfa37ead4"
+      ],
+      "checked_build": null,
+      "latency_ms": 11598.37,
+      "model_calls": [
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"lore\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring's story and lore, who is Marika?\",\"search_query\":\"Elden Ring lore who is Marika Queen Marika the Eternal\",\"entities\":[\"Elden Ring\",\"Marika\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 1861,
+          "completion_tokens": 101,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring lore Queen Marika the Eternal story\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+          "prompt_tokens": 1977,
+          "completion_tokens": 58,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"cd52b0a2-e259-512d-bf4d-062627258c4b\",\"4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b\",\"220f1311-d051-5a80-b5b2-dd62970d59e0\",\"eeb9e541-e7b8-52b4-936e-efbc1f2591ec\",\"f3e56375-38f3-5654-87ea-4b5dfa37ead4\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+          "prompt_tokens": 15799,
+          "completion_tokens": 166,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"answer\":\"Marika là nữ thần hiện tại và là bình chứa của Elden Ring, đồng thời là người cai trị Golden Order ở Lands Between [1]. Bà từng là một phụ nữ Numen, một Empyrean, và theo các nội dung gắn với Shadow of the Erdtree, bà xuất thân từ Shaman Village ở Hinterland rồi lên đến Gate of Divinity trên Enir-Ilim để thành thần; bà cũng là mẹ hoặc mẹ kế của các demigod, là người trồng nên Erdtree và là vợ của các Elden Lord là Godfrey và Radagon [2]. Sau khi Godwyn chết trong Night of Black Knives, Marika dùng búa đập vỡ Elden Ring; Radagon cố sửa lại nhưng bất thành, và bà bị giam trong Erdtree như hình phạt [5]. Enia cũng nói rõ bà là bình chứa của Elden Ring, một vị thần, và bị giam sau khi Elden Ring bị đập vỡ [4].\\n\\nTrước đó, Marika đã lấy Rune of Death ra khỏi Elden Ring và giao cho bóng của mình là Maliketh phong ấn, nhờ đó bà và những người được Grace ban phước có thể bất tử — danh hiệu \\\"Queen Marika the Eternal\\\" gắn với điều này. Cũng chính Grace ấy bị tước khỏi Godfrey cùng đoàn quân của ông, những người trở thành Tarnished, và theo lời hứa của Marika, Grace được trả lại để họ trở về Lands Between sửa chữa Elden Ring đã vỡ [3].\",\"evidence\":[{\"index\":1,\"quote_id\":\"q0\"},{\"index\":2,\"quote_id\":\"q0\"},{\"index\":3,\"quote_id\":\"q0\"},{\"index\":4,\"quote_id\":\"q0\"},{\"index\":5,\"quote_id\":\"q0\"}],\"insufficient\":false}",
+          "prompt_tokens": 5744,
+          "completion_tokens": 637,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "image_selection",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"ids\":[\"301d02a235d6d359384d6581371f44c771184cc3c356916e4757c63322904d94:1\",\"522a414ee2dce8be922929098241d4859eeeb212af063726fb3a85ca7db99d25:1\",\"0d5d4c2f55fc883ae33263e878e78eb4f6918a0e36a0deb7db8daabe1fb3fb3f:1\"]}",
+          "prompt_tokens": 5071,
+          "completion_tokens": 120,
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "ADV02",
+      "question": "Theo lore Elden Ring, cha ruột của Marika là ai?",
+      "lang": "vi",
+      "group": null,
+      "expected": "Nếu không có bằng chứng trực tiếp, nêu khoảng trống và không đoán tên.",
+      "status": "ok",
+      "manual_correctness": null,
+      "manual_faithfulness": null,
+      "http_status": 200,
+      "response": {
+        "conversation_id": "3eb58403-530f-42d4-9c5d-633f9e2d80be",
+        "message_id": "fcfd034a-7791-5071-abd0-00485d2f3751",
+        "answer": "Mình chưa thể xác nhận cha ruột của Marika. Các thông tin hiện có chỉ nói Marika là người Numen đến từ Shaman Village, từng là Empyrean và lên thần tại Gate of Divinity, cùng danh sách con và anh/chị em (Maliketh là half-brother/shadow), nhưng không đề cập ai là cha ruột của bà.",
+        "sources": [],
+        "grounded": false,
+        "latency_ms": 5015.37,
+        "images": [],
+        "clarification": null
+      },
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "off",
+          "mode": "off",
+          "status": "not_run"
+        },
+        "graph_nodes": [
+          "scope",
+          "memory",
+          "agent_decision",
+          "tool_agent",
+          "context",
+          "prompt"
+        ],
+        "memory": {
+          "method": "semantic",
+          "status": "empty",
+          "selected": 0,
+          "selected_ids": []
+        },
+        "model_calls": [
+          {
+            "phase": "decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "generation"
+          }
+        ],
+        "agent": {
+          "status": "ok",
+          "reason": "ready",
+          "normalized_source_refs": 0,
+          "action": "retrieve",
+          "intent": "lore",
+          "turn_type": "new",
+          "rewrite": true,
+          "selected_memory_ids": [],
+          "usage": {
+            "prompt_tokens": 1860,
+            "completion_tokens": 94
+          },
+          "elapsed_ms": 1157.64
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "agent_decision",
+          "model_calls": 0
+        },
+        "tool_actions": [
+          {
+            "action": "local_search",
+            "reason": "initial",
+            "status": "ok",
+            "query": "Elden Ring Marika biological father parentage lore",
+            "returned": 30,
+            "elapsed_ms": 53.89
+          },
+          {
+            "action": "finish",
+            "reason": "sufficient",
+            "status": "ok",
+            "query": ""
+          }
+        ],
+        "evidence_selection": {
+          "method": "model",
+          "ids": [
+            "4af7d168-4f85-5b3c-b4bb-0fe920326ffc",
+            "8b9ef700-28a8-55e5-b116-e2e9e4eb5495",
+            "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b"
+          ]
+        },
+        "tool_stop": "finish",
+        "selected_ids": [
+          "4af7d168-4f85-5b3c-b4bb-0fe920326ffc",
+          "8b9ef700-28a8-55e5-b116-e2e9e4eb5495",
+          "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b"
+        ],
+        "prepare_ms": 3526.41,
+        "generation_graph_nodes": [
+          "generate",
+          "validate",
+          "finish"
+        ],
+        "generation_usage": [
+          {
+            "prompt_tokens": 5153,
+            "completion_tokens": 125
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 5153,
+          "completion_tokens": 125
+        },
+        "memory_sync": {
+          "indexed": 1,
+          "deleted": 0,
+          "skipped": 0,
+          "failed": 0
+        }
+      },
+      "resolved_question": "According to Elden Ring lore, who is Marika's biological father?",
+      "evidence_ids": [
+        "4af7d168-4f85-5b3c-b4bb-0fe920326ffc",
+        "8b9ef700-28a8-55e5-b116-e2e9e4eb5495",
+        "4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b"
+      ],
+      "checked_build": null,
+      "latency_ms": 5083.88,
+      "model_calls": [
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"lore\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"According to Elden Ring lore, who is Marika's biological father?\",\"search_query\":\"Elden Ring lore Marika biological father parentage\",\"entities\":[\"Marika\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 1860,
+          "completion_tokens": 94,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring Marika biological father parentage lore\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+          "prompt_tokens": 1975,
+          "completion_tokens": 58,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"4af7d168-4f85-5b3c-b4bb-0fe920326ffc\",\"8b9ef700-28a8-55e5-b116-e2e9e4eb5495\",\"4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+          "prompt_tokens": 17046,
+          "completion_tokens": 121,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"answer\":\"Mình chưa thể xác nhận cha ruột của Marika. Các thông tin hiện có chỉ nói Marika là người Numen đến từ Shaman Village, từng là Empyrean và lên thần tại Gate of Divinity, cùng danh sách con và anh/chị em (Maliketh là half-brother/shadow), nhưng không đề cập ai là cha ruột của bà.\",\"evidence\":[],\"insufficient\":true}",
+          "prompt_tokens": 5153,
+          "completion_tokens": 125,
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "ADV03",
+      "question": "Mới chơi Elden Ring, tôi nên tập né hay đỡ đòn trước?",
+      "lang": "vi",
+      "group": null,
+      "expected": "Tư vấn theo điều kiện, không bịa số khung hình hay ngưỡng chính xác.",
+      "status": "ok",
+      "manual_correctness": null,
+      "manual_faithfulness": null,
+      "http_status": 200,
+      "response": {
+        "conversation_id": "051e674e-8bb2-4ce8-ac0d-b2685f2b2799",
+        "message_id": "4742c426-02d5-5d13-9c97-8ca7ba3865fd",
+        "grounded": true,
+        "latency_ms": 10688.59,
+        "answer": "Nên tập né (roll) trước làm kỹ năng nền, rồi mới tập đỡ đòn. Roll có khung bất tử trong lúc lăn nên không ăn sát thương khi canh đúng thời điểm [3] — đây là thứ bạn phải dùng đi dùng lại suốt game, kể cả khi đang cầm khiên. Đỡ đòn phụ thuộc vào Stamina và Guard Boost của khiên, nên chuỗi đòn dài hoặc đòn nặng vẫn có thể bào hết Stamina và phá thế thủ [2].\n\nKhi đã quen né, hãy thêm đỡ đòn vì nó mở ra Guard Counter: đỡ xong phản công ngay, và đòn này dễ phá stance của địch [1]. Cách tập hợp lý là né làm phản xạ chính, còn đỡ đòn dùng khi bạn chủ động muốn đổi nhịp và phản công — đừng giữ khiên làm lối chơi mặc định cho mọi tình huống.",
+        "sources": [
+          {
+            "index": 1,
+            "title": "About Guard Counters",
+            "section": "Description",
+            "url": "https://eldenring.wiki.gg/wiki/About_Guard_Counters#%F0%9F%8F%B4%F3%A0%81%A7%F3%A0%81%A2%F3%A0%81%A5%F3%A0%81%AE%F3%A0%81%A7%F3%A0%81%BF-0",
+            "text": "You can perform a counterattack immediately after blocking an enemy attack.\nGuard counters make it easy to break an enemy's stance.",
+            "origin": "corpus"
+          },
+          {
+            "index": 2,
+            "title": "Skill: Barricade Shield",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Skill%3A_Barricade_Shield#Notes",
+            "text": "Costs 12 points of FP to perform.\nCosts 0 points of Stamina to perform.\nIt's possible to use this skill while Guarding, making it possible immediately reactivate the skill after the previous application ends.\nIt's conversely also possible to Guard when using the skill to continue Guarding against longer attack strings.\nIt's not possible to use this skill just after being hit while Guarding due to the slight stun the shield-wielder receives, so an empty moment has to be found to do this.\nBest used at the start of enemy attack chains, though it pays to be wary of low Stamina as the Stamina damage reduction can't counteract all of it.\nOne simple way around it is to use it as preparation for a Guard Counter, to spend Stamina on attacks afterwards instead.\nAll one-handed non-jumping weapon attacks except for those of Whips, the Cipher Pata, and the Coded Sword will bounce, briefly stunning the attacker.\nThis doesn't always work if the Barricade Shield user is running or attacking, and for roughly a second after these actions.\nLess effective for Greatshields, especially ones with low Guard Boost. Medium Shields can make fairly good use of the skill with any of the 100% Physical Guard shields, while Small Shields are more limited to those with already high Physical Guard such as the Gilded Iron Shield or Iron Roundshield.\nStacks with the Greatshield Talisman Stamina damage reduction, if with somewhat diminishing returns.\nThe Talisman and the Skill together reduce incoming Stamina damage by 44% for Greatshields and by 60% for all other Shields.",
+            "origin": "corpus"
+          },
+          {
+            "index": 3,
+            "title": "Skill: Bloodhound's Step",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Skill%3A_Bloodhound%27s_Step#Notes",
+            "text": "Costs 12 points of Stamina.\nThe dodging functions the same way as a roll, meaning that no damage is taken during the dodge but that build-up from Status Effects is still inflicted.\nNote that the direct damage from Blood Loss or Frostbite won't be taken if they fully applied during a dash, but the user will still be staggered out of the dash.\nThe damage from Madness and the stun from Madness and Sleep will still be inflicted, as will the Damage Negation decrease from Frostbite and the passive damage from Poison and Scarlet Rot.\nThis skill is very similar to the skill Quickstep, however it covers a longer distance and grants more i-frames (16 or 14 vs 15 or 13) at the cost of more FP (5 vs 3).\nVery usable as a movement skill for movement-restricting areas such as as deep water or swamps.\nStill very usable for this when out of FP, though the amount of i-frames will be heavily decreased so that should preferable only be used outside of combat for this.",
+            "origin": "corpus"
+          }
+        ],
+        "images": [],
+        "clarification": null
+      },
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "off",
+          "mode": "off",
+          "status": "not_run"
+        },
+        "graph_nodes": [
+          "scope",
+          "memory",
+          "agent_decision",
+          "tool_agent",
+          "context",
+          "prompt"
+        ],
+        "memory": {
+          "method": "semantic",
+          "status": "empty",
+          "selected": 0,
+          "selected_ids": []
+        },
+        "model_calls": [
+          {
+            "phase": "decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "generation"
+          },
+          {
+            "phase": "image_selection"
+          }
+        ],
+        "agent": {
+          "status": "ok",
+          "reason": "ready",
+          "normalized_source_refs": 0,
+          "action": "retrieve",
+          "intent": "mechanics",
+          "turn_type": "new",
+          "rewrite": true,
+          "selected_memory_ids": [],
+          "usage": {
+            "prompt_tokens": 1868,
+            "completion_tokens": 99
+          },
+          "elapsed_ms": 1181.53
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "agent_decision",
+          "model_calls": 0
+        },
+        "tool_actions": [
+          {
+            "action": "local_search",
+            "reason": "initial",
+            "status": "ok",
+            "query": "Elden Ring dodging vs blocking beginner guard break stamina",
+            "returned": 30,
+            "elapsed_ms": 61.31
+          },
+          {
+            "action": "finish",
+            "reason": "sufficient",
+            "status": "ok",
+            "query": ""
+          }
+        ],
+        "evidence_selection": {
+          "method": "model",
+          "ids": [
+            "4588bd6e-4651-5db1-bede-0bd0e0eb5940",
+            "f2951a83-d073-5276-bc1e-0c0c040cd624",
+            "631b0629-b978-51f9-b45f-6998e45f64fc",
+            "bc03fdcb-db6c-5be5-a29b-8fdb4f06dbfd",
+            "7ce97218-640b-594a-a3b5-c8342716e27b"
+          ]
+        },
+        "tool_stop": "finish",
+        "selected_ids": [
+          "4588bd6e-4651-5db1-bede-0bd0e0eb5940",
+          "f2951a83-d073-5276-bc1e-0c0c040cd624",
+          "631b0629-b978-51f9-b45f-6998e45f64fc",
+          "bc03fdcb-db6c-5be5-a29b-8fdb4f06dbfd",
+          "7ce97218-640b-594a-a3b5-c8342716e27b"
+        ],
+        "prepare_ms": 3652.43,
+        "generation_graph_nodes": [
+          "generate",
+          "validate",
+          "finish"
+        ],
+        "images": {
+          "returned": 0,
+          "selection": "model_metadata",
+          "candidates": 2
+        },
+        "memory_sync": {
+          "indexed": 1,
+          "deleted": 0,
+          "skipped": 0,
+          "failed": 0
+        }
+      },
+      "resolved_question": "As a new Elden Ring player, should I practice dodging or blocking first?",
+      "evidence_ids": [
+        "4588bd6e-4651-5db1-bede-0bd0e0eb5940",
+        "f2951a83-d073-5276-bc1e-0c0c040cd624",
+        "631b0629-b978-51f9-b45f-6998e45f64fc",
+        "bc03fdcb-db6c-5be5-a29b-8fdb4f06dbfd",
+        "7ce97218-640b-594a-a3b5-c8342716e27b"
+      ],
+      "checked_build": null,
+      "latency_ms": 10745.87,
+      "model_calls": [
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"As a new Elden Ring player, should I practice dodging or blocking first?\",\"search_query\":\"Elden Ring beginner should practice dodging or blocking first\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 1868,
+          "completion_tokens": 99,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring dodging vs blocking beginner guard break stamina\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+          "prompt_tokens": 1978,
+          "completion_tokens": 59,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"finish\", \"query\": \"\", \"evidence_ids\": [\"4588bd6e-4651-5db1-bede-0bd0e0eb5940\", \"f2951a83-d073-5276-bc1e-0c0c040cd624\", \"631b0629-b978-51f9-b45f-6998e45f64fc\", \"bc03fdcb-db6c-5be5-a29b-8fdb4f06dbfd\", \"7ce97218-640b-594a-a3b5-c8342716e27b\"], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"sufficient\"}",
+          "prompt_tokens": 17285,
+          "completion_tokens": 169,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": true,
+          "status": "ok",
+          "content": "{\"answer\":\"Nên tập né (roll) trước làm kỹ năng nền, rồi mới tập đỡ đòn. Roll có khung bất tử trong lúc lăn nên không ăn sát thương khi canh đúng thời điểm [3] — đây là thứ bạn phải dùng đi dùng lại suốt game, kể cả khi đang cầm khiên. Đỡ đòn phụ thuộc vào Stamina và Guard Boost của khiên, nên chuỗi đòn dài hoặc đòn nặng vẫn có thể bào hết Stamina và phá thế thủ [2].\\n\\nKhi đã quen né, hãy thêm đỡ đòn vì nó mở ra Guard Counter: đỡ xong phản công ngay, và đòn này dễ phá stance của địch [1]. Cách tập hợp lý là né làm phản xạ chính, còn đỡ đòn dùng khi bạn chủ động muốn đổi nhịp và phản công — đừng giữ khiên làm lối chơi mặc định cho mọi tình huống.\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]},{\"index\":2,\"quote_ids\":[\"q0\"]},{\"index\":3,\"quote_ids\":[\"q0\"]}],\"insufficient\":false}",
+          "prompt_tokens": null,
+          "completion_tokens": null
+        },
+        {
+          "phase": "image_selection",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"ids\":[]}",
+          "prompt_tokens": 389,
+          "completion_tokens": 5,
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "ADV04",
+      "question": "class tốt nhất đầu game",
+      "lang": "vi",
+      "group": null,
+      "expected": "So sánh lựa chọn theo lối chơi hoặc nói rõ giả định khi gợi ý.",
+      "status": "ok",
+      "manual_correctness": null,
+      "manual_faithfulness": null,
+      "http_status": 200,
+      "response": {
+        "conversation_id": "1f9aedef-186e-42ca-a835-8644515578f6",
+        "message_id": "417a4153-11b0-57cb-ab6c-c220da04ddb4",
+        "answer": "Không có nguồn nào xếp hạng class nào là \"tốt nhất\", nhưng có vài lựa chọn được hỗ trợ rõ ràng theo hướng chơi. Samurai khởi đầu với Uchigatana, Red Thorn Roundshield, Longbow cùng 20 mũi tên thường và 10 mũi tên lửa, cộng bộ giáp Land of Reeds — tức là có sẵn cả cận chiến lẫn đánh xa ngay từ đầu, một khởi đầu khá trọn vẹn cho người mới [1].\n\nNếu bạn thích vũ khí nặng, Vagabond cầm được Zweihander bằng hai tay mà không cần tăng thêm điểm nào [2]. Về vũ khí nhặt được sớm, Morning Star ở Weeping Peninsula là lựa chọn tốt đầu game vì sát thương gốc cao, có Bleed sẵn và mọi Origin đều dùng được mà không phải cộng chỉ số (có Origin phải cầm hai tay) [3]. Còn nếu muốn đi theo phép thuật, Meteorite Staff rất hữu dụng đầu game và lấy được sớm bằng cách mở rương dịch chuyển ở Dragon-Burnt Ruins để tới Sellia Crystal Tunnel [4] — đây là vũ khí chứ không phải class, nhưng nó giúp hướng Sorcery khởi đầu dễ thở hơn.\n\nMình chưa thể xác nhận thứ hạng \"class tốt nhất\" cho đầu game, vì không có dữ liệu nào so sánh trực tiếp các class với nhau.",
+        "sources": [
+          {
+            "index": 1,
+            "title": "Samurai",
+            "section": "Starting equipment",
+            "url": "https://eldenring.wiki.gg/wiki/Samurai#Starting_equipment",
+            "text": "Armaments\nUchigatana\nRed Thorn Roundshield\nLongbow\nArrow x20\nFire Arrow x10\nSpells\nNone\nGear\nLand of Reeds Helm\nLand of Reeds Armor\nLand of Reeds Gauntlets\nLand of Reeds Greaves\nMisc.\nAny Keepsakes the player chooses\nMemory of Grace",
+            "origin": "corpus"
+          },
+          {
+            "index": 2,
+            "title": "Zweihander",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Zweihander#Notes",
+            "text": "Has unique one- and two-handed heavy attacks and charged heavy attacks, where the first attack in each two-attack chain is replaced by a thrust. This trait is shared with the Ancient Meteoric Ore Greatsword , Fire Knight's Greatsword , Moonrithyll's Knight Sword , and Troll Knight's Sword.\nThis gives the weapon the versatility of having a thrust attack besides the crouching light attack.\nLightest Colossal Sword in the game.\nThis makes this weapon useful for dual-wielding.\nThe third longest Colossal Sword, after the Greatsword and the Ancient Meteoric Ore Greatsword.\nLeans towards Dexterity for Cold and Blood/Poison affinities.\nThe Vagabond origin can wield this weapon two-handed without any additional levels.\nFor other origins and two-handing this weapon, Heroes need 2 more points in Dexterity and Confessors and Samurai need 1 more point in Strength.\nDue to the relatively low wielding requirements and weight, this weapon is the infusable Colossal Sword that is most easily used for build that want to use non-Heavy, non-Fire Affinities.\nIt's also still fairly useful for those wishing to use either of those two Affinities, as the aforementioned advantages and early accessibility means that stat points can be focused on increasing other stats such as Vigor for more HP and Endurance for better armor, until the higher Attack Power of other Colossal Swords become more advantageous.\nLow overall Attack Power on most non-Dexterity Affinities.",
+            "origin": "corpus"
+          },
+          {
+            "index": 3,
+            "title": "Morning Star",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Morning_Star#Notes",
+            "text": "The Morning Star has unique thrusting attacks on the last hit of its light attack chain, as well as its running heavy, rolling light, and backstep light attacks. These attacks are also used with the Scepter of the All-Knowing.\nDespite being unlisted, these attacks deal Pierce damage.\nThe Morning Star is a great early game weapon as it deals high base damage, has innate Bleed, can be wielded by all the Origins without having to level up their stats (some Origins might have to two-hand it) and can be found in the Weeping Peninsula.\nAlthough the Spiked Club is a bit stronger for Occult Affinity, that weapon requires farming specific enemies to acquire.\nHas very short range.",
+            "origin": "corpus"
+          },
+          {
+            "index": 4,
+            "title": "Meteorite Staff",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Meteorite_Staff#Notes",
+            "text": "Though it is unupgradeable, it's effectively equivalent to a +15 Regular or +5 Somber Staff.\nUseful early on for anything wishing to delve into Sorceries, especially if grabbed as soon as the playthrough starts.\nEasily reachable by taking the teleport chest in Dragon-Burnt Ruins to get to Sellia Crystal Tunnel and exiting it down the hill (remember to rest at the Site of Grace to unlock regular teleportation again). From there, just head west in the swamp.\nHas a Strength requirement of 6, below the minimum possible Strength for any of the Origins.\nIncreases the Attack Power of Gravity Sorceries by 30% (by 69% if one is held in each hand).\nAlso applies to Gravity Sorceries cast with other Staves, as long as a Meteorite Staff is held in the other hand.\nUsable as a staff if casting Gravity Sorceries, but is otherwise best used as an off-hand stat stick to boost the power of specific spells after another staff has been sufficiently upgraded.\n138 Sorcery Scaling at 18 Intelligence (minimum requirement) and 272 Sorcery Scaling at 80 Intelligence.\n168 Scaling at 30 Intelligence, 193 Scaling with 40 Intelligence, 218 Scaling at 50 Intelligence, 244 Scaling at 60 Intelligence, 258 Scaling at 70 Intelligence.",
+            "origin": "corpus"
+          }
+        ],
+        "grounded": true,
+        "latency_ms": 16356.6,
+        "images": [],
+        "clarification": null
+      },
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "auto",
+          "mode": "auto",
+          "status": "ok",
+          "trigger": "agent_tool",
+          "selected_urls": 3,
+          "failed_extracts": 0,
+          "excluded": 0,
+          "image_markup_removed": 0,
+          "link_markup_removed": 0,
+          "navigation_lines_removed": 17
+        },
+        "graph_nodes": [
+          "scope",
+          "memory",
+          "agent_decision",
+          "tool_agent",
+          "context",
+          "prompt"
+        ],
+        "memory": {
+          "method": "semantic",
+          "status": "empty",
+          "selected": 0,
+          "selected_ids": []
+        },
+        "model_calls": [
+          {
+            "phase": "decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "generation"
+          },
+          {
+            "phase": "image_selection"
+          }
+        ],
+        "agent": {
+          "status": "ok",
+          "reason": "ready",
+          "normalized_source_refs": 0,
+          "action": "retrieve",
+          "intent": "build",
+          "turn_type": "new",
+          "rewrite": true,
+          "selected_memory_ids": [],
+          "usage": {
+            "prompt_tokens": 1851,
+            "completion_tokens": 90
+          },
+          "elapsed_ms": 997.61
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "agent_decision",
+          "model_calls": 0
+        },
+        "tool_actions": [
+          {
+            "action": "local_search",
+            "reason": "initial",
+            "status": "ok",
+            "query": "Elden Ring starting classes early game beginner stats gear",
+            "returned": 30,
+            "elapsed_ms": 43.17
+          },
+          {
+            "action": "web_search",
+            "reason": "missing_evidence",
+            "status": "ok",
+            "query": "Elden Ring best starting classes early game Vagabond Samurai Confessor comparison",
+            "returned": 3,
+            "elapsed_ms": 3964.46
+          },
+          {
+            "action": "finish",
+            "reason": "sufficient",
+            "status": "ok",
+            "query": ""
+          }
+        ],
+        "evidence_selection": {
+          "method": "model",
+          "ids": [
+            "b1346906-386e-5070-b781-3d39ffcf3023",
+            "1134f537-bc4f-581f-b6dc-d9dc65f1b278",
+            "5a69260b-0d5b-524a-9e88-c98de8231e4d",
+            "38f87a8e-b208-58fd-a286-763584449c56",
+            "57af17f7-d3ff-58b5-b348-a89f9ad71a7f"
+          ]
+        },
+        "tool_stop": "finish",
+        "selected_ids": [
+          "b1346906-386e-5070-b781-3d39ffcf3023",
+          "1134f537-bc4f-581f-b6dc-d9dc65f1b278",
+          "5a69260b-0d5b-524a-9e88-c98de8231e4d",
+          "38f87a8e-b208-58fd-a286-763584449c56",
+          "57af17f7-d3ff-58b5-b348-a89f9ad71a7f"
+        ],
+        "prepare_ms": 8623.43,
+        "generation_graph_nodes": [
+          "generate",
+          "validate",
+          "finish"
+        ],
+        "generation_usage": [
+          {
+            "prompt_tokens": 6446,
+            "completion_tokens": 1006
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 6446,
+          "completion_tokens": 1006
+        },
+        "dropped_uncited_paragraphs": 1,
+        "images": {
+          "returned": 0,
+          "selection": "model_metadata",
+          "candidates": 3
+        },
+        "memory_sync": {
+          "indexed": 1,
+          "deleted": 0,
+          "skipped": 0,
+          "failed": 0
+        }
+      },
+      "resolved_question": "What are the best starting classes for the early game in Elden Ring?",
+      "evidence_ids": [
+        "b1346906-386e-5070-b781-3d39ffcf3023",
+        "1134f537-bc4f-581f-b6dc-d9dc65f1b278",
+        "5a69260b-0d5b-524a-9e88-c98de8231e4d",
+        "38f87a8e-b208-58fd-a286-763584449c56",
+        "57af17f7-d3ff-58b5-b348-a89f9ad71a7f"
+      ],
+      "checked_build": null,
+      "latency_ms": 16423.86,
+      "model_calls": [
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"build\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"What are the best starting classes for the early game in Elden Ring?\",\"search_query\":\"Elden Ring best starting classes for early game beginner\",\"entities\":[],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 1851,
+          "completion_tokens": 90,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring starting classes early game beginner stats gear\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+          "prompt_tokens": 1978,
+          "completion_tokens": 58,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\":\"web_search\",\"query\":\"Elden Ring best starting classes early game Vagabond Samurai Confessor comparison\",\"evidence_ids\":[],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"missing_evidence\"}",
+          "prompt_tokens": 16658,
+          "completion_tokens": 60,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"b1346906-386e-5070-b781-3d39ffcf3023\",\"1134f537-bc4f-581f-b6dc-d9dc65f1b278\",\"5a69260b-0d5b-524a-9e88-c98de8231e4d\",\"38f87a8e-b208-58fd-a286-763584449c56\",\"57af17f7-d3ff-58b5-b348-a89f9ad71a7f\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+          "prompt_tokens": 16693,
+          "completion_tokens": 156,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"answer\":\"Không có nguồn nào xếp hạng class nào là \\\"tốt nhất\\\", nhưng có vài lựa chọn được hỗ trợ rõ ràng theo hướng chơi. Samurai khởi đầu với Uchigatana, Red Thorn Roundshield, Longbow cùng 20 mũi tên thường và 10 mũi tên lửa, cộng bộ giáp Land of Reeds — tức là có sẵn cả cận chiến lẫn đánh xa ngay từ đầu, một khởi đầu khá trọn vẹn cho người mới [1].\\n\\nNếu bạn thích vũ khí nặng, Vagabond cầm được Zweihander bằng hai tay mà không cần tăng thêm điểm nào [2]. Về vũ khí nhặt được sớm, Morning Star ở Weeping Peninsula là lựa chọn tốt đầu game vì sát thương gốc cao, có Bleed sẵn và mọi Origin đều dùng được mà không phải cộng chỉ số (có Origin phải cầm hai tay) [3]. Còn nếu muốn đi theo phép thuật, Meteorite Staff rất hữu dụng đầu game và lấy được sớm bằng cách mở rương dịch chuyển ở Dragon-Burnt Ruins để tới Sellia Crystal Tunnel [4] — đây là vũ khí chứ không phải class, nhưng nó giúp hướng Sorcery khởi đầu dễ thở hơn.\\n\\nTóm lại: Samurai là lựa chọn cân bằng dễ tiếp cận, Vagabond hợp với lối chơi vũ khí nặng, còn nếu bạn định chơi phép thì việc lấy Meteorite Staff sớm quan trọng hơn việc chọn class nào.\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]},{\"index\":2,\"quote_ids\":[\"q0\"]},{\"index\":3,\"quote_ids\":[\"q0\"]},{\"index\":4,\"quote_ids\":[\"q0\"]}],\"insufficient\":false,\"limitation\":\"Mình chưa thể xác nhận thứ hạng \\\"class tốt nhất\\\" cho đầu game, vì không có dữ liệu nào so sánh trực tiếp các class với nhau.\"}",
+          "prompt_tokens": 6446,
+          "completion_tokens": 1006,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "image_selection",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"ids\":[]}",
+          "prompt_tokens": 471,
+          "completion_tokens": 5,
+          "finish_reason": "stop"
+        }
+      ]
+    },
+    {
+      "id": "ADV05",
+      "question": "Giả sử trong Elden Ring tôi đang level 40, lên level 55, mỗi cấp được 1 điểm. Tính giúp tôi số điểm thêm theo đúng giả định này.",
+      "lang": "vi",
+      "group": null,
+      "expected": "15 điểm, nêu phép tính từ dữ kiện người chơi đưa.",
+      "status": "ok",
+      "manual_correctness": null,
+      "manual_faithfulness": null,
+      "http_status": 200,
+      "response": {
+        "conversation_id": "cdacbcd3-ff3e-4cd3-a381-bbd92fb55e97",
+        "message_id": "66bd728a-e1a7-5f28-8704-b03552ea27f9",
+        "answer": "Từ level 40 lên 55 là 15 cấp. Với giả định mỗi cấp được 1 điểm, bạn có thêm 15 điểm thuộc tính [1].",
+        "sources": [
+          {
+            "index": 1,
+            "title": "Attribute point accounting",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wikidot.com/stats",
+            "text": "A character's level equals the sum of the eight primary attributes minus 79. Thus the target attribute sum is level + 79. Vigor affects HP; Mind affects FP; Endurance affects stamina and equip load. Arithmetic does not establish optimality.",
+            "origin": "corpus"
+          }
+        ],
+        "grounded": true,
+        "latency_ms": 7436.54,
+        "images": [],
+        "clarification": null
+      },
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "off",
+          "mode": "off",
+          "status": "not_run"
+        },
+        "graph_nodes": [
+          "scope",
+          "memory",
+          "agent_decision",
+          "tool_agent",
+          "context",
+          "prompt"
+        ],
+        "memory": {
+          "method": "semantic",
+          "status": "empty",
+          "selected": 0,
+          "selected_ids": []
+        },
+        "model_calls": [
+          {
+            "phase": "decision"
+          },
+          {
+            "phase": "decision_repair"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "tool_decision"
+          },
+          {
+            "phase": "generation"
+          }
+        ],
+        "agent": {
+          "status": "ok",
+          "reason": "ready",
+          "repair_attempts": 1,
+          "normalized_source_refs": 0,
+          "action": "retrieve",
+          "intent": "mechanics",
+          "turn_type": "new",
+          "rewrite": true,
+          "selected_memory_ids": [],
+          "usage": {
+            "prompt_tokens": 2079,
+            "completion_tokens": 148
+          },
+          "elapsed_ms": 2859.13
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "agent_decision",
+          "model_calls": 0
+        },
+        "tool_actions": [
+          {
+            "action": "source_snapshot",
+            "reason": "initial",
+            "status": "ok",
+            "query": "",
+            "returned": 1,
+            "elapsed_ms": 0.02
+          },
+          {
+            "action": "finish",
+            "reason": "sufficient",
+            "status": "ok",
+            "query": ""
+          }
+        ],
+        "evidence_selection": {
+          "method": "model",
+          "ids": [
+            "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb"
+          ]
+        },
+        "tool_stop": "finish",
+        "selected_ids": [
+          "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb"
+        ],
+        "prepare_ms": 4785.55,
+        "generation_graph_nodes": [
+          "generate",
+          "validate",
+          "finish"
+        ],
+        "generation_usage": [
+          {
+            "prompt_tokens": 4592,
+            "completion_tokens": 317
+          }
+        ],
+        "usage": {
+          "prompt_tokens": 4592,
+          "completion_tokens": 317
+        },
+        "images": {
+          "returned": 0,
+          "selection": "empty_or_budget"
+        },
+        "memory_sync": {
+          "indexed": 2,
+          "deleted": 0,
+          "skipped": 0,
+          "failed": 0
+        }
+      },
+      "resolved_question": "In Elden Ring, assuming I am at level 40 and go up to level 55, gaining 1 point per level, how many additional stat points do I get under this assumption?",
+      "evidence_ids": [
+        "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb"
+      ],
+      "checked_build": null,
+      "latency_ms": 7541.57,
+      "model_calls": [
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring, assuming I am at level 40 and go up to level 55, gaining 1 point per level, how many additional stat points do I get under this assumption?\",\"search_query\":\"Elden Ring leveling from level 40 to level 55 number of stat points gained per level\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[{\"key\":\"level\",\"value\":\"40\",\"source_id\":\"current\"}],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 1895,
+          "completion_tokens": 143,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring, assuming I am at level 40 and go up to level 55, gaining 1 point per level, how many additional stat points do I get under this assumption?\",\"search_query\":\"Elden Ring leveling from level 40 to level 55 gaining 1 point per level, number of additional stat points\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[{\"key\":\"level\",\"value\":\"40\",\"source_id\":\"current\"}],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+          "prompt_tokens": 2079,
+          "completion_tokens": 148,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\": \"source_snapshot\", \"query\": \"\", \"evidence_ids\": [], \"snapshot_ids\": [\"curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb\"], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+          "prompt_tokens": 2019,
+          "completion_tokens": 87,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "tool_decision",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+          "prompt_tokens": 2657,
+          "completion_tokens": 81,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"answer\":\"Từ level 40 lên 55 là 15 cấp. Với giả định mỗi cấp được 1 điểm, bạn có thêm 15 điểm thuộc tính [1].\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]}],\"insufficient\":false}",
+          "prompt_tokens": 4592,
+          "completion_tokens": 317,
+          "finish_reason": "stop"
+        }
+      ]
+    }
+  ],
+  "preflight": [
+    {
+      "resource": "PostgreSQL",
+      "status": "ok"
+    },
+    {
+      "resource": "Qdrant corpus",
+      "status": "ok"
+    },
+    {
+      "resource": "Redis",
+      "status": "ok"
+    }
+  ],
+  "test_database": "indexbeast_agent_test_56eceff345",
+  "test_memory_collection": "ib_agent_test_56eceff345",
+  "logical_model_calls": [
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"lore\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring's story and lore, who is Marika?\",\"search_query\":\"Elden Ring lore who is Marika Queen Marika the Eternal\",\"entities\":[\"Elden Ring\",\"Marika\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 1861,
+      "completion_tokens": 101,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring lore Queen Marika the Eternal story\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+      "prompt_tokens": 1977,
+      "completion_tokens": 58,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"cd52b0a2-e259-512d-bf4d-062627258c4b\",\"4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b\",\"220f1311-d051-5a80-b5b2-dd62970d59e0\",\"eeb9e541-e7b8-52b4-936e-efbc1f2591ec\",\"f3e56375-38f3-5654-87ea-4b5dfa37ead4\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+      "prompt_tokens": 15799,
+      "completion_tokens": 166,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "generation",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"answer\":\"Marika là nữ thần hiện tại và là bình chứa của Elden Ring, đồng thời là người cai trị Golden Order ở Lands Between [1]. Bà từng là một phụ nữ Numen, một Empyrean, và theo các nội dung gắn với Shadow of the Erdtree, bà xuất thân từ Shaman Village ở Hinterland rồi lên đến Gate of Divinity trên Enir-Ilim để thành thần; bà cũng là mẹ hoặc mẹ kế của các demigod, là người trồng nên Erdtree và là vợ của các Elden Lord là Godfrey và Radagon [2]. Sau khi Godwyn chết trong Night of Black Knives, Marika dùng búa đập vỡ Elden Ring; Radagon cố sửa lại nhưng bất thành, và bà bị giam trong Erdtree như hình phạt [5]. Enia cũng nói rõ bà là bình chứa của Elden Ring, một vị thần, và bị giam sau khi Elden Ring bị đập vỡ [4].\\n\\nTrước đó, Marika đã lấy Rune of Death ra khỏi Elden Ring và giao cho bóng của mình là Maliketh phong ấn, nhờ đó bà và những người được Grace ban phước có thể bất tử — danh hiệu \\\"Queen Marika the Eternal\\\" gắn với điều này. Cũng chính Grace ấy bị tước khỏi Godfrey cùng đoàn quân của ông, những người trở thành Tarnished, và theo lời hứa của Marika, Grace được trả lại để họ trở về Lands Between sửa chữa Elden Ring đã vỡ [3].\",\"evidence\":[{\"index\":1,\"quote_id\":\"q0\"},{\"index\":2,\"quote_id\":\"q0\"},{\"index\":3,\"quote_id\":\"q0\"},{\"index\":4,\"quote_id\":\"q0\"},{\"index\":5,\"quote_id\":\"q0\"}],\"insufficient\":false}",
+      "prompt_tokens": 5744,
+      "completion_tokens": 637,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "image_selection",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"ids\":[\"301d02a235d6d359384d6581371f44c771184cc3c356916e4757c63322904d94:1\",\"522a414ee2dce8be922929098241d4859eeeb212af063726fb3a85ca7db99d25:1\",\"0d5d4c2f55fc883ae33263e878e78eb4f6918a0e36a0deb7db8daabe1fb3fb3f:1\"]}",
+      "prompt_tokens": 5071,
+      "completion_tokens": 120,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"lore\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"According to Elden Ring lore, who is Marika's biological father?\",\"search_query\":\"Elden Ring lore Marika biological father parentage\",\"entities\":[\"Marika\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 1860,
+      "completion_tokens": 94,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring Marika biological father parentage lore\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+      "prompt_tokens": 1975,
+      "completion_tokens": 58,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"4af7d168-4f85-5b3c-b4bb-0fe920326ffc\",\"8b9ef700-28a8-55e5-b116-e2e9e4eb5495\",\"4d2ba80f-0e66-5b18-88e4-e3649b4d9e8b\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+      "prompt_tokens": 17046,
+      "completion_tokens": 121,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "generation",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"answer\":\"Mình chưa thể xác nhận cha ruột của Marika. Các thông tin hiện có chỉ nói Marika là người Numen đến từ Shaman Village, từng là Empyrean và lên thần tại Gate of Divinity, cùng danh sách con và anh/chị em (Maliketh là half-brother/shadow), nhưng không đề cập ai là cha ruột của bà.\",\"evidence\":[],\"insufficient\":true}",
+      "prompt_tokens": 5153,
+      "completion_tokens": 125,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"As a new Elden Ring player, should I practice dodging or blocking first?\",\"search_query\":\"Elden Ring beginner should practice dodging or blocking first\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 1868,
+      "completion_tokens": 99,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring dodging vs blocking beginner guard break stamina\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+      "prompt_tokens": 1978,
+      "completion_tokens": 59,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"finish\", \"query\": \"\", \"evidence_ids\": [\"4588bd6e-4651-5db1-bede-0bd0e0eb5940\", \"f2951a83-d073-5276-bc1e-0c0c040cd624\", \"631b0629-b978-51f9-b45f-6998e45f64fc\", \"bc03fdcb-db6c-5be5-a29b-8fdb4f06dbfd\", \"7ce97218-640b-594a-a3b5-c8342716e27b\"], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"sufficient\"}",
+      "prompt_tokens": 17285,
+      "completion_tokens": 169,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "generation",
+      "streaming": true,
+      "status": "ok",
+      "content": "{\"answer\":\"Nên tập né (roll) trước làm kỹ năng nền, rồi mới tập đỡ đòn. Roll có khung bất tử trong lúc lăn nên không ăn sát thương khi canh đúng thời điểm [3] — đây là thứ bạn phải dùng đi dùng lại suốt game, kể cả khi đang cầm khiên. Đỡ đòn phụ thuộc vào Stamina và Guard Boost của khiên, nên chuỗi đòn dài hoặc đòn nặng vẫn có thể bào hết Stamina và phá thế thủ [2].\\n\\nKhi đã quen né, hãy thêm đỡ đòn vì nó mở ra Guard Counter: đỡ xong phản công ngay, và đòn này dễ phá stance của địch [1]. Cách tập hợp lý là né làm phản xạ chính, còn đỡ đòn dùng khi bạn chủ động muốn đổi nhịp và phản công — đừng giữ khiên làm lối chơi mặc định cho mọi tình huống.\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]},{\"index\":2,\"quote_ids\":[\"q0\"]},{\"index\":3,\"quote_ids\":[\"q0\"]}],\"insufficient\":false}",
+      "prompt_tokens": null,
+      "completion_tokens": null
+    },
+    {
+      "phase": "image_selection",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"ids\":[]}",
+      "prompt_tokens": 389,
+      "completion_tokens": 5,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"build\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"What are the best starting classes for the early game in Elden Ring?\",\"search_query\":\"Elden Ring best starting classes for early game beginner\",\"entities\":[],\"selected_memory_ids\":[],\"constraints\":[],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 1851,
+      "completion_tokens": 90,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"local_search\", \"query\": \"Elden Ring starting classes early game beginner stats gear\", \"evidence_ids\": [], \"snapshot_ids\": [], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+      "prompt_tokens": 1978,
+      "completion_tokens": 58,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\":\"web_search\",\"query\":\"Elden Ring best starting classes early game Vagabond Samurai Confessor comparison\",\"evidence_ids\":[],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"missing_evidence\"}",
+      "prompt_tokens": 16658,
+      "completion_tokens": 60,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"b1346906-386e-5070-b781-3d39ffcf3023\",\"1134f537-bc4f-581f-b6dc-d9dc65f1b278\",\"5a69260b-0d5b-524a-9e88-c98de8231e4d\",\"38f87a8e-b208-58fd-a286-763584449c56\",\"57af17f7-d3ff-58b5-b348-a89f9ad71a7f\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+      "prompt_tokens": 16693,
+      "completion_tokens": 156,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "generation",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"answer\":\"Không có nguồn nào xếp hạng class nào là \\\"tốt nhất\\\", nhưng có vài lựa chọn được hỗ trợ rõ ràng theo hướng chơi. Samurai khởi đầu với Uchigatana, Red Thorn Roundshield, Longbow cùng 20 mũi tên thường và 10 mũi tên lửa, cộng bộ giáp Land of Reeds — tức là có sẵn cả cận chiến lẫn đánh xa ngay từ đầu, một khởi đầu khá trọn vẹn cho người mới [1].\\n\\nNếu bạn thích vũ khí nặng, Vagabond cầm được Zweihander bằng hai tay mà không cần tăng thêm điểm nào [2]. Về vũ khí nhặt được sớm, Morning Star ở Weeping Peninsula là lựa chọn tốt đầu game vì sát thương gốc cao, có Bleed sẵn và mọi Origin đều dùng được mà không phải cộng chỉ số (có Origin phải cầm hai tay) [3]. Còn nếu muốn đi theo phép thuật, Meteorite Staff rất hữu dụng đầu game và lấy được sớm bằng cách mở rương dịch chuyển ở Dragon-Burnt Ruins để tới Sellia Crystal Tunnel [4] — đây là vũ khí chứ không phải class, nhưng nó giúp hướng Sorcery khởi đầu dễ thở hơn.\\n\\nTóm lại: Samurai là lựa chọn cân bằng dễ tiếp cận, Vagabond hợp với lối chơi vũ khí nặng, còn nếu bạn định chơi phép thì việc lấy Meteorite Staff sớm quan trọng hơn việc chọn class nào.\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]},{\"index\":2,\"quote_ids\":[\"q0\"]},{\"index\":3,\"quote_ids\":[\"q0\"]},{\"index\":4,\"quote_ids\":[\"q0\"]}],\"insufficient\":false,\"limitation\":\"Mình chưa thể xác nhận thứ hạng \\\"class tốt nhất\\\" cho đầu game, vì không có dữ liệu nào so sánh trực tiếp các class với nhau.\"}",
+      "prompt_tokens": 6446,
+      "completion_tokens": 1006,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "image_selection",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"ids\":[]}",
+      "prompt_tokens": 471,
+      "completion_tokens": 5,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring, assuming I am at level 40 and go up to level 55, gaining 1 point per level, how many additional stat points do I get under this assumption?\",\"search_query\":\"Elden Ring leveling from level 40 to level 55 number of stat points gained per level\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[{\"key\":\"level\",\"value\":\"40\",\"source_id\":\"current\"}],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 1895,
+      "completion_tokens": 143,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"intent\":\"mechanics\",\"turn_type\":\"new\",\"action\":\"retrieve\",\"rewrite\":true,\"answer_language\":\"vi\",\"resolved_question\":\"In Elden Ring, assuming I am at level 40 and go up to level 55, gaining 1 point per level, how many additional stat points do I get under this assumption?\",\"search_query\":\"Elden Ring leveling from level 40 to level 55 gaining 1 point per level, number of additional stat points\",\"entities\":[\"Elden Ring\"],\"selected_memory_ids\":[],\"constraints\":[{\"key\":\"level\",\"value\":\"40\",\"source_id\":\"current\"}],\"missing\":[],\"reply\":\"\",\"reason\":\"ready\"}",
+      "prompt_tokens": 2079,
+      "completion_tokens": 148,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\": \"source_snapshot\", \"query\": \"\", \"evidence_ids\": [], \"snapshot_ids\": [\"curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb\"], \"allocation\": {}, \"build_data\": {}, \"question\": \"\", \"missing\": [], \"reason\": \"initial\"}",
+      "prompt_tokens": 2019,
+      "completion_tokens": 87,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "tool_decision",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"action\":\"finish\",\"query\":\"\",\"evidence_ids\":[\"curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb\"],\"snapshot_ids\":[],\"allocation\":{},\"build_data\":{},\"question\":\"\",\"missing\":[],\"reason\":\"sufficient\"}",
+      "prompt_tokens": 2657,
+      "completion_tokens": 81,
+      "finish_reason": "stop"
+    },
+    {
+      "phase": "generation",
+      "streaming": false,
+      "status": "ok",
+      "content": "{\"answer\":\"Từ level 40 lên 55 là 15 cấp. Với giả định mỗi cấp được 1 điểm, bạn có thêm 15 điểm thuộc tính [1].\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]}],\"insufficient\":false}",
+      "prompt_tokens": 4592,
+      "completion_tokens": 317,
+      "finish_reason": "stop"
+    }
+  ],
+  "tavily_requests": [
+    {
+      "endpoint": "search",
+      "status": "ok"
+    },
+    {
+      "endpoint": "extract",
+      "status": "ok"
+    }
+  ],
+  "transport": "in-process ASGI HTTP, real model/tools/encoder when preflight passes",
+  "limitations": [
+    "Development set; no independent human review",
+    "HTTP success is not correctness",
+    "Service recreation tests state restoration, not a Windows reboot",
+    "SSE usage may be unavailable"
+  ],
+  "corpus_points_before": 18383,
+  "resources_created": true,
+  "snapshot": {
+    "llm_model": "deepseek-flash",
+    "llm_temperature": 0.2,
+    "llm_max_tokens": 4096,
+    "rag_thinking_enabled": true,
+    "rag_collection": "indexbeast_clean_20261108_76b39a01",
+    "rag_top_k": 5,
+    "chat_timeout_seconds": 45.0,
+    "chat_agent_max_calls": 6
+  },
+  "corpus_points_after": 18383,
+  "summary": {
+    "outcomes": {
+      "ok": 5
+    },
+    "logical_model_calls": 25,
+    "tavily_requests": 2,
+    "prompt_tokens_known": 135345,
+    "completion_tokens_known": 3963,
+    "unknown_usage_calls": 1
+  }
+}

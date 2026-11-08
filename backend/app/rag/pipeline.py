@@ -467,10 +467,15 @@ class ChatPipeline:
         if decision is None:
             raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
         p.agent_decision = decision.model_dump()
+        p.gameplay_advice = (
+            decision.action == "retrieve"
+            and decision.intent in {"mechanics", "build", "gameplay_comparison"}
+            and req.options.spoilers
+        )
         if req.options.lang == "auto" and decision.answer_language:
             p.lang = state["answer_language"] = decision.answer_language
         continuing = decision.turn_type != "new" and decision.intent != "cancel"
-        rounds = working.get("clarification_rounds", 0) if continuing else 0
+        rounds = working.get("clarification_rounds", 0) if continuing and pending else 0
         if decision.action == "clarify" and rounds >= 3:
             raise UnavailableError(
                 "Đã đạt giới hạn hỏi bổ sung. Bạn có thể gửi yêu cầu cụ thể hơn hoặc hủy yêu cầu này."
@@ -479,7 +484,7 @@ class ChatPipeline:
             "constraints": [c.model_dump() for c in decision.constraints],
             "original": working.get("original", req.message) if continuing else req.message,
             "request_text": working.get("request_text", req.message) if continuing else req.message,
-            "clarification_rounds": rounds + 1 if decision.action == "clarify" else 0,
+            "clarification_rounds": rounds + int(decision.action == "clarify"),
             "intent": decision.intent,
             "lang": p.lang,
             "pending": None,
@@ -834,10 +839,11 @@ class ChatPipeline:
             candidates = merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", []))
             model_selection = self._agent_active(state) and self.settings.chat_tool_agent_enabled
             if model_selection:
-                ids = p.trace.get("evidence_selection", {}).get("ids", [])
+                selection = p.trace.get("evidence_selection", {})
+                ids = selection.get("ids", [])
                 if p.checked_build is not None:
                     ids = list(dict.fromkeys([*p.checked_build["sources"], *ids]))[:5]
-                if ids:
+                if ids or selection.get("method") == "model":
                     by_id = {h.id: h for h in original_candidates}
                     candidates = [by_id[i] for i in ids]
                 else:
@@ -853,16 +859,14 @@ class ChatPipeline:
                 query="" if model_selection else state["req"].message + "\n" + state["query"],
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            if not p.hits and not (self._agent_active(state) and self.settings.chat_tool_agent_enabled):
+            if not p.hits and not p.gameplay_advice:
                 p.static_answer = (
                     no_overview_evidence(state["overview"], p.lang)
                     if state.get("overview") is not None
                     else (
-                        "Mình chưa thể trả lời chắc chắn chi tiết này. "
-                        "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
+                        "Mình chưa có đủ thông tin để trả lời câu này."
                         if p.lang == "vi"
-                        else "I can't confirm this detail yet. "
-                        "Could you name the equipment, boss, quest or specific detail you want to check?"
+                        else "I don't have enough information to answer this question."
                     )
                 )
         return state
@@ -875,6 +879,7 @@ class ChatPipeline:
             "lang": p.lang,
             "spoilers": req.options.spoilers,
             "policy": prompt("answer" if p.mode == "rag" else "llm_only")
+            + ("\n" + prompt("gameplay_advice") if p.gameplay_advice else "")
             + ("\n" + prompt("overview") if state.get("overview") is not None else ""),
             # In RAG, old turns cannot bias generation or masquerade as new evidence.
             # In llm_only, selected USER context remains explicitly conversational, never assistant claims.

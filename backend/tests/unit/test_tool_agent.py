@@ -5,9 +5,10 @@ import json
 import pytest
 
 from app.adapters.llm import LLMResponse
+from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from app.rag.pipeline import ChatPipeline
 from core.errors import UnavailableError
-from tests.unit.test_agent_durable import AgentLLM, req, settings
+from tests.unit.test_agent_durable import AgentLLM, plan, req, settings
 from tests.unit.test_live_chat import FakeRetriever
 
 
@@ -67,11 +68,145 @@ async def test_off_forbids_web_and_preserves_local_answer():
 
 async def test_clarification_is_model_generated_and_resumable():
     llm = ToolsLLM(
-        [step("clarify", question="Bạn muốn biết khía cạnh nào?", missing=[{"key": "aspect", "label": "Khía cạnh"}])]
+        [
+            step(
+                "clarify",
+                reason="player_detail",
+                question="Bạn muốn biết khía cạnh nào?",
+                missing=[{"key": "aspect", "label": "Khía cạnh"}],
+            )
+        ]
     )
     p = await pipeline(llm).prepare(req(), [])
     assert p.clarification.question == "Bạn muốn biết khía cạnh nào?"
     assert p.player_state["pending"]["id"] == str(p.clarification.id)
+
+
+async def test_missing_game_evidence_does_not_create_clarification_or_generate_without_sources():
+    llm = ToolsLLM(
+        [
+            step("local_search", "Ranni identity"),
+            step("clarify", question="Bạn có thông tin nào không?", missing=[{"key": "evidence", "label": "Nguồn"}]),
+            step("stop"),
+        ]
+    )
+    pipe = pipeline(llm)
+    p = await pipe.prepare(req(), [])
+    result = await pipe.generator.generate(p)
+    assert p.trace["tool_actions"][1]["status"] == "denied"
+    assert p.trace["evidence_selection"] == {"method": "model", "ids": []}
+    assert p.clarification is None and p.player_state["pending"] is None
+    assert result.answer == "Mình chưa có đủ thông tin để trả lời câu này."
+    assert not result.sources and not result.grounded and llm.calls == 0
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+async def test_comparison_passes_selected_options_and_keeps_recommendation(streaming):
+    from tests.unit.test_live_chat import hit
+
+    query = "Elden Ring starting classes starting gear and playstyle comparison"
+    llm = ToolsLLM([step("local_search", query), step("finish", evidence_ids=["1", "2"])])
+    llm.decisions = [plan(intent="gameplay_comparison", entities=[], resolved_question=query, search_query=query)]
+    llm.data = {
+        "answer": "A có khiên từ đầu [1]. B có gậy dùng phép [2].",
+        "evidence": [{"index": 1, "quote_id": "q0"}, {"index": 2, "quote_id": "q0"}],
+        "insufficient": False,
+        "recommendation": "Nếu muốn tập cận chiến và đỡ đòn, mình chọn A. Nếu thích phép, chọn B.",
+    }
+    llm.tokens = list(json.dumps(llm.data))
+    pipe = pipeline(llm)
+    pipe.retriever = FakeRetriever(
+        [
+            hit(1, title="Class A", text="Class A starts with a shield for melee.", url="https://example.test/a"),
+            hit(2, title="Class B", text="Class B starts with a staff for spells.", url="https://example.test/b"),
+        ]
+    )
+    p = await pipe.prepare(req("class tốt nhất đầu game"), [])
+    expected = llm.data["answer"] + "\n\n" + llm.data["recommendation"]
+    if streaming:
+        assert "".join([token async for token in pipe.generator.stream(p)]) == expected
+        result = p.trace["result"]
+    else:
+        result = await pipe.generator.generate(p)
+    assert llm.observations[0]["intent"] == "gameplay_comparison"
+    assert p.clarification is None and result.grounded
+    assert result.answer == expected
+    assert p.trace["answer_basis"] == "evidence_with_recommendation"
+    assert [source.url for source in result.sources] == ["https://example.test/a", "https://example.test/b"]
+
+
+@pytest.mark.parametrize("streaming", [False, True])
+async def test_gameplay_advice_can_answer_with_empty_retrieval_without_claiming_sources(streaming):
+    query = "Elden Ring beginner dodge or block trade-offs"
+    llm = ToolsLLM([step("local_search", query), step("stop")])
+    llm.decisions = [plan(intent="mechanics", entities=[], resolved_question=query, search_query=query)]
+    llm.data = {
+        "answer": "Nếu khó canh thời điểm né, hãy tập đỡ những đòn dễ đọc rồi xen kẽ né khi đã quen.",
+        "evidence": [],
+        "insufficient": False,
+        "advisory": True,
+    }
+    llm.tokens = list(json.dumps(llm.data))
+    pipe = pipeline(llm)
+    pipe.retriever = FakeRetriever([])
+    p = await pipe.prepare(req("Mới chơi nên tập né hay đỡ đòn?", options={"web_search": "off"}), [])
+    assert p.static_answer is None and p.clarification is None
+    if streaming:
+        assert "".join([token async for token in pipe.generator.stream(p)]) == llm.data["answer"]
+        result = p.trace["result"]
+    else:
+        result = await pipe.generator.generate(p)
+    assert result.answer == llm.data["answer"] and not result.grounded and not result.sources
+    assert p.trace["answer_basis"] == "gameplay_advice"
+
+
+@pytest.mark.parametrize("intent", ["lore", "comparison", "mechanics"])
+async def test_unverified_advice_is_blocked_for_lore_and_no_spoilers(intent):
+    query = "Elden Ring Marika"
+    llm = ToolsLLM([step("local_search", query), step("stop")])
+    llm.decisions = [plan(intent=intent)]
+    pipe = pipeline(llm)
+    p = await pipe.prepare(req(options={"spoilers": intent != "mechanics"}), [])
+    assert not p.gameplay_advice and p.static_answer is not None
+    with pytest.raises(RAGValidationError, match="trích dẫn"):
+        validate_answer(p, {"answer": "A claim.", "evidence": [], "insufficient": False, "advisory": True})
+
+
+@pytest.mark.parametrize("extra", [{"answer": "Advice [1]"}, {"insufficient": True}, {"limitation": "Unverified"}])
+def test_gameplay_advice_keeps_citation_and_status_contract(extra):
+    p = Prepared("rag", "en", [], gameplay_advice=True)
+    with pytest.raises(RAGValidationError) as error:
+        validate_answer(p, {"answer": "Advice.", "evidence": [], "insufficient": False, "advisory": True, **extra})
+    assert error.value.reason == "invalid_gameplay_advice"
+
+
+async def test_failed_local_search_without_evidence_is_a_service_error():
+    pipe = pipeline(ToolsLLM([step("local_search", "Ranni identity"), step("stop")]))
+    pipe.retriever = FakeRetriever(missing=True)
+    with pytest.raises(UnavailableError, match="Không thể truy vấn"):
+        await pipe.prepare(req(), [])
+
+
+async def test_retrieving_after_a_clarification_does_not_reset_the_tool_question_budget():
+    llm = ToolsLLM(
+        [step("clarify", reason="player_detail", question="Còn điều gì?", missing=[{"key": "goal", "label": "Goal"}])]
+    )
+    llm.decisions = [
+        plan(
+            action="clarify",
+            reason="ambiguous_subject",
+            reply="Bạn đang nói về ai?",
+            missing=[{"key": "subject", "label": "Nhân vật"}],
+        ),
+        plan(turn_type="clarification_reply"),
+    ]
+    pipe = pipeline(llm, chat_tool_steps=1)
+    first = await pipe.prepare(req(), [])
+    first.player_state["clarification_rounds"] = 3
+    resumed = await pipe.prepare(req("Ranni", clarification_id=first.clarification.id), [], player=first.player_state)
+    assert "clarify" not in llm.observations[0]["available_actions"]
+    assert resumed.clarification is None
+    assert resumed.trace["tool_actions"][0]["status"] == "denied"
 
 
 async def test_budget_reserves_generation_and_does_not_loop():

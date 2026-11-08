@@ -42,6 +42,7 @@ class AgentDecision(BaseModel):
         "route",
         "quest",
         "comparison",
+        "gameplay_comparison",
         "overview",
         "smalltalk",
         "cancel",

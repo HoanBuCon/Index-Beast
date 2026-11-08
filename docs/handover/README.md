@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · So sánh và hỏi bổ sung đúng lý do (09/11/2026)](2026-11-09_s3-tv3_so-sanh-va-hoi-bo-sung.md)
+
 - [TV2 · Commit và PR structured tables (09/11/2026)](2026-11-09_s3-tv2_commit-va-pr-structured-tables.md)
 
 - [TV2 · Tái tạo facts/clean/chunk từ raw cuối (09/11/2026)](2026-11-09_s3-tv2_tai-tao-facts-clean-chunk-tu-raw.md)

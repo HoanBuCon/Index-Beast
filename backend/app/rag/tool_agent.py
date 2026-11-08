@@ -69,6 +69,7 @@ async def run_tools(pipe, state):
     local_calls, web_calls = 0, 0
     actions = p.trace["tool_actions"] = []
     stop_reason = "step_budget"
+    rounds = (p.player_state or {}).get("clarification_rounds", 0)
     for _ in range(pipe.settings.chat_tool_steps):
         # Reserve one generation call; repairs still obey the shared turn budget.
         if len(p.trace.get("model_calls", [])) >= pipe.settings.chat_agent_max_calls - 1:
@@ -82,7 +83,9 @@ async def run_tools(pipe, state):
             spoilers=req.options.spoilers,
             preserve_order=True,
         )
-        available = ["finish", "stop", "clarify"]
+        available = ["finish", "stop"]
+        if rounds < 3:
+            available.append("clarify")
         if local_calls < pipe.settings.chat_tool_queries and pipe.retriever is not None:
             available.append("local_search")
         if state["search_mode"] != "off" and not web_calls and pipe.web_search is not None:
@@ -104,6 +107,7 @@ async def run_tools(pipe, state):
         payload = {
             "player_profile": profile,
             "request": state["resolved_question"],
+            "intent": p.agent_decision.get("intent"),
             "initial_query": state["query"],
             "answer_language": p.lang,
             "web_policy": state["search_mode"],
@@ -171,7 +175,7 @@ async def run_tools(pipe, state):
                 i not in shown_ids for i in step.evidence_ids
             )
             p.trace["evidence_selection"] = {
-                "method": "model" if step.evidence_ids and not invalid else "rank_fallback",
+                "method": "model" if not invalid and (step.evidence_ids or action == "stop") else "rank_fallback",
                 "ids": [] if invalid else step.evidence_ids,
             }
             if invalid:
@@ -180,9 +184,12 @@ async def run_tools(pipe, state):
             stop_reason = action
             break
         if action == "clarify":
-            rounds = (p.player_state or {}).get("clarification_rounds", 0)
-            if not step.question.strip() or not step.missing or rounds >= 3:
-                raise UpstreamError("Câu hỏi bổ sung chưa hợp lệ hoặc vượt giới hạn.")
+            if step.reason != "player_detail":
+                row["status"] = "denied"
+                observations.append({"action": action, "status": "requires_missing_player_detail"})
+                continue
+            if not step.question.strip() or not step.missing:
+                raise UpstreamError("Câu hỏi bổ sung chưa hợp lệ.")
             p.clarification = Clarification(
                 id=uuid4(),
                 question=step.question,
@@ -255,6 +262,15 @@ async def run_tools(pipe, state):
         raise UnavailableError("Agent chưa hoàn tất tìm web bắt buộc trong ngân sách.")
     if web_calls and p.trace["web_search"]["status"] != "ok" and not hits:
         raise UnavailableError("Tìm trên web đang gặp sự cố.")
+    local_attempts = [row for row in actions if row["action"] == "local_search" and row["status"] in {"ok", "error"}]
+    if (
+        p.static_answer is None
+        and not hits
+        and local_attempts
+        and all(row["status"] == "error" for row in local_attempts)
+        and p.trace["web_search"]["status"] != "ok"
+    ):
+        raise UnavailableError("Không thể truy vấn kho tri thức RAG.")
     state["documents"] = [hit_to_document(h) for h in hits.values() if not isinstance(h, WebHit)]
     state["web_hits"] = [h for h in hits.values() if isinstance(h, WebHit)]
     return state
