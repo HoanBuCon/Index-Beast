@@ -4,7 +4,7 @@
 |---|---|
 | Ngày | 08/11/2026 |
 | Người thực hiện | TV1 (Hoanbucon) |
-| Nhánh | `fix/s3-tv1-make-venv` (từ `develop` tại `162aab2`) |
+| Nhánh | `fix/s3-tv1-make-venv` (từ `develop` tại `704e2c0`) |
 
 ## Vấn đề
 
