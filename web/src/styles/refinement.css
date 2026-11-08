@@ -575,6 +575,42 @@ body {
   color: var(--ui-muted);
 }
 
+.source-list .source-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.source-item button {
+  min-width: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.source-item button > span:last-child {
+  margin-left: 0;
+}
+.source-item .source-number {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.source-item a {
+  padding: 12px 8px;
+  font-size: 14px;
+  color: var(--ui-accent);
+}
+.source-list .eyebrow {
+  font-size: 11px;
+}
+@media (max-width: 520px) {
+  .source-list .source-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .source-item a {
+    justify-self: start;
+    padding: 4px 14px 8px;
+  }
+}
+
 .input-area:not(.welcome-input) {
   max-width: calc(var(--ui-chat-width) + 64px);
   padding: 16px 32px 28px;

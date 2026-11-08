@@ -17,7 +17,8 @@ export const help: Command = {
               "Ví dụ: `/ask question:Marika là ai?`\n\n" +
               "Bot giữ ngữ cảnh theo người dùng/kênh; trong thread dùng chung ngữ cảnh của thread. " +
               "Bạn có thể gửi câu trả lời bổ sung bằng một lệnh `/ask` tiếp theo. " +
-              "Nội dung dài được chia thành các phần; nguồn nằm ở phần đầu.\n\n" +
+              "Nội dung dài được chia thành các phần; nguồn nằm ở phần đầu. " +
+              "Nút xem đầy đủ trên web (nếu có) mở bản chia sẻ chỉ đọc, hết hạn sau 24 giờ; ai có link đều xem được câu đó.\n\n" +
               "`/ping` — kiểm tra bot online.\n`/about` — nhóm phát triển, nguồn và giấy phép.\n\n" +
               "AI có thể mắc sai sót. Hãy kiểm tra các nguồn được dẫn; câu trả lời có thể tiết lộ nội dung trò chơi.",
           ),

@@ -96,7 +96,8 @@ Bàn giao: [Bot ask và API mock TV4](../docs/handover/2026-10-30_s2-tv4_bot-ask
 - `/help`, `/about`: hướng dẫn/nguồn và CC BY-SA, trả riêng cho người gọi, không gọi backend/LLM.
 - Script deploy đăng ký toàn cục toàn bộ bốn lệnh trong registry. Đã chạy ngày 08/11/2026 và đọc lại từ Discord xác nhận đủ bốn lệnh.
   Gateway chẩn đoán và hai lượt handler → backend thật đạt. Sau phản ánh và ảnh mới ngày 08/11/2026,
-  `/help` và `/about` vẫn chưa được xác nhận hiển thị/chạy ở client người dùng dù REST có đủ bốn lệnh.
+  `/help` và `/about` ban đầu chưa được xác nhận hiển thị/chạy ở client dù REST có đủ bốn lệnh;
+  sau đó người dùng đã gửi ảnh hai lệnh trả lời thành công trên Discord.
   Chưa kiểm tra trực tiếp câu trả lời dài trên Discord.
 
 ## Chạy và kiểm tra thủ công
@@ -119,8 +120,15 @@ Kiểm tra cả nguồn và thứ tự các phần. Cần dùng server test đ�
 Trong `bot/`: `npm.cmd run typecheck`, `npm.cmd test`, `npm.cmd run format:check`.
 Các test giả lập interaction/fetch; không cần Discord/backend hoặc gọi model.
 
-Link “xem đầy đủ trên web” chưa triển khai: API hiện chặn người dùng web đọc lịch sử Discord nếu không có quyền trusted-service.
-Không đưa API_SERVICE_TOKEN vào URL hoặc frontend. TV1 cần thống nhất cơ chế chia sẻ/quyền đọc trước; không gắn link giả về trang chủ.
-Trong lúc đó bot trả đủ văn bản qua các phần, không âm thầm bỏ phần cuối. Nguồn dài vẫn bị giới hạn theo dung lượng field của Discord.
+Ngày 08/11 người dùng cho phép bổ sung API chia sẻ giới hạn vào backend: bot tạo bản chụp một câu trả lời qua
+POST `/api/v1/answer-shares` có service auth, nhận mã ngẫu nhiên 24 giờ và gắn nút “Xem đầy đủ trên web”.
+Người có link chỉ đọc bản chụp đó; không được quyền đọc cả hội thoại. Không đưa API_SERVICE_TOKEN vào URL hoặc frontend.
+Bot vẫn trả đủ văn bản qua các phần; nếu tạo link lỗi, chỉ ghi loại lỗi và giữ câu trả lời, không tự retry LLM.
+Nguồn dài vẫn bị giới hạn theo dung lượng field Discord; bản chia sẻ lấy toàn bộ danh sách nguồn trong câu trả lời lưu ở backend.
+
+Đặt `WEB_URL` thành URL gốc của web mà người nhận truy cập được, không kèm path/query/fragment hoặc thông tin đăng nhập.
+URL local hiện dùng Radmin VPN; người nhận cần truy cập được mạng đó. Production dùng URL HTTPS của dự án.
+Sau đổi `.env`, dừng rồi chạy lại `make bot` để nhận cấu hình mới. Không cần deploy slash command lại vì không đổi định nghĩa lệnh.
+Link chỉ có trong câu trả lời mới sau cập nhật, không tự sửa các tin Discord cũ. Xem `docs/api/answer-shares-tv4.md`.
 
 Ghi nguồn CC BY-SA dựa theo khảo sát `docs/data-sources.md`; không áp giấy phép văn bản cho toàn bộ ảnh/font hoặc nội dung bên ngoài.

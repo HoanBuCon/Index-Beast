@@ -1,6 +1,6 @@
 // Cắt câu trả lời theo giới hạn embed (4.096 ký tự), field nguồn, link 'xem đầy đủ trên web'.
 // Phụ trách: TV4 · [S3] Bot: câu trả lời thật, chia nhỏ
-// S3: chia đủ nội dung bằng answerEmbeds; link xem đầy đủ trên web còn chờ cơ chế cấp quyền của TV1.
+// S3: chia đủ nội dung bằng answerEmbeds; handler ask gắn link bản chia sẻ một câu trả lời có hạn dùng.
 
 import { EmbedBuilder, escapeMarkdown } from "discord.js";
 import type { ChatResponse } from "../api/types.ts";

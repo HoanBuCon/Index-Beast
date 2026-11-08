@@ -43,3 +43,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   // Bot dùng chung cho mọi server đã cài đặt; không cần DISCORD_GUILD_ID.
   return { token, clientId };
 }
+
+// Chỉ dùng URL gốc công khai của web; tuyệt đối không gắn service token vào link.
+export function loadWebUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  if (!env.WEB_URL?.trim()) return undefined;
+  try {
+    const url = new URL(env.WEB_URL.trim());
+    if (
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      !["", "/"].includes(url.pathname)
+    )
+      return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}

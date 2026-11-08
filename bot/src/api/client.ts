@@ -1,7 +1,14 @@
 // Gọi POST /api/v1/chat với X-Service-Token, X-Request-ID; external_ref = discord:thread:<id> / discord:channel:<id>:<user-hash>.
 // Phụ trách: TV4 · [S2] Bot /ask gọi API
 
-import type { ChatRequest, ChatResponse, ConversationOut, FeedbackRequest, StreamEvent } from "./types.ts";
+import type {
+  ChatRequest,
+  ChatResponse,
+  ConversationOut,
+  FeedbackRequest,
+  StreamEvent,
+  AnswerShareCreated,
+} from "./types.ts";
 import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 import { loadApiConfig } from "../config.ts";
 
@@ -232,7 +239,28 @@ export function createApiClient(
     return data;
   }
 
+  async function createAnswerShare(conversationId: string, messageId: string): Promise<AnswerShareCreated> {
+    if (!isUuid(conversationId) || !isUuid(messageId)) throw new Error("Mã câu trả lời không hợp lệ.");
+    const response = await request("/answer-shares", {
+      method: "POST",
+      body: JSON.stringify({ conversation_id: conversationId, message_id: messageId }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await response.json();
+    if (
+      !data ||
+      typeof data.token !== "string" ||
+      !/^[A-Za-z0-9_-]{43}$/.test(data.token) ||
+      typeof data.expires_at !== "string" ||
+      !Number.isFinite(Date.parse(data.expires_at))
+    )
+      throw new Error("Dữ liệu link chia sẻ không hợp lệ.");
+    return { token: data.token, expires_at: data.expires_at };
+  }
+
   return {
+    createAnswerShare: (conversationId: string, messageId: string) =>
+      safe(() => createAnswerShare(conversationId, messageId)),
     chat: (body: ChatRequest, signal?: AbortSignal) => safe(() => chat(body, signal)),
     sendFeedback: (messageId: string, rating: number, reason: string) =>
       safe(() => sendFeedback(messageId, rating, reason)),

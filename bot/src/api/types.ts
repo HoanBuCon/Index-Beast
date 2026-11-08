@@ -44,6 +44,11 @@ export interface ChatResponse {
   grounded: boolean;
   latency_ms: number;
 }
+
+export interface AnswerShareCreated {
+  token: string;
+  expires_at: string;
+}
 export interface FeedbackRequest {
   message_id: string;
   rating: 1 | -1;

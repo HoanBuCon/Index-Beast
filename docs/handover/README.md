@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
+
 - [TV4 · Đăng ký global và kiểm tra backend thật (08/11/2026)](2026-11-08_s3-tv4_dang-ky-global-va-thu-backend-that.md)
 
 - [TV4 · Sprint 3: SSE web, bot và About (08/11/2026)](2026-11-08_s3-tv4_web-sse-bot-va-about.md)
