@@ -22,6 +22,10 @@ Only count a conflict as a coverage gap when it affects an aspect actually reque
 reward amount does not make supported instructions insufficient when the user only asks for a method.
 An exact reward/rate or a best/fastest comparison does require applicable numeric/conditional evidence;
 do not mark it sufficient merely because multiple excerpts mention the method.
+For subjective recommendations such as a beginner's starting class, comparable equipment, stats or
+playstyle facts can support conditional advice even without a source ranking. Treat absent player
+preferences as optional for that general answer. Use ambiguous only when the subject or essential
+user condition is unclear. Missing game evidence for a clear request is partial or insufficient.
 Return JSON only: status (sufficient/partial/insufficient/ambiguous), covered (short list of supported
 question aspects), missing (short list of gaps), evidence (object mapping supplied index strings to
 NONEMPTY ARRAYS of 1–3 distinct quote ID strings from that excerpt's evidence_units).

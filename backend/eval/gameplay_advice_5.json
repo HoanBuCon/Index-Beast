@@ -1,0 +1,7 @@
+[
+  {"id":"ADV01","lang":"vi","web_search":"off","question":"Theo cốt truyện Elden Ring, Marika là ai?","expected":"Trả lời theo bằng chứng, giữ trích dẫn cho các khẳng định lore."},
+  {"id":"ADV02","lang":"vi","web_search":"off","question":"Theo lore Elden Ring, cha ruột của Marika là ai?","expected":"Nếu không có bằng chứng trực tiếp, nêu khoảng trống và không đoán tên."},
+  {"id":"ADV03","lang":"vi","web_search":"off","endpoint":"chat/stream","question":"Mới chơi Elden Ring, tôi nên tập né hay đỡ đòn trước?","expected":"Tư vấn theo điều kiện, không bịa số khung hình hay ngưỡng chính xác."},
+  {"id":"ADV04","lang":"vi","web_search":"auto","question":"class tốt nhất đầu game","expected":"So sánh lựa chọn theo lối chơi hoặc nói rõ giả định khi gợi ý."},
+  {"id":"ADV05","lang":"vi","web_search":"off","question":"Giả sử trong Elden Ring tôi đang level 40, lên level 55, mỗi cấp được 1 điểm. Tính giúp tôi số điểm thêm theo đúng giả định này.","expected":"15 điểm, nêu phép tính từ dữ kiện người chơi đưa."}
+]

@@ -14,7 +14,16 @@ Choose at most 5 snapshot IDs (including the four accounting rules when needed).
 Snapshot IDs must be from the catalog, selected for relevance, not by a fixed weapon list.
 calculator only validates a proposed eight-attribute allocation against supplied checked rules/profile;
 it is not an AR/DPS/optimal-build solver. Do not ask it to invent player constraints.
-clarify asks only essential player information, not missing factual game knowledge. Do not repeat known details.
+For comparison or gameplay_comparison, look for distinct options under the same requested conditions and collect
+complementary evidence for each. Starting classes can be compared by documented gear, stats and
+playstyle. An explicit source ranking is unnecessary for conditional advice. Avoid unrelated rankings.
+For starting-class comparisons, prioritize class profiles and shared stat or equipment tables. Items
+found later in the game are not evidence of a class's starting equipment. Prefer a different class's
+starting profile over a chunk about general early-game weapons when filling a comparison gap.
+Use a focused second search when one important option or criterion is missing and budget permits.
+Use clarify with reason=player_detail only when the user's answer would materially change the advice
+or resolve the subject. Ask one natural question and list the essential missing fields. Do not repeat
+known details. Missing game evidence, invalid model output and tool errors are not player details.
 Return JSON only: action, query (string, empty if unused), evidence_ids (array of candidate IDs), snapshot_ids (array), allocation (object), build_data (object, empty if unused),
 question (string, empty if unused), missing (array of {key,label,input_type:"text",options:[]}),
 reason (one of initial, missing_evidence, different_query, player_detail, sufficient, unavailable).
@@ -23,7 +32,10 @@ For finish/stop choose evidence_ids (up to 5 distinct IDs from candidates) that 
 requested aspects. Prefer actual mechanics/tables for numbers and walkthrough steps for route requirements,
 not just entity mentions. Select complementary evidence and explicit conditions; do not infer approval.
 The candidate text is a selection preview; generation receives original full admitted chunks.
-Do not choose all keyword matches. If no candidate supports the request choose evidence_ids=[].
+Do not choose all keyword matches. If no candidate supports the request and no useful search remains,
+choose stop with evidence_ids=[]. Use finish when there is evidence for a full or useful partial answer.
+If qualitative gameplay advice is enough, do not use extra searches solely to find a published
+recommendation. Obtain inputs for exact game values and checked allocations before proposing them.
 
 For calculator you may supply build_data for ANY confirmed class/weapon, using only supplied sources:
 {starting_class,weapon,usage:"one_handed_no_bonuses",starting_level:NUMBER,

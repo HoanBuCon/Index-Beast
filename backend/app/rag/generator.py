@@ -56,6 +56,7 @@ class Prepared:
     agent_decision: dict = field(default_factory=dict)
     max_calls: int | None = None
     checked_build: dict | None = None
+    gameplay_advice: bool = False
 
 
 @dataclass
@@ -96,6 +97,8 @@ class GroundedAnswer(BaseModel):
     answer: str = Field(min_length=1, max_length=16000)
     evidence: list[Evidence] = Field(max_length=5)
     insufficient: bool
+    advisory: bool = False
+    recommendation: str | None = Field(default=None, min_length=1, max_length=1000)
     limitation: str | None = Field(default=None, min_length=1, max_length=1000)
     build_allocation: dict[str, int] | None = Field(default=None, min_length=8, max_length=8)
 
@@ -131,13 +134,29 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         if URL.search(parsed.answer):
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
+        if parsed.advisory:
+            failure = "invalid_gameplay_advice"
+            if (
+                not prepared.gameplay_advice
+                or parsed.insufficient
+                or not parsed.answer.strip()
+                or used
+                or evidence
+                or parsed.limitation is not None
+                or parsed.recommendation is not None
+                or parsed.build_allocation is not None
+                or prepared.checked_build is not None
+            ):
+                raise ValueError("Gameplay advice requires an eligible request and uncited qualitative guidance")
+            prepared.trace["answer_basis"] = "gameplay_advice"
+            return Generated(parsed.answer)
         if parsed.insufficient:
             if prepared.checked_build is not None:
                 failure = "invalid_build_allocation"
                 raise ValueError("Checked build cannot be silently discarded")
             if parsed.build_allocation is not None:
                 raise ValueError("Insufficient answers cannot include a build allocation")
-            if used or evidence or parsed.limitation is not None:
+            if used or evidence or parsed.limitation is not None or parsed.recommendation is not None:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
             return Generated(parsed.answer)
@@ -156,6 +175,17 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence quote is not in cited text")
         answer = parsed.answer
+        if parsed.recommendation is not None:
+            failure = "invalid_gameplay_advice"
+            if (
+                not prepared.gameplay_advice
+                or prepared.checked_build is not None
+                or parsed.build_allocation is not None
+                or not parsed.recommendation.strip()
+                or URL.search(parsed.recommendation)
+                or CITATION.search(parsed.recommendation)
+            ):
+                raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
         if prepared.checked_build is not None:
             from app.rag.build_data import check
             from app.rag.build_math import ATTRIBUTES
@@ -242,6 +272,9 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         ]
         # Operational grounding: model supplied evidence, exact quotes and indices checked.
         # This is NOT a guarantee of semantic entailment of every claim.
+        if parsed.recommendation is not None:
+            answer += "\n\n" + parsed.recommendation.strip()
+            prepared.trace["answer_basis"] = "evidence_with_recommendation"
         if parsed.limitation is not None:
             answer += "\n\n" + parsed.limitation.strip()
         return Generated(answer, sources, True)
@@ -292,6 +325,7 @@ RETRYABLE_REASONS = {
     "invalid_limitation",
     "duplicate_evidence_index",
     "invalid_build_allocation",
+    "invalid_gameplay_advice",
 }
 
 
@@ -346,12 +380,12 @@ class Generator:
         values["policy"] = values.get("policy", "") + (
             '\nFORMAT RETRY: Return ONLY one valid JSON object, with "answer" first, '
             '"evidence" array and "insufficient" boolean. No Markdown or prose outside JSON. '
-            'If evidence is insufficient, return {"answer":"State the specific evidence gap '
+            'If evidence is insufficient, return {"answer":"Name the unknown game detail '
             'in the requested language.","evidence":[],"insufficient":true}. '
-            "Use only the supplied evidence; never invent citations or change source indices."
-            " If insufficient=true, answer must contain ONLY the specific gap or clarification: no related facts, "
+            "Use the supplied evidence for cited claims; never invent citations or change source indices."
+            " If insufficient=true, answer must contain ONLY the specific gap: no related facts, "
             "source counts, source descriptions or bracketed citations. "
-            "If insufficient=false, every answer paragraph must contain [n], the set of [n] must equal the set of "
+            "For an evidence-based answer, every paragraph must contain [n], the set of [n] must equal the set of "
             "evidence.index, and each quote_id must come from that source's evidence_units. "
             "Keep the response short and avoid decorative quotes."
             " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
@@ -359,11 +393,17 @@ class Generator:
             "quote_id (one ID string) or quote (legacy exact text). Do not repeat source indices. "
             "limitation is optional: omit it when unused; do not return null, empty text, or extra fields. "
             "Do not include type, response_format, status or any other undeclared field. "
-            'For a build that needs clarification use {"answer":"Which weapon and PvE or PvP?",'
-            '"evidence":[],"insufficient":true}, translated into the reply language. '
-            "Do not mix this clarification object with supported claims, evidence or limitation. "
-            "Answer directly without narrating retrieval or describing the supplied context. "
+            "Leave user clarification to the planner. Do not turn a format repair or a missing source into a question. "
+            "Lead with the answer or conditional recommendation. Name sources only if the user asks for them. "
+            "Leave out commentary about retrieval, missing rankings or available data, including from limitation. "
         )
+        if prepared.gameplay_advice:
+            values["policy"] += (
+                ' Gameplay advice may instead use {"answer":"General advice under a clear assumption.",'
+                '"evidence":[],"insufficient":false,"advisory":true}. '
+                "With cited gameplay facts, put an optional inference in recommendation without citations. "
+                "Apply the gameplay advice policy, including its limits on game stats and build allocations."
+            )
         values["policy"] += language_policy
         return values
 
