@@ -138,6 +138,12 @@ class Settings(BaseSettings):
         return list(dict.fromkeys(result))
 
     @property
+    def admin_enabled(self) -> bool:
+        """/admin/* chỉ bật khi ADMIN_TOKEN là một giá trị thật (không trống, không "change-me")."""
+        secret = self.admin_token.get_secret_value().strip() if self.admin_token else ""
+        return bool(secret) and secret != PLACEHOLDER
+
+    @property
     def web_search_available(self) -> bool:
         return bool(
             self.web_search_enabled

@@ -1,6 +1,145 @@
 {
   "components": {
     "schemas": {
+      "AdminConversation": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "description": "Câu hỏi đầu tiên của hội thoại, cắt còn 60 ký tự.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "AdminConversation",
+        "type": "object"
+      },
+      "AdminEvalRun": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Metrics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "metrics"
+        ],
+        "title": "AdminEvalRun",
+        "type": "object"
+      },
+      "AdminFeedback": {
+        "properties": {
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "message_id",
+          "rating"
+        ],
+        "title": "AdminFeedback",
+        "type": "object"
+      },
+      "AdminJob": {
+        "properties": {
+          "id": {
+            "description": "Mã job của CLI (external_id) nếu có, không thì UUID.",
+            "title": "Id",
+            "type": "string"
+          },
+          "pages_ok": {
+            "title": "Pages Ok",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "pages_ok"
+        ],
+        "title": "AdminJob",
+        "type": "object"
+      },
+      "AdminStats": {
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/AdminConversation"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "eval_runs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminEvalRun"
+            },
+            "title": "Eval Runs",
+            "type": "array"
+          },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/AdminFeedback"
+            },
+            "title": "Feedback",
+            "type": "array"
+          },
+          "ingestion_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminJob"
+            },
+            "title": "Ingestion Jobs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversations",
+          "feedback",
+          "ingestion_jobs",
+          "eval_runs"
+        ],
+        "title": "AdminStats",
+        "type": "object"
+      },
       "AnswerShareCreated": {
         "properties": {
           "expires_at": {
@@ -43,6 +182,11 @@
       },
       "ChatCapabilities": {
         "properties": {
+          "trace_available": {
+            "default": false,
+            "title": "Trace Available",
+            "type": "boolean"
+          },
           "web_search_available": {
             "title": "Web Search Available",
             "type": "boolean"
@@ -1088,6 +1232,58 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/stats": {
+      "get": {
+        "description": "Đọc PostgreSQL. Hội thoại chỉ có ở đó khi CHAT_PERSISTENCE=postgres; chế độ memory trả danh sách rỗng.",
+        "operationId": "get_stats_api_v1_admin_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Hội thoại gần đây, feedback, job ingestion và kết quả eval",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/trace/{message_id}": {
       "get": {
         "operationId": "get_trace_api_v1_admin_trace__message_id__get",

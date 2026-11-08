@@ -10,7 +10,7 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Phiên bản | 0.7.0 (Draft) |
+| Phiên bản | 0.7.1 (Draft) |
 | Ngày | 2026-10-17 · cập nhật 2026-11-08 |
 | Chủ sở hữu tài liệu | TV1 (Tech Lead) — mọi thành viên đều được đề xuất thay đổi |
 | Trạng thái | Living document — cập nhật cuối mỗi Sprint Review |
@@ -184,7 +184,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-WEB-05 | Câu hỏi gợi ý trên màn hình trống. | S | Volatile | S4 | Done |
 | FR-WEB-06 | Responsive mobile, theme tối phong cách Elden Ring. | S | Volatile | S5 | In Progress |
 | FR-WEB-07 | Trang About: giới thiệu, ghi nguồn & giấy phép CC BY-SA, disclaimer fan project. | M | Stable | S5 | Done — cần sửa câu "không gồm DLC" (xem TBD-08) |
-| FR-WEB-08 | Trang admin: xem log hội thoại, feedback, trạng thái ingestion, kết quả eval. | S | Volatile | S5 | In Progress — trang gọi `/admin/stats` (API chưa có); xem trace ở PR #79 |
+| FR-WEB-08 | Trang admin: xem log hội thoại, feedback, trạng thái ingestion, kết quả eval. | S | Volatile | S5 | In Progress — có `/admin/stats` và xem trace theo `message_id` (câu trả lời có liên kết "Xem trace" khi bật `ADMIN_TOKEN`); feedback còn trống do TBD-09, eval chưa có dữ liệu |
 | FR-WEB-09 | Đăng nhập (Discord OAuth) để đồng bộ lịch sử. | C | Volatile | S5 | Deferred (ADR-005: web ẩn danh ở v1) |
 
 ### 3.6 FR-BOT — Discord Bot
@@ -243,13 +243,13 @@ Hợp đồng nguồn: `docs/api/openapi.json` (sinh từ code, CI kiểm). Ch�
 |---|---|---|---|---|
 | POST | `/chat` | Gửi câu hỏi, nhận câu trả lời đầy đủ (JSON) | Bot | Có |
 | POST | `/chat/stream` | Như trên nhưng stream SSE (`status`, `token`, `sources`, `done`, `error`) | Web | Có |
-| GET | `/chat/capabilities` | Cờ công khai (hiện có `web_search_available`) | Web | Có |
+| GET | `/chat/capabilities` | Cờ công khai: `web_search_available`, `trace_available` (có bật `/admin/*`) | Web | Có |
 | GET | `/conversations/{id}` | Lấy lịch sử hội thoại (web cần `conversation_token`) | Web | Có |
 | POST | `/feedback` | Gửi 👍/👎 cho `message_id` | Web, Bot | Mới xác nhận request, chưa lưu |
 | GET | `/images/{id}` | Ảnh minh họa cục bộ đã kiểm (theo hash) | Web | Có |
 | GET | `/health` | Trạng thái api, db, qdrant, redis | Hạ tầng | Có |
 | GET | `/admin/trace/{message_id}` | Trace RAG của một câu trả lời, cần `X-Admin-Token` | Admin | PR #79 |
-| GET | `/admin/stats` | Thống kê request, feedback, eval | Admin | Chưa có |
+| GET | `/admin/stats` | Hội thoại gần đây, feedback, job ingestion, kết quả eval (đọc PostgreSQL) | Admin | Có |
 | POST | `/admin/ingest` | Kích hoạt job ingestion | Admin | Chưa có |
 
 Request `/chat`:
@@ -349,6 +349,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | 0.5.0 | 2026-10-17 | 4 Hollows | Xác định phạm vi Elden Ring base game; quy ước Git tại docs/quy_uoc.md |
 | 0.6.0 | 2026-10-17 | 4 Hollows | Làm gọn tài liệu theo phạm vi base game; đồng bộ kế hoạch và nguồn dữ liệu |
 | 0.7.0 | 2026-11-08 | TV1 | Cuối Sprint 3: phạm vi đổi sang base + SotE, lore và gameplay/build (theo §9 đây là đổi phạm vi nên đáng lẽ tăng MAJOR; giữ 0.x vì chưa release v1.0). Thêm trạng thái thực tế cho mọi FR và NFR; FR-RET-04 đổi sang đánh giá bằng chứng, FR-RET-08 đổi DuckDuckGo thành Tavily, FR-CHAT-02 đổi sang lịch sử liên quan, FR-GEN-06 bỏ ngoại lệ build. Cập nhật §5 (API), §6 (bảng `conversation_runtime`, `conversation_memories`, hai collection Qdrant), thuật ngữ, TBD-07..10 và phụ lục A |
+| 0.7.1 | 2026-11-08 | TV1 | Thêm `/admin/stats`; web hiển thị `message_id` và liên kết xem trace khi `/chat/capabilities` báo `trace_available`; cập nhật §5 và FR-WEB-08 |
 
 ## Phụ lục A — Kịch bản demo / kiểm thử chấp nhận
 

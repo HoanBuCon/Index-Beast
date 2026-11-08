@@ -16,7 +16,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.db.models import Chunk, Conversation, Document, Feedback, IngestionJob, Message
+from core.db.models import Chunk, Conversation, Document, EvalRun, Feedback, IngestionJob, Message
 from core.ids import document_id
 
 
@@ -127,4 +127,31 @@ async def finish_job(
 
 async def list_jobs(session: AsyncSession, limit: int = 20) -> Sequence[IngestionJob]:
     query = select(IngestionJob).order_by(IngestionJob.started_at.desc()).limit(limit)
+    return (await session.execute(query)).scalars().all()
+
+
+async def recent_conversations(session: AsyncSession, limit: int = 20) -> list[tuple[uuid.UUID, str | None, datetime]]:
+    """(id, câu hỏi đầu tiên, giờ tạo) của các hội thoại mới nhất, cho trang admin."""
+    first_question = (
+        select(Message.content)
+        .where(Message.conversation_id == Conversation.id, Message.role == "user")
+        .order_by(Message.created_at)
+        .limit(1)
+        .scalar_subquery()
+    )
+    query = (
+        select(Conversation.id, first_question, Conversation.created_at)
+        .order_by(Conversation.created_at.desc())
+        .limit(limit)
+    )
+    return [tuple(row) for row in (await session.execute(query)).all()]
+
+
+async def recent_feedback(session: AsyncSession, limit: int = 50) -> Sequence[Feedback]:
+    query = select(Feedback).order_by(Feedback.created_at.desc()).limit(limit)
+    return (await session.execute(query)).scalars().all()
+
+
+async def recent_eval_runs(session: AsyncSession, limit: int = 10) -> Sequence[EvalRun]:
+    query = select(EvalRun).order_by(EvalRun.created_at.desc()).limit(limit)
     return (await session.execute(query)).scalars().all()

@@ -2,31 +2,38 @@
 // Phụ trách: TV4 · [S5] Trang admin
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import type { AdminStats } from "../api/types";
 import { getAdminStats, getTrace } from "../api/client";
 export default function AdminPage() {
+  // Liên kết "Xem trace" ở câu trả lời mang theo message_id; token không đi theo URL, phải nhập tại đây.
+  const [params] = useSearchParams();
   const [token, setToken] = useState("");
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [trace, setTrace] = useState<unknown>(null);
-  const [messageId, setMessageId] = useState("");
+  const [messageId, setMessageId] = useState(params.get("message_id") ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
-  async function load(kind: "stats" | "trace") {
+  async function load(kinds: ("stats" | "trace")[]) {
     controller.current?.abort();
     const next = new AbortController();
     controller.current = next;
     setBusy(true);
     setError("");
-    try {
-      if (kind === "stats") setStats(await getAdminStats(token.trim(), next.signal));
-      else setTrace(await getTrace(token.trim(), messageId.trim(), next.signal));
-    } catch (cause) {
-      if (!next.signal.aborted) setError(cause instanceof Error ? cause.message : "Không tải được dữ liệu.");
-    } finally {
-      if (!next.signal.aborted) setBusy(false);
+    const errors = new Set<string>();
+    for (const kind of kinds) {
+      try {
+        if (kind === "stats") setStats(await getAdminStats(token.trim(), next.signal));
+        else setTrace(await getTrace(token.trim(), messageId.trim(), next.signal));
+      } catch (cause) {
+        if (next.signal.aborted) return;
+        errors.add(cause instanceof Error ? cause.message : "Không tải được dữ liệu.");
+      }
     }
+    setError([...errors].join(" "));
+    setBusy(false);
   }
   function logout() {
     controller.current?.abort();
@@ -48,7 +55,8 @@ export default function AdminPage() {
         className="admin-auth"
         onSubmit={(e) => {
           e.preventDefault();
-          void load("stats");
+          // Có sẵn message_id (từ liên kết Xem trace hoặc đã nhập) thì tải luôn trace cùng lúc kết nối
+          void load(messageId.trim() ? ["stats", "trace"] : ["stats"]);
         }}
       >
         <label htmlFor="admin-token">{"Token quản trị"}</label>
@@ -102,7 +110,7 @@ export default function AdminPage() {
           className="trace-form"
           onSubmit={(e) => {
             e.preventDefault();
-            void load("trace");
+            void load(["trace"]);
           }}
         >
           <label className="sr-only" htmlFor="message-id">
@@ -117,6 +125,9 @@ export default function AdminPage() {
           />
           <button disabled={!token.trim() || !messageId.trim() || busy}>{"Xem trace"}</button>
         </form>
+        {trace === null && messageId.trim() && !error && (
+          <p className="muted">{"Nhập token quản trị rồi bấm Kết nối (hoặc Xem trace) để xem trace của mã này."}</p>
+        )}
         {trace !== null && <pre>{JSON.stringify(trace, null, 2)}</pre>}
       </section>
       <section>
