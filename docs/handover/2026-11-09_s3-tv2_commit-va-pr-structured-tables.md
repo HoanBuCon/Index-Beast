@@ -15,9 +15,18 @@ Kiểm nghiệm dữ liệu của lượt triển khai được ghi tại
 [handover tái tạo](2026-11-09_s3-tv2_tai-tao-facts-clean-chunk-tu-raw.md).
 Các dòng “chưa commit/push” trong tài liệu trước phản ánh thời điểm triển khai,
 được thay thế bởi yêu cầu Git hiện tại. Kiểm lại test/lint sau đồng bộ develop;
-kết quả và link PR sẽ được bổ sung khi đã chạy thực tế. Không tự merge.
+Không tự merge.
 
 Đã rebase lên develop tại `3697e79` (PR #87/#88/#89). Chỉ xung đột danh sách
 docs/handover/README.md; đã giữ cả liên kết TV4 mới và liên kết TV2. Không sửa
 mã của TV1/TV3/TV4. Kiểm lại sau rebase: 93 unit test dữ liệu đạt, 20 fixture cũ
 skip; Ruff check và format cho cả 16 file Python của PR đạt, diff check đạt.
+
+Đã push nhánh riêng, upstream đúng
+`origin/feature/s3-tv2-structured-tables-ingestion`. Commit mã nguồn `ca8840b`.
+Đã mở [PR #90](https://github.com/HoanBuCon/Index-Beast/pull/90), base develop,
+head feature/s3-tv2-structured-tables-ingestion, trạng thái open/non-draft. Tài khoản
+tạo PR ThinhHuu-vip; đã gửi yêu cầu review tới Mentor @HoanBuCon. Chưa merge.
+GitHub CLI chưa có trên PATH, dùng Git credential manager qua GitHub REST API;
+không in hoặc lưu token vào file. CI là trạng thái GitHub riêng, không coi unit
+test local đạt là CI đã xanh. PR không chứa dữ liệu local hoặc model weights.
