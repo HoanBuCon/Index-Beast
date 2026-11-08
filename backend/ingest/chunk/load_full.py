@@ -61,7 +61,15 @@ def validate_document(doc, rows, cap):
 
 def preflight(directory):
     report = read(directory / "report.json")
-    if report.get("chunking_version") != "s2-full-chunk-1.0":
+    if report.get("chunking_version") not in {
+        "s2-full-chunk-1.0",
+        "s2-full-chunk-1.1",
+        "s3-full-chunk-1.0",
+        "s3-full-chunk-1.1",
+        "s3-full-chunk-1.2",
+        "s3-full-chunk-1.3",
+        "s3-full-chunk-2.0",
+    }:
         raise ValueError("Full S2 artifact required")
     for name, digest in report["artifact_sha256"].items():
         if sha256((directory / name).read_bytes()) != digest:

@@ -147,3 +147,111 @@ Artifact mới: wikigg/<doc>.jsonl, chunks.jsonl, chunks.csv UTF-8 BOM, coverage
 updated_at là thời điểm sinh artifact chunk; processed_at là thời điểm clean; fetched_at là thời điểm tải; source_updated_at còn null nếu raw chưa ghi thời điểm nguồn sửa. Không thay nguồn sửa bằng fetched_at. Do updated_at khác nhau, file hash của hai lượt có thể khác; logical_content_sha256 kiểm tính ổn định của ID/text/metadata sau khi bỏ updated_at.
 
 Bước này chỉ chunk section scope base có căn cứ heuristic. Review/excluded được thống kê và không đưa vào chunks. Scope chưa được xác minh ngữ nghĩa toàn bộ, giấy phép ảnh chưa rõ vẫn phải review, và kết quả retrieval chưa đo. Prototype không ghi PostgreSQL/Qdrant/entities, không chạy embedding hoặc LLM.
+
+## S3: bản thử chất lượng full corpus, bật rõ gameplay
+
+Phần prototype 200 trang phía trên giữ policy riêng. Với full cohort base + SotE
+đã được duyệt, `ingest.transform.full --gameplay` bật policy `s3-full-clean-1.2`:
+giữ thông số infobox có nhãn, gameplay prose và nguồn ngôn ngữ theo tab. Không có
+flag này vẫn dùng policy S2. Không tự đưa trial S3 vào runner/manifest chính thức.
+
+Chạy từ `backend`, dùng output mới và tokenizer/model local đã chuẩn bị:
+
+```powershell
+$modelCache = Join-Path $env:USERPROFILE '.cache/huggingface/hub/models--intfloat--multilingual-e5-small/snapshots/614241f622f53c4eeff9890bdc4f31cfecc418b3'
+$tokenizerPath = Join-Path $modelCache 'tokenizer.json'
+.venv/Scripts/python.exe -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --gameplay --limit 20 --output-dir data/clean_runs/s3-new-20
+.venv/Scripts/python.exe -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --gameplay --output-dir data/clean_runs/s3-new-full
+.venv/Scripts/python.exe -m ingest.chunk.full --input-dir data/clean_runs/s3-new-full --tokenizer $tokenizerPath --output-dir data/chunk_runs/s3-new-full
+.venv/Scripts/python.exe -m ingest.chunk.load_full data/chunk_runs/s3-new-full --validate-only
+.venv/Scripts/python.exe -m ingest index --input data/chunk_runs/s3-new-full/chunks.jsonl --policy pilot --languages en --tokenizer $tokenizerPath --dry-run
+```
+
+Chunk S3 version `s3-full-chunk-1.3` giữ infobox vừa cap trong cùng unit, lặp
+header khi phải chia bảng dài, max 450/overlap 50. Giữ exact offsets và provenance.
+CSV dùng UTF-8 BOM; JSONL có `content_type`, `table_header`, `language_evidence`.
+Các lệnh trên không chạy encoder hoặc ghi DB. Không bỏ `--validate-only`/`--dry-run`
+khi chỉ muốn kiểm offline. `scripts/data_pipeline.py` thuộc TV1 hiện nhận prefix
+S2; tích hợp version S3 cần review riêng.
+
+Đánh giá local dưới đây chỉ chạy khi người dùng cho phép embedding. Cần weights
+ONNX local đúng revision; script không tự tải model và không gọi LLM:
+
+```powershell
+.venv/Scripts/python.exe -m ingest.debug.readiness_structure --chunks data/chunk_runs/s3-new-full --clean data/clean_runs/s3-new-full --tokenizer $tokenizerPath --output data/research_runs/s3-rag-readiness-20261108 --name rerun
+.venv/Scripts/python.exe -m ingest.debug.readiness_retrieval evaluate --artifact data/chunk_runs/s3-new-full/chunks.jsonl --model-path $modelCache --output data/research_runs/s3-rag-readiness-20261108 --name rerun
+```
+
+Thư mục research phải có protocol đã đóng băng từ lượt đầu. Để tạo diagnostic
+mới: `python -m ingest.debug.readiness_retrieval prepare --output
+data/research_runs/<thu-muc-moi>`; sau đó evaluate before/after trong cùng thư mục.
+Sau khi dọn dữ liệu cũ theo yêu cầu, prepare mặc định dùng inventory tại
+`data/delivery/final/chunk/documents.jsonl`. Dùng `--baseline-documents <path>`
+để chọn baseline khác; file chunks.jsonl phải nằm cùng thư mục inventory. Cần tạo
+thư mục output trước. Protocol đã đóng băng trước đây giữ nguyên, không prepare lại.
+Không sửa protocol sau khi xem kết quả. Review 50 mẫu do assistant chưa thay cho
+human gold. Xem [báo cáo và giới hạn](../../docs/testing/2026-11-08_tv2-rag-readiness.md)
+và điểm vào dữ liệu local `data/delivery/final/manifest.json`.
+
+### CSV sạch và bảng cần review
+
+Từ S3 clean 1.2, dùng **`content_clean.csv`** cho nội dung được giữ (`decision=keep`,
+`chunk_eligible=True`). `content_clean_all.csv` là catalog đối soát chứa cả review,
+không đưa nguyên file này vào embedding. `review.csv` giữ nội dung chưa đủ cấu
+trúc kèm lý do, source snapshot và DOM locator; raw không bị sửa.
+
+Bảng quest item có ô nhắc tới “dialogue” không được coi là hội thoại. Bảng hội
+thoại nhiều cột chưa được parser tách rõ vai trò đưa review với lý do
+`unresolved_multicolumn_dialogue`. Không lọc theo dấu `|` chung: giữ bảng chỉ số
+đã gắn nhãn và hội thoại một cột có trigger. Khi bổ sung parser nhiều cột, có thể
+khôi phục nội dung từ review/raw thay vì crawl lại.
+
+## S3: tái tạo với bảng có cấu trúc (P0/P1/P2 đã được duyệt)
+
+Người dùng chốt giữ raw/ảnh/crawl state, dọn artifact cũ và tái tạo offline toàn
+bộ phạm vi P0/P1/P2. Bật cả `--gameplay --structured-tables`; không có flag mới
+thì cleaner vẫn dùng policy cũ. Policy mới `s3-full-clean-2.0`, chunk `s3-full-chunk-2.0`.
+
+```powershell
+# Từ backend, tokenizer local như các lệnh phía trên. Chọn output mới.
+.venv/Scripts/python.exe -m ingest.transform.full --run-dir data/crawl_runs/s2-full-20261028 --gameplay --structured-tables --output-dir data/clean_runs/<new>
+.venv/Scripts/python.exe -m ingest.chunk.full --input-dir data/clean_runs/<new> --tokenizer $tokenizerPath --output-dir data/chunk_runs/<new>
+.venv/Scripts/python.exe -m ingest.chunk.load_full data/chunk_runs/<new> --validate-only
+```
+
+Thêm `--sample-ids 363,52,...` để thử các source ID có trong cohort. Danh sách mẫu
+20 trang đã kiểm tại `docs/testing/2026-11-08_structured-sample20.json` từ root repo.
+Chạy `ingest.debug.verify_structured --help` và `ingest.debug.readiness_structure --help`
+để kiểm artifact offline; không gọi encoder. `reset_derived.ps1` là thao tác xóa
+artifact chỉ chạy khi được ủy quyền rõ ràng; không chạy như bước kiểm tra thông thường.
+
+Trong clean output:
+
+- `content_clean.csv`: chỉ dòng keep, dùng chuẩn bị RAG; `content_clean_all.csv`
+  là catalog gồm cả review, không đưa nguyên vào embedding.
+- `tables/tables_inventory.jsonl`: mọi bảng/cell nguồn, span, header, tri-state và lý do.
+- `tables/table_facts.jsonl` và `.csv`: giữ cả fact keep và review, phải lọc
+  `decision=keep` khi sử dụng. Mỗi fact có source/revision/snapshot/hash,
+  table/row/cell ID, row_key, raw value, stat_name, grade/coefficient nếu tách rõ,
+  level và affinity có căn cứ; metadata không rõ giữ null/unknown. CSV null là ô rỗng.
+- `tables/tables_review.csv` và `.jsonl`: ô review hoặc excluded, giữ text và DOM.
+- `tables/facts_clean.jsonl` và `.csv`: chỉ fact keep, đây là file facts bàn giao
+  để chuẩn bị RAG. Nhãn keep là xác nhận cấu trúc theo nguồn/rule, chưa phải human gold.
+- `images.csv`: manifest ảnh hiện có; không tự sinh caption hoặc nối ảnh không rõ.
+
+Grid mở rộng ô gộp nhưng mọi giá trị vẫn trỏ ô gốc; xung đột/nested container hoặc
+cột lặp chưa rõ đưa review. Parser dùng header nhiều tầng, source icon alt khi
+header là icon, tên item/material và điều kiện để giữ đúng vai trò. Không dùng
+màu sắc để tự gán damage type, không nội suy /Lv, không đổi dấu '-' thành số 0.
+Thư viện hiện tại được dùng lại, không cần model/API mới.
+
+Hội thoại một cột tiếp tục dùng typed parser cũ để giữ trigger/speaker; bảng nhiều
+cột tách locale khi có nhãn rõ. Bảng quote giữ nội dung nguồn. Các định dạng còn
+chưa hiểu trong P1/P2 được hạch toán review, không ép mọi bảng thành fact sạch.
+Số ô keep có cả header/quote và nội dung giao cho parser cũ, không bằng số fact.
+
+Chunk table_fact nguyên theo hàng, mang Row/Variant/title/section và fact_ids.
+Hàng quá dài chuyển review, không cắt giữa nhãn và số. Những fact infobox đã giữ
+có thể được biểu diễn bởi chunk infobox_stats cũ nên không phải mọi fact keep đều
+có fact_id trực tiếp trong chunk; kiểm cả provenance và stats regression.
+Chưa tích hợp runner TV1 tự nhận version mới, chưa embedding/index/LLM/push.
