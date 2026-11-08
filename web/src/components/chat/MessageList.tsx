@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Link } from "react-router";
 import type { Message, Source } from "../../api/types";
 import CitationPopover from "./CitationPopover";
 import graceIcon from "../../assets/ERN_Map_Icon_Site_of_Grace.png";
@@ -19,6 +20,7 @@ export default function MessageList({
   illustrationsByMessage,
   illustrationPreviewState,
   onClarification,
+  traceLinks = false,
   autoScroll = true,
 }: {
   messages: Message[];
@@ -28,6 +30,8 @@ export default function MessageList({
   illustrationsByMessage?: Readonly<Record<string, readonly AnswerIllustration[]>>;
   illustrationPreviewState?: IllustrationPreviewState;
   onClarification?: (text: string, id: string) => Promise<boolean> | void;
+  // API có bật /admin/* (capabilities.trace_available): hiện mã câu trả lời và liên kết sang trang trace.
+  traceLinks?: boolean;
   autoScroll?: boolean;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
@@ -115,6 +119,13 @@ export default function MessageList({
                     onAnswer={onClarification}
                   />
                 )}
+              {traceLinks && message.serverId && !message.incomplete && (
+                <p className="message-trace">
+                  <span>{"ID câu trả lời"}</span>
+                  <code>{message.serverId}</code>
+                  <Link to={`/admin?message_id=${encodeURIComponent(message.serverId)}`}>{"Xem trace"}</Link>
+                </p>
+              )}
             </>
           )}
         </article>

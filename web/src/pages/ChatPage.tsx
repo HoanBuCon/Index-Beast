@@ -56,11 +56,15 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const [mode, setMode] = useState<Conversation["mode"]>("api-stream");
   const [searchMode, setSearchMode] = useState<SearchMode>("auto");
   const [searchAvailable, setSearchAvailable] = useState(false);
+  const [traceAvailable, setTraceAvailable] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/v1/chat/capabilities", { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : null))
-      .then((data) => setSearchAvailable(data?.web_search_available === true))
+      .then((data) => {
+        setSearchAvailable(data?.web_search_available === true);
+        setTraceAvailable(data?.trace_available === true);
+      })
       .catch(() => {});
     return () => controller.abort();
   }, []);
@@ -272,6 +276,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 messages={conversation.messages}
                 busy={stream.busy}
                 demo={mode === "demo"}
+                traceLinks={traceAvailable}
                 onClarification={(text, id) => {
                   const failed = retryInput(conversation);
                   const retry = stream.error && failed?.clarificationId === id && failed.text === text ? failed : null;

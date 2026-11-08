@@ -350,9 +350,15 @@ async def test_web_sources_reach_json_or_sse_with_valid_citations_and_no_web_ima
 def test_capability_endpoint_only_exposes_availability(client):
     client.app.state.ctx.settings = settings()
     response = client.get("/api/v1/chat/capabilities")
-    assert response.status_code == 200 and response.json() == {"web_search_available": True}
+    assert response.status_code == 200 and response.json() == {
+        "web_search_available": True,
+        "trace_available": False,  # chưa đặt ADMIN_TOKEN
+    }
     client.app.state.ctx.settings = settings(web_search_enabled=False)
-    assert client.get("/api/v1/chat/capabilities").json() == {"web_search_available": False}
+    assert client.get("/api/v1/chat/capabilities").json() == {
+        "web_search_available": False,
+        "trace_available": False,
+    }
 
 
 async def test_owned_http_client_is_closed_and_extracted_instructions_stay_data():

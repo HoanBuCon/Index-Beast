@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.context import AppContext
 from app.services.chat import ChatService
-from core.config import PLACEHOLDER
 from core.errors import NotFoundError, UnauthorizedError
 
 
@@ -43,10 +42,9 @@ ADMIN_TOKEN_HEADER = "X-Admin-Token"
 
 def require_admin(request: Request) -> None:
     """Chưa cấu hình ADMIN_TOKEN thì /admin/* trả 404 như chưa tồn tại; sai token trả 401."""
-    configured = request.app.state.ctx.settings.admin_token
-    secret = configured.get_secret_value().strip() if configured else ""
-    if not secret or secret == PLACEHOLDER:
+    settings = request.app.state.ctx.settings
+    if not settings.admin_enabled:
         raise NotFoundError("Không tìm thấy tài nguyên.")
     sent = request.headers.get(ADMIN_TOKEN_HEADER, "")
-    if not hmac.compare_digest(sent.encode(), secret.encode()):
+    if not hmac.compare_digest(sent.encode(), settings.admin_token.get_secret_value().strip().encode()):
         raise UnauthorizedError("Token quản trị không hợp lệ.")

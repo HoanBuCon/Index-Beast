@@ -11,8 +11,12 @@ router = APIRouter(tags=["chat"])
 
 class ChatCapabilities(BaseModel):
     web_search_available: bool
+    # Web chỉ hiện liên kết "Xem trace" khi API có bật /admin/* (ADMIN_TOKEN); không lộ token
+    trace_available: bool = False
 
 
 @router.get("/chat/capabilities", response_model=ChatCapabilities)
 async def capabilities(ctx: AppContext = Depends(get_ctx)):
-    return ChatCapabilities(web_search_available=ctx.settings.web_search_available)
+    return ChatCapabilities(
+        web_search_available=ctx.settings.web_search_available, trace_available=ctx.settings.admin_enabled
+    )

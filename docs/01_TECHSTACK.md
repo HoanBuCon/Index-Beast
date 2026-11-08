@@ -30,7 +30,7 @@
 | ORM · driver · migration | SQLAlchemy async · asyncpg · Alembic | 2.1.5 · 0.32.0 · 1.20.0 |
 | Cache · rate-limit | Redis · redis-py (rate-limit `/chat` đã dùng; cache chưa) | 8.10.2 · 8.1.0 |
 | Bộ nhớ hội thoại | PostgreSQL (`conversation_runtime`, `conversation_memories`, migration `0002`) là nguồn sự thật; Qdrant collection `conversation_memories` (dense E5, 384 chiều) chỉ là chỉ mục dẫn xuất | — |
-| Trace và số đo | `messages.trace` (JSONB) và cột `rewritten_query`, `latency_ms`, `tokens_in/out`; `GET /api/v1/admin/trace/{id}` với `X-Admin-Token` (PR #79) | — |
+| Trace và số đo | `messages.trace` (JSONB) và cột `rewritten_query`, `latency_ms`, `tokens_in/out`; `GET /api/v1/admin/trace/{id}` và `GET /api/v1/admin/stats` với `X-Admin-Token`; trang `/admin` của web xem được cả hai, câu trả lời có liên kết "Xem trace" khi `ADMIN_TOKEN` được đặt | — |
 | Làm sạch · ảnh | BeautifulSoup · Pillow (kiểm định dạng ảnh crawl và ảnh trả về) | 4.15.0 · 12.3.0 |
 | Runtime JS | Node.js LTS | 24.22.0 |
 | TypeScript | chỉ dùng `tsc --noEmit` | 6.0.3 |

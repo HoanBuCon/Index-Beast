@@ -6,6 +6,7 @@ Phụ trách: TV1 · [S3] Trace từng bước RAG
 import json
 from contextlib import ExitStack
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -128,3 +129,85 @@ async def test_repository_trace_maps_database_errors_to_unavailable():
 
     with pytest.raises(UnavailableError):
         await MemoryRepository(lambda: Down()).trace(uuid4())
+
+
+class FakeAsyncSession:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        return False
+
+
+def stats_client(admin_client, monkeypatch, **repo_results):
+    from core.db import repositories as repo
+
+    client, _ = admin_client("s3cret-token")
+    client.app.state.ctx.sessionmaker = lambda: FakeAsyncSession()
+    defaults = {"recent_conversations": [], "recent_feedback": [], "list_jobs": [], "recent_eval_runs": []}
+    for name, value in {**defaults, **repo_results}.items():
+
+        async def fake(_session, *_args, _value=value, **_kwargs):
+            if isinstance(_value, Exception):
+                raise _value
+            return _value
+
+        monkeypatch.setattr(repo, name, fake)
+    return client, SimpleNamespace(headers={"X-Admin-Token": "s3cret-token"})
+
+
+def test_admin_stats_matches_the_shape_the_web_client_validates(admin_client, monkeypatch):
+    when = datetime(2026, 11, 8, 3, 0, tzinfo=UTC)
+    client, auth = stats_client(
+        admin_client,
+        monkeypatch,
+        recent_conversations=[(uuid4(), "  Marika   là ai? " + "x" * 100, when), (uuid4(), None, when)],
+        recent_feedback=[
+            SimpleNamespace(message_id=uuid4(), rating=-1, reason="sai"),
+            SimpleNamespace(message_id=uuid4(), rating=1, reason=None),
+        ],
+        list_jobs=[
+            SimpleNamespace(external_id="crawl-abc", id=uuid4(), status="succeeded", pages_ok=7),
+            SimpleNamespace(external_id=None, id=uuid4(), status="running", pages_ok=0),
+        ],
+        recent_eval_runs=[SimpleNamespace(id=uuid4(), metrics={"recall@5": 0.8, "n": 3, "ok": True, "note": "x"})],
+    )
+    response = client.get("/api/v1/admin/stats", headers=auth.headers)
+    assert response.status_code == 200
+    body = response.json()
+    first, second = body["conversations"]
+    assert first["title"].startswith("Marika là ai? xxx") and len(first["title"]) == 60
+    assert second["title"] == "(chưa có câu hỏi)" and isinstance(first["created_at"], str)
+    withreason, without = body["feedback"]
+    assert withreason["reason"] == "sai" and "reason" not in without  # client web từ chối reason=null
+    assert [j["id"] for j in body["ingestion_jobs"]][0] == "crawl-abc" and len(body["ingestion_jobs"][1]["id"]) == 36
+    assert body["eval_runs"][0]["metrics"] == {"recall@5": 0.8, "n": 3}  # chỉ giữ số, bỏ bool và chuỗi
+
+
+def test_admin_stats_is_empty_not_an_error_without_data(admin_client, monkeypatch):
+    client, auth = stats_client(admin_client, monkeypatch)
+    assert client.get("/api/v1/admin/stats", headers=auth.headers).json() == {
+        "conversations": [],
+        "feedback": [],
+        "ingestion_jobs": [],
+        "eval_runs": [],
+    }
+
+
+def test_admin_stats_requires_the_token_and_maps_database_errors(admin_client, monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    client, auth = stats_client(
+        admin_client, monkeypatch, recent_feedback=OperationalError("select", {}, ConnectionError("db down"))
+    )
+    assert client.get("/api/v1/admin/stats").status_code == 401
+    assert client.get("/api/v1/admin/stats", headers={"X-Admin-Token": "wrong"}).status_code == 401
+    down = client.get("/api/v1/admin/stats", headers=auth.headers)
+    assert down.status_code == 503 and down.json()["code"] == "unavailable"
+
+
+@pytest.mark.parametrize("token,enabled", [(None, False), ("", False), ("change-me", False), ("s3cret-token", True)])
+def test_admin_enabled_and_trace_capability_follow_the_token(admin_client, token, enabled):
+    client, _ = admin_client(token)
+    assert client.app.state.ctx.settings.admin_enabled is enabled
+    assert client.get("/api/v1/chat/capabilities").json()["trace_available"] is enabled
