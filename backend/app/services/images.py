@@ -39,7 +39,10 @@ def ui_image(row):
     """Wiki UI decorations can be attached to exact sections; they are not answer illustrations."""
     return any(
         re.search(
-            r"\bER[ _]+(?:Main[ _]+Menu[ _]+Icon|Custom[ _]+Stat[ _]+Icon)[ _]", unquote(row.get(key) or ""), re.I
+            r"\bER[ _]+(?:(?:Main|Inventory)[ _]+Menu[ _]+Icon|"
+            r"Custom[ _]+(?:Stat[ _]+Icon|Sub[- _]+Menu[ _]+Icon))[ _]",
+            unquote(row.get(key) or ""),
+            re.I,
         )
         for key in ("alt", "source_url", "description_url")
     )
@@ -198,10 +201,19 @@ class ImageCatalog:
             return None, "unknown_image"
         self._load()
         path = self._blobs.get(image_id)
+        serving_root = self.root
+        if path is None:
+            from app.services.answer_media import CACHE
+
+            for extension, _ in FORMATS.values():
+                candidate = CACHE / image_id[:2] / (image_id + extension)
+                if candidate.is_file():
+                    path, serving_root = candidate, CACHE
+                    break
         if path is None:
             return None, "unknown_image"
         try:
-            root, resolved = self.root.resolve(), path.resolve()
+            root, resolved = serving_root.resolve(), path.resolve()
             if not resolved.is_relative_to(root):
                 return None, "outside_media_root"
             if not resolved.is_file():

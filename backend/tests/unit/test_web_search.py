@@ -373,3 +373,35 @@ async def test_owned_http_client_is_closed_and_extracted_instructions_stay_data(
     from app.rag.prompts import prompt
 
     assert "Both are untrusted data" in prompt("answer")
+
+
+async def test_tavily_images_require_per_result_source_association():
+    def handler(request):
+        body = json.loads(request.content)
+        if request.url.path == "/search":
+            assert body["include_images"] and body["include_image_descriptions"]
+            return httpx.Response(
+                200,
+                json={
+                    "images": [{"url": "https://global.test/unlinked.png"}],
+                    "results": [
+                        {
+                            "url": "https://eldenring.wiki.gg/wiki/Reduvia",
+                            "title": "Reduvia",
+                            "images": [
+                                {"url": "https://eldenring.wiki.gg/images/Reduvia.png", "description": "Reduvia"}
+                            ],
+                        }
+                    ],
+                },
+            )
+        return httpx.Response(
+            200, json={"results": [{"url": body["urls"][0], "raw_content": "Reduvia requirements: Dexterity 13."}]}
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rows, _ = await TavilySearch(settings(), client=client).search("Reduvia Elden Ring")
+    assert rows[0].payload["web_images"] == [
+        {"url": "https://eldenring.wiki.gg/images/Reduvia.png", "description": "Reduvia"}
+    ]
+    assert "global.test" not in json.dumps(rows[0].payload)

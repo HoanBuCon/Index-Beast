@@ -55,6 +55,7 @@ class Prepared:
     player_state: object = None  # Request-local copy; service commits only after successful completion.
     agent_decision: dict = field(default_factory=dict)
     max_calls: int | None = None
+    checked_build: dict | None = None
 
 
 @dataclass
@@ -131,6 +132,9 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
         if parsed.insufficient:
+            if prepared.checked_build is not None:
+                failure = "invalid_build_allocation"
+                raise ValueError("Checked build cannot be silently discarded")
             if parsed.build_allocation is not None:
                 raise ValueError("Insufficient answers cannot include a build allocation")
             if used or evidence or parsed.limitation is not None:
@@ -152,7 +156,42 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence quote is not in cited text")
         answer = parsed.answer
-        if parsed.build_allocation is not None:
+        if prepared.checked_build is not None:
+            from app.rag.build_data import check
+            from app.rag.build_math import ATTRIBUTES
+
+            failure = "invalid_build_allocation"
+            artifact = prepared.checked_build
+            attribute_pattern = "|".join(ATTRIBUTES)
+            if re.search(rf"\b(?:{attribute_pattern})\b\s*[:=|—–-]?\s*\d", answer, re.I) or any(
+                "|" in line and sum(bool(re.search(rf"\b{k}\b", line, re.I)) for k in ATTRIBUTES) >= 2
+                for line in answer.splitlines()
+            ):
+                raise ValueError("Stat numbers belong in the checked artifact, not model prose")
+            verified = check(artifact["data"], artifact["allocation"], prepared.values["player_profile"], prepared.hits)
+            if verified["version"] != artifact["version"] or (
+                parsed.build_allocation is not None and parsed.build_allocation != artifact["allocation"]
+            ):
+                raise ValueError("Generator changed checked allocation")
+            required_indices = {i for i, h in enumerate(prepared.hits, 1) if h.id in artifact["sources"]}
+            for i in required_indices:
+                hit = prepared.hits[i - 1]
+                facts = [artifact["data"][k] for k in ("starting_level", "points_per_level", "attribute_cap")]
+                facts.append(artifact["data"]["class_floor_rule"])
+                facts += list(artifact["data"]["base"].values()) + list(artifact["data"]["requirements"].values())
+                units = evidence_units(hit.payload["text"])
+                if any(units[f["quote_id"]] not in evidence.get(i, []) for f in facts if f["source_id"] == hit.id):
+                    raise ValueError("Missing exact accounting quotes")
+            if not required_indices <= used:
+                raise ValueError("Missing accounting citations")
+            answer += "\n\n" + (
+                "Gợi ý phân bổ (một tay, không bonus): "
+                if prepared.lang == "vi"
+                else "Suggested allocation (one-handed, no bonuses): "
+            )
+            answer += " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
+            answer += " " + "".join(f"[{i}]" for i in sorted(required_indices))
+        elif parsed.build_allocation is not None:
             from app.rag.build_math import ATTRIBUTES, check_allocation
             from app.rag.gameplay_knowledge import trusted_rule_kind
             from app.services.gameplay import extract

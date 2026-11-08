@@ -1,0 +1,73 @@
+{
+  "basis": "Đọc đáp án và quote được trả, mở 10 file ảnh độc nhất bằng view_image; không browser QA, không VLM API.",
+  "live_version": "Sau 889 offline tests, trước các sửa offline phát hiện từ run này. Không gọi thêm lượt thật.",
+  "http_200": 7,
+  "http_502": 3,
+  "attempted_turns": 10,
+  "image_responses": 5,
+  "image_entries": 12,
+  "unique_files_opened": 10,
+  "web_image_success_verified": false,
+  "checked_generic_builds": 0,
+  "median_latency_ms": 10231.02,
+  "notes": [
+    {
+      "id": "EMB01",
+      "comment": "Đúng ảnh Rivers of Blood (hai kích thước). Text có limitation sai về khả năng ảnh; trả lời dài hơn nhu cầu."
+    },
+    {
+      "id": "EMB02",
+      "comment": "Đúng Arsenal Charm, cùng hash được trả ba lần; text nói không gửi ảnh dù images[] có ảnh."
+    },
+    {
+      "id": "EMB03",
+      "comment": "SSE hoàn tất; ba ảnh Ranni phù hợp nhân vật, có ảnh cutscene gây spoiler không cần thiết. Text phủ nhận khả năng ảnh."
+    },
+    {
+      "id": "EMB04",
+      "comment": "Search+Extract thật; requirements 5 STR/13 DEX/13 ARC xuất hiện trong nguồn. Không có candidate ảnh web đủ association."
+    },
+    {
+      "id": "EMB05",
+      "comment": "Search+Extract thật nhưng final evidence chỉ local; ảnh Dark Moon Greatsword là local entity_page, không phải ảnh web."
+    },
+    {
+      "id": "EMB06",
+      "comment": "Không có checked_build. Calculator từ chối source chưa được fetch, rồi schema không hợp lệ; không dùng web dù auto. Trả thiếu dữ liệu đúng về trạng thái vận hành."
+    },
+    {
+      "id": "EMB07",
+      "comment": "502 tại agent decision: goal là bản dịch tổng hợp tiếng Anh, không phải substring nguồn user tiếng Việt. Không chạy calculator."
+    },
+    {
+      "id": "EMB08",
+      "comment": "Chỉ trả định hướng Dex/Arc và ba kích thước ảnh Reduvia. Không có bảng 8 số đã kiểm; thiếu class/rule/requirements."
+    },
+    {
+      "id": "EMB09",
+      "comment": "502 trước clarification: model trả 3 missing fields trong khi schema tối đa2. Chưa tạo pending clarification."
+    },
+    {
+      "id": "EMB10",
+      "comment": "502 trước retrieval: query thiếu Moonveilll-X và mất phủ định. Vì EMB09 lỗi nên không kiểm được resume pending thật."
+    }
+  ],
+  "independent_math": [
+    {
+      "id": "EMB06",
+      "allocation_sum": 139,
+      "expected_if_class_inputs_valid": 139,
+      "matches_total": true,
+      "accepted_artifact": false,
+      "note": "Tổng đúng không xác minh class numbers, source provenance hoặc cap; source chưa fetch nên calculator từ chối."
+    },
+    {
+      "id": "EMB06",
+      "allocation_sum": 139,
+      "expected_if_class_inputs_valid": 139,
+      "matches_total": true,
+      "accepted_artifact": false,
+      "note": "Tổng đúng không xác minh class numbers, source provenance hoặc cap; source chưa fetch nên calculator từ chối."
+    }
+  ]
+}

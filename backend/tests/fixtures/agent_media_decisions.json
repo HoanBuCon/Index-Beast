@@ -1,0 +1,222 @@
+[
+  {
+    "id": "EMB07",
+    "question": "Tôi là Hero level 80, chơi PvE cận chiến dùng Great Stars một tay, không buff hay trang bị cộng chỉ số. Hãy đề xuất bảng tám chỉ số khả thi, kiểm tra điểm theo level, chỉ số nền class và yêu cầu vũ khí.",
+    "bad": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "retrieve",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "For a Hero starting class at level 80 playing melee PvE, using Great Stars one-handed with no buffs or stat-boosting equipment, propose a feasible eight-attribute stat spread and verify the points against the level, the Hero class base stats, and the weapon requirements.",
+      "search_query": "Elden Ring Hero starting class base stats level 80 melee PvE Great Stars one-handed weapon requirements stat allocation no buffs no stat-boosting equipment",
+      "entities": [
+        "Hero",
+        "Great Stars"
+      ],
+      "selected_memory_ids": [],
+      "constraints": [
+        {
+          "key": "level",
+          "value": "80",
+          "source_id": "current"
+        },
+        {
+          "key": "starting_class",
+          "value": "Hero",
+          "source_id": "current"
+        },
+        {
+          "key": "weapon",
+          "value": "Great Stars",
+          "source_id": "current"
+        },
+        {
+          "key": "goal",
+          "value": "PvE melee one-handed, no buffs or stat-boosting equipment",
+          "source_id": "current"
+        }
+      ],
+      "missing": [],
+      "reply": "",
+      "reason": "ready"
+    },
+    "fixed": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "retrieve",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "For a Hero starting class at level 80 playing melee PvE, using Great Stars one-handed with no buffs or stat-boosting equipment, propose a feasible eight-attribute stat spread and verify the points against the level, the Hero class base stats, and the weapon requirements.",
+      "search_query": "Elden Ring Hero starting class base stats level 80 melee PvE Great Stars one-handed weapon requirements stat allocation no buffs no stat-boosting equipment",
+      "entities": [
+        "Hero",
+        "Great Stars"
+      ],
+      "selected_memory_ids": [],
+      "constraints": [
+        {
+          "key": "level",
+          "value": "80",
+          "source_id": "current"
+        },
+        {
+          "key": "starting_class",
+          "value": "Hero",
+          "source_id": "current"
+        },
+        {
+          "key": "weapon",
+          "value": "Great Stars",
+          "source_id": "current"
+        },
+        {
+          "key": "goal",
+          "value": "PvE",
+          "source_id": "current"
+        }
+      ],
+      "missing": [],
+      "reply": "",
+      "reason": "ready"
+    }
+  },
+  {
+    "id": "EMB09",
+    "question": "Chia tám chỉ số cho build PvE của tôi, nhưng tôi chưa chọn class, level hay vũ khí.",
+    "bad": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "clarify",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "",
+      "search_query": "",
+      "entities": [],
+      "selected_memory_ids": [],
+      "constraints": [],
+      "missing": [
+        {
+          "key": "starting_class",
+          "label": "Class khởi đầu",
+          "input_type": "text",
+          "options": []
+        },
+        {
+          "key": "level",
+          "label": "Level mục tiêu",
+          "input_type": "text",
+          "options": []
+        },
+        {
+          "key": "weapon",
+          "label": "Vũ khí chính",
+          "input_type": "text",
+          "options": []
+        }
+      ],
+      "reply": "Để chia tám chỉ số chính xác cho build PvE, bạn cho mình biết ba điều: class khởi đầu, level mục tiêu và vũ khí chính bạn muốn dùng. Nếu chưa chắc vũ khí, cứ nói hướng chơi bạn thích (ví dụ cận chiến nặng, nhanh, hay phép) là được.",
+      "reason": "missing_player_details"
+    },
+    "fixed": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "clarify",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "",
+      "search_query": "",
+      "entities": [],
+      "selected_memory_ids": [],
+      "constraints": [],
+      "missing": [
+        {
+          "key": "starting_class",
+          "label": "Class khởi đầu",
+          "input_type": "text",
+          "options": []
+        },
+        {
+          "key": "level",
+          "label": "Level mục tiêu",
+          "input_type": "text",
+          "options": []
+        }
+      ],
+      "reply": "Bạn dùng class khởi đầu nào và muốn build ở level bao nhiêu?",
+      "reason": "missing_player_details"
+    }
+  },
+  {
+    "id": "EMB10",
+    "question": "Tôi chọn Astrologer level 25, vũ khí là Moonveilll-X bản mod riêng không có dữ liệu công khai. Không tự đoán yêu cầu của vũ khí này.",
+    "bad": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "retrieve",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "For an Astrologer at level 25 using a private modded weapon called Moonveilll-X that has no public data, what general build guidance applies without guessing this weapon's requirements?",
+      "search_query": "Astrologer level 25 build general guidance Intelligence weapon requirements unknown modded weapon",
+      "entities": [
+        "Astrologer",
+        "Moonveilll-X"
+      ],
+      "selected_memory_ids": [],
+      "constraints": [
+        {
+          "key": "level",
+          "value": "25",
+          "source_id": "current"
+        },
+        {
+          "key": "starting_class",
+          "value": "Astrologer",
+          "source_id": "current"
+        },
+        {
+          "key": "weapon",
+          "value": "Moonveilll-X",
+          "source_id": "current"
+        }
+      ],
+      "missing": [],
+      "reply": "",
+      "reason": "ready"
+    },
+    "fixed": {
+      "intent": "build",
+      "turn_type": "new",
+      "action": "retrieve",
+      "rewrite": true,
+      "answer_language": "vi",
+      "resolved_question": "For an Astrologer at level 25 using a private modded weapon called Moonveilll-X that has no public data, what general build guidance applies without guessing this weapon's requirements?",
+      "search_query": "Astrologer level 25 build general guidance Intelligence weapon requirements unknown modded weapon Moonveilll-X no public data do not guess weapon requirements",
+      "entities": [
+        "Astrologer",
+        "Moonveilll-X"
+      ],
+      "selected_memory_ids": [],
+      "constraints": [
+        {
+          "key": "level",
+          "value": "25",
+          "source_id": "current"
+        },
+        {
+          "key": "starting_class",
+          "value": "Astrologer",
+          "source_id": "current"
+        },
+        {
+          "key": "weapon",
+          "value": "Moonveilll-X",
+          "source_id": "current"
+        }
+      ],
+      "missing": [],
+      "reply": "",
+      "reason": "ready"
+    }
+  }
+]

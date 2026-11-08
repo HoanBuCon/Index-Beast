@@ -1,0 +1,59 @@
+
+> index-beast-web@0.1.0 test
+> node --test tests/*.test.ts
+
+✔ only completed nonempty assistant answers can show supplied illustrations (0.9528ms)
+✔ illustrations allow only local-root and HTTP(S) URLs, without credentials (0.4208ms)
+3:03:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+✔ rendering preserves safe Markdown and sources, requires opt-in media, and provides honest states (1692.901ms)
+✔ optional media preserves metadata, limits/deduplicates and only accepts cited local image IDs (2.6864ms)
+✔ JSON and SSE retain the same server images in the sources event and message state (13.5785ms)
+✔ bad optional images do not break JSON text or server conversation history (2.3898ms)
+✔ browser history round-trips server images and reads legacy conversations without media (1.7835ms)
+✔ backend adapter uses metadata/citations without guessing entity kind or approving unknown rights (0.8651ms)
+3:03:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+✔ normal chat renders real backend images after completion without fixture props (1625.8666ms)
+✔ search selection travels with the request without mutating history or caller options (52.968ms)
+✔ JSON sends POST /chat, body and request ID, then maps answer and sources into UI events (3.0892ms)
+✔ JSON validates data before render (6.3127ms)
+✔ non-JSON and provider failures remain errors rather than falling back to demo (2.3617ms)
+✔ 502 is not reported as a connection failure (0.8066ms)
+✔ cancel aborts an in-flight JSON fetch (0.999ms)
+✔ retry retains earlier history and sends the failed question once (1.2986ms)
+✔ frontend JSON demo handles success, failure and cancellation without fetch (1215.1845ms)
+✔ clarification is optional, bounded and rejects malformed metadata (2.5815ms)
+✔ JSON carries structured question and follow-up ID without changing old requests (8.5992ms)
+✔ failed free-text reply retains raw text, clarification and the same turn ID on retry (1.3511ms)
+3:03:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+✔ inline question accepts free text without dropdowns and retains expiration state (1600.2268ms)
+3:03:50 AM [vite] (client) [optimizer] bundling dependencies...
+✔ SSE preserves Vietnamese across bytes and CRLF boundaries (9.8734ms)
+✔ SSE joins data lines and ignores unterminated event (0.714ms)
+✔ chat rejects partial output without done (43.2215ms)
+✔ done validates message and conversation IDs (1.4446ms)
+✔ 429 preserves Retry-After without exposing provider body (2.3194ms)
+✔ malformed sources fail before UI render (1.0025ms)
+✔ stopping SSE consumer releases its reader (0.7341ms)
+✔ frontend limits match the checked-in OpenAPI v1 contract (3.9479ms)
+✔ source accepts API null fields but rejects malformed fields (0.2381ms)
+✔ invalid question is rejected locally without calling API (1.3797ms)
+WebSocket server error: Port 24678 is already in use
+✔ UI renders on HTTP LAN without randomUUID, old English preference or blocked storage (1317.5164ms)
+✔ JSON capability survives adapter and protected history/feedback use a header (45.5121ms)
+✔ SSE done preserves capability and rejects malformed optional tokens (3.7243ms)
+✔ local storage restores scoped capability while still accepting legacy conversations (1.4176ms)
+✔ search button cycles OFF -> ON -> ALWAYS -> OFF using API modes (2.2305ms)
+3:03:48 AM [vite] (client) Re-optimizing dependencies because vite config has changed
+✔ composer exposes three-state button, locks during requests and when unavailable (612.1648ms)
+✔ uses native randomUUID when available (2.2744ms)
+✔ HTTP LAN crypto without randomUUID generates valid UUIDv4 from random bytes (0.4976ms)
+✔ fallback generates distinct IDs and fails rather than using Math.random without Web Crypto (9.2515ms)
+✔ API request IDs work without secure-context randomUUID (33.8352ms)
+ℹ tests 41
+ℹ suites 0
+ℹ pass 41
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2322.0529

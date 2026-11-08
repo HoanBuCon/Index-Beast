@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.adapters.llm import LLMError
 from app.adapters.tavily import WebHit, WebSearchError
@@ -25,8 +25,10 @@ class ToolStep(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     action: Literal["local_search", "web_search", "source_snapshot", "calculator", "finish", "clarify", "stop"]
     query: str = Field(default="", max_length=1000)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=5)
     snapshot_ids: list[str] = Field(default_factory=list, max_length=5)
     allocation: dict[str, int] = Field(default_factory=dict, max_length=8)
+    build_data: dict = Field(default_factory=dict)
     question: str = Field(default="", max_length=1000)
     missing: list[ClarificationField] = Field(default_factory=list, max_length=2)
     reason: Literal["initial", "missing_evidence", "different_query", "player_detail", "sufficient", "unavailable"]
@@ -53,6 +55,16 @@ async def run_tools(pipe, state):
         if pipe.settings.gameplay_knowledge_enabled
         else {}
     )
+    from app.rag.build_data import BuildCache
+
+    if not hasattr(pipe, "build_cache"):
+        pipe.build_cache = BuildCache()
+    profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
+    cached = pipe.build_cache.get(profile)
+    if cached:
+        for h in cached[1]:
+            if isinstance(h, WebHit) or pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None:
+                catalog[h.id] = {"id": h.id, "payload": h.payload, "web": isinstance(h, WebHit)}
     hits, seen, observations = {}, set(), []
     local_calls, web_calls = 0, 0
     actions = p.trace["tool_actions"] = []
@@ -63,7 +75,12 @@ async def run_tools(pipe, state):
             stop_reason = "model_budget"
             break
         selected = select_context(
-            list(hits.values()), 5, pipe.settings.rag_context_chars, policy=pipe.policy, spoilers=req.options.spoilers
+            list(hits.values()),
+            5,
+            pipe.settings.rag_context_chars,
+            policy=pipe.policy,
+            spoilers=req.options.spoilers,
+            preserve_order=True,
         )
         available = ["finish", "stop", "clarify"]
         if local_calls < pipe.settings.chat_tool_queries and pipe.retriever is not None:
@@ -76,7 +93,16 @@ async def run_tools(pipe, state):
             {trusted_rule_kind(h) for h in selected}
         ):
             available.append("calculator")
+        profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
+        if (
+            hits
+            and all(profile.get(k) for k in ("level", "starting_class", "weapon"))
+            and "calculator" not in available
+        ):
+            available.append("calculator")
+        shown_ids = {h.id for h in list(hits.values())[:30]}
         payload = {
+            "player_profile": profile,
             "request": state["resolved_question"],
             "initial_query": state["query"],
             "answer_language": p.lang,
@@ -84,7 +110,18 @@ async def run_tools(pipe, state):
             "available_actions": available,
             "remaining_steps": pipe.settings.chat_tool_steps - len(actions),
             "observations": observations[-3:],
+            "checked_build": p.checked_build,
+            "cached_build_data": cached[0] if cached else None,
             "evidence": [context_item(h, i + 1) for i, h in enumerate(selected)],
+            "candidates": [
+                {
+                    **{k: v for k, v in context_item(h, 1).items() if k not in {"text", "evidence_units", "index"}},
+                    "id": h.id,
+                    "text": h.payload["text"][:1000],
+                    "preview_truncated": len(h.payload["text"]) > 1000,
+                }
+                for h in list(hits.values())[:30]
+            ],
             "snapshots": [{"id": k, "title": v["payload"]["title"]} for k, v in catalog.items()][:40],
         }
         spend(p.trace, "tool_decision", p.max_calls)
@@ -92,7 +129,12 @@ async def run_tools(pipe, state):
             async with asyncio.timeout(pipe.settings.chat_agent_timeout_seconds):
                 result = await pipe.llm.invoke_chain(
                     rewrite_prompt()
-                    | pipe.llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=768),
+                    | pipe.llm.bind_model(
+                        json_output=True,
+                        thinking=False,
+                        temperature=0,
+                        max_tokens=2048 if "calculator" in available else 768,
+                    ),
                     {"policy": prompt("tools"), "history": [], "question": json.dumps(payload, ensure_ascii=False)},
                 )
             data, _ = decode_output(result.content)
@@ -109,7 +151,10 @@ async def run_tools(pipe, state):
         arguments = (
             step.query
             if action in {"local_search", "web_search"}
-            else json.dumps({"ids": sorted(step.snapshot_ids), "allocation": step.allocation}, sort_keys=True)
+            else json.dumps(
+                {"ids": sorted(step.snapshot_ids), "allocation": step.allocation, "build_data": step.build_data},
+                sort_keys=True,
+            )
         )
         identity = key(action, arguments)
         if action not in available or (identity in seen and action not in {"finish", "stop", "clarify"}):
@@ -122,6 +167,15 @@ async def run_tools(pipe, state):
                 row["status"] = "denied_web_required"
                 observations.append({"status": "always_requires_web_before_finish"})
                 continue
+            invalid = len(set(step.evidence_ids)) != len(step.evidence_ids) or any(
+                i not in shown_ids for i in step.evidence_ids
+            )
+            p.trace["evidence_selection"] = {
+                "method": "model" if step.evidence_ids and not invalid else "rank_fallback",
+                "ids": [] if invalid else step.evidence_ids,
+            }
+            if invalid:
+                p.trace["evidence_selection"]["reason"] = "invalid_or_duplicate_id"
             row["status"] = "ok"
             stop_reason = action
             break
@@ -160,12 +214,22 @@ async def run_tools(pipe, state):
             elif action == "source_snapshot":
                 if not step.snapshot_ids or any(k not in catalog for k in step.snapshot_ids):
                     raise ValueError("unknown_snapshot")
-                found = [Hit(k, 0.0, dict(catalog[k]["payload"])) for k in step.snapshot_ids]
+                found = [
+                    (WebHit if catalog[k].get("web") else Hit)(k, 0.0, dict(catalog[k]["payload"]))
+                    for k in step.snapshot_ids
+                ]
             elif action == "calculator":
                 from app.rag.build_math import check_allocation
 
                 profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
-                row["calculation"] = check_allocation(step.allocation, profile)
+                if step.build_data:
+                    from app.rag.build_data import check
+
+                    p.checked_build = check(step.build_data, step.allocation, profile, list(hits.values()))
+                    pipe.build_cache.put(p.checked_build["data"], [hits[i] for i in p.checked_build["sources"]])
+                    row["calculation"] = {k: v for k, v in p.checked_build.items() if k != "data"}
+                else:
+                    row["calculation"] = check_allocation(step.allocation, profile)
             for h in found:
                 if (
                     isinstance(h, WebHit)
@@ -175,6 +239,15 @@ async def run_tools(pipe, state):
             row.update(status="ok", returned=len(found))
         except (UnavailableError, TimeoutError, WebSearchError, ValueError) as exc:
             row.update(status="error", error_type=type(exc).__name__)
+            if action == "calculator":
+                row["validation"] = (
+                    [
+                        {"field": list(e["loc"]), "type": e["type"]}
+                        for e in exc.errors(include_input=False, include_url=False)
+                    ]
+                    if isinstance(exc, ValidationError)
+                    else str(exc)[:200]
+                )
         row["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
         observations.append({k: v for k, v in row.items() if k != "query"})
     p.trace["tool_stop"] = stop_reason

@@ -13,6 +13,9 @@ def main(argv=None):
     parser.add_argument("--output", type=Path)
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--probe-images", action="store_true", help="GET/decode/hash returned images and save run-local copies"
+    )
     parser.add_argument("--allow-llm", action="store_true")
     parser.add_argument("--allow-web", action="store_true")
     parser.add_argument("--allow-embedding", action="store_true")
@@ -30,6 +33,8 @@ def main(argv=None):
             or case.get("lang") not in {"vi", "en"}
             or not isinstance(case.get("id"), str)
             or case["id"] in ids
+            or case.get("web_search", "auto") not in {"off", "auto", "always"}
+            or case.get("endpoint", "chat") not in {"chat", "chat/stream"}
         ):
             parser.error("Invalid or duplicate manifest row")
         ids.add(case["id"])

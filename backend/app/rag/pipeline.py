@@ -213,6 +213,7 @@ def select_context(
     spoilers: bool = True,
     entities: list[str] | None = None,
     query: str = "",
+    preserve_order: bool = False,
 ) -> list[Hit]:
     admission = policy or CorpusPolicy()
     selected, seen, seen_content, used = [], set(), set(), 0
@@ -228,7 +229,7 @@ def select_context(
         if urlsplit(p["url"]).scheme not in {"https", "http"} or not urlsplit(p["url"]).netloc:
             continue
         eligible.append(hit)
-    for hit in coverage_order(eligible, entities or [], query):
+    for hit in eligible if preserve_order else coverage_order(eligible, entities or [], query):
         key = content_key(hit)
         if hit.id in seen or (key is not None and key in seen_content):
             continue
@@ -829,14 +830,27 @@ class ChatPipeline:
     def _context(self, state: dict) -> dict:
         p = state["prepared"]
         if p.static_answer is None:
+            original_candidates = [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])
+            candidates = merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", []))
+            model_selection = self._agent_active(state) and self.settings.chat_tool_agent_enabled
+            if model_selection:
+                ids = p.trace.get("evidence_selection", {}).get("ids", [])
+                if p.checked_build is not None:
+                    ids = list(dict.fromkeys([*p.checked_build["sources"], *ids]))[:5]
+                if ids:
+                    by_id = {h.id: h for h in original_candidates}
+                    candidates = [by_id[i] for i in ids]
+                else:
+                    p.trace.setdefault("evidence_selection", {"method": "rank_fallback", "ids": []})
             p.hits = select_context(
-                merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", [])),
+                candidates,
                 self.settings.rag_top_k,
                 self.settings.rag_context_chars,
                 policy=self.policy,
                 spoilers=state["req"].options.spoilers,
-                entities=state.get("entities"),
-                query=state["req"].message + "\n" + state["query"],
+                preserve_order=model_selection,
+                entities=[] if model_selection else state.get("entities"),
+                query="" if model_selection else state["req"].message + "\n" + state["query"],
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
             if not p.hits and not (self._agent_active(state) and self.settings.chat_tool_agent_enabled):
@@ -871,6 +885,7 @@ class ChatPipeline:
                     "original_user_message": req.message,
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
+                    "checked_build": p.checked_build,
                 },
                 ensure_ascii=False,
             ),

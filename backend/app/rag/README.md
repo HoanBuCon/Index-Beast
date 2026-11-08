@@ -1,5 +1,13 @@
 # IndexBeast: LangGraph, LangChain và corpus thử nghiệm
 
+## Evidence, ảnh và build có nguồn — 07/11/2026
+
+Luồng tool-agent chọn context bằng ID và metadata, ảnh local/web qua metadata selector,
+calculator mới nhận dữ liệu class/weapon có nguồn thay vì chỉ Samurai/Moonveil.
+Xem [contract, kiểm kê rule và lệnh benchmark](../../../docs/api/evidence-media-build.md).
+Nhánh compatibility cũ vẫn tồn tại; validation số học/citation không phải human review hay chứng minh entailment.
+
+
 ## Bounded tool agent — 06/11/2026
 
 Khi `CHAT_AGENT_ENABLED=true`, default `CHAT_TOOL_AGENT_ENABLED=true` bổ sung vòng model chọn tool theo observation,

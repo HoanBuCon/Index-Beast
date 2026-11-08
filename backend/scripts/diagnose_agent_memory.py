@@ -214,6 +214,8 @@ async def execute(args, manifest, cases):
                     row["phase"] = "decision"
                 elif inputs.get("policy", "").startswith("You are IndexBeast's bounded tool"):
                     row["phase"] = "tool_decision"
+                elif inputs.get("policy", "").startswith("Select images"):
+                    row["phase"] = "image_selection"
                 return row
 
         counted = CountedAgent(ctx.llm, len(cases) * 6)
@@ -301,7 +303,11 @@ async def execute(args, manifest, cases):
                         "message": case["question"],
                         "channel": "web",
                         "turn_id": str(uuid4()),
-                        "options": {"web_search": "auto", "lang": case["lang"], "spoilers": True},
+                        "options": {
+                            "web_search": case.get("web_search", "auto"),
+                            "lang": case["lang"],
+                            "spoilers": True,
+                        },
                         **group,
                     }
                     endpoint = case.get("endpoint", "chat")
@@ -337,11 +343,46 @@ async def execute(args, manifest, cases):
                         await asyncio.to_thread(private_state, state_path, groups)
                         data.pop("conversation_token", None)
                         row.update(status="ok", response=data)
+                        if getattr(args, "probe_images", False):
+                            import io
+
+                            from PIL import Image
+
+                            row["image_checks"] = []
+                            for im in data.get("images", []):
+                                probe = {"id": im["id"], "association": im.get("association")}
+                                row["image_checks"].append(probe)
+                                if (
+                                    not re.fullmatch(r"[0-9a-f]{64}", im["id"])
+                                    or im["url"] != "/api/v1/images/" + im["id"]
+                                ):
+                                    probe["error"] = "invalid_server_image_url"
+                                    continue
+                                image_response = await http.get(im["url"])
+                                probe.update(
+                                    http_status=image_response.status_code,
+                                    mime=image_response.headers.get("content-type"),
+                                )
+                                if image_response.status_code == 200:
+                                    raw = image_response.content
+                                    probe["hash_matches"] = hashlib.sha256(raw).hexdigest() == im["id"]
+                                    with Image.open(io.BytesIO(raw)) as raster:
+                                        raster.load()
+                                        probe.update(format=raster.format, width=raster.width, height=raster.height)
+                                        extension = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp", "GIF": ".gif"}[
+                                            raster.format
+                                        ]
+                                    folder = args.output / "images"
+                                    folder.mkdir(exist_ok=True)
+                                    path = folder / (im["id"] + extension)
+                                    path.write_bytes(raw)
+                                    probe["inspection_file"] = str(path.resolve())
                     prepared = observed.get("prepared")
                     if prepared:
                         row["trace"] = {k: v for k, v in prepared.trace.items() if k != "result"}
                         row["resolved_question"] = json.loads(prepared.values["payload"])["question"]
                         row["evidence_ids"] = [h.id for h in prepared.hits]
+                        row["checked_build"] = prepared.checked_build
                 except Exception as exc:
                     row.update(status="error", error_type=type(exc).__name__)
                 finally:

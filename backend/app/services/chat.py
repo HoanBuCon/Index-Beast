@@ -243,10 +243,21 @@ class LiveChatService:
             for msg in state.conversation.messages[-64:]
         ]
 
-    async def _images(self, req, prepared, result) -> list[ChatImage]:
+    async def _images(self, req, prepared, result, started=None) -> list[ChatImage]:
         if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
             return []
         try:
+            if self.pipeline.settings.chat_agent_enabled and self.pipeline.settings.chat_tool_agent_enabled:
+                from app.services.answer_media import resolve
+
+                remaining = (
+                    self.pipeline.settings.chat_timeout_seconds - (time.perf_counter() - started) if started else 7
+                )
+                if remaining <= 1:
+                    prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
+                    return []
+                async with asyncio.timeout(min(6, remaining - 1)):
+                    return await resolve(self, req, prepared, result)
             resolved = await self.image_catalog.resolve(
                 prepared.hits, [s.index for s in result.sources if s.origin != "web"], spoilers=req.options.spoilers
             )
@@ -355,7 +366,7 @@ class LiveChatService:
                         return replay
                     prepared, player = await self._prepare(req, state)
                     result = await self.pipeline.generator.generate(prepared)
-                    images = await self._images(req, prepared, result)
+                    images = await self._images(req, prepared, result, started)
                     return await self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
             raise TimeoutAppError() from None
@@ -419,7 +430,7 @@ class LiveChatService:
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
-                    images = await self._images(req, prepared, result)
+                    images = await self._images(req, prepared, result, started)
                     response = replay or await self._save(req, state, prepared, result, started, images, player)
                     yield (
                         "sources",
