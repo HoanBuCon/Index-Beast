@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Chấm golden set 25 câu theo độ khó (09/11/2026)](2026-11-09_s3-tv3_cham-golden-25-theo-do-kho.md)
+
 - [TV3 · So sánh và hỏi bổ sung đúng lý do (09/11/2026)](2026-11-09_s3-tv3_so-sanh-va-hoi-bo-sung.md)
 
 - [TV2 · Commit và PR structured tables (09/11/2026)](2026-11-09_s3-tv2_commit-va-pr-structured-tables.md)
