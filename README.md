@@ -17,14 +17,16 @@ Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xe
 
 **Phạm vi hiện tại:** Elden Ring có nguồn, gồm lore, gameplay và tư vấn build định tính; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Dữ liệu gameplay còn thiếu bảng stat/acquisition/combat đã bị lọc; xem [audit khả năng thực tế và cách thử](docs/testing/2026-10-29_elden-ring-assistant-capabilities.md). Các tài liệu SRS/ADR cũ cần nhóm đồng bộ riêng.
 
-## 4 con Hollows
+## Thành viên 4 Hollows
 
-| Mã | Thành viên | Vai trò |
-|---|---|---|
-| TV1 | Hoanbucon | Tech Lead · Backend & DevOps |
-| TV2 | UncleThing | Data Engineer |
-| TV3 | MinhMuc | AI / RAG Engineer |
-| TV4 | QuyVuiVe | Frontend & Discord Bot |
+Mở phần của từng thành viên để xem việc đã làm, việc còn cần nghiệm thu và kế hoạch đến cuối Sprint 6.
+
+| Mã | Thành viên | Vai trò | Phân công và tiến độ |
+|---|---|---|---|
+| TV1 | Hoanbucon | Tech Lead · Backend & DevOps | [Công việc TV1](backend/README-TV1-TV3.md#tv1-hoanbucon) |
+| TV2 | UncleThing | Data Engineer | [Công việc TV2](backend/README-TV2-TV4.md#tv2-unclething) |
+| TV3 | MinhMuc | AI / RAG Engineer | [Công việc TV3](backend/README-TV1-TV3.md#tv3-minhmuc) |
+| TV4 | QuyVuiVe | Frontend & Discord Bot | [Công việc TV4](backend/README-TV2-TV4.md#tv4-quyvuive) |
 
 ## Tài liệu
 

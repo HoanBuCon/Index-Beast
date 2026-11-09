@@ -1,5 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · README công việc TV2, TV4 và mục tra cứu thành viên (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv2-tv4.md)
+
+- [TV3 · README công việc TV1 và TV3 qua 6 sprint (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv1-tv3.md)
+
 - [TV3 · Chấm golden set 25 câu theo độ khó (09/11/2026)](2026-11-09_s3-tv3_cham-golden-25-theo-do-kho.md)
 
 - [TV3 · So sánh và hỏi bổ sung đúng lý do (09/11/2026)](2026-11-09_s3-tv3_so-sanh-va-hoi-bo-sung.md)
