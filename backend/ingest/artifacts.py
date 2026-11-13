@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from datetime import UTC, datetime
+from pathlib import Path, PureWindowsPath
 
 
 def now():
@@ -27,3 +28,15 @@ def save(path, value):
 
 def read(path):
     return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def local_snapshot(recorded, data_dir):
+    """Artifact ghi đường dẫn tuyệt đối của máy tạo ra nó (vd. D:/Index-Beast/backend/data/raw/...).
+    Trên máy khác, tìm cùng file theo phần sau thư mục `raw` trong data dir hiện tại; hash vẫn được kiểm sau đó."""
+    path = Path(recorded)
+    if path.exists():
+        return path
+    parts = PureWindowsPath(recorded).parts
+    if "raw" not in parts:
+        return path
+    return data_dir.joinpath(*parts[parts.index("raw") :])
