@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV2 · Sprint 4: chất lượng wiki, spoiler và eval local (12/11/2026)](2026-11-12_s4-tv2_wiki-quality.md)
+
 - [TV3 · README công việc TV2, TV4 và mục tra cứu thành viên (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv2-tv4.md)
 
 - [TV3 · README công việc TV1 và TV3 qua 6 sprint (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv1-tv3.md)

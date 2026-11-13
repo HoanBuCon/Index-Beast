@@ -12,6 +12,8 @@ def context_prefix(doc, section, unit):
     variant = section.get("variant_context")
     if variant and variant.get("label"):
         lines.append("Variant: " + variant["label"])
+    if unit.get("quest_stage"):
+        lines.append("Quest stage: " + unit["quest_stage"])
     if unit.get("lang") not in (None, "unknown"):
         lines.append("Language: " + unit["lang"])
     if unit.get("speaker"):
@@ -119,6 +121,7 @@ def prepare_units(doc, section, tokenizer, cap):
     units = []
     buffer = []
     indices = []
+    stage = None
 
     def flush():
         nonlocal buffer, indices
@@ -132,6 +135,7 @@ def prepare_units(doc, section, tokenizer, cap):
                     "trigger": None,
                     "speaker": None,
                     "block_indices": indices[:],
+                    "quest_stage": stage,
                     "source_locations": [b["location"] for b in buffer],
                 }
             )
@@ -139,6 +143,9 @@ def prepare_units(doc, section, tokenizer, cap):
         indices = []
 
     for index, block in enumerate(section["blocks"]):
+        if block.get("quest_stage_start"):
+            flush()
+            stage = block["text"]
         if block["kind"] == "dialogue":
             flush()
             if not block.get("turns"):
@@ -175,7 +182,7 @@ def prepare_units(doc, section, tokenizer, cap):
             )
         else:
             candidate = "\n".join([b["text"] for b in buffer] + [block["text"]])
-            prefix = context_prefix(doc, section, {"lang": section["lang"]})
+            prefix = context_prefix(doc, section, {"lang": section["lang"], "quest_stage": stage})
             if buffer and token_count(tokenizer, prefix + candidate) > cap:
                 flush()
             buffer.append(block)
