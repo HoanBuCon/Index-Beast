@@ -53,3 +53,12 @@ def test_json_booleans_are_not_metrics(tmp_path):
 def test_git_sha_choices():
     assert eval_runs.git_sha("none") is None
     assert eval_runs.git_sha("abc123") == "abc123"
+
+
+def test_json_file_must_be_an_object_and_readable(tmp_path):
+    report = tmp_path / "report.json"
+    report.write_text("[1, 2]")
+    with pytest.raises(SystemExit, match="object"):
+        eval_runs.build(args(from_json=str(report)))
+    with pytest.raises(SystemExit, match="Không đọc được"):
+        eval_runs.build(args(from_json=str(tmp_path / "missing.json")))

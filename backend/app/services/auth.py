@@ -19,6 +19,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 
 from core.config import Settings
+from core.db import repositories as repo
 from core.db.models import AuthSession, Conversation, User
 from core.errors import BadRequestError, NotFoundError, UnauthorizedError, UnavailableError
 
@@ -92,14 +93,12 @@ async def upsert_user(sessionmaker, settings: Settings, discord_id: str, display
 
 
 async def create_session(sessionmaker, user_id: UUID, days: int) -> str:
-    """Trả token thô cho cookie; DB chỉ giữ SHA-256. Dọn luôn các phiên đã hết hạn của người này."""
+    """Trả token thô cho cookie; DB chỉ giữ SHA-256. Dọn luôn mọi phiên đã hết hạn (dùng chỉ mục expires_at)."""
     token = secrets.token_urlsafe(32)
     now = datetime.now(UTC)
     try:
         async with sessionmaker() as session, session.begin():
-            await session.execute(
-                delete(AuthSession).where(AuthSession.user_id == user_id, AuthSession.expires_at < now)
-            )
+            await session.execute(delete(AuthSession).where(AuthSession.expires_at < now))
             session.add(
                 AuthSession(user_id=user_id, token_hash=hash_token(token), expires_at=now + timedelta(days=days))
             )
@@ -136,8 +135,6 @@ async def end_session(sessionmaker, token: str | None) -> None:
 
 async def list_conversations(sessionmaker, user_id: UUID, limit: int = 50) -> list[tuple[UUID, str, datetime]]:
     """Hội thoại của người dùng, mới nhất trước: (id, câu hỏi đầu, giờ tạo)."""
-    from core.db import repositories as repo
-
     try:
         async with sessionmaker() as session:
             rows = await repo.conversations_of_user(session, user_id, limit)

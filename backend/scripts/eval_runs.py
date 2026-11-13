@@ -63,7 +63,12 @@ def build(args) -> tuple[dict[str, Any], dict[str, float]]:
     config: dict[str, Any] = {}
     raw_metrics: dict[str, Any] = {}
     if args.from_json:
-        data = json.loads(Path(args.from_json).read_text(encoding="utf-8"))
+        try:
+            data = json.loads(Path(args.from_json).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise SystemExit(f"Không đọc được {args.from_json}: {exc}") from None
+        if not isinstance(data, dict):
+            raise SystemExit('File JSON phải là một object có khóa "metrics" và "config".')
         config.update(data.get("config") or {})
         raw_metrics.update(data.get("metrics") or {})
     config.update(parse_pairs(args.config or [], "--config"))
