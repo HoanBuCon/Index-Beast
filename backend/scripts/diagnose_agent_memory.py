@@ -190,7 +190,9 @@ async def execute(args, manifest, cases):
                 "chat_mode": "rag",
                 "chat_persistence": "postgres",
                 "chat_agent_enabled": True,
-                "chat_agent_max_calls": 6,
+                "chat_agent_max_calls": None,
+                "chat_tool_steps": None,
+                "chat_tool_queries": None,
                 "chat_memory_collection": collection,
                 "web_search_mode": "auto",
                 "llm_max_retries": 0,
@@ -218,16 +220,12 @@ async def execute(args, manifest, cases):
                     row["phase"] = "image_selection"
                 return row
 
-        counted = CountedAgent(ctx.llm, len(cases) * 6)
+        counted = CountedAgent(ctx.llm)
         counted.calls = list(report["logical_model_calls"])
         ctx.llm = counted
         original_post = ctx.web_search._post
-        tool_counts = Counter()
 
         async def post(endpoint, payload):
-            tool_counts[endpoint] += 1
-            if tool_counts[endpoint] > 1 or endpoint not in {"search", "extract"}:
-                raise RuntimeError("Per-turn Tavily budget exceeded")
             row = {"endpoint": endpoint, "status": "running"}
             report["tavily_requests"].append(row)
             try:
@@ -250,6 +248,8 @@ async def execute(args, manifest, cases):
                 "rag_top_k",
                 "chat_timeout_seconds",
                 "chat_agent_max_calls",
+                "chat_tool_steps",
+                "chat_tool_queries",
             )
         }
         app = create_app(settings, context=ctx)
@@ -282,7 +282,6 @@ async def execute(args, manifest, cases):
                     return prepared
 
                 service.pipeline.prepare = track
-                tool_counts.clear()
                 start_calls = len(counted.calls)
                 row = {
                     "id": case["id"],

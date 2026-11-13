@@ -33,6 +33,7 @@ from app.rag.query_plan import content_key, fuse_ranked, plan_queries
 from app.rag.reranker import NoReranker, Reranker
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.rewrite import contextual_followup, rewrite
+from app.rag.task_plan import start_plan
 from app.rag.web_query import web_query
 from app.rag.web_search import assess, merge_evidence
 from core.config import Settings
@@ -67,6 +68,8 @@ class PreparationState(TypedDict, total=False):
     local_context: list[dict]
     memory_scope: object
     memory_candidates: list[dict]
+    name_to_check: str
+    verify_coverage: bool
 
 
 def language(question: str, requested: str) -> str:
@@ -411,7 +414,14 @@ class ChatPipeline:
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
         if self._agent_active(state):
-            prepared.max_calls = self.settings.chat_agent_max_calls
+            state["verify_coverage"] = (
+                self.settings.chat_tool_agent_enabled
+                and self.web_search is not None
+                and state["search_mode"] == "auto"
+                and req.options.spoilers
+            )
+            if not state["verify_coverage"]:
+                prepared.max_calls = self.settings.chat_agent_max_calls
             return state
         if outside_scope(req.message):
             prepared.static_answer = (
@@ -459,7 +469,9 @@ class ChatPipeline:
             state.get("memory_candidates", []),
             working,
             p.lang,
-            self.settings,
+            self.settings.model_copy(update={"chat_agent_max_calls": None})
+            if state.get("verify_coverage")
+            else self.settings,
             p.trace,
             shared_thread=shared_thread,
             requested_lang=req.options.lang,
@@ -490,17 +502,25 @@ class ChatPipeline:
             "pending": None,
             "updated": time.time(),
         }
+        if decision.turn_type == "clarification_reply" and pending and working.get("plan"):
+            p.player_state["plan"] = [{**item} for item in working["plan"]]
+            p.player_state["plan_evidence"] = working.get("plan_evidence", [])
+        elif decision.subgoals and self.settings.chat_tool_agent_enabled:
+            p.player_state["plan"] = start_plan(decision.subgoals)
         state["next_player"] = p.player_state
         if decision.intent == "cancel":
             p.player_state = state["next_player"] = {"updated": time.time(), "constraints": [], "pending": None}
         state["history"] = []
         state["entities"] = decision.entities
+        state["name_to_check"] = decision.name_to_check
         state["query"] = decision.search_query if decision.rewrite else req.message
         state["resolved_question"] = decision.resolved_question or req.message
         state["gameplay"] = decision.intent in {"build", "route", "quest", "mechanics", "acquisition"}
+        fallback = p.trace["agent"]["reason"] == "original_query_fallback"
+        p.trace["rewrite_fallback"] = fallback
         p.trace["rewrite"] = {
-            "status": "accepted" if decision.rewrite else "not_run",
-            "reason": "agent_decision",
+            "status": "fallback" if fallback else "accepted" if decision.rewrite else "not_run",
+            "reason": "original_query_fallback" if fallback else "agent_decision",
             "model_calls": 0,
         }
         p.trace["memory"]["selected_ids"] = decision.selected_memory_ids
@@ -513,6 +533,8 @@ class ChatPipeline:
             )
             p.clarification = clarification
             p.player_state["pending"] = clarification.model_dump(mode="json")
+            if p.player_state.get("plan"):
+                p.trace["task_plan"] = p.player_state["plan"]
         if decision.action != "retrieve":
             p.static_answer = decision.reply
         return state
@@ -845,7 +867,7 @@ class ChatPipeline:
                     ids = list(dict.fromkeys([*p.checked_build["sources"], *ids]))[:5]
                 if ids or selection.get("method") == "model":
                     by_id = {h.id: h for h in original_candidates}
-                    candidates = [by_id[i] for i in ids]
+                    candidates = [by_id[i] for i in ids if i in by_id]
                 else:
                     p.trace.setdefault("evidence_selection", {"method": "rank_fallback", "ids": []})
             p.hits = select_context(
@@ -891,6 +913,8 @@ class ChatPipeline:
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
                     "checked_build": p.checked_build,
+                    **({"task_plan": p.trace["task_plan"]} if p.trace.get("task_plan") else {}),
+                    **({"verified_name": p.trace["verified_name"]} if p.trace.get("verified_name") else {}),
                 },
                 ensure_ascii=False,
             ),

@@ -24,6 +24,7 @@ class Assessment(BaseModel):
     evidence: dict[
         str, Annotated[list[Annotated[str, Field(pattern=r"^q\d{1,4}$")]], Field(min_length=1, max_length=3)]
     ] = Field(max_length=5)
+    followup_query: str = Field(default="", max_length=600)
 
     @field_validator("evidence", mode="before")
     @classmethod
@@ -34,17 +35,21 @@ class Assessment(BaseModel):
         return {key: [ids] if isinstance(ids, str) else ids for key, ids in value.items()}
 
 
-async def assess(llm, question, history, context, deadline_seconds):
+async def assess(llm, question, history, context, deadline_seconds, *, task=None):
     if not context:
         return "insufficient", {"status": "insufficient", "reason": "no_context", "decision": "local_insufficient"}
     try:
         async with asyncio.timeout(deadline_seconds):
             result = await llm.invoke_chain(
-                rewrite_prompt() | llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=512),
+                rewrite_prompt()
+                | llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=768 if task else 512),
                 {
                     "policy": prompt("assess"),
                     "history": history,
-                    "question": json.dumps({"question": question, "context": context}, ensure_ascii=False),
+                    "question": json.dumps(
+                        {"question": question, "context": context, **({"task": task} if task else {})},
+                        ensure_ascii=False,
+                    ),
                 },
             )
         data, _ = decode_output(result.content)
@@ -63,6 +68,7 @@ async def assess(llm, question, history, context, deadline_seconds):
             "status": parsed.status,
             "reason": "assessed",
             "decision": "ambiguous" if parsed.status == "ambiguous" else f"local_{parsed.status}",
+            **(parsed.model_dump(include={"covered", "missing", "evidence", "followup_query"}) if task else {}),
         }
     except (TimeoutError, LLMError, ValueError):
         # Conservative search fallback, not proof of absence or fabricated confidence.

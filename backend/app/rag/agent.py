@@ -4,7 +4,7 @@ import asyncio
 import json
 import re
 import time
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -12,15 +12,19 @@ from app.adapters.llm import LLMError
 from app.api.schemas.chat import ClarificationField
 from app.rag.output import decode_output
 from app.rag.prompts import prompt, rewrite_prompt
-from app.rag.rewrite import _contains, preserves_numbers
+from app.rag.rewrite import _contains, contains_name, name_key, preserves_numbers
 from core.errors import UnavailableError, UpstreamError
+
+GoalText = Annotated[str, Field(min_length=1, max_length=240)]
+
+
+class QueryNameMismatch(ValueError):
+    """The source entity is valid, but its name disappeared from the proposed query."""
 
 
 def spend(trace: dict, phase: str, maximum: int | None):
-    if maximum is None:
-        return
     calls = trace.setdefault("model_calls", [])
-    if len(calls) >= maximum:
+    if maximum is not None and len(calls) >= maximum:
         raise UnavailableError("Lượt hỏi đã đạt giới hạn xử lý. Hãy gửi yêu cầu cụ thể hơn.")
     calls.append({"phase": phase})
 
@@ -60,10 +64,22 @@ class AgentDecision(BaseModel):
     constraints: list[Constraint] = Field(max_length=10)
     missing: list[ClarificationField] = Field(max_length=2)
     reply: str = Field(max_length=1000)
+    subgoals: list[GoalText] = Field(default_factory=list, max_length=4)
+    name_to_check: str = Field(default="", max_length=100)
     reason: Literal["ready", "missing_player_details", "ambiguous_subject", "conversation_control", "unrelated"]
 
     @model_validator(mode="after")
     def coherent(self):
+        if self.subgoals and (
+            len(self.subgoals) < 2 or len({s.strip().casefold() for s in self.subgoals}) != len(self.subgoals)
+        ):
+            raise ValueError("A plan requires distinct subgoals")
+        if self.subgoals and (self.action not in {"retrieve", "clarify"} or any(not s.strip() for s in self.subgoals)):
+            raise ValueError("Plan requires a game request")
+        if self.name_to_check and (
+            self.action != "retrieve" or not any(name_key(n) == name_key(self.name_to_check) for n in self.entities)
+        ):
+            raise ValueError("Name lookup requires an unresolved entity surface in retrieval")
         if self.action == "retrieve" and (not self.search_query.strip() or not self.resolved_question.strip()):
             raise ValueError("Retrieval requires a resolved question and query")
         if self.action == "clarify" and (not self.missing or not self.reply.strip()):
@@ -128,7 +144,8 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
         if item["source_id"] != "current":
             sources[item["source_id"]] = sources.get(item["source_id"], "") + "\n" + item["value"]
     for item in decision.constraints:
-        if item.source_id not in sources or not _contains(sources[item.source_id], item.value):
+        contains_value = contains_name if item.key in {"weapon", "starting_class", "location"} else _contains
+        if item.source_id not in sources or not contains_value(sources[item.source_id], item.value):
             raise ValueError("Constraint not present in its user source")
         # An old question is not authority to reinstate a superseded player fact.
         latest = next((c for c in working.get("constraints", []) if c["key"] == item.key), None)
@@ -144,8 +161,10 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
     context = question + "\n" + "\n".join(row["text"] for row in selected)
     context += "\n" + request_text
     context += "\n" + "\n".join(c.value for c in decision.constraints)
-    if any(not name.strip() or not _contains(context, name) for name in decision.entities):
+    if any(not contains_name(context, name) for name in decision.entities):
         raise ValueError("Entity has no supplied user provenance")
+    if decision.name_to_check and not contains_name(context, decision.name_to_check):
+        raise ValueError("Suspected spelling has no supplied user provenance")
     if decision.action == "retrieve":
         # Invariants only: no legacy name/intent classifier or equipment allowlist decides acceptance.
         # Without rewriting, retrieval executes the original question. An unused search_query
@@ -157,8 +176,8 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
             if not preserves_numbers(question, query) or not preserves_numbers(query, context):
                 raise ValueError("Query changed numeric constraints")
             for name in decision.entities:
-                if not name.strip() or not _contains(context, name) or not _contains(query, name):
-                    raise ValueError("Entity has no supplied user provenance")
+                if not contains_name(query, name):
+                    raise QueryNameMismatch("Entity has no supplied user provenance in query")
             for goal in ("PvE", "PvP", "NG+"):
                 if goal.casefold() in question.casefold() and goal.casefold() not in query.casefold():
                     raise ValueError("Goal dropped")
@@ -180,13 +199,14 @@ async def decide(
     spend(trace, "decision", settings.chat_agent_max_calls)
     diagnostic = {"status": "error", "reason": "invalid_decision"}
     trace["agent"] = diagnostic
+    original_query = None
     try:
         payload = {
             "question": question,
             "answer_language": lang,
             "requested_language": requested_lang,
             "memories": candidates,
-            "working_state": working,
+            "working_state": {k: v for k, v in working.items() if k != "plan_evidence"},
             "shared_thread": shared_thread,
         }
         async with asyncio.timeout(settings.chat_agent_timeout_seconds):
@@ -199,7 +219,16 @@ async def decide(
                 try:
                     decision = AgentDecision.model_validate(data)
                     decision, normalized = normalize_sources(decision, candidates, working)
-                    check_decision(decision, question, candidates, working)
+                    try:
+                        check_decision(decision, question, candidates, working)
+                    except QueryNameMismatch:
+                        if decision.turn_type == "new" and decision.rewrite:
+                            fallback = decision.model_copy(
+                                update={"rewrite": False, "resolved_question": question, "search_query": question}
+                            )
+                            check_decision(fallback, question, candidates, working)
+                            original_query = (fallback, normalized)
+                        raise
                 except ValueError as exc:
                     required = {k for k, v in AgentDecision.model_fields.items() if v.is_required()}
                     # Repair only a complete, recognizable decision; never turn arbitrary JSON into a fake success.
@@ -208,7 +237,10 @@ async def decide(
                         or not isinstance(data, dict)
                         or not required <= data.keys()
                         or data.keys() - AgentDecision.model_fields.keys()
-                        or len(trace.get("model_calls", [])) >= settings.chat_agent_max_calls - 1
+                        or (
+                            settings.chat_agent_max_calls is not None
+                            and len(trace.get("model_calls", [])) >= settings.chat_agent_max_calls - 1
+                        )
                     ):
                         raise
                     from pydantic import ValidationError
@@ -243,8 +275,20 @@ async def decide(
     except TimeoutError:
         diagnostic["reason"] = "timeout"
         raise UnavailableError("Bước hiểu yêu cầu vượt thời gian xử lý. Vui lòng thử lại.") from None
-    except ValueError as exc:
-        diagnostic["reason"] = "timeout" if isinstance(exc, TimeoutError) else "invalid_decision"
+    except ValueError:
+        if original_query is not None:
+            decision, normalized = original_query
+            diagnostic.update(
+                status="ok",
+                action=decision.action,
+                intent=decision.intent,
+                turn_type=decision.turn_type,
+                rewrite=False,
+                reason="original_query_fallback",
+                selected_memory_ids=decision.selected_memory_ids,
+                normalized_source_refs=normalized,
+            )
+            return decision
         return None
     finally:
         diagnostic["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)

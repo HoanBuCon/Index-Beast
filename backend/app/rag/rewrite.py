@@ -155,6 +155,15 @@ def _contains(text: str, surface: str) -> bool:
     return re.search(r"(?<!\w)" + re.escape(_normalized(surface)) + r"(?!\w)", _normalized(text)) is not None
 
 
+def name_key(text: str) -> str:
+    return " ".join(re.sub(r"(?<=[^\W\d_]),\s*(?=[^\W\d_])", " ", _normalized(text)).split())
+
+
+def contains_name(text: str, name: str) -> bool:
+    key = name_key(name)
+    return bool(key and re.search(r"(?<!\w)" + re.escape(key) + r"(?!\w)", name_key(text)))
+
+
 def rewrite_problem(question: str, query: str, entities: list[str], history: list[dict]) -> str | None:
     if not query.strip():
         return "empty_query"
@@ -165,11 +174,11 @@ def rewrite_problem(question: str, query: str, entities: list[str], history: lis
     # Assistant prose can neither authorize a new subject nor become game evidence.
     context = question + "\n" + "\n".join(str(row.get("content", "")) for row in history if row.get("role") == "user")
     for entity in entities:
-        if not entity.strip() or not _contains(context, entity):
+        if not contains_name(context, entity):
             return "unverified_entity"
-        if not _contains(query, entity):
+        if not contains_name(query, entity):
             return "entity_lost"
-    if any(not _contains(query, name) for name in protected_names(question)):
+    if any(not contains_name(query, name) for name in protected_names(question)):
         return "proper_name_lost"
     # Reject new numeric literals, except those explicitly provided by user history.
     user_context = (

@@ -459,19 +459,24 @@ class LiveChatService:
         return ManagedEvents(events(), cleanup)
 
     async def _replay(self, req, state, started):
-        if self.repository is None or req.turn_id is None:
+        if req.turn_id is None:
             return None
         user_id = uuid5(state.conversation.id, f"user:{req.turn_id}")
-        user = await self.repository.message(state.conversation.id, user_id)
+        answer_id = uuid5(state.conversation.id, f"assistant:{req.turn_id}")
+        if self.repository is None:
+            messages = {message.id: message for message in state.conversation.messages}
+            user, row = messages.get(user_id), messages.get(answer_id)
+        else:
+            user = await self.repository.message(state.conversation.id, user_id)
+            row = await self.repository.message(state.conversation.id, answer_id) if user is not None else None
         if user is None:
             return None
         if user.content != req.message:
             raise BadRequestError("Mã lượt hỏi đã dùng cho nội dung khác.")
-        row = await self.repository.message(
-            state.conversation.id, uuid5(state.conversation.id, f"assistant:{req.turn_id}")
-        )
         if row is None:
             raise UnavailableError("Lượt hỏi đã lưu chưa hoàn chỉnh.")
+        images = row.images if self.repository is None else (row.trace or {}).get("images", [])
+        clarification = row.clarification if self.repository is None else (row.trace or {}).get("clarification")
         return ChatResponse(
             conversation_id=state.conversation.id,
             message_id=row.id,
@@ -479,7 +484,7 @@ class LiveChatService:
             sources=row.sources,
             grounded=bool(row.grounded),
             latency_ms=(time.perf_counter() - started) * 1000,
-            images=(row.trace or {}).get("images", []),
-            clarification=(row.trace or {}).get("clarification"),
+            images=images,
+            clarification=clarification,
             conversation_token=state.token if req.channel == "web" else None,
         )

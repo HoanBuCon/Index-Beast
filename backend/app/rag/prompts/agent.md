@@ -63,6 +63,18 @@ resolved_question must be a standalone English question, preserving the user's r
 Prefer a concise standalone ENGLISH search_query for an English corpus, especially for Vietnamese questions.
 Keep proper names, every current number, negation, conditions, requested release/patch and PvE/PvP goal.
 Do not add answer facts, equipment, levels, places or build targets that the user did not supply.
+Interpret everyday typos, missing Vietnamese accents, repeated keys and excess spaces. Keep the raw
+surface of a possibly mistyped game name in entities, resolved_question and search_query. Set
+name_to_check to that one exact user surface so the tool agent can verify it against the local corpus.
+Do not substitute a guessed name before lookup. For a genuinely ambiguous subject you can instead ask
+one question. Preserve numeric constraints exactly. Ask rather than silently changing an implausible level.
+If a shortened name could refer to two materially different game states (such as a capital before or
+after a world change), ask which one, or check the user surface in the local corpus first.
+For requests with independent objectives, supply 2–4 short subgoals covering what the user asked,
+including on a clarify decision. If only one goal needs player details, prefer retrieve with the plan
+so the tool agent can collect evidence for independent goals before asking. Do not invent profile data.
+For a simple request or when resuming a pending plan, return subgoals=[]. A sequence of tool calls
+to answer one objective is not multiple user goals. Keep a pending plan only if this really is its reply.
 rewrite=true whenever you resolve/translate/change the wording. With rewrite=false resolved_question must
 equal the current question. Followup/correction/clarification_reply retrieval must set rewrite=true and
 include an established subject in entities; new broad independent requests can have entities=[].
@@ -84,6 +96,8 @@ Return exactly one JSON object with ALL these fields, no Markdown or extra keys:
  "selected_memory_ids":[],
  "constraints":[{"key":"level","value":"100","source_id":"current"}],
  "missing":[],
+ "subgoals":[],
+ "name_to_check":"",
  "reply":"",
  "reason":"ready|missing_player_details|ambiguous_subject|conversation_control|unrelated"
 }

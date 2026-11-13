@@ -54,14 +54,14 @@ def save(directory, report):
 
 
 class CountedLLM:
-    def __init__(self, delegate, maximum):
+    def __init__(self, delegate, maximum=None):
         self.delegate, self.maximum, self.calls = delegate, maximum, []
 
     def bind_model(self, **kwargs):
         return self.delegate.bind_model(**kwargs)
 
     def start(self, inputs, streaming=False):
-        if len(self.calls) >= self.maximum:
+        if self.maximum is not None and len(self.calls) >= self.maximum:
             raise RuntimeError("Logical LLM call budget exhausted")
         row = {
             "phase": "generation"
