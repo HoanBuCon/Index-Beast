@@ -13,8 +13,8 @@ from tests.unit.test_live_chat import FakeRetriever
 
 
 class ToolsLLM(AgentLLM):
-    def __init__(self, actions):
-        super().__init__()
+    def __init__(self, actions, decisions=None):
+        super().__init__(decisions)
         self.actions = iter(actions)
         self.observations = []
 

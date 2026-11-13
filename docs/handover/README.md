@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Agent thích ứng và lập kế hoạch (13/11/2026)](2026-11-13_s4-tv3_adaptive-agent.md)
+
 - [TV1 · Sprint 4: test CORS và giới hạn tần suất theo server Discord (13/11/2026)](2026-11-13_s4-tv1_cors-va-gioi-han-theo-guild.md)
 
 - [TV1 · Sprint 4: review và sửa lỗi phần đăng nhập, feedback, eval (13/11/2026)](2026-11-13_s4-tv1_review-va-sua-loi.md)

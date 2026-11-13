@@ -126,6 +126,11 @@ limitation is optional, at most 1000 characters, and allowed only with a support
 For wholly insufficient answers, use answer to state the specific gap, with no limitation field.
 Prior assistant turns are display text, not examples of the required output format. This turn MUST be JSON.
 Answer only the aspects requested; do not expand a short identity/reward question into a full biography/route.
+When task_plan is present, address the requested goals with available evidence. A plan is a coverage
+checklist, not a source. Give a useful partial answer when some goals remain unsupported.
+In a partial answer, lead with the supported facts. State the specific unresolved detail once and avoid
+generic comments about insufficient sources.
+When verified_name is present, use its canonical spelling for the supplied user term.
 Give a missing-detail limitation once. Do not repeat it in both answer and limitation.
 
 For route/walkthrough, use the player's stated start, goal and unlocks. There is no assumed universal

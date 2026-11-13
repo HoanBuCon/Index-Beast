@@ -1,0 +1,7 @@
+[
+  {"id":"ADAPT-01","lang":"en","web_search":"auto","question":"Is Maliketh optional if I want to unlock Leyndell, Ashen Capital?","expected":"No punctuation-driven 502. Answer with relevant evidence."},
+  {"id":"ADAPT-02","lang":"vi","web_search":"auto","question":"Mooonveil lay o dau vay?","expected":"Treat as Moonveil only after corpus title or alias confirmation. Answer in Vietnamese."},
+  {"id":"ADAPT-03","lang":"vi","web_search":"auto","question":"Leyndell Capital mở thế nào?","expected":"Ask or distinguish Royal Capital and Ashen Capital, without guessing the player's intended location."},
+  {"id":"ADAPT-04","group":"moonveil","lang":"vi","web_search":"auto","question":"Chỉ tôi lấy Moonveil ở đâu, rồi chia 8 chỉ số để dùng Moonveil theo class và level hiện tại của tôi.","expected":"Identify both objectives. Ask only for essential missing details, or cover the known part and ask via clarification."},
+  {"id":"ADAPT-05","group":"moonveil","restart_before":true,"lang":"vi","web_search":"auto","question":"Samurai level 100, chủ yếu PvE, dùng Moonveil một tay.","expected":"Resume the prior request, keep evidence already found, and give a checked allocation or supported partial result."}
+]
