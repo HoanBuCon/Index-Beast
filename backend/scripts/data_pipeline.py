@@ -53,7 +53,7 @@ def crawl_pages() -> int:
     return len(info.get("pages", [])) + len(info.get("errors", []))
 
 
-def latest(kind: str, version_key: str, prefix: str, pages_key: str) -> Path | None:
+def latest(kind: str, version_key: str, prefix: str | tuple[str, ...], pages_key: str) -> Path | None:
     """Thư mục mới nhất trong data/<kind> đúng phiên bản pipeline full và có đủ số trang của lượt crawl."""
     root, expected = DATA / kind, crawl_pages()
     candidates = []
@@ -65,12 +65,17 @@ def latest(kind: str, version_key: str, prefix: str, pages_key: str) -> Path | N
     return max(candidates, key=lambda d: (d / "report.json").stat().st_mtime, default=None)
 
 
+# Phiên bản pipeline full: S2 (lore), S3 (gameplay, bảng có cấu trúc), S4 (wiki quality)
+CLEAN_VERSIONS = ("s2-full-clean", "s3-full-clean", "s4-full-clean")
+CHUNK_VERSIONS = ("s2-full-chunk", "s3-full-chunk", "s4-full-chunk")
+
+
 def latest_clean() -> Path | None:
-    return latest("clean_runs", "cleaning_version", "s2-full-clean", "pages_in")
+    return latest("clean_runs", "cleaning_version", CLEAN_VERSIONS, "pages_in")
 
 
 def latest_chunk() -> Path | None:
-    return latest("chunk_runs", "chunking_version", "s2-full-chunk", "pages")
+    return latest("chunk_runs", "chunking_version", CHUNK_VERSIONS, "pages")
 
 
 def tokenizer() -> Path:
@@ -101,14 +106,25 @@ def crawl(a) -> None:
 def clean(a) -> Path:
     source = need(a.input or DATA / "crawl_runs" / DEFAULT_CRAWL_RUN, "lượt crawl")
     output = a.output or DATA / "clean_runs" / f"clean-{stamp()}"
-    run("ingest.transform.full", "--run-dir", source, "--output-dir", output)
+    flags = [flag for flag, on in (("--gameplay", a.gameplay), ("--structured-tables", a.structured_tables)) if on]
+    run("ingest.transform.full", "--run-dir", source, "--output-dir", output, *flags)
     return output
 
 
 def chunk(a, source: Path | None = None) -> Path:
     source = need(source or a.input or latest_clean(), "bản clean")
     output = a.output or DATA / "chunk_runs" / f"chunk-{stamp()}"
-    run("ingest.chunk.full", "--input-dir", source, "--tokenizer", a.tokenizer or tokenizer(), "--output-dir", output)
+    flags = ["--wiki-quality"] if a.wiki_quality else []
+    run(
+        "ingest.chunk.full",
+        "--input-dir",
+        source,
+        "--tokenizer",
+        a.tokenizer or tokenizer(),
+        "--output-dir",
+        output,
+        *flags,
+    )
     return output
 
 
@@ -157,6 +173,13 @@ def main() -> None:
     p.add_argument("--output", type=Path, help="Thư mục đầu ra mới (mặc định: tên có thời gian)")
     p.add_argument("--run-id", default=DEFAULT_CRAWL_RUN, help="crawl: id lượt crawl, dùng lại để resume")
     p.add_argument("--no-media", action="store_true", help="crawl: bỏ tải ảnh")
+    p.add_argument(
+        "--gameplay", action="store_true", help="clean: giữ thông số và gameplay (policy S3, cần cho dữ liệu mới)"
+    )
+    p.add_argument(
+        "--structured-tables", action="store_true", help="clean: bảng có cấu trúc thành fact (cần --gameplay)"
+    )
+    p.add_argument("--wiki-quality", action="store_true", help="chunk: wiki scope, spoiler, chặng nhiệm vụ (Sprint 4)")
     p.add_argument("--tokenizer", type=Path, help="chunk: tokenizer.json của E5 (mặc định: tìm trong models/)")
     p.add_argument("--validate-only", action="store_true", help="load: chỉ kiểm tra, không ghi PostgreSQL")
     p.add_argument("--collection", help="index: collection Qdrant đích (bắt buộc khi index thật)")

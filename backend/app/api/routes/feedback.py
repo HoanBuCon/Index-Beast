@@ -1,4 +1,4 @@
-"""POST /feedback: 👍/👎 cho một câu trả lời.
+"""POST /feedback: 👍/👎 cho một câu trả lời; lưu vào bảng feedback khi bật lưu hội thoại bằng PostgreSQL.
 
 Phụ trách: TV1 · [S2] API contract v1
 """
@@ -40,4 +40,7 @@ async def feedback(
     )
     if not exists:
         raise NotFoundError("Không tìm thấy câu trả lời để đánh giá.")
+    # Chỉ lưu khi hội thoại nằm trong PostgreSQL (CHAT_PERSISTENCE=postgres); chế độ RAM chỉ xác nhận yêu cầu
+    if (repository := getattr(service, "repository", None)) is not None:
+        await repository.save_feedback(body.message_id, body.rating, body.reason)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

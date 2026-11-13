@@ -47,3 +47,30 @@ async def test_admin_queries_order_titles_and_limits(db_url: str):  # noqa: F811
             assert len(await repo.recent_feedback(session, limit=1)) == 1
     finally:
         await engine.dispose()
+
+
+async def test_feedback_is_replaced_not_duplicated_and_eval_runs_round_trip(db_url: str):  # noqa: F811
+    from app.services.memory_repository import MemoryRepository
+    from scripts import eval_runs
+
+    engine = create_async_engine(db_url)
+    try:
+        sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+        async with sessionmaker() as session, session.begin():
+            conversation = await repo.create_conversation(session, channel="web")
+            answer = await repo.add_message(session, conversation.id, role="assistant", content="OK")
+        memory = MemoryRepository(sessionmaker)
+        await memory.save_feedback(answer.id, 1, None)
+        await memory.save_feedback(answer.id, -1, "thiếu nguồn")
+        async with sessionmaker() as session:
+            rows = await repo.recent_feedback(session)
+            assert [(f.rating, f.reason) for f in rows if f.message_id == answer.id] == [(-1, "thiếu nguồn")]
+
+        await eval_runs.record(sessionmaker, git_sha="abc", config={"name": "baseline"}, metrics={"recall@5": 0.8})
+        listed = await eval_runs.recent(sessionmaker, 5)
+        mine = [
+            (r.git_sha, r.metrics) for r in listed if r.config.get("name") == "baseline"
+        ]  # DB dùng chung trong module
+        assert mine == [("abc", {"recall@5": 0.8})]
+    finally:
+        await engine.dispose()

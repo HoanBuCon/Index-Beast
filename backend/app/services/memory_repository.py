@@ -5,12 +5,12 @@ import hmac
 from dataclasses import dataclass
 from uuid import UUID, uuid5
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import undefer
 
 from app.api.schemas.conversation import ConversationOut, MessageOut
-from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Message
+from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Feedback, Message
 from core.errors import BadRequestError, NotFoundError, UnauthorizedError, UnavailableError
 
 
@@ -82,6 +82,16 @@ class MemoryRepository:
                 return Snapshot(output, conv.external_ref, conv.client_user_ref or "", runtime.revision, runtime.state)
         except SQLAlchemyError:
             raise UnavailableError("Không đọc được hội thoại đã lưu.") from None
+
+    async def save_feedback(self, message_id: UUID, rating: int, reason: str | None) -> None:
+        """Mỗi câu trả lời giữ một đánh giá: gửi lại thì thay thế đánh giá cũ (người dùng đổi ý 👍 sang 👎)."""
+        try:
+            async with self.sessions() as session, session.begin():
+                await session.execute(delete(Feedback).where(Feedback.message_id == message_id))
+                session.add(Feedback(message_id=message_id, rating=rating, reason=reason))
+                await session.flush()
+        except SQLAlchemyError:
+            raise UnavailableError("Không lưu được đánh giá.") from None
 
     async def trace(self, message_id: UUID) -> dict | None:
         """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu."""

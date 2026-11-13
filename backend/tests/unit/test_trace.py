@@ -171,7 +171,15 @@ def test_admin_stats_matches_the_shape_the_web_client_validates(admin_client, mo
             SimpleNamespace(external_id="crawl-abc", id=uuid4(), status="succeeded", pages_ok=7),
             SimpleNamespace(external_id=None, id=uuid4(), status="running", pages_ok=0),
         ],
-        recent_eval_runs=[SimpleNamespace(id=uuid4(), metrics={"recall@5": 0.8, "n": 3, "ok": True, "note": "x"})],
+        recent_eval_runs=[
+            SimpleNamespace(
+                id=uuid4(),
+                config={"name": "baseline"},
+                created_at=when,
+                metrics={"recall@5": 0.8, "n": 3, "ok": True, "note": "x"},
+            ),
+            SimpleNamespace(id=uuid4(), config={}, created_at=when, metrics={"mrr": 0.4}),
+        ],
     )
     response = client.get("/api/v1/admin/stats", headers=auth.headers)
     assert response.status_code == 200
@@ -182,7 +190,9 @@ def test_admin_stats_matches_the_shape_the_web_client_validates(admin_client, mo
     withreason, without = body["feedback"]
     assert withreason["reason"] == "sai" and "reason" not in without  # client web từ chối reason=null
     assert [j["id"] for j in body["ingestion_jobs"]][0] == "crawl-abc" and len(body["ingestion_jobs"][1]["id"]) == 36
-    assert body["eval_runs"][0]["metrics"] == {"recall@5": 0.8, "n": 3}  # chỉ giữ số, bỏ bool và chuỗi
+    named, unnamed = body["eval_runs"]
+    assert named["metrics"] == {"recall@5": 0.8, "n": 3}  # chỉ giữ số, bỏ bool và chuỗi
+    assert named["id"] == "baseline · 08/11 03:00" and len(unnamed["id"]) == 36  # có tên thì hiện tên, không thì UUID
 
 
 def test_admin_stats_is_empty_not_an_error_without_data(admin_client, monkeypatch):

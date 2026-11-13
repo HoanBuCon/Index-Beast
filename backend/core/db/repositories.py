@@ -152,6 +152,15 @@ async def recent_feedback(session: AsyncSession, limit: int = 50) -> Sequence[Fe
     return (await session.execute(query)).scalars().all()
 
 
+async def add_eval_run(
+    session: AsyncSession, *, git_sha: str | None, config: dict[str, Any], metrics: dict[str, float]
+) -> EvalRun:
+    run = EvalRun(git_sha=git_sha, config=config, metrics=metrics)
+    session.add(run)
+    await session.flush()
+    return run
+
+
 async def recent_eval_runs(session: AsyncSession, limit: int = 10) -> Sequence[EvalRun]:
     query = select(EvalRun).order_by(EvalRun.created_at.desc()).limit(limit)
     return (await session.execute(query)).scalars().all()

@@ -33,6 +33,12 @@ async def get_trace(message_id: UUID, service: ChatService = Depends(get_chat_se
     return TraceOut.model_validate(await service.trace(message_id))
 
 
+def _run_label(run) -> str:
+    """Tên lượt đo (config.name) kèm giờ để phân biệt các lần cùng tên; không có tên thì dùng UUID."""
+    name = (run.config or {}).get("name")
+    return f"{name} · {run.created_at:%d/%m %H:%M}" if name and run.created_at else str(run.id)
+
+
 def _title(question: str | None) -> str:
     text = " ".join((question or "").split())
     return text[:TITLE_CHARS] if text else "(chưa có câu hỏi)"
@@ -60,7 +66,7 @@ async def get_stats(ctx: AppContext = Depends(get_ctx)) -> AdminStats:
         ingestion_jobs=[AdminJob(id=j.external_id or str(j.id), status=j.status, pages_ok=j.pages_ok) for j in jobs],
         eval_runs=[
             AdminEvalRun(
-                id=str(r.id),
+                id=_run_label(r),
                 # Client web chỉ nhận số; bỏ giá trị khác (và bool, vì bool cũng là int)
                 metrics={k: v for k, v in (r.metrics or {}).items() if type(v) in (int, float)},
             )
