@@ -493,6 +493,19 @@
             "description": "Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô.",
             "title": "External Ref"
           },
+          "guild_id": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID server Discord của bot, để giới hạn tần suất theo server. Chỉ tính khi có service token.",
+            "title": "Guild Id"
+          },
           "message": {
             "maxLength": 2000,
             "minLength": 1,

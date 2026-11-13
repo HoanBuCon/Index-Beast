@@ -10,7 +10,7 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Phiên bản | 0.8.0 (Draft) |
+| Phiên bản | 0.8.1 (Draft) |
 | Ngày | 2026-10-17 · cập nhật 2026-11-08 |
 | Chủ sở hữu tài liệu | TV1 (Tech Lead) — mọi thành viên đều được đề xuất thay đổi |
 | Trạng thái | Living document — cập nhật cuối mỗi Sprint Review |
@@ -169,7 +169,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-CHAT-01 | API tạo/tiếp tục phiên hội thoại; lưu tin nhắn người dùng, câu trả lời, nguồn, độ trễ, token. | M | Stable | S2–S3 | In Progress — lưu PostgreSQL khi `CHAT_PERSISTENCE=postgres` (mặc định vẫn `memory`); độ trễ, token và trace ở PR #79 |
 | FR-CHAT-02 | Dùng lịch sử liên quan của hội thoại làm ngữ cảnh: tối đa 3 lượt người dùng liên quan trong 64 tin nhắn gần nhất của đúng hội thoại (`CHAT_HISTORY_MESSAGES` giới hạn lượng nạp). Câu trả lời cũ không được coi là nguồn kiến thức. | M | Volatile | S3 | Changed → Done — lịch sử liên quan thay cho N lượt gần nhất |
 | FR-CHAT-03 | Mỗi kênh (web session, Discord channel/thread/user) có `conversation_id` riêng. | M | Stable | S3 | Done — bot theo `external_ref`, web theo `conversation_id` + token |
-| FR-CHAT-04 | Rate-limit theo IP / user / guild (cấu hình được). | S | Volatile | S4 | Done — Redis, theo IP hoặc `external_ref`; chưa theo guild |
+| FR-CHAT-04 | Rate-limit theo IP / user / guild (cấu hình được). | S | Volatile | S4 | Done — Redis, theo IP hoặc `external_ref`; thêm trần theo server Discord khi bot gửi `guild_id` (`RATE_LIMIT_GUILD_PER_MINUTE`); bot (TV4) chưa gửi `guild_id` |
 | FR-CHAT-05 | Cache câu trả lời cho câu hỏi chuẩn hoá trùng lặp (không có lịch sử). | C | Volatile | S5 | Proposed |
 | FR-CHAT-06 | Xác thực client nội bộ (bot, web) bằng API key / service token. | M | Stable | S4 | Done — `X-Service-Token` cho bot, `X-Admin-Token` cho admin (PR #79) |
 
@@ -373,6 +373,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | 0.7.0 | 2026-11-08 | TV1 | Cuối Sprint 3: phạm vi đổi sang base + SotE, lore và gameplay/build (theo §9 đây là đổi phạm vi nên đáng lẽ tăng MAJOR; giữ 0.x vì chưa release v1.0). Thêm trạng thái thực tế cho mọi FR và NFR; FR-RET-04 đổi sang đánh giá bằng chứng, FR-RET-08 đổi DuckDuckGo thành Tavily, FR-CHAT-02 đổi sang lịch sử liên quan, FR-GEN-06 bỏ ngoại lệ build. Cập nhật §5 (API), §6 (bảng `conversation_runtime`, `conversation_memories`, hai collection Qdrant), thuật ngữ, TBD-07..10 và phụ lục A |
 | 0.7.1 | 2026-11-08 | TV1 | Thêm `/admin/stats`; web hiển thị `message_id` và liên kết xem trace khi `/chat/capabilities` báo `trace_available`; cập nhật §5 và FR-WEB-08 |
 | 0.8.0 | 2026-11-13 | TV1 | Sprint 4: thêm nhóm FR-AUTH-01..09 (ADR-005, đề xuất); FR-WEB-09 chuyển sang FR-AUTH; TBD-04 đổi; §5 thêm các endpoint `/auth/*` và `/me/*`, `/feedback` lưu dữ liệu; §6 thêm `users`, `auth_sessions`, `conversations.user_id` |
+| 0.8.1 | 2026-11-13 | TV1 | FR-CHAT-04: thêm trần tần suất theo server Discord (`guild_id` tùy chọn trong `/chat`, chỉ tính với service token) |
 
 ## Phụ lục A — Kịch bản demo / kiểm thử chấp nhận
 
