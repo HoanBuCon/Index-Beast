@@ -147,9 +147,38 @@ async def recent_conversations(session: AsyncSession, limit: int = 20) -> list[t
     return [tuple(row) for row in (await session.execute(query)).all()]
 
 
+async def conversations_of_user(
+    session: AsyncSession, user_id: uuid.UUID, limit: int = 50
+) -> list[tuple[uuid.UUID, str | None, datetime]]:
+    """(id, câu hỏi đầu tiên, giờ tạo) các hội thoại của người dùng, mới nhất trước."""
+    first_question = (
+        select(Message.content)
+        .where(Message.conversation_id == Conversation.id, Message.role == "user")
+        .order_by(Message.created_at)
+        .limit(1)
+        .scalar_subquery()
+    )
+    query = (
+        select(Conversation.id, first_question, Conversation.created_at)
+        .where(Conversation.user_id == user_id)
+        .order_by(Conversation.created_at.desc())
+        .limit(limit)
+    )
+    return [tuple(row) for row in (await session.execute(query)).all()]
+
+
 async def recent_feedback(session: AsyncSession, limit: int = 50) -> Sequence[Feedback]:
     query = select(Feedback).order_by(Feedback.created_at.desc()).limit(limit)
     return (await session.execute(query)).scalars().all()
+
+
+async def add_eval_run(
+    session: AsyncSession, *, git_sha: str | None, config: dict[str, Any], metrics: dict[str, float]
+) -> EvalRun:
+    run = EvalRun(git_sha=git_sha, config=config, metrics=metrics)
+    session.add(run)
+    await session.flush()
+    return run
 
 
 async def recent_eval_runs(session: AsyncSession, limit: int = 10) -> Sequence[EvalRun]:

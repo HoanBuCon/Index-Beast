@@ -26,7 +26,7 @@ from app.rag.semantic_memory import MemoryScope, MemoryVectors, SemanticMemory
 from app.services.chat import LiveChatService
 from app.services.memory_repository import MemoryRepository, Snapshot, owner_hash
 from core.config import Settings
-from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Message
+from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Feedback, Message
 from core.errors import BadRequestError, UnauthorizedError, UnavailableError, UpstreamError
 from tests.unit.test_live_chat import FakeLLM, FakeRetriever
 
@@ -81,7 +81,13 @@ def repo(tmp_path):
     engine = create_engine("sqlite:///" + str(tmp_path / "memory.sqlite"))
     Conversation.metadata.create_all(
         engine,
-        tables=[Conversation.__table__, Message.__table__, ConversationRuntime.__table__, ConversationMemory.__table__],
+        tables=[
+            Conversation.__table__,
+            Message.__table__,
+            ConversationRuntime.__table__,
+            ConversationMemory.__table__,
+            Feedback.__table__,
+        ],
     )
     factory = sessionmaker(engine, expire_on_commit=False)
     yield MemoryRepository(lambda: AsyncFacade(factory))

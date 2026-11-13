@@ -1,5 +1,7 @@
 # ADR 004 Phạm vi lore Elden Ring
 
+> **Cập nhật 2026-11-13:** phạm vi hiện hành là **base game + Shadow of the Erdtree**, gồm cả lore lẫn gameplay/build (SRS 0.8.0, `game_scope=elden_ring`). Phần "Quyết định" và "Áp dụng" bên dưới là bản gốc 2026-10-17, giữ lại để lưu vết.
+
 > Cập nhật được người dùng duyệt 29/10/2026: Sprint 2 clean/chunk toàn bộ 4164 raw base game + Shadow of the Erdtree. game_scope=elden_ring; release_scope là nhãn có bằng chứng/candidate/unknown. Không áp dụng điều kiện base-only để chặn DLC trong lượt này. Nightreign/Tarnished Edition vẫn ở review. TV3 cần phối hợp bộ lọc retrieval, không thay đổi tự động trong phần việc TV2. Nội dung base-only bên dưới là quyết định trước ngoại lệ này.
 
 

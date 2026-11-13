@@ -143,7 +143,11 @@ class LiveChatService:
             raise BadRequestError("Web dùng conversation token, không dùng external_ref làm danh tính.")
         async with self._registry_lock:
             stored = await self.repository.load(
-                req.conversation_id, channel=req.channel, external_ref=req.external_ref, token=req.conversation_token
+                req.conversation_id,
+                channel=req.channel,
+                external_ref=req.external_ref,
+                token=req.conversation_token,
+                user_id=req.user_id,
             )
             if stored:
                 if stored.conversation.id not in self._conversations:
@@ -187,11 +191,15 @@ class LiveChatService:
         if self.repository is None or state.revision == 0:
             return
         stored = await self.repository.load(
-            state.conversation.id, channel=req.channel, external_ref=req.external_ref, token=req.conversation_token
+            state.conversation.id,
+            channel=req.channel,
+            external_ref=req.external_ref,
+            token=req.conversation_token,
+            user_id=req.user_id,
         )
         state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
 
-    async def stored_history(self, conversation_id, *, token=None, trusted_service=False):
+    async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):
         if self.repository is None:
             return self.history(conversation_id)
         # Read the channel/ref by ID internally, but never return messages before capability/service auth.
@@ -209,10 +217,12 @@ class LiveChatService:
             raise UnavailableError("Không đọc được hội thoại.") from None
         if channel == "discord" and not trusted_service:
             raise UnauthorizedError("Cần service token để đọc hội thoại Discord.")
-        stored = await self.repository.load(conversation_id, channel=channel, external_ref=external_ref, token=token)
+        stored = await self.repository.load(
+            conversation_id, channel=channel, external_ref=external_ref, token=token, user_id=user_id
+        )
         return stored.conversation
 
-    async def stored_has_message(self, message_id, *, token=None, trusted_service=False):
+    async def stored_has_message(self, message_id, *, token=None, trusted_service=False, user_id=None):
         if self.repository is None:
             return self.has_message(message_id)
         from core.db.models import Message
@@ -225,7 +235,7 @@ class LiveChatService:
                 conversation_id = row.conversation_id
         except Exception:
             raise UnavailableError("Không kiểm tra được câu trả lời đã lưu.") from None
-        await self.stored_history(conversation_id, token=token, trusted_service=trusted_service)
+        await self.stored_history(conversation_id, token=token, trusted_service=trusted_service, user_id=user_id)
         return True
 
     def _history_for(self, state: ConversationState) -> list[dict]:
@@ -308,7 +318,9 @@ class LiveChatService:
         latency_ms = round((time.perf_counter() - started) * 1000, 2)
         if self.repository is not None:
             working = working or {}
-            snapshot = Snapshot(state.conversation, state.external_ref, state.owner, state.revision, working)
+            snapshot = Snapshot(
+                state.conversation, state.external_ref, state.owner, state.revision, working, user_id=req.user_id
+            )
             tokens_in, tokens_out = token_usage(prepared.trace)
             record = {
                 "trace": public_trace(prepared.trace, latency_ms=latency_ms),

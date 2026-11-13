@@ -5,12 +5,12 @@ import hmac
 from dataclasses import dataclass
 from uuid import UUID, uuid5
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import undefer
 
 from app.api.schemas.conversation import ConversationOut, MessageOut
-from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Message
+from core.db.models import Conversation, ConversationMemory, ConversationRuntime, Feedback, Message
 from core.errors import BadRequestError, NotFoundError, UnauthorizedError, UnavailableError
 
 
@@ -25,13 +25,14 @@ class Snapshot:
     owner: str
     revision: int
     working: dict
+    user_id: UUID | None = None  # chủ sở hữu đã đăng nhập, gắn vào hội thoại mới
 
 
 class MemoryRepository:
     def __init__(self, sessionmaker):
         self.sessions = sessionmaker
 
-    async def load(self, conversation_id=None, *, channel, external_ref, token=None) -> Snapshot | None:
+    async def load(self, conversation_id=None, *, channel, external_ref, token=None, user_id=None) -> Snapshot | None:
         try:
             async with self.sessions() as session:
                 query = select(Conversation, ConversationRuntime).join(ConversationRuntime)
@@ -49,8 +50,11 @@ class MemoryRepository:
                 conv, runtime = row
                 if conv.channel != channel or conv.external_ref != external_ref:
                     raise NotFoundError("Không tìm thấy hội thoại.")
-                if channel == "web" and (
-                    not token or not hmac.compare_digest(owner_hash(token), conv.client_user_ref or "")
+                owned_by_user = user_id is not None and conv.user_id == user_id  # ADR-005
+                if (
+                    channel == "web"
+                    and not owned_by_user
+                    and (not token or not hmac.compare_digest(owner_hash(token), conv.client_user_ref or ""))
                 ):
                     raise UnauthorizedError("Cần token của hội thoại này.")
                 messages = (
@@ -82,6 +86,16 @@ class MemoryRepository:
                 return Snapshot(output, conv.external_ref, conv.client_user_ref or "", runtime.revision, runtime.state)
         except SQLAlchemyError:
             raise UnavailableError("Không đọc được hội thoại đã lưu.") from None
+
+    async def save_feedback(self, message_id: UUID, rating: int, reason: str | None) -> None:
+        """Mỗi câu trả lời giữ một đánh giá: gửi lại thì thay thế đánh giá cũ (người dùng đổi ý 👍 sang 👎)."""
+        try:
+            async with self.sessions() as session, session.begin():
+                await session.execute(delete(Feedback).where(Feedback.message_id == message_id))
+                session.add(Feedback(message_id=message_id, rating=rating, reason=reason))
+                await session.flush()
+        except SQLAlchemyError:
+            raise UnavailableError("Không lưu được đánh giá.") from None
 
     async def trace(self, message_id: UUID) -> dict | None:
         """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu."""
@@ -126,6 +140,7 @@ class MemoryRepository:
                             channel=conv.channel,
                             external_ref=snapshot.external_ref,
                             client_user_ref=snapshot.owner,
+                            user_id=snapshot.user_id,
                             created_at=conv.created_at,
                         )
                     )

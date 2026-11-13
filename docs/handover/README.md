@@ -1,5 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Sprint 4: review và sửa lỗi phần đăng nhập, feedback, eval (13/11/2026)](2026-11-13_s4-tv1_review-va-sua-loi.md)
+
+- [TV1 · Sprint 4: feedback, eval, đăng nhập Discord (13/11/2026)](2026-11-13_s4-tv1_bao-cao-ban-giao.md)
+
 - [TV2 · Sprint 4: chất lượng wiki, spoiler và eval local (12/11/2026)](2026-11-12_s4-tv2_wiki-quality.md)
 
 - [TV3 · README công việc TV2, TV4 và mục tra cứu thành viên (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv2-tv4.md)
@@ -201,3 +205,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-08 | TV1 (Hoanbucon) | [Sửa 3 lỗi tìm thấy ở lần review thứ hai phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review-lan-2.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Rà soát cách chia section và chunk trên 4.164 trang](2026-11-02_s3-tv1_ra-soat-section-chunk.md) |
 | 2026-11-09 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 3](2026-11-09_s3-tv1_bao-cao-ban-giao-sprint-3.md) |
+| 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |

@@ -1,8 +1,8 @@
-# Index Beast — Techstack (v1.6)
+# Index Beast — Techstack (v1.7)
 
 | | |
 |---|---|
-| Trạng thái | Chốt 2026-10-17; cập nhật 2026-11-08 theo code cuối Sprint 3 (`develop` `cb2a358`, kèm PR #67, #79, #80 ghi rõ ở từng dòng) |
+| Trạng thái | Chốt 2026-10-17; cập nhật 2026-11-08 theo code cuối Sprint 3 (`develop` `cb2a358`, kèm PR #67, #79, #80 ghi rõ ở từng dòng); v1.7 (13/11) thêm đăng nhập Discord (nhánh Sprint 4, chưa merge) |
 | Phạm vi | Elden Ring base game + Shadow of the Erdtree; lore và gameplay/build khi có bằng chứng (đã chốt, thẻ CHANGE-REQ ở Sprint 3) |
 | Quy mô mục tiêu | Vài trăm người dùng, ~50 đồng thời lúc cao điểm |
 | Hạ tầng | 1 VPS 4 vCPU / 8 GB, Ubuntu 24.04 LTS, Docker Compose Staging cùng cấu hình (xem `docs/staging.md`). |
@@ -31,6 +31,7 @@
 | Cache · rate-limit | Redis · redis-py (rate-limit `/chat` đã dùng; cache chưa) | 8.10.2 · 8.1.0 |
 | Bộ nhớ hội thoại | PostgreSQL (`conversation_runtime`, `conversation_memories`, migration `0002`) là nguồn sự thật; Qdrant collection `conversation_memories` (dense E5, 384 chiều) chỉ là chỉ mục dẫn xuất | — |
 | Trace và số đo | `messages.trace` (JSONB) và cột `rewritten_query`, `latency_ms`, `tokens_in/out`; `GET /api/v1/admin/trace/{id}` và `GET /api/v1/admin/stats` với `X-Admin-Token`; trang `/admin` của web xem được cả hai, câu trả lời có liên kết "Xem trace" khi `ADMIN_TOKEN` được đặt | — |
+| Đăng nhập | Discord OAuth2 (code + PKCE) qua httpx; phiên cookie `httpOnly` lưu băm trong PostgreSQL (`users`, `auth_sessions`, migration `0004`); không thêm thư viện mới. Đề xuất, chờ duyệt (ADR-005) | — |
 | Làm sạch · ảnh | BeautifulSoup · Pillow (kiểm định dạng ảnh crawl và ảnh trả về) | 4.15.0 · 12.3.0 |
 | Runtime JS | Node.js LTS | 24.22.0 |
 | TypeScript | chỉ dùng `tsc --noEmit` | 6.0.3 |
@@ -47,7 +48,7 @@
 |---|---|
 | LLM | `deepseek-flash` cho cả viết lại truy vấn và sinh câu trả lời, gọi qua LangChain `ChatDeepSeek`. Thinking tắt mặc định (`RAG_THINKING_ENABLED`). Câu trả lời RAG là JSON (`answer`, `evidence`), backend kiểm trích dẫn nguyên văn. Base URL `https://api.deepseek.com`. Code gọi LLM gom trong `app/adapters/llm.py`. LangSmith (đi kèm LangChain) luôn tắt tracing. Đầu ra JSON hỏng/rỗng hoặc "thiếu bằng chứng nhưng có trích dẫn" được thử lại tối đa 1 lần không thinking (`RAG_FORMAT_RETRIES`, `app/rag/output.py`); không sửa nội dung, không nới kiểm trích dẫn. Từ Sprint 3 còn các lượt gọi riêng cho quyết định của agent, đánh giá bằng chứng và viết lại truy vấn: đo thử trên 25 và 20 câu cho khoảng 2–3 lượt gọi mỗi câu hỏi (chưa phải đo tải thật). |
 | Chế độ chat | `CHAT_MODE`: `mock` (mặc định, dữ liệu giả), `llm_only`, `rag`. Không tự chuyển chế độ khi lỗi. `CHAT_PERSISTENCE`: `memory` (mặc định, hội thoại trong RAM) hoặc `postgres`. `CHAT_AGENT_ENABLED` và `CHAT_TOOL_AGENT_ENABLED` mặc định `true`. |
-| Bảo vệ API | Ở `llm_only`/`rag`: giới hạn `RATE_LIMIT_PER_MINUTE` theo IP (web) hoặc `external_ref` (bot) bằng Redis; kênh `discord` cần `X-Service-Token`; hạn `CHAT_TIMEOUT_SECONDS` (45 s) cho một câu hỏi, bot chờ 60 s. `/api/v1/admin/*` cần `X-Admin-Token` (`ADMIN_TOKEN`) và tắt hẳn (404) khi chưa đặt (PR #79). |
+| Bảo vệ API | Ở `llm_only`/`rag`: giới hạn `RATE_LIMIT_PER_MINUTE` theo IP (web) hoặc `external_ref` (bot) bằng Redis; kênh `discord` cần `X-Service-Token`; hạn `CHAT_TIMEOUT_SECONDS` (45 s) cho một câu hỏi, bot chờ 60 s. `/api/v1/admin/*` cần `X-Admin-Token` (`ADMIN_TOKEN`) và tắt hẳn (404) khi chưa đặt (PR #79). Đăng nhập (ADR-005): `AUTH_ADMIN_DISCORD_IDS` cho quản trị viên vào `/admin/*` không cần token; giới hạn tần suất bắt đầu đăng nhập theo IP; lệnh ghi dùng cookie kiểm `Origin`. |
 | Truy vấn tiếng Việt | Chỉ index chunk tiếng Anh (`RAG_LANGUAGES=en`). Khi bật `RAG_REWRITE_ENABLED`, LLM viết lại thành câu tiếng Anh độc lập (giữ tên riêng, số liệu; timeout 8 s, tối đa 512 token); `RAG_QUERY_MODE=dual` truy vấn thêm câu gốc, gộp hai danh sách bằng RRF theo thứ hạng (`app/rag/query_plan.py`). Mặc định rewrite tắt: câu tiếng Việt đi thẳng vào e5 đa ngôn ngữ và BM25. Ngôn ngữ trả lời tách khỏi ngôn ngữ truy vấn. Khi agent bật (mặc định) mô hình quyết định có viết lại hay không; server vẫn kiểm giữ tên riêng, số, phủ định, mục tiêu và ý định (`app/rag/rewrite.py`, `app/rag/agent.py`). |
 | Câu hỏi tổng quan | Câu rộng ("các boss trong Elden Ring") được nhận diện bằng từ khóa VI/EN, không gọi LLM (`app/rag/overview.py`, `RAG_OVERVIEW_ENABLED=true`): tối đa 2 truy vấn, ưu tiên trang/section tổng quan, trả lời theo nhóm có nguồn thay vì từ chối vì thiếu danh sách đầy đủ. |
 | Hybrid search | Qdrant Query API: prefetch dense 30 + bm25 30 (`RAG_PREFETCH`) → RRF → chọn tối đa 5 đoạn (`RAG_TOP_K`) trong 12.000 ký tự ngữ cảnh. Tổng thời gian truy xuất tối đa 20 s (`RAG_RETRIEVAL_TIMEOUT_SECONDS`), chia đều cho các truy vấn. Không dùng Elasticsearch. |

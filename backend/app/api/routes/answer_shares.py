@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 
 from app.api.deps import get_chat_service
 from app.api.errors import ErrorBody
-from app.api.guard import _trusted_service
+from app.api.guard import is_trusted_service
 from app.api.schemas.answer_share import AnswerShareCreated, AnswerShareRequest, SharedAnswer
 from app.services.answer_shares import AnswerShareStore
 from core.errors import BadRequestError, NotFoundError, UnauthorizedError
@@ -27,7 +27,7 @@ def private_response(response: Response) -> None:
 async def create_answer_share(
     body: AnswerShareRequest, request: Request, response: Response, service=Depends(get_chat_service)
 ) -> AnswerShareCreated:
-    if not _trusted_service(request):
+    if not is_trusted_service(request):
         raise UnauthorizedError("Chỉ dịch vụ bot được tạo link chia sẻ.")
     if hasattr(service, "stored_history"):
         history = await service.stored_history(body.conversation_id, trusted_service=True)
