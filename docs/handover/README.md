@@ -201,3 +201,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-08 | TV1 (Hoanbucon) | [Sửa 3 lỗi tìm thấy ở lần review thứ hai phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review-lan-2.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Rà soát cách chia section và chunk trên 4.164 trang](2026-11-02_s3-tv1_ra-soat-section-chunk.md) |
 | 2026-11-09 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 3](2026-11-09_s3-tv1_bao-cao-ban-giao-sprint-3.md) |
+| 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |
