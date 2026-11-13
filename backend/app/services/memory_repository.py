@@ -25,13 +25,14 @@ class Snapshot:
     owner: str
     revision: int
     working: dict
+    user_id: UUID | None = None  # chủ sở hữu đã đăng nhập, gắn vào hội thoại mới
 
 
 class MemoryRepository:
     def __init__(self, sessionmaker):
         self.sessions = sessionmaker
 
-    async def load(self, conversation_id=None, *, channel, external_ref, token=None) -> Snapshot | None:
+    async def load(self, conversation_id=None, *, channel, external_ref, token=None, user_id=None) -> Snapshot | None:
         try:
             async with self.sessions() as session:
                 query = select(Conversation, ConversationRuntime).join(ConversationRuntime)
@@ -49,8 +50,11 @@ class MemoryRepository:
                 conv, runtime = row
                 if conv.channel != channel or conv.external_ref != external_ref:
                     raise NotFoundError("Không tìm thấy hội thoại.")
-                if channel == "web" and (
-                    not token or not hmac.compare_digest(owner_hash(token), conv.client_user_ref or "")
+                owned_by_user = user_id is not None and conv.user_id == user_id  # ADR-005
+                if (
+                    channel == "web"
+                    and not owned_by_user
+                    and (not token or not hmac.compare_digest(owner_hash(token), conv.client_user_ref or ""))
                 ):
                     raise UnauthorizedError("Cần token của hội thoại này.")
                 messages = (
@@ -136,6 +140,7 @@ class MemoryRepository:
                             channel=conv.channel,
                             external_ref=snapshot.external_ref,
                             client_user_ref=snapshot.owner,
+                            user_id=snapshot.user_id,
                             created_at=conv.created_at,
                         )
                     )

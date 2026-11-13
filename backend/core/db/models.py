@@ -1,4 +1,5 @@
-"""Bảng ORM theo SRS §6: documents, chunks, entities, conversations, messages, feedback, ingestion_jobs, eval_runs.
+"""Bảng ORM theo SRS §6: documents, chunks, entities, conversations, messages, feedback, ingestion_jobs, eval_runs,
+users, auth_sessions (đăng nhập, ADR-005).
 Đổi schema → sửa file này rồi `alembic revision --autogenerate -m "..."`, đọc lại file sinh ra trước khi commit.
 
 Quy ước: khóa chính UUID (documents/chunks dùng id ổn định do ingest sinh để upsert idempotent); thời gian là
@@ -136,6 +137,8 @@ class Conversation(Base):
     external_ref: Mapped[str | None] = mapped_column(Text)  # vd. discord:thread:<id>
     client_user_ref: Mapped[str | None] = mapped_column(Text)  # chỉ lưu bản băm (NFR-PRIV-01)
     guild_id: Mapped[str | None] = mapped_column(Text)
+    # Chủ sở hữu đã đăng nhập (ADR-005); null với hội thoại khách và Discord
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
 
     messages: Mapped[list["Message"]] = relationship(
@@ -233,3 +236,36 @@ class EvalRun(Base):
     config: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+
+
+class User(Base):
+    """Người dùng đăng nhập (ADR-005). Chỉ lưu băm HMAC của Discord ID (NFR-PRIV-01), không lưu ID thô.
+
+    Quyền admin không lưu ở đây: suy ra từ AUTH_ADMIN_DISCORD_IDS mỗi request, nên thu hồi có hiệu lực ngay.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_hash"),
+        CheckConstraint(_in("provider", ("discord",)), name="provider"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    provider: Mapped[str] = mapped_column(Text, default="discord", server_default="discord")
+    provider_user_hash: Mapped[str] = mapped_column(Text)
+    display_name: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuthSession(Base):
+    """Phiên đăng nhập. Cookie giữ token ngẫu nhiên; ở đây chỉ có SHA-256 của token."""
+
+    __tablename__ = "auth_sessions"
+    __table_args__ = (Index("ix_auth_sessions_expires_at", "expires_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

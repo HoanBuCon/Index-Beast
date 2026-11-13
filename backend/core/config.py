@@ -68,6 +68,15 @@ class Settings(BaseSettings):
     # --- Bảo vệ API (TV1): chỉ áp dụng khi CHAT_MODE gọi LLM thật (llm_only, rag) ---
     api_service_token: SecretStr | None = None  # bot gửi qua X-Service-Token; bỏ trống/"change-me" = chưa cấu hình
     admin_token: SecretStr | None = None  # X-Admin-Token cho /admin/*; bỏ trống/"change-me" = tắt /admin/*
+    # --- Đăng nhập Discord OAuth2 (TV1, ADR-005): tắt cho tới khi có đủ client id, client secret và AUTH_SECRET ---
+    web_url: str = "http://localhost:15173"  # nơi người dùng được đưa về sau khi đăng nhập
+    discord_client_id: str = ""
+    discord_client_secret: SecretStr | None = None
+    auth_secret: SecretStr | None = None  # khóa băm Discord ID (HMAC), không bao giờ đổi sau khi đã có người dùng
+    auth_redirect_uri: str = ""  # bỏ trống: <WEB_URL>/api/v1/auth/discord/callback; phải khớp Discord Developer Portal
+    auth_session_days: int = Field(default=7, ge=1, le=90)
+    auth_cookie_secure: bool | None = None  # bỏ trống: bật khi WEB_URL là https
+    auth_admin_discord_ids: Annotated[list[str], NoDecode] = []  # .env: Discord ID, phân cách bằng dấu phẩy
     rate_limit_per_minute: int = Field(default=10, ge=1, le=1000)  # mỗi IP (web) hoặc mỗi external_ref (bot)
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
 
@@ -138,6 +147,27 @@ class Settings(BaseSettings):
         return list(dict.fromkeys(result))
 
     @property
+    def auth_enabled(self) -> bool:
+        """Đăng nhập chỉ bật khi đủ ba giá trị thật (không trống, không "change-me"), AUTH_SECRET từ 32 ký tự."""
+
+        def real(value: object) -> bool:
+            text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
+            return bool(text.strip()) and text.strip() != PLACEHOLDER
+
+        long_secret = self.auth_secret is not None and len(self.auth_secret.get_secret_value().strip()) >= 32
+        return (
+            real(self.discord_client_id) and real(self.discord_client_secret) and real(self.auth_secret) and long_secret
+        )
+
+    @property
+    def auth_callback_url(self) -> str:
+        return self.auth_redirect_uri.strip() or f"{self.web_url.rstrip('/')}/api/v1/auth/discord/callback"
+
+    @property
+    def auth_cookie_is_secure(self) -> bool:
+        return self.web_url.startswith("https://") if self.auth_cookie_secure is None else self.auth_cookie_secure
+
+    @property
     def admin_enabled(self) -> bool:
         """/admin/* chỉ bật khi ADMIN_TOKEN là một giá trị thật (không trống, không "change-me")."""
         secret = self.admin_token.get_secret_value().strip() if self.admin_token else ""
@@ -166,6 +196,19 @@ class Settings(BaseSettings):
     @classmethod
     def _upper_log_level(cls, value: object) -> object:
         return value.upper() if isinstance(value, str) else value
+
+    @field_validator("auth_cookie_secure", mode="before")
+    @classmethod
+    def _empty_cookie_secure_is_auto(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value  # docker compose truyền chuỗi rỗng
+
+    @field_validator("auth_admin_discord_ids", mode="before")
+    @classmethod
+    def _split_admin_ids(cls, value: object) -> object:
+        ids = [i.strip() for i in value.split(",") if i.strip()] if isinstance(value, str) else value
+        if isinstance(ids, list) and not all(isinstance(i, str) and i.isdigit() for i in ids):
+            raise ValueError("AUTH_ADMIN_DISCORD_IDS chỉ gồm Discord ID (số), phân cách bằng dấu phẩy")
+        return ids
 
     @field_validator("cors_origins", mode="before")
     @classmethod

@@ -10,7 +10,7 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Phiên bản | 0.7.1 (Draft) |
+| Phiên bản | 0.8.0 (Draft) |
 | Ngày | 2026-10-17 · cập nhật 2026-11-08 |
 | Chủ sở hữu tài liệu | TV1 (Tech Lead) — mọi thành viên đều được đề xuất thay đổi |
 | Trạng thái | Living document — cập nhật cuối mỗi Sprint Review |
@@ -185,7 +185,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-WEB-06 | Responsive mobile, theme tối phong cách Elden Ring. | S | Volatile | S5 | In Progress |
 | FR-WEB-07 | Trang About: giới thiệu, ghi nguồn & giấy phép CC BY-SA, disclaimer fan project. | M | Stable | S5 | Done — cần sửa câu "không gồm DLC" (xem TBD-08) |
 | FR-WEB-08 | Trang admin: xem log hội thoại, feedback, trạng thái ingestion, kết quả eval. | S | Volatile | S5 | In Progress — có `/admin/stats` và xem trace theo `message_id` (câu trả lời có liên kết "Xem trace" khi bật `ADMIN_TOKEN`); feedback còn trống do TBD-09, eval chưa có dữ liệu |
-| FR-WEB-09 | Đăng nhập (Discord OAuth) để đồng bộ lịch sử. | C | Volatile | S5 | Deferred (ADR-005: web ẩn danh ở v1) |
+| FR-WEB-09 | Đăng nhập (Discord OAuth) để đồng bộ lịch sử. | C | Volatile | S4 | Changed → In Progress — nay thuộc FR-AUTH-*; giao diện (TV4) chưa làm |
 
 ### 3.6 FR-BOT — Discord Bot
 
@@ -209,6 +209,20 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-EVAL-03 | Script đánh giá câu trả lời: faithfulness, correctness (LLM-as-judge + kiểm tra tay mẫu). | M | Volatile | S4 | In Progress — có bộ chẩn đoán 25 câu, chưa có LLM-as-judge |
 | FR-EVAL-04 | Lưu kết quả mỗi lần chạy eval (cấu hình, điểm) để so sánh giữa các sprint. | S | Stable | S4 | Proposed — bảng `eval_runs` có, chưa ghi |
 | FR-EVAL-05 | Lưu trace từng request (query gốc, query viết lại, chunk ids, điểm, độ trễ từng bước, token) vào PostgreSQL, xem được theo `message_id` qua endpoint admin hoặc CLI, không chứa secret. | M | Stable | S3 | In Progress — PR #79 (PostgreSQL, endpoint admin, `make trace`) |
+
+### 3.8 FR-AUTH — Đăng nhập (Sprint 4, ADR-005)
+
+| ID | Yêu cầu | Ưu tiên | Ổn định | Sprint | Trạng thái |
+|---|---|---|---|---|---|
+| FR-AUTH-01 | Đăng nhập bằng Discord OAuth2 (authorization code + PKCE, scope `identify`); `state` ngẫu nhiên dùng một lần và khớp cookie; đường dẫn quay về chỉ nhận dạng tương đối. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-02 | Phiên là cookie `httpOnly`, `SameSite=Lax`, `Secure` khi web chạy HTTPS; DB chỉ lưu SHA-256 của token; hết hạn sau `AUTH_SESSION_DAYS`; đăng xuất xóa phiên. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-03 | Chỉ lưu băm HMAC-SHA256 của Discord ID (không lưu ID thô) và tên hiển thị (NFR-PRIV-01). | M | Stable | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-04 | Khách vẫn dùng được: đăng nhập là tùy chọn; hội thoại khách hoạt động như trước bằng `conversation_token`. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-05 | Hội thoại gắn với người dùng (`conversations.user_id`); chủ sở hữu đọc và tiếp tục từ thiết bị khác không cần token; nhận lại hội thoại khách bằng `conversation_token`; liệt kê hội thoại của tôi. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-06 | Quản trị viên theo `AUTH_ADMIN_DISCORD_IDS` (suy ra mỗi request, thu hồi có hiệu lực ngay); `ADMIN_TOKEN` giữ cho vận hành. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-07 | Chống lạm dụng: giới hạn tần suất bắt đầu đăng nhập theo IP; kiểm `Origin` trên lệnh ghi dùng cookie; không bao giờ ghi mã đăng nhập hay token vào log. | M | Stable | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
+| FR-AUTH-08 | Xóa tài khoản và dữ liệu hội thoại theo yêu cầu người dùng. | S | Volatile | S5 | Proposed |
+| FR-AUTH-09 | Giao diện web: nút đăng nhập/đăng xuất, tên người dùng, danh sách hội thoại, nhận lại hội thoại khách (TV4, hợp đồng `docs/api/auth-tv4.md`). | M | Volatile | S4 | Proposed |
 
 ## 4. Yêu cầu phi chức năng
 
@@ -245,7 +259,13 @@ Hợp đồng nguồn: `docs/api/openapi.json` (sinh từ code, CI kiểm). Ch�
 | POST | `/chat/stream` | Như trên nhưng stream SSE (`status`, `token`, `sources`, `done`, `error`) | Web | Có |
 | GET | `/chat/capabilities` | Cờ công khai: `web_search_available`, `trace_available` (có bật `/admin/*`) | Web | Có |
 | GET | `/conversations/{id}` | Lấy lịch sử hội thoại (web cần `conversation_token`) | Web | Có |
-| POST | `/feedback` | Gửi 👍/👎 cho `message_id` | Web, Bot | Mới xác nhận request, chưa lưu |
+| POST | `/feedback` | Gửi 👍/👎 cho `message_id`; mỗi câu trả lời giữ một đánh giá | Web, Bot | Lưu vào PostgreSQL khi `CHAT_PERSISTENCE=postgres` (nhánh Sprint 4) |
+| GET | `/auth/discord/login` | Bắt đầu đăng nhập (302 sang Discord) | Web | Nhánh Sprint 4 |
+| GET | `/auth/discord/callback` | Discord gọi lại; tạo phiên và về web | Discord | Nhánh Sprint 4 |
+| POST | `/auth/logout` | Xóa phiên | Web | Nhánh Sprint 4 |
+| GET | `/auth/me` | Trạng thái đăng nhập (luôn 200) | Web | Nhánh Sprint 4 |
+| GET | `/me/conversations` | Hội thoại của tôi | Web | Nhánh Sprint 4 |
+| POST | `/me/conversations/claim` | Nhận hội thoại khách về tài khoản bằng `conversation_token` | Web | Nhánh Sprint 4 |
 | GET | `/images/{id}` | Ảnh minh họa cục bộ đã kiểm (theo hash) | Web | Có |
 | GET | `/health` | Trạng thái api, db, qdrant, redis | Hạ tầng | Có |
 | GET | `/admin/trace/{message_id}` | Trace RAG của một câu trả lời, cần `X-Admin-Token` | Admin | PR #79 |
@@ -294,7 +314,9 @@ Response:
 | `documents` | id, source, url, title, revision_id, game_scope, raw_hash, fetched_at, status |
 | `chunks` | id, document_id, section, text, token_count, source_type, spoiler_level, qdrant_point_id |
 | `entities` | id, canonical_name, aliases[], type (npc/boss/location/item), source |
-| `conversations` | id, channel, external_ref, client_user_ref (băm), guild_id, created_at |
+| `conversations` | id, channel, external_ref, client_user_ref (băm), guild_id, user_id (FK `users`, null cho khách), created_at |
+| `users` | id, provider (`discord`), provider_user_hash (HMAC, duy nhất cùng provider), display_name, created_at, last_login_at (migration `0004`) |
+| `auth_sessions` | id, user_id, token_hash (SHA-256, duy nhất), created_at, expires_at (migration `0004`) |
 | `messages` | id, conversation_id, role, content, rewritten_query, sources (jsonb), grounded, latency_ms, tokens_in, tokens_out, trace (jsonb), created_at. Trace và số đo chỉ ghi cho tin nhắn assistant (PR #79) |
 | `conversation_runtime` | conversation_id, revision, state (jsonb): trạng thái làm việc và câu hỏi đang chờ; khóa lạc quan theo `revision` (migration `0002`) |
 | `conversation_memories` | id, conversation_id, source_message_id, kind (topic/fact), key, content, status (active/superseded), revision, indexed_revision (migration `0002`) |
@@ -321,7 +343,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | TBD-01 | ~~Nhà cung cấp/model LLM~~ | Đã chốt | ADR-001: `deepseek-flash` (non-thinking), `deepseek-v4-pro` cho eval |
 | TBD-02 | Reranker cuối cùng | S4 | Chưa bật (`NoReranker`); cần số đo trước khi quyết định có bật hay bỏ |
 | TBD-03 | Phạm vi nội dung | Đã chốt, đã đổi | ADR-004 gốc: lore base game (2026-10-17). Hiện: base + SotE, lore và gameplay/build; file ADR-004 cần cập nhật |
-| TBD-04 | Đăng nhập web | Đã chốt cho v1 | ADR-005: web ẩn danh; hội thoại truy cập lại bằng `conversation_token`. FR-WEB-09 Deferred |
+| TBD-04 | Đăng nhập web | Đã đổi 2026-11-13 | Sprint 4 yêu cầu Auth service. ADR-005 (đề xuất): Discord OAuth2, khách vẫn dùng được, phiên trong PostgreSQL. Còn chờ chủ dự án chọn có bắt buộc đăng nhập ở v2 không |
 | TBD-05 | Cách phân loại `source_type` (in-game vs speculation) tự động hay thủ công | S2 | |
 | TBD-06 | Tên miền & nơi đặt bot (server Discord nào để demo) | S4 | Staging dự kiến chạy bằng IP với chứng chỉ nội bộ cho tới khi có tên miền (`staging.md`) |
 | TBD-07 | Giấy phép và điều khoản của domain trong allowlist tìm web (eldenring.wiki.fextralife.com, en.bandainamcoent.eu) | Trước production | Đoạn trích hiển thị cho người dùng kèm link; chưa có quyết định pháp lý |
@@ -350,6 +372,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | 0.6.0 | 2026-10-17 | 4 Hollows | Làm gọn tài liệu theo phạm vi base game; đồng bộ kế hoạch và nguồn dữ liệu |
 | 0.7.0 | 2026-11-08 | TV1 | Cuối Sprint 3: phạm vi đổi sang base + SotE, lore và gameplay/build (theo §9 đây là đổi phạm vi nên đáng lẽ tăng MAJOR; giữ 0.x vì chưa release v1.0). Thêm trạng thái thực tế cho mọi FR và NFR; FR-RET-04 đổi sang đánh giá bằng chứng, FR-RET-08 đổi DuckDuckGo thành Tavily, FR-CHAT-02 đổi sang lịch sử liên quan, FR-GEN-06 bỏ ngoại lệ build. Cập nhật §5 (API), §6 (bảng `conversation_runtime`, `conversation_memories`, hai collection Qdrant), thuật ngữ, TBD-07..10 và phụ lục A |
 | 0.7.1 | 2026-11-08 | TV1 | Thêm `/admin/stats`; web hiển thị `message_id` và liên kết xem trace khi `/chat/capabilities` báo `trace_available`; cập nhật §5 và FR-WEB-08 |
+| 0.8.0 | 2026-11-13 | TV1 | Sprint 4: thêm nhóm FR-AUTH-01..09 (ADR-005, đề xuất); FR-WEB-09 chuyển sang FR-AUTH; TBD-04 đổi; §5 thêm các endpoint `/auth/*` và `/me/*`, `/feedback` lưu dữ liệu; §6 thêm `users`, `auth_sessions`, `conversations.user_id` |
 
 ## Phụ lục A — Kịch bản demo / kiểm thử chấp nhận
 

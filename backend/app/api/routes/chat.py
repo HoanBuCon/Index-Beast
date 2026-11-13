@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 from starlette.background import BackgroundTask
 
-from app.api.deps import get_chat_service
+from app.api.deps import get_chat_service, optional_user
 from app.api.errors import ErrorBody
 from app.api.guard import enforce_chat_limits
 from app.api.schemas.chat import (
@@ -22,6 +22,7 @@ from app.api.schemas.chat import (
     ChatResponse,
     ErrorEvent,
 )
+from app.services.auth import AuthUser
 from app.services.chat import ChatService
 from core.errors import AppError
 from core.logging import request_id_var
@@ -37,9 +38,14 @@ def _sse(event: str, payload: object) -> str:
 
 
 @router.post("/chat", response_model=ChatResponse, responses=_ERROR_RESPONSES, summary="Hỏi đáp, trả một lần (bot)")
-async def chat(body: ChatRequest, request: Request, service: ChatService = Depends(get_chat_service)) -> ChatResponse:
+async def chat(
+    body: ChatRequest,
+    request: Request,
+    service: ChatService = Depends(get_chat_service),
+    user: AuthUser | None = Depends(optional_user),
+) -> ChatResponse:
     await enforce_chat_limits(request, body)
-    return await service.answer(body)
+    return await service.answer(body.attach_user(user.id if user else None))
 
 
 @router.post(
@@ -56,11 +62,14 @@ async def chat(body: ChatRequest, request: Request, service: ChatService = Depen
     summary="Hỏi đáp, stream SSE (web)",
 )
 async def chat_stream(
-    body: ChatRequest, request: Request, service: ChatService = Depends(get_chat_service)
+    body: ChatRequest,
+    request: Request,
+    service: ChatService = Depends(get_chat_service),
+    user: AuthUser | None = Depends(optional_user),
 ) -> StreamingResponse:
     await enforce_chat_limits(request, body)
     # Lỗi trước khi bắt đầu stream (hội thoại không tồn tại, quá tốc độ…) vẫn trả JSON + mã HTTP đúng
-    stream = await service.open_stream(body)
+    stream = await service.open_stream(body.attach_user(user.id if user else None))
 
     async def events() -> AsyncIterator[str]:
         try:

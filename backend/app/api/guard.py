@@ -65,6 +65,20 @@ async def record_admin_failure(request: Request) -> None:
         raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
 
 
+async def enforce_login_limit(request: Request) -> None:
+    """Mỗi lần bắt đầu đăng nhập tạo một khóa `state` trong Redis nên giới hạn theo IP như /chat."""
+    ctx = request.app.state.ctx
+    key = f"ratelimit:login:ip:{_client_ip(request)}:{int(time.time()) // WINDOW_SECONDS}"
+    try:
+        async with ctx.redis.pipeline(transaction=True) as pipe:
+            count, _ = await pipe.incr(key).expire(key, WINDOW_SECONDS * 2).execute()
+    except Exception:
+        log.warning("login rate limit unavailable", exc_info=True)
+        raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
+    if count > ctx.settings.rate_limit_per_minute:
+        raise RateLimitedError(retry_after=_retry_after())
+
+
 async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
     ctx = request.app.state.ctx
     settings = ctx.settings

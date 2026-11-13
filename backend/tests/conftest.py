@@ -71,6 +71,15 @@ class FakeRedis(FakeResource):
     async def ping(self) -> bool:
         return await self._respond()
 
+    async def set(self, key: str, value: str, ex: int | None = None) -> bool:
+        await self._respond()
+        self.__dict__.setdefault("store", {})[key] = value
+        return True
+
+    async def getdel(self, key: str):
+        await self._respond()
+        return self.__dict__.setdefault("store", {}).pop(key, None)
+
     async def get(self, key: str):
         await self._respond()
         return self.__dict__.setdefault("counts", {}).get(key)

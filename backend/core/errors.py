@@ -30,6 +30,12 @@ class UnauthorizedError(AppError):
     message = "Thiếu hoặc sai thông tin xác thực."
 
 
+class ForbiddenError(AppError):
+    status_code = 403
+    code = "forbidden"
+    message = "Yêu cầu không được phép từ nguồn này."
+
+
 class NotFoundError(AppError):
     status_code = 404
     code = "not_found"

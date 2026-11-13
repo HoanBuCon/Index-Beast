@@ -9,7 +9,7 @@ Phụ trách: TV1 · [S2] API contract v1
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, PrivateAttr, StringConstraints
 
 MAX_MESSAGE_CHARS = 2000
 
@@ -32,6 +32,16 @@ class ChatRequest(BaseModel):
     )
     options: ChatOptions = ChatOptions()
     clarification_id: UUID | None = Field(None, description="ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.")
+    # Người dùng đăng nhập do server gắn từ cookie phiên (ADR-005); không có trong JSON/OpenAPI, client không giả được
+    _user_id: UUID | None = PrivateAttr(default=None)
+
+    @property
+    def user_id(self) -> UUID | None:
+        return self._user_id
+
+    def attach_user(self, user_id: UUID | None) -> "ChatRequest":
+        self._user_id = user_id
+        return self
 
 
 class ClarificationField(BaseModel):
