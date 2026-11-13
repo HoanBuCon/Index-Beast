@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.deps import get_chat_service, optional_user
 from app.api.errors import ErrorBody
-from app.api.guard import _trusted_service
+from app.api.guard import is_trusted_service
 from app.api.schemas.feedback import FeedbackRequest
 from app.services.auth import AuthUser
 from app.services.chat import ChatService
@@ -37,7 +37,7 @@ async def feedback(
         await service.stored_has_message(
             body.message_id,
             token=request.headers.get("X-Conversation-Token"),
-            trusted_service=_trusted_service(request),
+            trusted_service=is_trusted_service(request),
             user_id=user.id if user else None,
         )
         if hasattr(service, "stored_has_message")

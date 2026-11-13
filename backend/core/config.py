@@ -250,6 +250,10 @@ def ensure_safe_for_environment(settings: Settings) -> None:
     leaked = [name.upper() for name, value in settings if _reveal(value) == PLACEHOLDER]
     if leaked:
         raise UnsafeConfigError(f"ENVIRONMENT=prod nhưng vẫn dùng giá trị mẫu '{PLACEHOLDER}': {', '.join(leaked)}")
+    if settings.auth_enabled and not settings.auth_cookie_is_secure:
+        raise UnsafeConfigError(
+            "ENVIRONMENT=prod bật đăng nhập nhưng cookie phiên không có cờ Secure: đặt WEB_URL https://..."
+        )
 
 
 def _reveal(value: object) -> object:

@@ -91,6 +91,15 @@ async def test_sessions_are_hashed_expire_and_can_be_ended(sessionmaker):
     async with sessionmaker() as session:
         count = len((await session.execute(select(AuthSession).where(AuthSession.user_id == user.id))).scalars().all())
     assert count == 1
+
+    gone = await auth.upsert_user(sessionmaker, SETTINGS, "101", "Never returns")
+    stale = await auth.create_session(sessionmaker, gone.id, 7)
+    async with sessionmaker() as session, session.begin():
+        await session.execute(update(AuthSession).values(expires_at=datetime.now(UTC) - timedelta(seconds=1)))
+    await auth.create_session(sessionmaker, user.id, 7)  # đăng nhập của người khác cũng dọn phiên hết hạn này
+    assert await auth.user_for_token(sessionmaker, SETTINGS, stale) is None
+    async with sessionmaker() as session:
+        assert (await session.execute(select(AuthSession).where(AuthSession.user_id == gone.id))).first() is None
     await auth.end_session(sessionmaker, fresh)
     assert await auth.user_for_token(sessionmaker, SETTINGS, fresh) is None
 

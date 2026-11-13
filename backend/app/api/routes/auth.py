@@ -23,7 +23,19 @@ from app.services.auth import OAUTH_COOKIE, OAUTH_STATE_TTL_SECONDS, SESSION_COO
 from app.services.memory_repository import owner_hash
 from core.errors import BadRequestError, NotFoundError, UnavailableError
 
-router = APIRouter(tags=["auth"])
+
+def no_store(response: Response) -> None:
+    """Mọi phản hồi ở đây gắn với một người dùng hoặc đặt cookie: không để proxy hay trình duyệt lưu lại.
+    Dependency chỉ phủ phản hồi JSON; route tự trả Response (chuyển hướng, 204) phải qua `_private`."""
+    response.headers["Cache-Control"] = "no-store"
+
+
+def _private(response: Response) -> Response:
+    no_store(response)
+    return response
+
+
+router = APIRouter(tags=["auth"], dependencies=[Depends(no_store)])
 OAUTH_COOKIE_PATH = "/api/v1/auth"
 _ERRORS = {401: {"model": ErrorBody}, 404: {"model": ErrorBody}, 503: {"model": ErrorBody}}
 
@@ -69,7 +81,9 @@ async def discord_login(
         await ctx.redis.set(_state_key(state), payload, ex=OAUTH_STATE_TTL_SECONDS)
     except Exception:
         raise UnavailableError("Không bắt đầu được đăng nhập.") from None
-    response = RedirectResponse(oauth.authorize_url(state, auth.pkce_challenge(verifier)), status.HTTP_302_FOUND)
+    response = _private(
+        RedirectResponse(oauth.authorize_url(state, auth.pkce_challenge(verifier)), status.HTTP_302_FOUND)
+    )
     response.set_cookie(
         OAUTH_COOKIE,
         state,
@@ -99,7 +113,7 @@ async def discord_callback(
     _require_enabled(ctx)
     cookie_state = request.cookies.get(OAUTH_COOKIE)
     if error:  # người dùng từ chối trên Discord
-        response = RedirectResponse(_web_url(ctx, "/?login=denied"), status.HTTP_302_FOUND)
+        response = _private(RedirectResponse(_web_url(ctx, "/?login=denied"), status.HTTP_302_FOUND))
         response.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
         return response
     auth.require_state(cookie_state, state)
@@ -118,7 +132,7 @@ async def discord_callback(
     user = await auth.upsert_user(ctx.sessionmaker, ctx.settings, discord_id, display_name)
     session_token = await auth.create_session(ctx.sessionmaker, user.id, ctx.settings.auth_session_days)
 
-    response = RedirectResponse(_web_url(ctx, auth.safe_next(saved.get("next"))), status.HTTP_302_FOUND)
+    response = _private(RedirectResponse(_web_url(ctx, auth.safe_next(saved.get("next"))), status.HTTP_302_FOUND))
     response.set_cookie(
         SESSION_COOKIE,
         session_token,
@@ -142,7 +156,7 @@ async def discord_callback(
 async def logout(request: Request, ctx: AppContext = Depends(get_ctx)) -> Response:
     if ctx.sessionmaker is not None:
         await auth.end_session(ctx.sessionmaker, request.cookies.get(SESSION_COOKIE))
-    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    response = _private(Response(status_code=status.HTTP_204_NO_CONTENT))
     response.delete_cookie(SESSION_COOKIE, path="/")
     return response
 

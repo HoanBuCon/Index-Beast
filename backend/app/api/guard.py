@@ -23,7 +23,7 @@ WINDOW_SECONDS = 60
 log = logging.getLogger(__name__)
 
 
-def _trusted_service(request: Request) -> bool:
+def is_trusted_service(request: Request) -> bool:
     expected = request.app.state.ctx.settings.api_service_token
     secret = expected.get_secret_value().strip() if expected else ""
     sent = request.headers.get(SERVICE_TOKEN_HEADER, "")
@@ -84,7 +84,7 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
     settings = ctx.settings
     if settings.chat_mode == "mock":
         return
-    trusted = _trusted_service(request)
+    trusted = is_trusted_service(request)
     if body.channel == "discord" and not trusted:
         # Không cho giả làm bot để né giới hạn theo IP
         raise UnauthorizedError("Kênh discord cần X-Service-Token hợp lệ.")

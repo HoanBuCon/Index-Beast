@@ -428,3 +428,24 @@ def test_login_start_is_rate_limited_per_ip(harness):
 def test_a_short_auth_secret_keeps_login_off():
     assert make_settings().auth_enabled
     assert not make_settings(auth_secret="too-short").auth_enabled
+
+
+def test_per_user_responses_are_never_cached(harness):
+    h = harness(user=USER)
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    me = h.client.get("/api/v1/auth/me")
+    login = h.client.get("/api/v1/auth/discord/login", follow_redirects=False)
+    assert (me.headers.get("cache-control"), login.headers.get("cache-control")) == ("no-store", "no-store")
+
+
+def test_prod_refuses_login_over_a_cookie_without_secure():
+    from core.config import UnsafeConfigError, ensure_safe_for_environment
+
+    def prod(web_url):
+        return Settings(
+            _env_file=None, **{**AUTH, "environment": "prod", "postgres_password": "s3cret", "web_url": web_url}
+        )
+
+    with pytest.raises(UnsafeConfigError, match="Secure"):
+        ensure_safe_for_environment(prod("http://example.org"))
+    ensure_safe_for_environment(prod("https://example.org"))

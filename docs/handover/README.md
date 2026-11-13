@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Sprint 4: review và sửa lỗi phần đăng nhập, feedback, eval (13/11/2026)](2026-11-13_s4-tv1_review-va-sua-loi.md)
+
 - [TV1 · Sprint 4: feedback, eval, đăng nhập Discord (13/11/2026)](2026-11-13_s4-tv1_bao-cao-ban-giao.md)
 
 - [TV2 · Sprint 4: chất lượng wiki, spoiler và eval local (12/11/2026)](2026-11-12_s4-tv2_wiki-quality.md)
