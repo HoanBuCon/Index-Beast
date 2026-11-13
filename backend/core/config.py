@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     auth_cookie_secure: bool | None = None  # bỏ trống: bật khi WEB_URL là https
     auth_admin_discord_ids: Annotated[list[str], NoDecode] = []  # .env: Discord ID, phân cách bằng dấu phẩy
     rate_limit_per_minute: int = Field(default=10, ge=1, le=1000)  # mỗi IP (web) hoặc mỗi external_ref (bot)
+    rate_limit_guild_per_minute: int = Field(default=30, ge=1, le=10000)  # mỗi server Discord (bot gửi guild_id)
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---

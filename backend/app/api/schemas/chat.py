@@ -30,6 +30,9 @@ class ChatRequest(BaseModel):
     external_ref: Annotated[str, Field(max_length=128)] | None = Field(
         None, description="Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô."
     )
+    guild_id: Annotated[str, Field(pattern=r"^\d{1,32}$")] | None = Field(
+        None, description="ID server Discord của bot, để giới hạn tần suất theo server. Chỉ tính khi có service token."
+    )
     options: ChatOptions = ChatOptions()
     clarification_id: UUID | None = Field(None, description="ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.")
     # Người dùng đăng nhập do server gắn từ cookie phiên (ADR-005); không có trong JSON/OpenAPI, client không giả được

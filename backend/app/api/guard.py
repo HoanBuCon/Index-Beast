@@ -1,7 +1,8 @@
 """Chặn lạm dụng /chat khi mỗi request tốn tiền LLM: xác thực bot bằng service token và giới hạn tần suất bằng Redis.
 Cũng giới hạn số lần thử sai X-Admin-Token của /admin/* theo IP (chống dò token).
 
-Khóa giới hạn: bot đã xác thực → theo external_ref (mọi request của bot cùng một IP); còn lại → theo IP client.
+Khóa giới hạn: bot đã xác thực → theo external_ref (mọi request của bot cùng một IP), thêm trần theo guild_id;
+còn lại → theo IP client.
 Chế độ mock không tốn tiền nên bỏ qua. Redis lỗi thì từ chối (503) thay vì mở cửa cho request không giới hạn.
 
 Phụ trách: TV1 · [S4] Xác thực client, rate-limit (làm sớm ở S2 vì chế độ LLM thật đã chạy)
@@ -65,17 +66,22 @@ async def record_admin_failure(request: Request) -> None:
         raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
 
 
-async def enforce_login_limit(request: Request) -> None:
-    """Mỗi lần bắt đầu đăng nhập tạo một khóa `state` trong Redis nên giới hạn theo IP như /chat."""
-    ctx = request.app.state.ctx
-    key = f"ratelimit:login:ip:{_client_ip(request)}:{int(time.time()) // WINDOW_SECONDS}"
+async def _count(ctx, key: str) -> int:
+    """Tăng bộ đếm của cửa sổ phút hiện tại. Redis lỗi thì từ chối (503) thay vì mở cửa."""
     try:
         async with ctx.redis.pipeline(transaction=True) as pipe:
             count, _ = await pipe.incr(key).expire(key, WINDOW_SECONDS * 2).execute()
     except Exception:
-        log.warning("login rate limit unavailable", exc_info=True)
+        log.warning("rate limit unavailable", exc_info=True)
         raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
-    if count > ctx.settings.rate_limit_per_minute:
+    return count
+
+
+async def enforce_login_limit(request: Request) -> None:
+    """Mỗi lần bắt đầu đăng nhập tạo một khóa `state` trong Redis nên giới hạn theo IP như /chat."""
+    ctx = request.app.state.ctx
+    window = int(time.time()) // WINDOW_SECONDS
+    if await _count(ctx, f"ratelimit:login:ip:{_client_ip(request)}:{window}") > ctx.settings.rate_limit_per_minute:
         raise RateLimitedError(retry_after=_retry_after())
 
 
@@ -90,12 +96,9 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
         raise UnauthorizedError("Kênh discord cần X-Service-Token hợp lệ.")
     who = f"ref:{body.external_ref or '-'}" if trusted else f"ip:{_client_ip(request)}"
     window = int(time.time()) // WINDOW_SECONDS
-    key = f"ratelimit:chat:{who}:{window}"
-    try:
-        async with ctx.redis.pipeline(transaction=True) as pipe:
-            count, _ = await pipe.incr(key).expire(key, WINDOW_SECONDS * 2).execute()
-    except Exception:
-        log.warning("rate limit unavailable", exc_info=True)
-        raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
-    if count > settings.rate_limit_per_minute:
+    if await _count(ctx, f"ratelimit:chat:{who}:{window}") > settings.rate_limit_per_minute:
+        raise RateLimitedError(retry_after=_retry_after())
+    # Trần thứ hai theo server Discord: nhiều thread hay nhiều người của một server không vượt được ngân sách chung
+    guild_key = f"ratelimit:chat:guild:{body.guild_id}:{window}"
+    if trusted and body.guild_id and await _count(ctx, guild_key) > settings.rate_limit_guild_per_minute:
         raise RateLimitedError(retry_after=_retry_after())

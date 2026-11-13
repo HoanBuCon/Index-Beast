@@ -65,6 +65,30 @@ def test_bot_is_limited_per_external_ref_not_shared_ip(guarded):
     assert other_thread.status_code == 200  # cùng IP của bot nhưng thread khác: không bị chặn chung
 
 
+def test_one_discord_server_has_a_shared_ceiling_across_threads(guarded):
+    client, _ = guarded  # hạn mức guild mặc định 30 > 2 mỗi thread: hạ xuống 3 để kiểm
+    client.app.state.ctx.settings.rate_limit_guild_per_minute = 3
+    headers = {"X-Service-Token": TOKEN}
+
+    def ask(thread, guild="42"):
+        body = {**BOT, "external_ref": f"discord:thread:{thread}", "guild_id": guild}
+        return client.post("/api/v1/chat", json=body, headers=headers).status_code
+
+    assert [ask(1), ask(1), ask(2), ask(3)] == [200, 200, 200, 429]  # thread 3 còn hạn mức riêng nhưng server đã hết
+    assert ask(4, guild="43") == 200  # server khác không bị ảnh hưởng
+
+
+def test_guild_id_from_a_web_client_cannot_be_used_to_dodge_or_poison_limits(guarded):
+    client, _ = guarded
+    codes = [client.post("/api/v1/chat", json={**BODY, "guild_id": str(n)}).status_code for n in range(3)]
+    assert codes == [200, 200, 429]  # vẫn bị giới hạn theo IP; guild_id không có service token thì bị bỏ qua
+
+
+def test_guild_id_must_be_a_discord_snowflake(guarded):
+    client, _ = guarded
+    assert client.post("/api/v1/chat", json={**BODY, "guild_id": "abc"}).status_code == 422
+
+
 def test_redis_down_rejects_instead_of_unlimited(guarded):
     client, redis = guarded
     redis.fail = True
