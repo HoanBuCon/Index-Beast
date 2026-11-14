@@ -66,10 +66,11 @@
   display: block;
   margin: 0;
   color: #d8d1b8;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 400;
   line-height: 1.6;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .clarification-divider {
@@ -116,40 +117,81 @@
 }
 
 .clarification-footer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  /* Hai lựa chọn cùng hàng như hộp xác nhận trong game, kể cả màn hình 360 px. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 4vw, 64px);
+  align-items: stretch;
   min-height: 56px;
   margin-top: 5px;
-  padding: 4px 24px;
+  padding: 12px 26px;
   background: url("../../item_/MENU_FL_Itemlog_1.png") center / 100% 100% no-repeat;
 }
 
 .clarification-confirm {
-  width: min(240px, 100%);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
   min-width: 0;
   min-height: 44px;
-  padding: 8px 28px;
+  padding: 4px 12px;
   color: #e1dbc6;
-  background: transparent;
-  border: 0;
+  background: #0b0d0a80;
+  /* Một cạnh CSS duy nhất; không kéo texture vuông gây vệt dọc trong nút dài. */
+  border: 1px solid #bdb9a78c;
   border-radius: 0;
-  font: 20px/1.4 var(--font-interface);
-  letter-spacing: 0.08em;
-  white-space: nowrap;
+  font: 18px/1.4 var(--font-interface);
+  letter-spacing: 0.02em;
+  white-space: normal;
   text-shadow: none;
-  transition: none;
+  transition:
+    color 0.3s ease-in-out,
+    text-shadow 0.3s ease-in-out,
+    border-color 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out,
+    background-color 0.3s ease-in-out;
 }
 
-.clarification-confirm:is(:hover, :focus-visible):not(:disabled) {
+.clarification-form button.clarification-confirm:is(:hover, :focus-visible):not(:disabled) {
   color: #e1dbc6;
-  background: transparent;
-  border: 0;
+  background: #bcb79a14;
+  border: 1px solid #e6e2ce;
+  box-shadow:
+    0 0 5px 1px #e6e0bd88,
+    inset 0 0 8px 2px #e6e0bd40;
+  text-shadow: 0 0 5px #ede7c640;
+  animation: clarification-soft-pulse 3.2s ease-in-out infinite;
 }
 
-.clarification-confirm:focus-visible {
-  outline: 1px solid #d9bc78;
-  outline-offset: 2px;
+/* Nhịp sáng chậm, không tắt hẳn viền hoặc làm nhấp nháy chữ. */
+@keyframes clarification-soft-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 3px 1px #e6e0bd55,
+      inset 0 0 6px 1px #e6e0bd28;
+    border-color: #c8c3ad;
+  }
+  50% {
+    box-shadow:
+      0 0 7px 2px #e6e0bd99,
+      inset 0 0 10px 2px #e6e0bd50;
+    border-color: #eee9d5;
+  }
+}
+
+.clarification-form button.clarification-confirm:focus-visible {
+  /* Khung và quầng sáng chung biểu thị focus, tránh thêm một viền ngoài cứng. */
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clarification-confirm {
+    transition: none;
+  }
+  .clarification-form button.clarification-confirm:is(:hover, :focus-visible):not(:disabled) {
+    animation: none;
+  }
 }
 
 .clarification-status {
@@ -195,6 +237,15 @@
 
   .clarification-input {
     font-size: 17px;
+  }
+
+  .clarification-footer {
+    padding-inline: 10px;
+  }
+
+  .clarification-confirm {
+    padding-inline: 6px;
+    font-size: 16px;
   }
 
   .clarification-help {

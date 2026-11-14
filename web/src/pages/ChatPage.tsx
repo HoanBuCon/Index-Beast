@@ -31,7 +31,7 @@ function fresh(mode: Conversation["mode"]): Conversation {
 export default function ChatPage({ children }: { children?: ReactNode }) {
   // Sidebar dùng chung cho chat, About và Admin; nội dung hội thoại vẫn thuộc hooks hiện có.
   const { pathname } = useLocation();
-  const isChat = pathname === "/";
+  const isChat = pathname === "/chat";
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [smallScreen, setSmallScreen] = useState(false);
@@ -79,7 +79,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     setDraft(next);
     setActive(next.id);
     stream.clearError();
-    navigate("/");
+    navigate("/chat");
     closeMobileSidebar();
   }
   function send(text: string) {
@@ -214,7 +214,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                       setActive(c.id);
                       setMode(c.mode);
                       stream.clearError();
-                      navigate("/");
+                      navigate("/chat");
                       closeMobileSidebar();
                     }}
                   >
@@ -295,7 +295,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         </section>
       ) : (
         <div
-          className={`document-panel${pathname === "/answer" ? " chat-panel shared-answer-panel" : ""}`}
+          className={`document-panel${pathname === "/answer" ? " chat-panel shared-answer-panel" : pathname === "/login" ? " chat-panel login-panel" : ""}`}
           inert={smallScreen && sidebarOpen}
         >
           {children}

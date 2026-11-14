@@ -74,7 +74,7 @@ export default function ClarificationForm({
         }}
       >
         <label className="clarification-title" htmlFor={`clarification-${question.id}`}>
-          Trả lời bổ sung
+          {question.question}
         </label>
         <div className="clarification-divider" aria-hidden="true" />
         <div className="clarification-panel">
@@ -106,8 +106,6 @@ export default function ClarificationForm({
           >
             OK
           </button>
-        </div>
-        <div className="clarification-footer">
           <button
             className="clarification-confirm clarification-cancel"
             type="button"
@@ -121,9 +119,6 @@ export default function ClarificationForm({
           {expired ? "Đã hết hạn — gửi lại yêu cầu trong ô chat chính." : disabled ? "Đang xử lý…" : ""}
         </p>
       </form>
-      <div className="clarification-help">
-        <small>Enter để gửi · Shift+Enter xuống dòng. Bạn cũng có thể hỏi mới trong ô chat chính.</small>
-      </div>
     </div>
   );
 }

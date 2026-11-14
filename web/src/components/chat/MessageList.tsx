@@ -36,6 +36,16 @@ export default function MessageList({
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  // TV4: câu hỏi đang chờ nằm trong nhãn ô nhập, không lặp lại cùng văn bản bên ngoài bảng.
+  const latest = messages.at(-1);
+  const latestUser = messages.findLast((m) => m.role === "user");
+  const canAnswer = (message: Message) =>
+    !message.incomplete &&
+    Boolean(
+      message.clarification &&
+      onClarification &&
+      (message.id === latest?.id || (latest?.incomplete && latestUser?.clarificationId === message.clarification.id)),
+    );
   useEffect(() => {
     if (autoScroll) bottom.current?.scrollIntoView({ block: "nearest" });
   }, [messages, autoScroll]);
@@ -50,7 +60,10 @@ export default function MessageList({
             {message.role === "user" ? "BẠN" : "INDEX BEAST"}
             {message.role === "assistant" && demo && <small>{"MINH HỌA"}</small>}
           </div>
-          <div className="prose">
+          <div
+            className="prose"
+            hidden={canAnswer(message) && !busy && message.content.trim() === message.clarification?.question.trim()}
+          >
             {message.role === "user" ? (
               message.content
             ) : (
@@ -111,19 +124,14 @@ export default function MessageList({
                   previewState={illustrationPreviewState}
                 />
               )}
-              {!message.incomplete &&
-                (message.id === messages.at(-1)?.id ||
-                  (messages.at(-1)?.incomplete &&
-                    messages.findLast((m) => m.role === "user")?.clarificationId === message.clarification?.id)) &&
-                message.clarification &&
-                onClarification && (
-                  <ClarificationForm
-                    key={message.clarification.id}
-                    question={message.clarification}
-                    disabled={busy}
-                    onAnswer={onClarification}
-                  />
-                )}
+              {canAnswer(message) && message.clarification && onClarification && (
+                <ClarificationForm
+                  key={message.clarification.id}
+                  question={message.clarification}
+                  disabled={busy}
+                  onAnswer={onClarification}
+                />
+              )}
               {traceLinks && message.serverId && !message.incomplete && (
                 <p className="message-trace">
                   <span>{"ID câu trả lời"}</span>

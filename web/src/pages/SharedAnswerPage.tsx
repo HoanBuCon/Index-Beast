@@ -73,7 +73,7 @@ export default function SharedAnswerPage() {
       )}
       <footer className="shared-answer-footer">
         {answer && <p className="chat-ai-note">AI có thể mắc sai sót. Hãy kiểm tra các nguồn được dẫn.</p>}
-        <Link to="/">Trở về trò chuyện</Link>
+        <Link to="/chat">Trở về trò chuyện</Link>
       </footer>
     </main>
   );

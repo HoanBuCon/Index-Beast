@@ -20,6 +20,20 @@ Lệnh không tự chạy backend; mở terminal khác chạy `make api` nếu m
 
 ## Chức năng
 
+### Giao diện đăng nhập (14/11/2026)
+
+Mở `/` hoặc `/login` hiện màn đăng nhập độc lập, không sidebar; nhấn **Vào website** tới chat tại `/chat`.
+Sidebar trong ứng dụng không có mục đăng nhập lặp lại. Bố cục theo ảnh tham chiếu mới: logo trên trái,
+nhóm đăng nhập bên trái và ảnh patches đầy đủ bên phải trên desktop; màn nhỏ xếp dọc. Giữ palette/font hiện tại,
+có hai lựa chọn Google/Discord và đường dẫn tiếp tục với tư cách khách. Đây là bản UI: hai nút provider bấm được và hiện thông báo chưa sẵn sàng khi bấm;
+không redirect OAuth, tạo phiên giả, lưu token hay đồng bộ lịch sử. Chat và lịch sử khách giữ nguyên.
+Backend Discord đã có hợp đồng [auth TV4](../docs/api/auth-tv4.md); khi nối thật phải kiểm `auth_available`,
+đọc phiên qua API, dùng cookie httpOnly và tuân thủ [ADR-005](../docs/adr/005-dang-nhap.md).
+Google chưa có contract được chốt. Bước này không thay backend hoặc quyết định ADR.
+Theo yêu cầu mới nhất đã bỏ phần email, chỉ giữ Google/Discord và Vào website.
+Các nút có nền trong suốt, dùng chung vệt sáng menu.
+Xem [bàn giao UI đăng nhập](../docs/handover/2026-11-14_s4-tv4_giao-dien-dang-nhap-google-discord.md).
+
 - Logo ELDEN RING PNG nền trong suốt đã được bỏ khỏi màn hình chat theo yêu cầu người dùng.
   Ba nút Nhân vật / Sự kiện / Thế giới đã bỏ. Hiện có ba câu hỏi gợi ý mới dưới ô nhập:
   “Elden Ring là game gì?”, “Game thuộc thể loại gì?”, “FromSoftware là gì?”; bấm để gửi qua luồng chat hiện có.
@@ -133,3 +147,7 @@ Lớp `src/styles/refinement.css` được nạp sau CSS cũ để giữ ghi ch�
   là bằng chứng hoàn thành UAT, Lighthouse, production hoặc chất lượng RAG.
 - Phạm vi lần này chỉ web S1–S2 của TV4. Bot `/ask` chưa được triển khai; review nhóm được bỏ qua theo yêu cầu.
 - [Bàn giao TV4](../docs/handover/2026-10-28_s2-tv4_web-api-mock.md) ghi phạm vi và kết quả kiểm tra.
+
+Nền trang đăng nhập sử dụng `item_/MENU_BaseMain_01.png` và `item_/MENU_FL_MenuBase.png`
+chép nguyên bản từ bộ hi_01 người dùng cung cấp: lớp phủ tối, ánh mờ phía dưới và nền mềm sau nhóm nút.
+Các lớp trang trí không nhận chuột; ảnh minh họa vẫn giữ đúng tỷ lệ và hiển thị đủ.

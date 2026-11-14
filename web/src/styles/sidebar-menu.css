@@ -42,7 +42,7 @@
   box-shadow: none;
 }
 
-.workspace .sidebar .grace-menu__line {
+:is(.workspace .sidebar, .login-page) .grace-menu__line {
   position: absolute;
   z-index: 0;
   top: calc(50% + 5px);
@@ -63,8 +63,8 @@
 }
 
 /* taste-skill-ignore: gradient/glow theo yêu cầu menu Elden Ring của người dùng. */
-.workspace .sidebar .grace-menu__line::before,
-.workspace .sidebar .grace-menu__line::after {
+:is(.workspace .sidebar, .login-page) .grace-menu__line::before,
+:is(.workspace .sidebar, .login-page) .grace-menu__line::after {
   content: "";
   position: absolute;
   pointer-events: none;
@@ -72,7 +72,7 @@
 }
 
 /* Quầng vàng mềm và lõi sáng riêng, không còn mảng ảnh sắc cạnh. */
-.workspace .sidebar .grace-menu__line::before {
+:is(.workspace .sidebar, .login-page) .grace-menu__line::before {
   inset: 0 -8px;
   /* Tâm trải rộng để quầng sáng bao cả nhãn, không chỉ một đốm giữa chữ. */
   background: radial-gradient(ellipse at center, #eac16c66 0%, #bc862e55 52%, #b07a2022 73%, transparent 94%);
@@ -80,7 +80,7 @@
   opacity: 0.55;
 }
 
-.workspace .sidebar .grace-menu__line::after {
+:is(.workspace .sidebar, .login-page) .grace-menu__line::after {
   top: 50%;
   left: 0;
   right: 0;
@@ -101,11 +101,11 @@
 }
 
 /* Mờ → sáng → dịu xuống; nhịp 3,2 giây chậm hơn bản lóe nhanh 1,15 giây trước. */
-.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::before {
+:is(.workspace .sidebar, .login-page) .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::before {
   animation: grace-menu-shimmer 3.2s ease-in-out infinite;
 }
 
-.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::after {
+:is(.workspace .sidebar, .login-page) .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line::after {
   animation: grace-menu-core 3.2s ease-in-out infinite;
 }
 
@@ -177,7 +177,7 @@
     0 0 8px #edc77b33;
 }
 
-.workspace .sidebar .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line {
+:is(.workspace .sidebar, .login-page) .grace-menu:is(:hover, :focus-visible):not(:disabled) .grace-menu__line {
   opacity: 1;
   transform: translateY(-50%) scaleX(1);
 }
@@ -208,12 +208,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workspace .sidebar .grace-menu__line::before,
-  .workspace .sidebar .grace-menu__line::after {
+  :is(.workspace .sidebar, .login-page) .grace-menu__line::before,
+  :is(.workspace .sidebar, .login-page) .grace-menu__line::after {
     animation: none !important;
   }
 
-  .workspace .sidebar .grace-menu__line,
+  :is(.workspace .sidebar, .login-page) .grace-menu__line,
   .workspace .sidebar .grace-menu__label,
   .workspace .sidebar .grace-menu__icon img {
     transition: none;

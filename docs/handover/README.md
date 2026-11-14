@@ -5,6 +5,7 @@
 - [TV3 · Cập nhật điều kiện khi người dùng đổi yêu cầu (14/11/2026)](2026-11-14_s4-tv3_superseded-constraints.md)
 
 - [TV3 · Nối lượt hỏi đường bằng mốc tiến độ (14/11/2026)](2026-11-14_s4-tv3_progress-clarification.md)
+- [TV4 · Giao diện đăng nhập Google/Discord (14/11/2026)](2026-11-14_s4-tv4_giao-dien-dang-nhap-google-discord.md)
 
 - [TV3 · Agent thích ứng và lập kế hoạch (13/11/2026)](2026-11-13_s4-tv3_adaptive-agent.md)
 
@@ -216,3 +217,5 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-02 | TV1 (Hoanbucon) | [Rà soát cách chia section và chunk trên 4.164 trang](2026-11-02_s3-tv1_ra-soat-section-chunk.md) |
 | 2026-11-09 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 3](2026-11-09_s3-tv1_bao-cao-ban-giao-sprint-3.md) |
 | 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |
+- [TV4 · Câu hỏi động và hai nút trong bảng bổ sung (14/11/2026)](2026-11-14_s4-tv4_cau-hoi-va-hai-nut-bo-sung.md)
+- [TV4 · Dọn ảnh không sử dụng (14/11/2026)](2026-11-14_s4-tv4_don-anh-khong-su-dung.md)
