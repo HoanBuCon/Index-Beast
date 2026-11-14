@@ -22,7 +22,7 @@ from langsmith import tracing_context
 
 from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import ChatRequest, Clarification
-from app.rag.agent import decide, spend
+from app.rag.agent import condition_changes, decide, inactive_conditions, spend
 from app.rag.context_policy import coverage_order
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
@@ -487,8 +487,11 @@ class ChatPipeline:
         if req.options.lang == "auto" and decision.answer_language:
             p.lang = state["answer_language"] = decision.answer_language
         continuing = decision.turn_type != "new" and decision.intent != "cancel"
+        changes = condition_changes(decision, working)
+        inactive = inactive_conditions(decision, working, changes)
         rounds = working.get("clarification_rounds", 0) if continuing and pending else 0
-        if decision.action == "clarify" and rounds >= 3:
+        limit = self.settings.chat_clarification_max_rounds
+        if decision.action == "clarify" and limit is not None and rounds >= limit:
             raise UnavailableError(
                 "Đã đạt giới hạn hỏi bổ sung. Bạn có thể gửi yêu cầu cụ thể hơn hoặc hủy yêu cầu này."
             )
@@ -502,7 +505,13 @@ class ChatPipeline:
             "pending": None,
             "updated": time.time(),
         }
-        if decision.turn_type == "clarification_reply" and pending and working.get("plan"):
+        if inactive:
+            p.player_state["inactive_conditions"] = inactive
+        if changes:
+            p.trace["updated_condition_keys"] = sorted({c.key for c in changes})
+            active_keys = {c.key for c in decision.constraints}
+            p.player_state["retired_condition_keys"] = sorted({c.key for c in changes} - active_keys)
+        if decision.turn_type == "clarification_reply" and pending and working.get("plan") and not changes:
             p.player_state["plan"] = [{**item} for item in working["plan"]]
             p.player_state["plan_evidence"] = working.get("plan_evidence", [])
         elif decision.subgoals and self.settings.chat_tool_agent_enabled:
@@ -895,6 +904,14 @@ class ChatPipeline:
 
     def _prompt(self, state: dict) -> Prepared:
         p, req = state["prepared"], state["req"]
+        player = state.get("next_player")
+        profile = (
+            {c["key"]: c["value"] for c in player.get("constraints", [])}
+            if isinstance(player, dict)
+            else dict(player.slots)
+            if player is not None
+            else {}
+        )
         p.template = self.template
         p.values = {
             "persona": prompt("persona"),
@@ -913,19 +930,15 @@ class ChatPipeline:
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
                     "checked_build": p.checked_build,
+                    **({"player_profile": profile} if profile else {}),
                     **({"task_plan": p.trace["task_plan"]} if p.trace.get("task_plan") else {}),
                     **({"verified_name": p.trace["verified_name"]} if p.trace.get("verified_name") else {}),
                 },
                 ensure_ascii=False,
             ),
         }
-        if state.get("next_player") is not None:
-            player = state["next_player"]
-            p.values["player_profile"] = (
-                {c["key"]: c["value"] for c in player.get("constraints", [])}
-                if isinstance(player, dict)
-                else dict(player.slots)
-            )
+        if player is not None:
+            p.values["player_profile"] = profile
         p.messages = convert_to_openai_messages(self.template.invoke(p.values).to_messages())
         p.trace["prepare_ms"] = round((time.perf_counter() - state["started"]) * 1000, 2)
         return p

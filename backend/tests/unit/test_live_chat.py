@@ -332,14 +332,14 @@ async def test_rerank_then_top_five_numbering_is_shared_by_generation():
     assert [d["index"] for d in evidence] == [1, 2, 3, 4, 5]
 
 
-async def test_request_spoiler_filter_does_not_mutate_shared_retriever():
+async def test_chat_accepts_legacy_spoiler_flag_and_retrieves_for_both_values():
     retrieval = FakeRetriever(hits=[])
     live = service("rag", FakeLLM(), retrieval)
     await asyncio.gather(
         live.answer(ChatRequest(**BODY, options={"spoilers": False})),
         live.answer(ChatRequest(**BODY, options={"spoilers": True})),
     )
-    assert sorted(spoilers for _, spoilers in retrieval.calls) == [False, True]
+    assert sorted(spoilers for _, spoilers in retrieval.calls) == [True, True]
     assert retrieval.spoilers is True
 
 
@@ -511,11 +511,12 @@ async def test_pilot_dlc_question_and_source_metadata_flow_through_langchain_pro
     assert "never assume shared canon" in llm.seen[-1][0]["content"]
 
 
-async def test_missing_spoiler_labels_return_insufficient_without_calling_model():
+@pytest.mark.parametrize("channel", ["web", "discord"])
+async def test_legacy_spoiler_flag_no_longer_excludes_unlabelled_evidence(channel):
     llm = FakeLLM()
     live = service("rag", llm, FakeRetriever([hit(game_scope="elden_ring", review_status=None)]))
-    response = await live.answer(ChatRequest(**BODY, options={"spoilers": False}))
-    assert not response.grounded and response.sources == [] and llm.calls == 0
+    response = await live.answer(ChatRequest(**{**BODY, "channel": channel}, options={"spoilers": False}))
+    assert response.grounded and response.sources and llm.calls == 1
 
 
 @pytest.mark.parametrize(

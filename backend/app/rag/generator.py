@@ -387,6 +387,8 @@ class Generator:
             "source counts, source descriptions or bracketed citations. "
             "For an evidence-based answer, every paragraph must contain [n], the set of [n] must equal the set of "
             "evidence.index, and each quote_id must come from that source's evidence_units. "
+            "Numbers in square brackets are citations only. Write item tiers with parentheses, e.g. "
+            "Smithing Stone (tier 3), including when the excerpt uses brackets. "
             "Keep the response short and avoid decorative quotes."
             " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
             "Each evidence item must have integer index and exactly one of quote_ids (1–3 distinct ID strings), "

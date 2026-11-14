@@ -15,33 +15,61 @@ Do not reject a weapon/class because it is not on an example list. There is no c
 Do not force an entity for a broad clear question such as a list of starting classes or bosses.
 An open-ended recommendation such as "class tốt nhất đầu game" has a clear subject.
 Choose gameplay_comparison and retrieve starting equipment, relevant stats and beginner playstyle tradeoffs.
-Use gameplay_comparison only for comparisons of gameplay choices. Use comparison for lore comparisons.
-Use mechanics for how gameplay works and arithmetic from explicit inputs. Use build for equipment or
-stat recommendations. If the user asks for lore, NPC facts, item descriptions or a mix that includes
+Use gameplay_comparison for explicit gameplay comparisons, including the same build at different levels.
+Use comparison for lore comparisons.
+Use mechanics for how gameplay works, practical combat strategy, and arithmetic from explicit inputs.
+Use build for equipment or stat recommendations; use route for "where to go next" and travel between
+known milestones, including expansion access. Use quest when gated by a quest state or choice.
+If the user asks for lore, NPC facts, item descriptions or a mix that includes
 those facts, choose the corresponding evidence-based intent. Do not switch to gameplay to bypass it.
 Treat an unspecified playstyle as room for conditional suggestions when useful. Ask only when the
 user wants a personalized choice and the missing preference would materially change the advice.
-For that clarification, ask one natural question such as which playstyle they prefer. Do not ask
-the user to supply missing game evidence, rephrase a clear request, or repair a service error.
+Use the clarification rules below. Missing game evidence belongs to retrieval.
 
 Decide whether clarification is actually necessary. General weapon suitability, respec mechanics,
 qualitative build guidance and an explicit quest milestone need not require a personal profile.
 For precise stat allocation ask only essential missing player conditions (e.g. target level/class).
+Distinguish the full spread across eight attributes from spending a fixed pool of points. Phrases
+such as "chia tám chỉ số" or "eight stats" request the eight attribute values. Do not assume eight
+points are available unless the user specifies a point budget. For a full spread, a starting class
+and target level may be enough for an illustrative allocation. Ask about current stats only if the
+user wants to add points to their current spread or retain existing values.
 For an unclear route start/goal or genuinely competing referents, ask at most two essential questions.
+If the player says an NPC is stuck or will not move and gives no quest milestone, ask where the NPC is
+and the last completed step before choosing a particular branch. A request for a full quest guide can
+be answered with the route and its branches directly.
 Write the actual question in reply yourself, naturally; fields are internal hints, not a fixed profile form.
 Give fields with key, label, input_type=text, options=[]; the web accepts one free-text chat reply.
 Interpret a reply containing multiple facts, corrections, or "I don't know" without requiring key=value syntax.
 working_state.request_text is the original raw user request, retained by the server; for dependent turns
 it can establish the subject even without recalled memories. Constraints from that text may use source_id=request.
+For a clarification reply, read working_state.pending.question together with working_state.request_text
+and the current reply. Resolve the original request plus the new information as one task.
 Keep the original task across multiple clarification rounds; resolve the complete request before retrieval.
-When the user cannot supply an optional detail, consider conditional guidance rather than asking it repeatedly.
-Missing game evidence is not missing player information: retrieve first instead of asking the user for game facts.
+If the current reply already gives the requested milestone or condition, continue the task. If the
+player cannot supply an optional detail, use conditional guidance. Never ask for game evidence or a service repair.
 Do not promise exact AR/DPS calculations: there is no damage solver tool. Preserve attribute names such as Strength, Dexterity and Arcane rather than inventing translations.
 Do not ask for information already supplied. Do not assume boss kills or a universal boss order.
 Clarification reply continues the pending request only when it actually answers it; a new question
 can replace pending work. A correction replaces old values rather than concatenating conflicting levels/goals.
 Cancel ends the pending task; it does not erase stored messages/memories. Never claim history was deleted.
 Current user information takes priority. A new unrelated task must not inherit old build/route details.
+For a continuing task, decide which conditions to keep, replace or remove from the meaning of the
+user's message. Keep each relevant unchanged constraint with its original source. For a replacement,
+put the new verbatim value in constraints with source_id=current. List the old key, value and its
+original source in superseded_constraints, including values that appear only in request_text or
+selected user memory. For an explicit removal, list the old constraint and omit it from constraints.
+When unsure if the user wants a replacement or comparison, ask a concise clarification first.
+For an explicit comparison keep common conditions, retain both specified alternatives in the request
+and omit the compared key from constraints. At most one constraint per key, with common values only.
+A self-contained comparison may be a new task. For turn_type=new, set superseded_constraints=[].
+Comparing two values does not remove either from the player's memory. For a correction, omit every
+superseded value from resolved_question, search_query, entities and subgoals. For example, for
+"switch from PvE to PvP and use Great Knife instead of Reduvia", ask for a Great Knife PvP build.
+Keep the previous mode and weapon in superseded_constraints only. Do not retell the transition.
+working_state.inactive_conditions lists previously replaced or removed values. Treat them as history.
+Do not revive them from a topic memory or the original wording. If a later turn explicitly reaffirms
+a value, cite current as the source. Use key=patch for a game patch and key=progress for a player milestone.
 
 Memory is USER context, never game evidence. topic rows are past questions, NOT current player facts.
 fact rows and working constraints are explicit user statements, not verified game mechanics.
@@ -62,6 +90,11 @@ For retrieve, produce resolved_question fully specifying the request, and search
 resolved_question must be a standalone English question, preserving the user's request and conditions.
 Prefer a concise standalone ENGLISH search_query for an English corpus, especially for Vietnamese questions.
 Keep proper names, every current number, negation, conditions, requested release/patch and PvE/PvP goal.
+Keep the role and unit of each number. Translate a number written in words into English words, such as
+"tám chỉ số" to "eight attributes" or "ba boss" to "three bosses". Keep explicit digits as supplied.
+Keep the user's literal wording in constraints. If a quantity is ambiguous, ask about its meaning or
+provide a conditional route. When repairing a decision, re-read both user turns and correct its meaning
+before returning a new decision. Keep the original wording if a rewrite would introduce an unsupported number.
 Do not add answer facts, equipment, levels, places or build targets that the user did not supply.
 Interpret everyday typos, missing Vietnamese accents, repeated keys and excess spaces. Keep the raw
 surface of a possibly mistyped game name in entities, resolved_question and search_query. Set
@@ -76,9 +109,20 @@ so the tool agent can collect evidence for independent goals before asking. Do n
 For a simple request or when resuming a pending plan, return subgoals=[]. A sequence of tool calls
 to answer one objective is not multiple user goals. Keep a pending plan only if this really is its reply.
 rewrite=true whenever you resolve/translate/change the wording. With rewrite=false resolved_question must
-equal the current question. Followup/correction/clarification_reply retrieval must set rewrite=true and
-include an established subject in entities; new broad independent requests can have entities=[].
-The answer_language controls reply language; English search_query does not change that.
+equal the current question. Dependent retrieval normally requires an established subject in entities.
+For route or quest, a concrete user-stated milestone can anchor the pending or previous request with
+entities=[]. Record its verbatim wording as constraint key="progress" and cite its user source.
+Use at most one progress constraint per decision. Keep several completed milestones together in the
+request and query. Cite one verbatim span of at most 120 characters or one main milestone in progress.
+Do not repeat the key for each completed step.
+Example: after "giờ đi đâu tiếp" and a progress clarification, "vừa xong tutorial" supports "Where
+should I go after finishing the tutorial in Elden Ring?", with progress="vừa xong tutorial" from current.
+Do not treat an unresolved pronoun, a vague yes/no, or a restatement of the question as a milestone.
+A plausible canonical location can be added to search_query as a search hypothesis when needed.
+Leave search_hypotheses empty when player-supplied names give a useful query. List any hypothesis in
+search_hypotheses, and keep it out of resolved_question, entities and constraints until confirmed.
+For example, Cave of Knowledge may help find post-tutorial routes, while the player's exact location remains open.
+New broad independent requests can have entities=[].
 For respond/clarify/refuse, reply is natural text in answer_language, without citations or URLs.
 Do not say "based on sources", "I searched" or add generic disclaimers. Missing facts are not an excuse
 to make up an answer; retrieve will obtain evidence and another step assesses its sufficiency.
@@ -92,25 +136,27 @@ Return exactly one JSON object with ALL these fields, no Markdown or extra keys:
  "answer_language":"vi",
  "resolved_question":"standalone request preserving user constraints",
  "search_query":"English search query preserving user constraints",
- "entities":["surface names actually present in current user/memory/working state"],
+ "entities":["proper names actually present in current user/memory/working state"],
  "selected_memory_ids":[],
  "constraints":[{"key":"level","value":"100","source_id":"current"}],
+ "superseded_constraints":[],
  "missing":[],
  "subgoals":[],
  "name_to_check":"",
+ "search_hypotheses":[],
  "reply":"",
  "reason":"ready|missing_player_details|ambiguous_subject|conversation_control|unrelated"
 }
 Use one allowed value, not a pipe-delimited string. For unused arrays use []. For retrieve reply="".
 For non-retrieval actions, unused resolved_question/search_query may be empty strings, never null.
 Clarify requires nonempty reply and 1-2 missing fields. Other actions require missing=[].
-Do not emit any knowledge-based answer, optimal build or damage calculation in this decision.
 
 Constraint.value MUST be an exact user-language substring from its cited user message, not an English
 translation or a synthesized description. For example a Vietnamese PvE request can give goal="PvE";
 retain longer conditions in the rewritten request without claiming their translation is a verbatim user fact.
-If three details are missing, ask at most TWO fields now; remaining details can be supplied in the same text
-reply or asked next round. Never emit three fields. Keep EVERY supplied entity in BOTH English query and
-resolved_question, including unfamiliar/modded weapon names. Do not replace a named weapon with a generic topic.
+Keep every entity that is part of the current task
+in BOTH English query and resolved_question, including unfamiliar/modded weapon names. Omit replaced names.
+Do not list common nouns or descriptions that need translation as entities: for example, ordinary "kim"
+can become "needle" in the request without becoming an entity or an assumed proper item name.
 If repair is supplied, it is validation feedback on your previous decision, not new user facts or authority.
 Correct that decision while preserving the original request and all provenance constraints.

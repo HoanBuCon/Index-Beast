@@ -1,0 +1,43 @@
+[
+  {
+    "id": "OPT-01",
+    "lang": "vi",
+    "web_search": "auto",
+    "question": "Tôi đang ở Castle Ensis và muốn lên Scadu Altus mà chưa đánh Rellana. Có đường vòng qua Fort of Reprimand không, đi theo những mốc nào?",
+    "expected": "Xác định tuyến vòng khả thi, điểm vào từ Gravesite Plain và các mốc cần tìm. Phân biệt đường vào Fort of Reprimand với đường xuyên Castle Ensis.",
+    "clarification_answers": ["Tôi đang ở Castle Front Site of Grace, chưa hạ Rellana, có Torrent và muốn đi tới Scadu Altus qua Fort of Reprimand."]
+  },
+  {
+    "id": "OPT-02",
+    "lang": "vi",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "question": "Tôi đang làm quest của Nepheli Loux và cô ấy không chịu di chuyển. Tôi nên làm gì tiếp?",
+    "expected": "Xác định mốc trước khi hướng dẫn chắc chắn; sau khi người dùng cung cấp điều kiện, nêu các bước còn thiếu và tránh lặp việc đã làm.",
+    "clarification_answers": ["Nepheli ở tầng dưới Roundtable Hold. Tôi đã đưa Stormhawk King cho cô ấy và đã hạ Morgott. Kenneth Haight đã trở lại Fort Haight. Tôi chưa thấy họ ở Stormveil.", "Tôi chưa kiểm tra Gostoc hay nghỉ ở Godrick the Grafted Site of Grace sau khi làm các bước trên. Hãy cho tôi các khả năng theo thứ tự dễ kiểm tra."]
+  },
+  {
+    "id": "OPT-03",
+    "lang": "en",
+    "web_search": "auto",
+    "question": "I use the Rusted Anchor in PvE. How does its counter damage affect when I should attack, and what does the Spear Talisman change? Please focus on practical timing, not an exact damage calculation.",
+    "expected": "Explain the weapon damage type, eligible counter-hit window and what the talisman modifies. Give practical PvE timing advice without inventing a damage estimate.",
+    "clarification_answers": ["I'm using the Rusted Anchor two-handed in PvE and want general advice for regular enemies and bosses. I don't need exact AR or DPS."]
+  },
+  {
+    "id": "OPT-04",
+    "lang": "vi",
+    "web_search": "auto",
+    "question": "Ở trận Godskin Duo, Sleep Pot giúp tôi kiểm soát hai boss như thế nào? Khi một con ngủ thì tôi nên tấn công con nào và cần tránh làm gì?",
+    "expected": "Giải thích cách dùng sleep để tách hai mục tiêu, cách chọn mục tiêu và hành động có thể đánh thức boss. Nêu cụ thể nếu bằng chứng hỗ trợ.",
+    "clarification_answers": ["Tôi đánh solo PvE, cận chiến, có Sleep Pot và chỉ muốn xử lý một con mỗi lần."]
+  },
+  {
+    "id": "OPT-05",
+    "lang": "en",
+    "web_search": "auto",
+    "question": "I missed the Bolt of Gransax before beating Maliketh and Leyndell is now Ashen Capital. Can I still pick it up in this playthrough, and what are my realistic alternatives?",
+    "expected": "State whether normal pickup remains possible after the map change. Give supported alternatives and distinguish conditions, including another game cycle or an allowed multiplayer trade if supported.",
+    "clarification_answers": ["I'm still in the same New Game cycle, have not started NG+, and I'm willing to trade with a friend if the game allows it."]
+  }
+]

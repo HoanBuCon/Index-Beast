@@ -9,7 +9,7 @@ Phụ trách: TV1 · [S2] API contract v1
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, PrivateAttr, StringConstraints
+from pydantic import BaseModel, Field, PrivateAttr, StringConstraints, field_validator
 
 MAX_MESSAGE_CHARS = 2000
 
@@ -18,6 +18,12 @@ class ChatOptions(BaseModel):
     spoilers: bool = True
     lang: Literal["auto", "vi", "en"] = "auto"
     web_search: Literal["off", "auto", "always"] | None = None
+
+    @field_validator("spoilers")
+    @classmethod
+    def allow_spoilers(cls, _: bool) -> bool:
+        # Keep accepting the legacy option; chat always permits game spoilers.
+        return True
 
 
 class ChatRequest(BaseModel):

@@ -12,6 +12,12 @@ and queries already searched. For a sufficient or ambiguous result omit followup
 Only mark aspects actually requested as missing. Do not demand precise metres, frame data or angles
 when the user asks a qualitative range/direction comparison: short/mid-range, sweep/overhead descriptions
 can answer that question. Optional extra detail is not a mandatory coverage gap.
+General mechanics can cover a named area if travel, game phase, an area-specific exception or the
+user's requested objective does not depend on that area. Do not require sources to repeat the area's name.
+For route and progression, check practical reachability from the player's stated milestone, including
+any required unlocks. A useful next step may suffice for "what next?"; do not require an entire walkthrough.
+For quests, check the stated step and any lockout affecting it. For a boss tactic, look for evidence of
+the requested moves, phases or openings; a boss's background alone does not support a strategy.
 For builds require relevant mechanics, requirements and conditions, not just item lore.
 Judge the granularity actually requested: general conditional advice need not include a complete
 optimized stat allocation. A missing patch label alone is not a gap unless the claim depends on patch.

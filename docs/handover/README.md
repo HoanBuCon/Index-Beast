@@ -1,5 +1,11 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Trợ lý chơi Elden Ring dùng nhiều nguồn (14/11/2026)](2026-11-14_s4-tv3_gameplay-multi-source.md)
+
+- [TV3 · Cập nhật điều kiện khi người dùng đổi yêu cầu (14/11/2026)](2026-11-14_s4-tv3_superseded-constraints.md)
+
+- [TV3 · Nối lượt hỏi đường bằng mốc tiến độ (14/11/2026)](2026-11-14_s4-tv3_progress-clarification.md)
+
 - [TV3 · Agent thích ứng và lập kế hoạch (13/11/2026)](2026-11-13_s4-tv3_adaptive-agent.md)
 
 - [TV1 · Sprint 4: test CORS và giới hạn tần suất theo server Discord (13/11/2026)](2026-11-13_s4-tv1_cors-va-gioi-han-theo-guild.md)

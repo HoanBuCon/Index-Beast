@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     chat_tool_agent_enabled: bool = True
     chat_tool_steps: int | None = Field(default=3, ge=1, le=4)
     chat_tool_queries: int | None = Field(default=2, ge=1, le=3)
+    chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int | None = Field(default=6, ge=1, le=8)
     chat_persistence: Literal["memory", "postgres"] = "memory"

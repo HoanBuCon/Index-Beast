@@ -58,6 +58,38 @@ async def test_duplicate_queries_are_not_executed_again():
     assert p.trace["tool_actions"][1]["status"] == "denied"
 
 
+async def test_planner_can_open_full_evidence_without_duplicate_preview_or_id_change():
+    from tests.unit.test_live_chat import hit
+
+    excerpt = "First paragraph about an Elden Ring dungeon. " * 18 + "The exact unlock condition is at the end."
+    llm = ToolsLLM(
+        [
+            step("local_search", "dungeon condition"),
+            step("inspect_evidence", evidence_ids=["1"]),
+            step("finish", evidence_ids=["1"]),
+        ]
+    )
+    pipe = pipeline(llm)
+    pipe.retriever = FakeRetriever([hit(1, text=excerpt), hit(2, text="Other context.")])
+    p = await pipe.prepare(req(), [])
+    previews, opened = llm.observations[1:]
+    assert not previews["evidence_details"]
+    assert previews["candidates"][0]["text"] == excerpt[:480]
+    assert previews["candidates"][0]["preview_truncated"]
+    assert opened["candidates"][0]["id"] == "1" and "text" not in opened["candidates"][0]
+    assert opened["evidence_details"][0]["id"] == "1"
+    assert opened["evidence_details"][0]["text"] == excerpt
+    assert "q0" in opened["evidence_details"][0]["evidence_units"]
+    assert [h.id for h in p.hits] == ["1"] and p.hits[0].payload["text"] == excerpt
+
+
+async def test_inspection_rejects_unavailable_ids():
+    llm = ToolsLLM([step("local_search", "Ranni"), step("inspect_evidence", evidence_ids=["invented"]), step("finish")])
+    p = await pipeline(llm).prepare(req(), [])
+    assert p.trace["tool_actions"][1]["status"] == "error"
+    assert not llm.observations[-1]["evidence_details"]
+
+
 async def test_off_forbids_web_and_preserves_local_answer():
     llm = ToolsLLM([step("web_search", "Ranni"), step("local_search", "Ranni"), step("finish")])
     p = await pipeline(llm).prepare(req(options={"web_search": "off"}), [])
@@ -160,13 +192,13 @@ async def test_gameplay_advice_can_answer_with_empty_retrieval_without_claiming_
     assert p.trace["answer_basis"] == "gameplay_advice"
 
 
-@pytest.mark.parametrize("intent", ["lore", "comparison", "mechanics"])
-async def test_unverified_advice_is_blocked_for_lore_and_no_spoilers(intent):
+@pytest.mark.parametrize("intent", ["lore", "comparison", "route", "quest", "acquisition"])
+async def test_unverified_advice_is_blocked_for_factual_intents(intent):
     query = "Elden Ring Marika"
     llm = ToolsLLM([step("local_search", query), step("stop")])
     llm.decisions = [plan(intent=intent)]
     pipe = pipeline(llm)
-    p = await pipe.prepare(req(options={"spoilers": intent != "mechanics"}), [])
+    p = await pipe.prepare(req(options={"spoilers": False}), [])
     assert not p.gameplay_advice and p.static_answer is not None
     with pytest.raises(RAGValidationError, match="trích dẫn"):
         validate_answer(p, {"answer": "A claim.", "evidence": [], "insufficient": False, "advisory": True})

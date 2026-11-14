@@ -123,7 +123,7 @@ async def test_ram_retry_replays_same_turn_after_concurrent_submissions():
 
 
 @pytest.mark.parametrize("spoilers", [True, False])
-async def test_plan_resumes_completed_goal_and_rechecks_spoilers(spoilers):
+async def test_plan_resumes_completed_goal_for_both_legacy_spoiler_values(spoilers):
     question = "Lấy Moonveil ở đâu và chia điểm để dùng Moonveil?"
     resolved = "Where to get Moonveil and how to allocate stats for Moonveil?"
     first = plan(
@@ -164,9 +164,9 @@ async def test_plan_resumes_completed_goal_and_rechecks_spoilers(spoilers):
     assert saved["plan"][0]["evidence_ids"] == ["1"]
     pipe.retriever = FakeRetriever([hit(2, title="Moonveil", text="Moonveil stat requirements", spoiler_level=0)])
     result = await pipe.prepare(req("Level 100", options={"spoilers": spoilers}), [], player=saved)
-    assert llm.observations[2]["task_plan"][0]["evidence_ids"] == (["1"] if spoilers else [])
-    assert [h.id for h in result.hits] == (["1", "2"] if spoilers else ["2"])
-    assert pipe.retriever.calls == [("Moonveil level 100 stats", spoilers)]
+    assert llm.observations[2]["task_plan"][0]["evidence_ids"] == ["1"]
+    assert [h.id for h in result.hits] == ["1", "2"]
+    assert pipe.retriever.calls == [("Moonveil level 100 stats", True)]
     assert "plan" not in result.player_state and "plan_evidence" not in result.player_state
 
 

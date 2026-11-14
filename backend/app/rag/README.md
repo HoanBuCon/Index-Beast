@@ -216,9 +216,8 @@ Supported source types: `in_game_text`, `wiki_prose`, `speculation`. Nhãn unkno
 không được chọn, không sửa nhãn. Ngôn ngữ mặc định `en`; có thể chọn `en,ja` hoặc tập tường minh khác.
 `unknown` chỉ được chọn nếu chủ động chỉ định chính nhãn đó, không bao giờ đổi thành `en`.
 
-Spoiler: thiếu/null nhãn không được coi là an toàn. `spoilers=false` chỉ nhận `spoiler_level=0`;
-corpus hiện thiếu trường này nên có thể trả thiếu bằng chứng. Dùng `spoilers=true` khi tự thử baseline,
-không gán 0 hàng loạt vào dữ liệu.
+Chat web/Discord luôn cho phép spoiler. Trường `options.spoilers` vẫn được nhận để tương thích với client cũ.
+Lọc `spoiler_level=0` vẫn áp dụng cho truy vấn vector trực tiếp nếu bật chế độ kiểm spoiler.
 
 ## Cấu hình
 

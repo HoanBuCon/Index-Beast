@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.adapters.llm import LLMError
 from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import Clarification, ClarificationField
-from app.rag.agent import GoalText, spend
+from app.rag.agent import GoalText, contains_superseded, spend
 from app.rag.entity_spelling import correct_name, matching_names
 from app.rag.output import decode_output
 from app.rag.prompts import prompt, rewrite_prompt
@@ -29,7 +29,15 @@ from core.types import Hit
 class ToolStep(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     action: Literal[
-        "check_name", "local_search", "web_search", "source_snapshot", "calculator", "finish", "clarify", "stop"
+        "check_name",
+        "local_search",
+        "web_search",
+        "source_snapshot",
+        "inspect_evidence",
+        "calculator",
+        "finish",
+        "clarify",
+        "stop",
     ]
     query: str = Field(default="", max_length=1000)
     evidence_ids: list[str] = Field(default_factory=list, max_length=5)
@@ -57,6 +65,8 @@ async def run_tools(pipe, state):
     from app.rag.pipeline import context_item, select_context
 
     p, req = state["prepared"], state["req"]
+    inactive = (p.player_state or {}).get("inactive_conditions", [])
+    comparison = req.message if p.agent_decision.get("intent") in {"comparison", "gameplay_comparison"} else ""
     if p.trace["web_search"]["requested"] == "always" and not pipe.settings.web_search_available:
         raise UnavailableError("Tìm trên web hiện chưa khả dụng.")
     catalog = (
@@ -90,6 +100,7 @@ async def run_tools(pipe, state):
     actions = p.trace["tool_actions"] = []
     stop_reason = "step_budget"
     rounds = (p.player_state or {}).get("clarification_rounds", 0)
+    clarification_limit = pipe.settings.chat_clarification_max_rounds
     step_limit = pipe.settings.chat_tool_steps
     local_limit = pipe.settings.chat_tool_queries
     model_limit = pipe.settings.chat_agent_max_calls
@@ -101,11 +112,12 @@ async def run_tools(pipe, state):
     web_queries = []
     no_new_web_evidence = 0
     covered_ids = []
+    inspected_ids = []
     checked_contexts = set()
     seen_excerpts = {(hit.payload.get("url"), " ".join(hit.payload["text"].split())) for hit in hits.values()}
     while step_limit is None or len(actions) < step_limit:
         remaining = pipe.settings.chat_timeout_seconds - (time.perf_counter() - state.get("started", 0))
-        reserve = min(8, pipe.settings.chat_timeout_seconds / 4)
+        reserve = min(19, pipe.settings.chat_timeout_seconds / 2)
         if verify_coverage and remaining <= reserve:
             stop_reason = "answer_time_reserved"
             break
@@ -122,7 +134,7 @@ async def run_tools(pipe, state):
             preserve_order=True,
         )
         available = ["finish", "stop"]
-        if rounds < 3:
+        if clarification_limit is None or rounds < clarification_limit:
             available.append("clarify")
         unresolved_name = name_status in {"pending", "ambiguous", "not_found"}
         if (local_limit is None or local_calls < local_limit) and pipe.retriever is not None:
@@ -157,13 +169,16 @@ async def run_tools(pipe, state):
         carried_ids = dict.fromkeys(key for item in task_plan for key in item["evidence_ids"] if key in hits)
         interleaved = (key for batch in zip_longest(*reversed(source_batches)) for key in batch if key is not None)
         candidate_ids = list(dict.fromkeys([*carried_ids, *covered_ids, *interleaved, *hits]))[:30]
-        candidates = [hits[key] for key in candidate_ids]
-        shown_ids = {h.id for h in candidates}
+        shown_ids = set(candidate_ids) | set(inspected_ids)
+        if candidate_ids and not unresolved_name:
+            available.append("inspect_evidence")
+        inspected = set(inspected_ids)
         payload = {
             "player_profile": profile,
             "request": state["resolved_question"],
             "intent": p.agent_decision.get("intent"),
             "initial_query": state["query"],
+            "search_hypotheses": p.agent_decision.get("search_hypotheses", []),
             "answer_language": p.lang,
             "web_policy": state["search_mode"],
             "available_actions": available,
@@ -177,15 +192,24 @@ async def run_tools(pipe, state):
             ),
             "checked_build": p.checked_build,
             "cached_build_data": cached[0] if cached else None,
-            "evidence": [context_item(h, i + 1) for i, h in enumerate(selected)],
+            "evidence_details": [{**context_item(hits[i], pos), "id": i} for pos, i in enumerate(inspected_ids, 1)],
             "candidates": [
                 {
-                    **{k: v for k, v in context_item(h, 1).items() if k not in {"text", "evidence_units", "index"}},
-                    "id": h.id,
-                    "text": h.payload["text"][:1000],
-                    "preview_truncated": len(h.payload["text"]) > 1000,
+                    "id": i,
+                    "title": hits[i].payload["title"],
+                    "origin": "web" if isinstance(hits[i], WebHit) else "corpus",
+                    **{
+                        k: hits[i].payload[k]
+                        for k in ("section", "source_type", "game_scope", "release_scope", "patch_version", "rule_kind")
+                        if hits[i].payload.get(k) is not None
+                    },
+                    **(
+                        {"text": hits[i].payload["text"][:480], "preview_truncated": len(hits[i].payload["text"]) > 480}
+                        if i not in inspected
+                        else {"opened": True}
+                    ),
                 }
-                for h in candidates
+                for i in candidate_ids
             ],
             "snapshots": [{"id": k, "title": v["payload"]["title"]} for k, v in catalog.items()][:40],
         }
@@ -234,7 +258,11 @@ async def run_tools(pipe, state):
             step.query
             if action in {"local_search", "web_search"}
             else json.dumps(
-                {"ids": sorted(step.snapshot_ids), "allocation": step.allocation, "build_data": step.build_data},
+                {
+                    "ids": sorted(step.evidence_ids if action == "inspect_evidence" else step.snapshot_ids),
+                    "allocation": step.allocation,
+                    "build_data": step.build_data,
+                },
                 sort_keys=True,
             )
         )
@@ -246,6 +274,15 @@ async def run_tools(pipe, state):
                 break
             stalled.add(identity)
             observations.append({"action": action, "status": "not_available_or_duplicate"})
+            continue
+        planned_text = "\n".join([step.query, *step.add_goals])
+        if contains_superseded(planned_text, inactive, comparison):
+            row["status"] = "denied"
+            if identity in stalled:
+                stop_reason = "repeated_action"
+                break
+            stalled.add(identity)
+            observations.append({"action": action, "status": "superseded_constraint"})
             continue
         if unresolved_name and action == "finish":
             row["status"] = "denied"
@@ -320,7 +357,11 @@ async def run_tools(pipe, state):
                     context,
                     assessment_timeout,
                     task={
-                        "original_request": (p.player_state or {}).get("request_text", req.message),
+                        "original_request": (
+                            state["resolved_question"]
+                            if inactive
+                            else (p.player_state or {}).get("request_text", req.message)
+                        ),
                         "goals": [item["goal"] for item in task_plan],
                         "checked_build": p.checked_build,
                         "searched_web_queries": web_queries[-8:],
@@ -339,7 +380,11 @@ async def run_tools(pipe, state):
                         raw_query = state["query"]
                     if raw_query and no_new_web_evidence < 2:
                         proposed, _ = web_query(raw_query)
-                        if key("web_search", proposed) not in seen and key("web_search", raw_query) not in seen:
+                        if (
+                            key("web_search", proposed) not in seen
+                            and key("web_search", raw_query) not in seen
+                            and not contains_superseded(proposed, inactive, comparison)
+                        ):
                             followup = proposed
                     if followup:
                         row["status"] = "needs_evidence"
@@ -423,6 +468,15 @@ async def run_tools(pipe, state):
                     (WebHit if catalog[k].get("web") else Hit)(k, 0.0, dict(catalog[k]["payload"]))
                     for k in step.snapshot_ids
                 ]
+            elif action == "inspect_evidence":
+                if (
+                    not step.evidence_ids
+                    or len(set(step.evidence_ids)) != len(step.evidence_ids)
+                    or not set(step.evidence_ids) <= shown_ids
+                ):
+                    raise ValueError("unknown_or_duplicate_evidence_id")
+                inspected_ids = step.evidence_ids
+                row["opened"] = len(inspected_ids)
             elif action == "calculator":
                 from app.rag.build_math import check_allocation
 
@@ -452,8 +506,12 @@ async def run_tools(pipe, state):
                 no_new_web_evidence = 0 if novel else no_new_web_evidence + 1
             if admitted:
                 source_batches.append(admitted)
+                if action == "source_snapshot":
+                    inspected_ids = admitted
                 if verify_coverage and novel:
                     p.trace.pop("evidence_selection", None)
+            if action == "calculator" and p.checked_build:
+                inspected_ids = []
             row.update(status="ok", returned=len(found))
         except (UnavailableError, TimeoutError, WebSearchError, ValueError) as exc:
             row.update(status="error", error_type=type(exc).__name__)
@@ -492,8 +550,11 @@ async def run_tools(pipe, state):
         p.trace["evidence_selection"] = {"method": "model", "ids": []}
     if state["search_mode"] == "always" and not web_calls and p.static_answer is None:
         raise UnavailableError("Agent chưa hoàn tất tìm web bắt buộc trong ngân sách.")
+    allow_advice = verify_coverage and p.gameplay_advice
     if web_calls and p.trace["web_search"]["status"] != "ok" and not hits:
-        raise UnavailableError("Tìm trên web đang gặp sự cố.")
+        if not allow_advice:
+            raise UnavailableError("Tìm trên web đang gặp sự cố.")
+        p.trace["tool_stop"] = "web_error_advice_available"
     local_attempts = [
         row
         for row in actions
@@ -505,6 +566,7 @@ async def run_tools(pipe, state):
         and local_attempts
         and all(row["status"] == "error" for row in local_attempts)
         and p.trace["web_search"]["status"] != "ok"
+        and not allow_advice
     ):
         raise UnavailableError("Không thể truy vấn kho tri thức RAG.")
     state["documents"] = [hit_to_document(h) for h in hits.values() if not isinstance(h, WebHit)]
