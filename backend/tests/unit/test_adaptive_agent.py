@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -278,3 +279,108 @@ async def test_auto_checks_coverage_and_keeps_local_evidence_when_web_fills_a_ga
         assert search.calls[0].splitlines()[0] == "Elden Ring official all ten starting classes"
         assert p.trace["tool_actions"][1]["status"] == "needs_evidence"
         assert [h.id for h in p.hits] == ["1", "web:classes"]
+
+
+@pytest.mark.parametrize("scenario", ["one_source", "missing_requirement", "conflicting_requirement"])
+async def test_auto_web_coverage_guides_generator_without_requiring_more_sources(scenario):
+    from app.adapters.llm import LLMResponse
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    question = "Moonveil cần bao nhiêu Intelligence?"
+    answer = "Moonveil cần 23 Intelligence [1]."
+    limitation = None
+    lookup = "Moonveil Intelligence requirement and location"
+    followup = "Elden Ring Moonveil Intelligence minimum requirements"
+    excerpts = [web_hit()]
+    gap = []
+    if scenario == "missing_requirement":
+        excerpts = []
+        gap = ["minimum Intelligence requirement"]
+    elif scenario == "conflicting_requirement":
+        other = web_hit()
+        excerpts.append(
+            replace(
+                other,
+                id="web:other",
+                payload={
+                    **other.payload,
+                    "url": "https://eldenring.fandom.com/wiki/Moonveil",
+                    "text": "Moonveil requires Intelligence 25.",
+                },
+            )
+        )
+        gap = ["minimum Intelligence requirement"]
+
+    if gap:
+        question = "Moonveil lấy ở đâu và cần bao nhiêu Intelligence?"
+        other = web_hit()
+        excerpts.insert(
+            0,
+            replace(other, id="web:pickup", payload={**other.payload, "text": "Moonveil drops in Gael Tunnel."}),
+        )
+        answer = "Bạn lấy Moonveil ở Gael Tunnel [1]."
+        limitation = (
+            "Chưa xác định được mức Intelligence tối thiểu."
+            if scenario == "missing_requirement"
+            else "Mức Intelligence tối thiểu còn mâu thuẫn."
+        )
+    evidence_ids = [h.id for h in excerpts]
+    checked_fact = ["acquisition location" if gap else "minimum Intelligence requirement"]
+    verdict = {
+        "status": "partial" if gap else "sufficient",
+        "covered": checked_fact,
+        "missing": gap,
+    }
+
+    class AssessedAgent(ToolsLLM):
+        async def invoke_chain(self, chain, inputs):
+            if not inputs.get("policy", "").startswith("Evaluate whether"):
+                return await super().invoke_chain(chain, inputs)
+            assessment = json.loads(inputs["question"])
+            assert [row["point_id"] for row in assessment["context"]] == evidence_ids
+            assert assessment["context"][0]["source_domain"] == "eldenring.wiki.gg"
+            return LLMResponse(
+                json.dumps(
+                    {
+                        **verdict,
+                        "evidence": {"1": ["q0"]},
+                        "followup_query": followup if gap else "",
+                    }
+                ),
+                "fake",
+                10,
+                5,
+                "stop",
+            )
+
+    class Search(FakeSearch):
+        async def search(self, query):
+            rows, diagnostics = await super().search(query)
+            return (rows, diagnostics) if len(self.calls) == 1 else ([], {"selected_urls": 0})
+
+    finish = step("finish", evidence_ids=evidence_ids)
+    llm = AssessedAgent(
+        [step("web_search", lookup), finish, finish, finish],
+        [plan(intent="acquisition", resolved_question=question, search_query=lookup, entities=["Moonveil"])],
+    )
+    llm.data = {
+        "answer": answer,
+        "evidence": [{"index": 1, "quote_id": "q0"}],
+        "insufficient": False,
+        **({"limitation": limitation} if limitation else {}),
+    }
+    search = Search(rows=excerpts)
+    pipe = ChatPipeline(
+        settings(chat_tool_agent_enabled=True, tavily_api_key="test-key"),
+        llm,
+        FakeRetriever([]),
+        web_search=search,
+    )
+    prepared = await pipe.prepare(req(question, options={"web_search": "auto"}), [])
+    assert json.loads(prepared.values["payload"])["evidence_coverage"] == verdict
+    assert len(search.calls) == (2 if gap else 1)
+    if gap:
+        assert followup in search.calls[1]
+    result = await pipe.generator.generate(prepared)
+    assert result.answer == (f"{answer}\n\n{limitation}" if limitation else answer)
+    assert result.grounded and len(result.sources) == 1 and result.sources[0].origin == "web"

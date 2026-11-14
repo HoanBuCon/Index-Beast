@@ -7,6 +7,7 @@ import unicodedata
 from datetime import UTC, datetime
 from itertools import zip_longest
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -198,6 +199,11 @@ async def run_tools(pipe, state):
                     "id": i,
                     "title": hits[i].payload["title"],
                     "origin": "web" if isinstance(hits[i], WebHit) else "corpus",
+                    **(
+                        {"source_domain": urlsplit(hits[i].payload["url"]).hostname}
+                        if isinstance(hits[i], WebHit)
+                        else {}
+                    ),
                     **{
                         k: hits[i].payload[k]
                         for k in ("section", "source_type", "game_scope", "release_scope", "patch_version", "rule_kind")
@@ -363,6 +369,7 @@ async def run_tools(pipe, state):
                             else (p.player_state or {}).get("request_text", req.message)
                         ),
                         "goals": [item["goal"] for item in task_plan],
+                        "player_profile": profile,
                         "checked_build": p.checked_build,
                         "searched_web_queries": web_queries[-8:],
                     },
@@ -370,8 +377,9 @@ async def run_tools(pipe, state):
                 supported = [evaluated[int(i) - 1].id for i in assessment.get("evidence", {})]
                 if supported:
                     covered_ids = list(dict.fromkeys([*supported, *covered_ids]))[: pipe.settings.rag_top_k]
-                p.trace.setdefault("coverage_checks", []).append(assessment)
-                p.trace["evidence_selection"] = {"method": "model", "ids": [hit.id for hit in evaluated]}
+                context_ids = [hit.id for hit in evaluated]
+                p.trace.setdefault("coverage_checks", []).append({**assessment, "context_ids": context_ids})
+                p.trace["evidence_selection"] = {"method": "model", "ids": context_ids}
                 if status == "sufficient" and not web_calls:
                     p.trace["web_search"]["status"] = "local_sufficient"
                 if status not in {"sufficient", "ambiguous"}:

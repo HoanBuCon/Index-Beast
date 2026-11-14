@@ -62,6 +62,20 @@ test("rendering preserves safe Markdown and sources, requires opt-in media, and 
     assert.match(markup, /aria-label="Nguồn tham khảo"/);
     assert.doesNotMatch(markup, /Câu trả lời có hữu ích\?|aria-label="(?:Hữu ích|Chưa hữu ích)"/);
     assert.doesNotMatch(markup, /src="https:\/\/tracker|<script>/);
+    const structured = render({
+      messages: [
+        {
+          ...message,
+          content:
+            "### Đường đi\n\n1. Đến **điểm xuất phát** [1].\n2. Qua cổng [1].\n\n- Nghỉ ở Grace.\n\n| Cách | Điều kiện |\n| --- | --- |\n| A | Có chìa khóa [1]. |",
+        },
+      ],
+    });
+    assert.match(structured, /<h3>Đường đi<\/h3>/);
+    assert.match(structured, /<ol>[\s\S]*<strong>điểm xuất phát<\/strong>[\s\S]*<\/ol>/);
+    assert.match(structured, /<ul>[\s\S]*Nghỉ ở Grace\.[\s\S]*<\/ul>/);
+    assert.match(structured, /class="answer-table"[^>]*><table>[\s\S]*<th>Điều kiện<\/th>/);
+    assert.equal((structured.match(/class="citation-link"/g) ?? []).length, 3);
     for (const extra of [
       { busy: true },
       { messages: [{ ...message, incomplete: true }] },

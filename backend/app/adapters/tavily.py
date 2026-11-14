@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from urllib.parse import urlsplit, urlunsplit
@@ -28,15 +29,18 @@ def allowed_url(url, domains):
         return None
     try:
         parts = urlsplit(url)
+        host = parts.hostname or ""
         if (
             parts.scheme != "https"
-            or parts.hostname not in domains
+            or not re.fullmatch(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,62}", host)
+            or host.endswith((".localhost", ".local", ".internal", ".home.arpa"))
+            or (domains is not None and host not in domains)
             or parts.username
             or parts.password
             or parts.port not in (None, 443)
         ):
             return None
-        return urlunsplit(("https", parts.hostname, parts.path or "/", parts.query, ""))
+        return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
     except ValueError:
         return None
 
@@ -85,6 +89,8 @@ class TavilySearch:
 
     async def search(self, query):
         diagnostics = {"selected_urls": 0, "failed_extracts": 0, "excluded": 0}
+        domain_mode = self.settings.web_search_domains_mode
+        allowed_domains = self.settings.web_search_domains if domain_mode == "restrict" else None
         try:
             async with asyncio.timeout(self.settings.web_search_timeout_seconds):
                 data = await self._post(
@@ -95,6 +101,7 @@ class TavilySearch:
                         "search_depth": "basic",
                         "max_results": self.settings.web_search_max_results,
                         "include_domains": self.settings.web_search_domains,
+                        "include_domains_mode": domain_mode,
                         "include_answer": False,
                         "include_raw_content": False,
                         "include_images": True,
@@ -106,7 +113,7 @@ class TavilySearch:
                 for item in data["results"][: self.settings.web_search_max_results]:
                     if not isinstance(item, dict):
                         raise WebSearchError("schema")
-                    url = allowed_url(item.get("url"), self.settings.web_search_domains)
+                    url = allowed_url(item.get("url"), allowed_domains)
                     title = item.get("title")
                     if url and isinstance(title, str) and title.strip():
                         selected.setdefault(url, title[:300])
@@ -143,7 +150,7 @@ class TavilySearch:
                 for item in extracted["results"][: self.settings.web_search_max_results]:
                     if not isinstance(item, dict):
                         raise WebSearchError("schema")
-                    url = allowed_url(item.get("url"), self.settings.web_search_domains)
+                    url = allowed_url(item.get("url"), allowed_domains)
                     text = item.get("raw_content")
                     if url not in selected or not isinstance(text, str) or not text.strip() or len(text) > 60000:
                         diagnostics["excluded"] += 1

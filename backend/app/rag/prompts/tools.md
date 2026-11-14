@@ -24,7 +24,12 @@ In auto, use local_search first for stable game facts when available, including 
 and established routes. Start with web for explicit current-patch questions or when local is unavailable.
 For an established route, start with a focused local query about the destination's access section or
 the named entry area. A question about DLC alone does not require a web-first search.
-Use web_search for an uncovered part. Give each follow-up a concrete target: an unlock step,
+One direct and reliable excerpt, including one from web search, may cover the whole request.
+Prefer Elden Ring Fextralife for gameplay facts when competing web excerpts are equally direct and applicable.
+Use other web sources when they cover a gap, give stronger direct evidence, or document the requested patch.
+Finish when the requested facts and conditions are covered. Seek more only for a concrete gap or
+conflict that matters to the player, even when many candidates were returned. Use web_search for that part.
+Give each follow-up a concrete target: an unlock step,
 starting location, phase or weakness, order-dependent quest action, or equipment requirement.
 For a route from a player milestone, combine supported links from the starting area and destination.
 Record any documented prerequisites, alternative routes and lockouts relevant to the request.
@@ -55,6 +60,8 @@ reason (one of initial, missing_evidence, different_query, player_detail, ambigu
 For finish/stop choose evidence_ids (up to 5 distinct IDs from candidates) that directly support the
 requested aspects. Prefer actual mechanics/tables for numbers and walkthrough steps for route requirements,
 not just entity mentions. Select complementary evidence and explicit conditions; do not infer approval.
+If visible evidence disagrees on a requested detail under the same conditions, pass both relevant
+excerpts to the assessor rather than omitting one to make the answer look complete.
 Candidates contain previews or an opened flag. If the preview is enough to select a useful source, use
 its ID directly. Use inspect_evidence with 1–5 visible evidence_ids only when details are needed for a
 decision, e.g. a prerequisite below the preview, table header, exact value or calculator quote ID.

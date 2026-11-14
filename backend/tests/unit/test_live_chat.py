@@ -787,6 +787,41 @@ async def test_fully_cited_answer_keeps_its_exact_text():
     assert "dropped_uncited_paragraphs" not in live.traces[result.message_id]
 
 
+async def test_structured_markdown_preserves_headings_and_citations_in_json_and_sse():
+    answer = (
+        "### Các bước\n\n1. Gặp Ranni [1].\n2. Hỏi Blaidd [1]."
+        "\n\n### Lựa chọn\n\n| Cách | Điểm cần biết |\n| --- | --- |\n| A | Gặp Ranni [1]. |"
+    )
+    data = {"answer": answer, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    llm = FakeLLM()
+    llm.data = data
+    live = service("rag", llm, FakeRetriever())
+    req = ChatRequest(**BODY)
+    response = await live.answer(req)
+    streaming = FakeLLM(tokens=list(json.dumps(data)))
+    stream = await service("rag", streaming, FakeRetriever()).open_stream(req)
+    async with aclosing(stream) as events:
+        frames = [frame async for frame in events]
+    assert response.answer == answer == "".join(payload.token for name, payload in frames if name == "token")
+    assert frames[-1][0] == "done"
+    assert [source.index for source in response.sources] == [1]
+
+
+async def test_stream_holds_uncited_intro_and_preserves_cited_steps():
+    steps = "### Các bước\n\n\n1. Gặp Ranni [1].\n2. Hỏi Blaidd [1]."
+    data = {
+        "answer": "Mở đầu chưa được trích dẫn.\n\n" + steps + "\n\nKết luận chưa được trích dẫn.",
+        "evidence": [{"index": 1, "quote_id": "q0"}],
+        "insufficient": False,
+    }
+    llm = FakeLLM(tokens=list(json.dumps(data)))
+    live = service("rag", llm, FakeRetriever())
+    async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
+        frames = [frame async for frame in events]
+    assert "".join(payload.token for name, payload in frames if name == "token") == steps
+    assert frames[-1][0] == "done"
+
+
 async def test_citation_protocol_retry_is_bounded():
     llm = SequenceLLM([json.dumps({"answer": "Uncited claim.", "evidence": [], "insufficient": False})])
     live = service("rag", llm, FakeRetriever())

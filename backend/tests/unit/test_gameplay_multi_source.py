@@ -44,12 +44,13 @@ def test_case_budget_keeps_all_clarification_answers(tmp_path, capsys):
     assert plan["manifest"]["cases"][0]["clarification_answers"] == ["A", "B"]
 
 
-def test_continue_case_retries_failed_clarification_in_the_same_conversation():
+@pytest.mark.parametrize("http_status", [502, 200])
+def test_continue_case_retries_failed_clarification_in_the_same_conversation(http_status):
     case = {"question": "Original question", "clarification_answers": ["First detail", "Second detail"]}
     row = {
         "http_turns": [
             {"http_status": 200, "response": {"clarification": {"id": "pending"}}},
-            {"http_status": 502, "message": "First detail"},
+            {"http_status": http_status, "message": "First detail"},
         ]
     }
     group = {"conversation_id": "conversation", "conversation_token": "token"}

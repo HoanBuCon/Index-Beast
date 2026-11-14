@@ -288,6 +288,8 @@ def context_item(hit: Hit, index: int) -> dict:
             item[key] = p[key]
     if "indexbeast_admission" in p:
         item["admission_policy"] = p["indexbeast_admission"]
+    if isinstance(hit, WebHit):
+        item["source_domain"] = urlsplit(p["url"]).hostname
     units = evidence_units(p["text"])
     item["evidence_units"] = {"q0": "entire source text above"} if "q0" in units else units
     return item
@@ -890,6 +892,11 @@ class ChatPipeline:
                 query="" if model_selection else state["req"].message + "\n" + state["query"],
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
+            checks = p.trace.get("coverage_checks", [])
+            if checks:
+                check = checks[-1]
+                if check["status"] in {"sufficient", "partial"} and check.get("context_ids") == p.trace["selected_ids"]:
+                    p.trace["answer_coverage"] = {key: check[key] for key in ("status", "covered", "missing")}
             if not p.hits and not p.gameplay_advice:
                 p.static_answer = (
                     no_overview_evidence(state["overview"], p.lang)
@@ -930,6 +937,7 @@ class ChatPipeline:
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
                     "checked_build": p.checked_build,
+                    **({"evidence_coverage": p.trace["answer_coverage"]} if "answer_coverage" in p.trace else {}),
                     **({"player_profile": profile} if profile else {}),
                     **({"task_plan": p.trace["task_plan"]} if p.trace.get("task_plan") else {}),
                     **({"verified_name": p.trace["verified_name"]} if p.trace.get("verified_name") else {}),

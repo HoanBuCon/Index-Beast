@@ -132,8 +132,8 @@ async def run_case(http, case, group, row, groups, state_path, *, case_budget, c
 
 def continuation_case(case, row, group):
     previous_turns = row["http_turns"][row.get("restart_offset", 0) :]
-    if not previous_turns or previous_turns[-1]["http_status"] == 200:
-        raise ValueError("Only a failed HTTP turn can be continued")
+    if not previous_turns or "response" in previous_turns[-1]:
+        raise ValueError("Only a turn without a completed response can be continued")
     replies_sent = sum(bool(turn.get("response", {}).get("clarification")) for turn in previous_turns)
     prior = next(
         (
