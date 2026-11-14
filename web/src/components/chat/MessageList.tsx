@@ -59,11 +59,16 @@ export default function MessageList({
                 skipHtml
                 components={{
                   img: () => null,
+                  table: ({ children }) => (
+                    <div className="answer-table" tabIndex={0}>
+                      <table>{children}</table>
+                    </div>
+                  ),
                   a: ({ href, children }) => {
                     const match = /^#source-(\d+)$/.exec(href ?? "");
                     const source = match ? message.sources.find((s) => s.index === Number(match[1])) : undefined;
                     return source ? (
-                      <button className="citation-link" onClick={() => setSelected(source)}>
+                      <button type="button" className="citation-link" onClick={() => setSelected(source)}>
                         {children}
                       </button>
                     ) : (

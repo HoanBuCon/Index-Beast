@@ -93,17 +93,18 @@ async def test_web_selection_download_error_does_not_erase_text(media, monkeypat
     assert llm.payload["candidates"][0]["association"] == "web_result"
 
 
-async def test_no_image_model_call_when_budget_or_spoilers_disallow(media):
+async def test_image_budget_preserved_and_legacy_spoiler_flag_allows_selection(media):
     service, p, answer, llm = setup(media, lambda rows: pytest.fail("must not call"))
     p.max_calls = 0
     assert await module.resolve(service, ChatRequest(message="Ranni", channel="web"), p, answer) == []
-    p.max_calls = 6
+    service, p, answer, llm = setup(media, lambda rows: [])
     assert (
         await module.resolve(
             service, ChatRequest(message="Ranni", channel="web", options={"spoilers": False}), p, answer
         )
         == []
     )
+    assert llm.payload["candidates"]
 
 
 @pytest.mark.parametrize(

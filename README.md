@@ -26,7 +26,7 @@ Mở phần của từng thành viên để xem việc đã làm, việc còn c�
 | TV1 | Hoanbucon | Tech Lead · Backend & DevOps | [Công việc TV1](backend/README-TV1-TV3.md#tv1-hoanbucon) |
 | TV2 | UncleThing | Data Engineer | [Công việc TV2](backend/README-TV2-TV4.md#tv2-unclething) |
 | TV3 | MinhMuc | AI / RAG Engineer | [Công việc TV3](backend/README-TV1-TV3.md#tv3-minhmuc) |
-| TV4 | QuyVuiVe | Frontend & Discord Bot | [Công việc TV4](backend/README-TV2-TV4.md#tv4-quyvuive) |
+| TV4 | QuyVuiVe | Frontend & Discord Bot | [Công việc TV4](web/README-TV2-TV4.md#tv4-quyvuive) |
 
 ## Tài liệu
 

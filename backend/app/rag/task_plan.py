@@ -44,13 +44,15 @@ def update_plan(plan, step, candidate_ids):
 def restore_evidence(pipe, state):
     prepared = state["prepared"]
     hits = {}
+    settings = pipe.settings
+    allowed_domains = settings.web_search_domains if settings.web_search_domains_mode == "restrict" else None
     for row in prepared.player_state.pop("plan_evidence", []):
         hit = (WebHit if row["web"] else Hit)(row["id"], row["score"], row["payload"])
         if isinstance(hit, WebHit):
             admitted = (
                 state["req"].options.spoilers
                 and state["search_mode"] != "off"
-                and allowed_url(hit.payload.get("url"), pipe.settings.web_search_domains)
+                and allowed_url(hit.payload.get("url"), allowed_domains)
             )
         else:
             admitted = (

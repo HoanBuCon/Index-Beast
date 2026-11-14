@@ -87,6 +87,7 @@ class Settings(BaseSettings):
     chat_tool_agent_enabled: bool = True
     chat_tool_steps: int | None = Field(default=3, ge=1, le=4)
     chat_tool_queries: int | None = Field(default=2, ge=1, le=3)
+    chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int | None = Field(default=6, ge=1, le=8)
     chat_persistence: Literal["memory", "postgres"] = "memory"
@@ -130,6 +131,7 @@ class Settings(BaseSettings):
     web_search_timeout_seconds: float = Field(default=8, gt=0, le=20)
     web_search_assessment_seconds: float = Field(default=3, gt=0, le=8)
     web_search_max_results: int = Field(default=3, ge=1, le=5)
+    web_search_domains_mode: Literal["prefer", "restrict"] = "prefer"
     web_search_domains: Annotated[list[str], NoDecode] = [
         "eldenring.wiki.gg",
         "eldenring.wiki.fextralife.com",

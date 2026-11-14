@@ -197,6 +197,18 @@ class MemoryRepository:
                             created_at=user.created_at,
                         )
                     )
+                    retired = set(working.get("retired_condition_keys", []))
+                    if retired:
+                        await session.execute(
+                            update(ConversationMemory)
+                            .where(
+                                ConversationMemory.conversation_id == conv.id,
+                                ConversationMemory.kind == "fact",
+                                ConversationMemory.key.in_(retired),
+                                ConversationMemory.status == "active",
+                            )
+                            .values(status="superseded", revision=ConversationMemory.revision + 1)
+                        )
                     for c in working.get("constraints", []):
                         if c["source_id"] != str(user.id):
                             continue

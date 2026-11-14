@@ -226,6 +226,44 @@ def test_only_exact_https_domains_are_extractable(url):
     assert allowed_url(url, ["eldenring.wiki.gg"]) is None
 
 
+@pytest.mark.parametrize("mode", ["prefer", "restrict"])
+async def test_tavily_domain_preference_can_admit_other_web_sources(mode):
+    fextralife = "https://eldenring.wiki.fextralife.com/Moonveil"
+    alternative = "https://example.com/elden-ring/moonveil"
+    expected = [fextralife, alternative] if mode == "prefer" else [fextralife]
+
+    def handler(request):
+        body = json.loads(request.content)
+        if request.url.path == "/search":
+            assert body["include_domains_mode"] == mode
+            assert "eldenring.wiki.fextralife.com" in body["include_domains"]
+            return httpx.Response(
+                200,
+                json={
+                    "results": [
+                        {"url": fextralife, "title": "Moonveil"},
+                        {"url": alternative, "title": "Moonveil guide"},
+                        {"url": "https://127.0.0.1/secret", "title": "Private"},
+                    ]
+                },
+            )
+        assert body["urls"] == expected
+        return httpx.Response(
+            200,
+            json={
+                "results": [
+                    {"url": url, "raw_content": "Moonveil requires Intelligence 23."}
+                    for url in [*expected, "https://example.com/unrequested"]
+                ]
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        rows, diag = await TavilySearch(settings(web_search_domains_mode=mode), client=client).search("Moonveil")
+    assert [row.payload["url"] for row in rows] == expected
+    assert diag["excluded"] == 2 + (mode == "restrict")
+
+
 async def test_tavily_wire_contract_extract_only_selected_urls_and_preserve_unknown():
     requests = []
 

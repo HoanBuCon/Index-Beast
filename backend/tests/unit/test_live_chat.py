@@ -332,14 +332,14 @@ async def test_rerank_then_top_five_numbering_is_shared_by_generation():
     assert [d["index"] for d in evidence] == [1, 2, 3, 4, 5]
 
 
-async def test_request_spoiler_filter_does_not_mutate_shared_retriever():
+async def test_chat_accepts_legacy_spoiler_flag_and_retrieves_for_both_values():
     retrieval = FakeRetriever(hits=[])
     live = service("rag", FakeLLM(), retrieval)
     await asyncio.gather(
         live.answer(ChatRequest(**BODY, options={"spoilers": False})),
         live.answer(ChatRequest(**BODY, options={"spoilers": True})),
     )
-    assert sorted(spoilers for _, spoilers in retrieval.calls) == [False, True]
+    assert sorted(spoilers for _, spoilers in retrieval.calls) == [True, True]
     assert retrieval.spoilers is True
 
 
@@ -511,11 +511,12 @@ async def test_pilot_dlc_question_and_source_metadata_flow_through_langchain_pro
     assert "never assume shared canon" in llm.seen[-1][0]["content"]
 
 
-async def test_missing_spoiler_labels_return_insufficient_without_calling_model():
+@pytest.mark.parametrize("channel", ["web", "discord"])
+async def test_legacy_spoiler_flag_no_longer_excludes_unlabelled_evidence(channel):
     llm = FakeLLM()
     live = service("rag", llm, FakeRetriever([hit(game_scope="elden_ring", review_status=None)]))
-    response = await live.answer(ChatRequest(**BODY, options={"spoilers": False}))
-    assert not response.grounded and response.sources == [] and llm.calls == 0
+    response = await live.answer(ChatRequest(**{**BODY, "channel": channel}, options={"spoilers": False}))
+    assert response.grounded and response.sources and llm.calls == 1
 
 
 @pytest.mark.parametrize(
@@ -784,6 +785,41 @@ async def test_fully_cited_answer_keeps_its_exact_text():
     result = await live.answer(ChatRequest(**BODY))
     assert result.answer == data["answer"]
     assert "dropped_uncited_paragraphs" not in live.traces[result.message_id]
+
+
+async def test_structured_markdown_preserves_headings_and_citations_in_json_and_sse():
+    answer = (
+        "### Các bước\n\n1. Gặp Ranni [1].\n2. Hỏi Blaidd [1]."
+        "\n\n### Lựa chọn\n\n| Cách | Điểm cần biết |\n| --- | --- |\n| A | Gặp Ranni [1]. |"
+    )
+    data = {"answer": answer, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    llm = FakeLLM()
+    llm.data = data
+    live = service("rag", llm, FakeRetriever())
+    req = ChatRequest(**BODY)
+    response = await live.answer(req)
+    streaming = FakeLLM(tokens=list(json.dumps(data)))
+    stream = await service("rag", streaming, FakeRetriever()).open_stream(req)
+    async with aclosing(stream) as events:
+        frames = [frame async for frame in events]
+    assert response.answer == answer == "".join(payload.token for name, payload in frames if name == "token")
+    assert frames[-1][0] == "done"
+    assert [source.index for source in response.sources] == [1]
+
+
+async def test_stream_holds_uncited_intro_and_preserves_cited_steps():
+    steps = "### Các bước\n\n\n1. Gặp Ranni [1].\n2. Hỏi Blaidd [1]."
+    data = {
+        "answer": "Mở đầu chưa được trích dẫn.\n\n" + steps + "\n\nKết luận chưa được trích dẫn.",
+        "evidence": [{"index": 1, "quote_id": "q0"}],
+        "insufficient": False,
+    }
+    llm = FakeLLM(tokens=list(json.dumps(data)))
+    live = service("rag", llm, FakeRetriever())
+    async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
+        frames = [frame async for frame in events]
+    assert "".join(payload.token for name, payload in frames if name == "token") == steps
+    assert frames[-1][0] == "done"
 
 
 async def test_citation_protocol_retry_is_bounded():

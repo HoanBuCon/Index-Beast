@@ -68,6 +68,94 @@ def private_state(path, groups):
     temp.replace(path)
 
 
+def chat_payload(response, endpoint):
+    if endpoint == "chat":
+        return response.json()
+    events = []
+    for frame in response.text.split("\n\n"):
+        lines = frame.splitlines()
+        event = next((line[7:] for line in lines if line.startswith("event: ")), None)
+        value = next((json.loads(line[6:]) for line in lines if line.startswith("data: ")), None)
+        if event:
+            events.append((event, value))
+    if not events or events[-1][0] != "done":
+        raise ValueError("SSE did not finish successfully")
+    return {
+        **events[-1][1],
+        "answer": "".join(v["token"] for k, v in events if k == "token"),
+        **next((v for k, v in events if k == "sources"), {}),
+    }
+
+
+async def run_case(http, case, group, row, groups, state_path, *, case_budget, checkpoint):
+    endpoint = case.get("endpoint", "chat")
+    answers = iter(case.get("clarification_answers", []))
+    message = case["question"]
+    continuation = dict(group)
+    while True:
+        body = {
+            "message": message,
+            "channel": "web",
+            "turn_id": str(uuid4()),
+            "options": {"web_search": case.get("web_search", "auto"), "lang": case["lang"], "spoilers": True},
+            **continuation,
+        }
+        response = await http.post("/api/v1/" + endpoint, json=body)
+        row["http_status"] = response.status_code
+        if case_budget:
+            row.setdefault("http_turns", []).append({"message": message, "http_status": response.status_code})
+        if response.status_code != 200:
+            row.update(status="error", error=response.json().get("code", "http_error"))
+            return None
+        data = chat_payload(response, endpoint)
+        continuation = {
+            "conversation_id": data["conversation_id"],
+            "conversation_token": data.pop("conversation_token", None),
+        }
+        if case["group"]:
+            groups[case["group"]] = continuation
+        if case_budget:
+            row["http_turns"][-1]["response"] = data
+            groups[case["id"]] = continuation
+        await asyncio.to_thread(private_state, state_path, groups)
+        clarification = data.get("clarification")
+        if not case_budget or not clarification:
+            row.update(status="ok", response=data)
+            return data
+        message = next(answers, None)
+        if message is None:
+            row.update(status="incomplete", error="clarification_answer_missing", response=data)
+            return None
+        continuation = {**continuation, "clarification_id": clarification["id"]}
+        checkpoint()
+
+
+def continuation_case(case, row, group):
+    previous_turns = row["http_turns"][row.get("restart_offset", 0) :]
+    if not previous_turns or "response" in previous_turns[-1]:
+        raise ValueError("Only a turn without a completed response can be continued")
+    replies_sent = sum(bool(turn.get("response", {}).get("clarification")) for turn in previous_turns)
+    prior = next(
+        (
+            t["response"]["clarification"]
+            for t in reversed(previous_turns)
+            if t.get("response", {}).get("clarification")
+        ),
+        None,
+    )
+    if prior:
+        if not group.get("conversation_id") or not group.get("conversation_token"):
+            # Older case reports did not persist credentials for ungrouped scenarios.
+            row["restart_offset"] = len(row["http_turns"])
+            return case, {}
+        group = {**group, "clarification_id": prior["id"]}
+    return {
+        **case,
+        "question": previous_turns[-1]["message"],
+        "clarification_answers": case.get("clarification_answers", [])[replies_sent:],
+    }, group
+
+
 async def execute(args, manifest, cases):
     # Set before importing model-related modules; no missing-cache downloads are allowed.
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -92,6 +180,7 @@ async def execute(args, manifest, cases):
         v.get_secret_value() for v in (base.deepseek_api_key, base.tavily_api_key, base.api_service_token) if v
     ]
     suffix = uuid4().hex[:10]
+    case_budget = manifest.get("budget_unit") == "main_question"
     database = f"indexbeast_agent_test_{suffix}"
     collection = f"ib_agent_test_{suffix}"
     report = {
@@ -116,7 +205,12 @@ async def execute(args, manifest, cases):
             "SSE usage may be unavailable",
         ],
     }
+    if case_budget:
+        report.update(budget_unit="main_question", planned_cases=len(cases))
+        del report["planned_turns"]
     resume = getattr(args, "resume", False)
+    continue_cases = getattr(args, "continue_cases", False)
+    recheck_cases = set(getattr(args, "recheck_case", []))
     import tempfile
 
     state_path = Path(tempfile.gettempdir()) / (
@@ -124,9 +218,15 @@ async def execute(args, manifest, cases):
     )
     if resume:
         previous = json.loads((args.output / "report.json").read_text(encoding="utf-8"))
-        if previous["manifest_sha256"] != report["manifest_sha256"] or previous["planned_turns"] != len(cases):
+        planned_field = "planned_cases" if case_budget else "planned_turns"
+        if previous["manifest_sha256"] != report["manifest_sha256"] or previous[planned_field] != len(cases):
             raise ValueError("Resume manifest/budget differs")
         remaining_cases(previous, cases)
+        if case_budget and any(
+            row["status"] == "running" or (row["status"] == "incomplete" and row["id"] not in recheck_cases)
+            for row in previous["rows"]
+        ):
+            raise ValueError("Case checkpoint contains an unfinished question; inspect it before starting a new run")
         report = previous
         database, collection = report["test_database"], report["test_memory_collection"]
         suffix = database.rsplit("_", 1)[-1]
@@ -193,6 +293,7 @@ async def execute(args, manifest, cases):
                 "chat_agent_max_calls": None,
                 "chat_tool_steps": None,
                 "chat_tool_queries": None,
+                **({"chat_clarification_max_rounds": None} if case_budget else {}),
                 "chat_memory_collection": collection,
                 "web_search_mode": "auto",
                 "llm_max_retries": 0,
@@ -265,10 +366,26 @@ async def execute(args, manifest, cases):
             # Warm only the cached encoder; this is not a hidden model/API diagnostic question.
             await app.state.chat_service.pipeline.retriever.encoder.encode_dense(["Ranni"], query=True)
             report["status"] = "running"
-            for case in cases[report["attempted_turns"] :]:
-                if report["attempted_turns"] >= len(cases):
-                    raise RuntimeError("Turn limit exceeded")
+            unfinished = (
+                [(cases[i], row) for i, row in enumerate(report["rows"]) if row["status"] == "error"]
+                if continue_cases
+                else []
+            )
+            rechecks = [
+                (cases[i], row)
+                for i, row in enumerate(report["rows"])
+                if row["id"] in recheck_cases and row["status"] in {"ok", "incomplete"}
+            ]
+            queued = [*unfinished, *rechecks, *((case, None) for case in cases[report["attempted_turns"] :])]
+            for case, previous_row in queued:
                 group = groups.get(case["group"], {}) if case["group"] else {}
+                if previous_row is not None and previous_row["status"] == "error":
+                    # Use the exact failed message, and the last accepted clarification when present.
+                    case, group = continuation_case(case, previous_row, groups.get(case["id"], group))
+                elif previous_row is not None:
+                    previous_row["restart_offset"] = len(previous_row["http_turns"])
+                    previous_row.pop("response", None)
+                    group = {}
                 if case.get("restart_before"):
                     app.state.chat_service = build_chat_service(ctx, image_catalog=app.state.image_catalog)
                 service = app.state.chat_service
@@ -293,89 +410,57 @@ async def execute(args, manifest, cases):
                     "manual_correctness": None,
                     "manual_faithfulness": None,
                 }
-                report["rows"].append(row)
-                report["attempted_turns"] += 1
+                if previous_row is None:
+                    report["rows"].append(row)
+                    report["attempted_turns"] += 1
+                else:
+                    row = previous_row
+                    row["status"] = "running"
+                    row.pop("error", None)
                 save(args.output, report, secret_values)
                 started = time.perf_counter()
                 try:
-                    body = {
-                        "message": case["question"],
-                        "channel": "web",
-                        "turn_id": str(uuid4()),
-                        "options": {
-                            "web_search": case.get("web_search", "auto"),
-                            "lang": case["lang"],
-                            "spoilers": True,
-                        },
-                        **group,
-                    }
-                    endpoint = case.get("endpoint", "chat")
-                    response = await http.post("/api/v1/" + endpoint, json=body)
-                    row["http_status"] = response.status_code
-                    if response.status_code != 200:
-                        row.update(status="error", error=response.json().get("code", "http_error"))
-                    else:
-                        if endpoint == "chat":
-                            data = response.json()
-                        else:
-                            events = []
-                            for frame in response.text.split("\n\n"):
-                                lines = frame.splitlines()
-                                event = next((line[7:] for line in lines if line.startswith("event: ")), None)
-                                value = next(
-                                    (json.loads(line[6:]) for line in lines if line.startswith("data: ")), None
-                                )
-                                if event:
-                                    events.append((event, value))
-                            if not events or events[-1][0] != "done":
-                                raise ValueError("SSE did not finish successfully")
-                            data = {
-                                **events[-1][1],
-                                "answer": "".join(v["token"] for k, v in events if k == "token"),
-                                **next((v for k, v in events if k == "sources"), {}),
-                            }
-                        if case["group"]:
-                            groups[case["group"]] = {
-                                "conversation_id": data["conversation_id"],
-                                "conversation_token": data.get("conversation_token"),
-                            }
-                        await asyncio.to_thread(private_state, state_path, groups)
-                        data.pop("conversation_token", None)
-                        row.update(status="ok", response=data)
-                        if getattr(args, "probe_images", False):
-                            import io
+                    data = await run_case(
+                        http,
+                        case,
+                        group,
+                        row,
+                        groups,
+                        state_path,
+                        case_budget=case_budget,
+                        checkpoint=lambda: save(args.output, report, secret_values),
+                    )
+                    if data is not None and getattr(args, "probe_images", False):
+                        import io
 
-                            from PIL import Image
+                        from PIL import Image
 
-                            row["image_checks"] = []
-                            for im in data.get("images", []):
-                                probe = {"id": im["id"], "association": im.get("association")}
-                                row["image_checks"].append(probe)
-                                if (
-                                    not re.fullmatch(r"[0-9a-f]{64}", im["id"])
-                                    or im["url"] != "/api/v1/images/" + im["id"]
-                                ):
-                                    probe["error"] = "invalid_server_image_url"
-                                    continue
-                                image_response = await http.get(im["url"])
-                                probe.update(
-                                    http_status=image_response.status_code,
-                                    mime=image_response.headers.get("content-type"),
-                                )
-                                if image_response.status_code == 200:
-                                    raw = image_response.content
-                                    probe["hash_matches"] = hashlib.sha256(raw).hexdigest() == im["id"]
-                                    with Image.open(io.BytesIO(raw)) as raster:
-                                        raster.load()
-                                        probe.update(format=raster.format, width=raster.width, height=raster.height)
-                                        extension = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp", "GIF": ".gif"}[
-                                            raster.format
-                                        ]
-                                    folder = args.output / "images"
-                                    folder.mkdir(exist_ok=True)
-                                    path = folder / (im["id"] + extension)
-                                    path.write_bytes(raw)
-                                    probe["inspection_file"] = str(path.resolve())
+                        row["image_checks"] = []
+                        for im in data.get("images", []):
+                            probe = {"id": im["id"], "association": im.get("association")}
+                            row["image_checks"].append(probe)
+                            if not re.fullmatch(r"[0-9a-f]{64}", im["id"]) or im["url"] != "/api/v1/images/" + im["id"]:
+                                probe["error"] = "invalid_server_image_url"
+                                continue
+                            image_response = await http.get(im["url"])
+                            probe.update(
+                                http_status=image_response.status_code,
+                                mime=image_response.headers.get("content-type"),
+                            )
+                            if image_response.status_code == 200:
+                                raw = image_response.content
+                                probe["hash_matches"] = hashlib.sha256(raw).hexdigest() == im["id"]
+                                with Image.open(io.BytesIO(raw)) as raster:
+                                    raster.load()
+                                    probe.update(format=raster.format, width=raster.width, height=raster.height)
+                                    extension = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp", "GIF": ".gif"}[
+                                        raster.format
+                                    ]
+                                folder = args.output / "images"
+                                folder.mkdir(exist_ok=True)
+                                path = folder / (im["id"] + extension)
+                                path.write_bytes(raw)
+                                probe["inspection_file"] = str(path.resolve())
                     prepared = observed.get("prepared")
                     if prepared:
                         row["trace"] = {k: v for k, v in prepared.trace.items() if k != "result"}
@@ -386,8 +471,8 @@ async def execute(args, manifest, cases):
                     row.update(status="error", error_type=type(exc).__name__)
                 finally:
                     service.pipeline.prepare = original_prepare
-                    row["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
-                    row["model_calls"] = counted.calls[start_calls:]
+                    row["latency_ms"] = round(row.get("latency_ms", 0) + (time.perf_counter() - started) * 1000, 2)
+                    row.setdefault("model_calls", []).extend(counted.calls[start_calls:])
                     report["logical_model_calls"] = counted.calls
                     save(args.output, report, secret_values)
             report["corpus_points_after"] = (await client.get_collection(base.rag_collection)).points_count
@@ -400,6 +485,12 @@ async def execute(args, manifest, cases):
                 "completion_tokens_known": sum(c.get("completion_tokens") or 0 for c in counted.calls),
                 "unknown_usage_calls": sum(c.get("prompt_tokens") is None for c in counted.calls),
             }
+            if case_budget:
+                report["summary"].update(
+                    started_main_questions=len(report["rows"]),
+                    terminal_responses=sum(r["status"] == "ok" for r in report["rows"]),
+                    http_requests=sum(len(r.get("http_turns", [])) for r in report["rows"]),
+                )
     except Exception as exc:
         report["status"] = "blocked" if not report["attempted_turns"] else "interrupted"
         report["preflight"].append({"resource": stage, "status": "error", "error_type": type(exc).__name__})

@@ -206,7 +206,7 @@ async def test_empty_overview_does_not_demand_entity_or_call_generator_but_failu
         )
 
 
-async def test_overview_keeps_policy_spoilers_and_unknown_release():
+async def test_overview_preserves_admission_policy_and_ignores_old_spoiler_flag():
     retriever = Retriever(
         rows=[
             hit("rejected", review_status="rejected"),
@@ -221,7 +221,7 @@ async def test_overview_keeps_policy_spoilers_and_unknown_release():
     safe = await live_pipeline.prepare(
         ChatRequest(message=request.message, channel="web", options={"spoilers": False}), []
     )
-    assert not safe.hits and safe.static_answer
+    assert [row.id for row in safe.hits] == ["unknown"]
 
 
 async def test_overview_can_be_disabled_and_llm_only_is_unchanged():

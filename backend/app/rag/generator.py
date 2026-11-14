@@ -33,6 +33,35 @@ _STREAM_EMITTER: ContextVar[Callable[[str], Awaitable[None]]] = ContextVar("inde
 
 CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
+SECTION_HEADING = re.compile(r"#{2,3} [^\r\n]+")
+BLOCK_SEPARATOR = re.compile(r"(\r?\n[ \t]*\r?\n(?:[ \t]*\r?\n)*)")
+
+
+def cited_blocks(answer: str) -> tuple[str, int]:
+    parts = BLOCK_SEPARATOR.split(answer)
+    blocks = [(index, block) for index, block in enumerate(parts[::2]) if block.strip()]
+    kept: list[str] = []
+    previous = None
+    dropped = 0
+    for position, (index, block) in enumerate(blocks):
+        if CITATION.search(block) or (
+            SECTION_HEADING.fullmatch(block.strip())
+            and position + 1 < len(blocks)
+            and CITATION.search(blocks[position + 1][1])
+        ):
+            if previous is not None:
+                kept.append(parts[2 * index - 1] if previous == index - 1 else "\n\n")
+            kept.append(block)
+            previous = index
+        else:
+            dropped += 1
+    return ("".join(kept) if dropped else answer), dropped
+
+
+def grounded_stream_prefix(text: str) -> str:
+    # A block without a citation can still gain one while its tokens arrive. Hold it
+    # until then, together with any heading that labels it. Use the same filter as JSON.
+    return cited_blocks(text)[0].rstrip("\r\n") if text.strip() else ""
 
 
 class LLM(Protocol):
@@ -246,15 +275,10 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 + " "
                 + "".join(f"[{i}]" for i in sorted(used) if prepared.hits[i - 1].payload.get("rule_kind") in required)
             )
-        paragraphs = [p for p in answer.split("\n\n") if p.strip()]
-        cited = [p for p in paragraphs if CITATION.search(p)]
-        if len(cited) < len(paragraphs):
-            # Đoạn không có nguồn thì không hiển thị; đã chắc còn đoạn có nguồn vì used khớp evidence ở trên.
-            answer = "\n\n".join(cited)
-            prepared.trace["dropped_uncited_paragraphs"] = len(paragraphs) - len(cited)
-            logging.getLogger(__name__).warning(
-                "Dropped uncited paragraphs", extra={"data": {"count": len(paragraphs) - len(cited)}}
-            )
+        answer, dropped = cited_blocks(answer)
+        if dropped:
+            prepared.trace["dropped_uncited_paragraphs"] = dropped
+            logging.getLogger(__name__).warning("Dropped uncited paragraphs", extra={"data": {"count": dropped}})
         if parsed.limitation is not None:
             failure = "invalid_limitation"
             if not parsed.limitation.strip() or URL.search(parsed.limitation) or CITATION.search(parsed.limitation):
@@ -385,8 +409,11 @@ class Generator:
             "Use the supplied evidence for cited claims; never invent citations or change source indices."
             " If insufficient=true, answer must contain ONLY the specific gap: no related facts, "
             "source counts, source descriptions or bracketed citations. "
-            "For an evidence-based answer, every paragraph must contain [n], the set of [n] must equal the set of "
+            "Keep appropriate Markdown inside answer. Short section headings are labels; cite each factual "
+            "paragraph, step, list item or comparison row. The set of [n] must equal the set of "
             "evidence.index, and each quote_id must come from that source's evidence_units. "
+            "Numbers in square brackets are citations only. Write item tiers with parentheses, e.g. "
+            "Smithing Stone (tier 3), including when the excerpt uses brackets. "
             "Keep the response short and avoid decorative quotes."
             " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
             "Each evidence item must have integer index and exactly one of quote_ids (1–3 distinct ID strings), "
@@ -614,6 +641,8 @@ class Generator:
                     boundary = max(text.rfind("\n"), text.rfind(". "), text.rfind("! "), text.rfind("? "))
                     safe = text[: boundary + 1] if boundary >= 0 else ""
                     self._check_visible(prepared, safe)
+                    if prepared.mode == "rag":
+                        safe = grounded_stream_prefix(safe)
                     if len(safe) > len(emitted):
                         yield safe[len(emitted) :]
                         emitted = safe
