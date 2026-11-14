@@ -5,6 +5,7 @@
 - [TV3 · Cập nhật điều kiện khi người dùng đổi yêu cầu (14/11/2026)](2026-11-14_s4-tv3_superseded-constraints.md)
 
 - [TV3 · Nối lượt hỏi đường bằng mốc tiến độ (14/11/2026)](2026-11-14_s4-tv3_progress-clarification.md)
+- [TV4 · Giao diện đăng nhập Google/Discord (14/11/2026)](2026-11-14_s4-tv4_giao-dien-dang-nhap-google-discord.md)
 
 - [TV3 · Agent thích ứng và lập kế hoạch (13/11/2026)](2026-11-13_s4-tv3_adaptive-agent.md)
 
