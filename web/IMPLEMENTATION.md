@@ -147,6 +147,7 @@ Lớp `src/styles/refinement.css` được nạp sau CSS cũ để giữ ghi ch�
   là bằng chứng hoàn thành UAT, Lighthouse, production hoặc chất lượng RAG.
 - Phạm vi lần này chỉ web S1–S2 của TV4. Bot `/ask` chưa được triển khai; review nhóm được bỏ qua theo yêu cầu.
 - [Bàn giao TV4](../docs/handover/2026-10-28_s2-tv4_web-api-mock.md) ghi phạm vi và kết quả kiểm tra.
+
 Nền trang đăng nhập sử dụng `item_/MENU_BaseMain_01.png` và `item_/MENU_FL_MenuBase.png`
 chép nguyên bản từ bộ hi_01 người dùng cung cấp: lớp phủ tối, ánh mờ phía dưới và nền mềm sau nhóm nút.
 Các lớp trang trí không nhận chuột; ảnh minh họa vẫn giữ đúng tỷ lệ và hiển thị đủ.

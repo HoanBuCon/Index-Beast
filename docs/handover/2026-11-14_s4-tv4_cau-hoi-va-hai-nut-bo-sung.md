@@ -97,3 +97,34 @@ cho hover/focus của nút được bật. Chỉ đổi sắc viền và độ l
 chữ, không thêm viền thứ hai. Disabled không chạy; reduced-motion tắt animation.
 Prettier CSS đạt; không thay hành vi gửi/hủy.
 
+## Xử lý xung đột rebase lên develop
+
+Người dùng báo rebase dừng tại commit 0232117 do xung đột `docs/handover/README.md`.
+Đã giữ cả ba liên kết TV3 từ develop và liên kết TV4 từ nhánh giao diện, bỏ marker,
+stage đúng README và chạy rebase continue. Commit thứ hai tự áp dụng thành công.
+
+- Nhánh cuối: `feature/tv4-dang-nhap-google-discord`, nền develop `52ebbe7`.
+- `0232117` được viết lại thành `3b9c940`; `c431128` thành `7626c88`.
+- Range-diff: commit thứ hai giữ nguyên patch; commit đầu chỉ đổi ngữ cảnh danh sách bàn giao.
+- Web nhận thêm thay đổi hợp lệ từ develop về bảng Markdown/cuộn ngang, không bỏ phần này.
+- Không còn file unmerged hoặc marker trong README; build web và 49/49 test đạt.
+  Có cảnh báo HMR port 24678 khi các Vite test chạy song song, không có test thất bại.
+- Không push hoặc force-push. Ghi chú này bổ sung sau rebase, chưa commit.
+
+## Sửa CI web trên PR #102
+
+Đọc log job web 132406894588 của run 43581462273: bước `npm run format:check`
+thất bại duy nhất ở `IMPLEMENTATION.md`, không phải lỗi rebase hoặc logic web.
+Sửa ranh giới đoạn Markdown sau danh sách bằng dòng trắng trong `web/IMPLEMENTATION.md`.
+Không thay CSS/JS, pipeline CI, backend hoặc bot. `npm run format:check` toàn web
+và build TypeScript/Vite đều đạt tại local sau sửa. Chưa commit/push bản sửa hoặc
+khẳng định CI trên GitHub đã chạy lại thành công; cần push để PR nhận bản sửa.
+
+## Chuẩn bị tích hợp PR #102 vào develop
+
+Người dùng yêu cầu merge PR vào develop. Kiểm tra GitHub xác nhận base develop,
+không xung đột, nhưng CI web của head 7626c88 vẫn lỗi format vì bản sửa còn ở local.
+Đưa bản sửa định dạng cùng ghi chú bàn giao lên nhánh PR để CI chạy lại.
+Quy ước dự án yêu cầu Mentor approve trước merge; không tự approve hoặc bypass CI.
+Kết quả CI/review/merge cuối cùng cần kiểm tra trên GitHub, không suy ra từ build local.
+
