@@ -1,81 +1,65 @@
-# Golden set IndexBeast — Sprint 3
+# Đánh giá IndexBeast · Sprint 4
 
-Cập nhật 05/11/2026: **thêm đúng 40 câu vào 60 câu cũ**, tổng 100; không chạy 100 câu test.
-Đợt live dùng 25 prompt và 5 lượt OFF ghép cặp, sau đó test lại có mục tiêu các lỗi phát hiện.
-Xem [hướng dẫn gameplay/hỏi lại](../../docs/api/gameplay-clarification-tv4.md)
-và [báo cáo thực tế](../../docs/testing/2026-11-05_gameplay-evaluation.md).
+[Golden set mặc định](golden_set.jsonl) gồm 200 câu mới, ID `IB-GS-101`–`IB-GS-300`. Bản 100 câu trước đây được lưu tại [golden_set_s3.jsonl](golden_set_s3.jsonl) để tái lập các báo cáo cũ.
 
-Đã có runner chẩn đoán tập 25 ID: `python -m scripts.diagnose_golden` mặc định plan-only.
-Xem [hướng dẫn chạy, review và giới hạn](../../docs/evaluation/golden-diagnostic-guide.md).
-Runner này đo pipeline, không hoàn thiện các module LLM judge/retrieval metric còn là khung bên dưới.
+| Độ khó | Tiếng Việt | Tiếng Anh | Tổng |
+| --- | ---: | ---: | ---: |
+| Dễ | 33 | 27 | 60 |
+| Trung bình | 49 | 41 | 90 |
+| Khó | 28 | 22 | 50 |
+| Tổng | 110 | 90 | 200 |
 
-Bộ so sánh ngôn ngữ riêng: [vi_en_pairs.jsonl](vi_en_pairs.jsonl), 13 cặp VI–EN đang chờ review.
-Không gộp vào golden_set 100 câu hoặc tính evidence recall khi chưa có chunk labels đã review.
-Xem [hướng dẫn benchmark theo tầng](../../docs/testing/2026-10-31_vi-en-retrieval-guide.md).
+Câu hỏi bao phủ trang bị, cơ chế, nhân vật, sự kiện, tuyến đường, nhiệm vụ và yêu cầu ngoài phạm vi. Đáp án tham chiếu dùng để chấm theo ý. Các ca hành vi dùng `expected_answer` để mô tả phản hồi cần đạt.
 
-[golden_set.jsonl](golden_set.jsonl) là file chính, đường dẫn `eval/golden_set.jsonl` khi đứng ở backend.
-Hiện có **100 câu: 64 VI / 36 EN (64% VI)**. Sprint 3 thêm `IB-GS-061`–`IB-GS-100`,
-26 VI/14 EN. Giữ nguyên 60 record cũ theo byte; độ khó toàn bộ: easy 33, medium 44, hard 23.
-Category: character 10, event 6, location 10, multi_hop 8, mechanics 11, equipment 13,
-quest 22, insufficient_evidence 7, out_of_scope 13. Giữ 10 câu SotE cũ.
+[Rubric Sprint 4](../../docs/evaluation/s4-rubric.md) quy định cách chấm đáp án, hành vi, lượt bổ sung, trích dẫn và chỉ số truy xuất.
 
-Giữ đúng bảy trường: id, question, lang, expected_answer, source_urls, category, difficulty.
-Không đổi ID/câu hỏi cũ. Đáp án tham chiếu là tập ý cần đúng và ràng buộc cần giữ, **không chấm exact string**.
-Đã đạt số lượng 100 theo FR-EVAL-01; review chéo và đánh giá độc lập vẫn chưa hoàn tất.
+[Phiếu review S4](reviews/s4-golden-set-review.jsonl) giữ quote nguyên văn, ID đoạn, URL và hash của nguồn S4 cho các ca có dữ kiện. Trường `case_tags` đánh dấu ca gõ sai, không dấu và hỏi bổ sung. `followup` lưu câu bổ sung, kết quả kỳ vọng và bằng chứng cho lượt cuối. `variant_pair` nhóm các biến thể cùng ý. Khi chia tập hoặc tính độ bất định, giữ các biến thể cùng ý trong cùng nhóm. Trường `assistant_review` ghi kết quả rà soát theo rubric TV2, do Codex thực hiện. Trạng thái ký duyệt của UncleThing vẫn là `pending`.
 
-## Phạm vi và nhãn
-
-Theo quyết định mới, chatbot hỗ trợ lore/gameplay/build/quest Elden Ring và SotE có bằng chứng.
-Không gộp continuity khác hoặc tự đoán metadata unknown thành base. SRS/ADR cũ cần nhóm đồng bộ riêng.
-
-- `character`, `event`, `location`, `multi_hop`: giữ nhóm cũ.
-- `mechanics`, `equipment`, `quest`: bổ sung cho năng lực trợ lý hiện tại.
-- `out_of_scope`: ngoài Elden Ring hoặc instruction injection, không cần source URL.
-- `insufficient_evidence`: trong phạm vi nhưng không có cơ sở cho khẳng định yêu cầu; không đánh đồng với out_of_scope.
-  ID 027 về build PvP chuyển sang nhóm này: không được từ chối chỉ vì là gameplay,
-  nhưng cũng không bịa build “mạnh nhất”. Có thể hỏi điều kiện hoặc gợi ý định tính có nguồn.
-
-Các factual case có URL nguồn, negative behavioral case dùng source_urls=[]; không bịa URL cho câu ngoài phạm vi.
-Scope phục vụ đánh giá nằm trong sidecar review, không thêm trường hoặc đổi payload admission của backend.
-
-## Nguồn và tình trạng review
-
-[Sidecar review](reviews/s2-golden-set-review.jsonl) có một record cho mỗi ID, phân công TV2 — UncleThing.
-Tất cả **100 pending, 0 approved** tại thời điểm bàn giao. ID 031–054 và 061–090 có author_evidence từ JSONL thật:
-chunk ID, dòng, URL, release_scope/source_type gốc, quote nguyên văn và text hash. Không tự gọi đó là TV2 review.
-54 case có quote/hash artifact được validator đối chiếu. 091–092 kiểm quy tắc toán trên
-[Stats](https://eldenring.wikidot.com/stats), không giả có artifact quote hoặc TV2 approval.
-24 factual case cũ chưa được audit lại toàn bộ trong tác vụ này, giữ pending.
-
-Các quote artifact là snapshot local; hai câu toán và các trường trong knowledge pack được kiểm trang công khai.
-Không coi ngày đọc trang là xác minh patch mới nhất.
-Các câu số liệu 045/048 và khuyến nghị 047 ghi rõ snapshot/note; không chấm chúng như khẳng định meta hiện tại.
-Không dùng ngày crawl hoặc candidate release làm chứng nhận patch/canon.
-
-TV2 làm theo [phiếu review và rubric](../../docs/evaluation/2026-10-31_golden-set-s2-review.md).
-Mỗi người review bằng nhánh/PR riêng theo quy ước; chưa tự gửi yêu cầu review hoặc cập nhật board.
-
-## Validation offline
-
-Từ backend:
+Từ thư mục backend, xác thực bộ mặc định và bằng chứng trong bản dữ liệu đã nạp.
 
 ```powershell
-.venv/Scripts/python.exe -X utf8 -m eval.validate_golden
-.venv/Scripts/python.exe -X utf8 -m eval.validate_golden --corpus data/chunk_runs/s2-full-v1/chunks.jsonl
-.venv/Scripts/python.exe -X utf8 -m eval.validate_golden --require-reviewed
+.venv/Scripts/python.exe -X utf8 -m eval.validate_golden --corpus data/chunk_runs/s4-wiki-release/chunks.jsonl
 ```
 
-Lệnh đầu kiểm schema, URL syntax, ID/câu hỏi trùng, ≥50% VI và review mapping.
-Lệnh có corpus còn đối chiếu quote/hash và URL theo artifact, không embedding hoặc kết nối server.
-Lệnh --require-reviewed **hiện exit 2 có chủ đích** vì chưa được review; schema hợp lệ không bằng approved.
-Approval cần reviewer UncleThing (hoặc TV2 - UncleThing), thời gian có timezone và các checks hoàn tất.
-Validator chỉ kiểm khai báo trong file, không xác thực danh tính hay thay thế PR review của TV2.
+[Manifest baseline S4](s4_baseline_25.json) dùng 25 câu chính riêng. Baseline kiểm tra luồng RAG–LangGraph với DeepSeek và Tavily Auto qua API, gồm JSON và SSE. Runner có thể tiếp tục câu hỏi phụ đã được chuẩn bị khi Agent yêu cầu làm rõ. Một câu hỏi chính và các lượt bổ sung của nó được tính là một ca.
 
-Không đưa expected_answer/câu hỏi/author rubric vào index hoặc prompt runtime để tự làm đẹp điểm.
-Runtime knowledge pack giữ nguyên source chunks độc lập, không chứa câu hỏi/đáp án golden; đây là
-bổ sung nguồn có chủ đích cho development, không phải đo tổng quát hóa trên tập chưa thấy.
-Các module retrieval.py/answer.py còn là khung; runner HTTP mới là `python -m scripts.diagnose_gameplay`.
-Manifest chọn 25 prompt: [gameplay_diagnostic_25.json](gameplay_diagnostic_25.json).
-10 scenario multi-turn riêng: [gameplay_scenarios.json](gameplay_scenarios.json), không giả thành standalone golden.
-Chỉ có nhận xét AI-assisted sơ bộ; không có human-reviewed Accuracy/Recall/MRR mới.
-Thiếu dữ liệu runtime không biến factual golden thành negative. Xem báo cáo để phân biệt valid output với đúng nội dung.
+```powershell
+.venv/Scripts/python.exe -X utf8 -m scripts.benchmark_agent --manifest eval/s4_baseline_25.json --max-cases 25
+.venv/Scripts/python.exe -X utf8 -m scripts.benchmark_agent --manifest eval/s4_baseline_25.json --max-cases 25 --execute --allow-llm --allow-web --allow-embedding --output data/research_runs/s4-baseline-25-new
+```
+
+Lệnh đầu in kế hoạch. Lệnh thứ hai chạy thật, cần dịch vụ PostgreSQL, Redis, Qdrant, cache encoder và key API. Runner dùng DB và collection bộ nhớ thử riêng. Corpus được đọc từ collection trong cấu hình. Kết quả chạy ngày 14/11/2026 nằm trong [báo cáo baseline S4](../../docs/testing/2026-11-14_s4-baseline-25.md).
+
+Các lệnh `scripts.diagnose_golden`, `scripts.diagnose_gameplay` và `scripts.diagnose_agent_memory` vẫn có thể tái lập các tập chẩn đoán cũ bằng bản S3 đã lưu. Các báo cáo đánh giá cần ghi rõ phiên bản bộ câu, số ca thực chạy và tiêu chí chấm.
+
+[Tập đánh giá 100 ca](s4_evaluation_100.json) được chọn trước khi chạy. Xem [báo cáo đánh giá S4](../../docs/testing/2026-11-14_s4-evaluation-100.md) để biết cấu hình, kết quả theo nhóm và phương pháp chấm.
+
+```powershell
+.venv/Scripts/python.exe -X utf8 -m scripts.benchmark_agent --manifest eval/s4_evaluation_100.json --max-cases 100 --execute --allow-llm --allow-web --allow-embedding --output data/research_runs/s4-evaluation-100-new
+.venv/Scripts/python.exe -X utf8 -m eval.measure_retrieval --manifest eval/s4_evaluation_100.json --output data/research_runs/s4-retrieval-100-new.json
+```
+
+Lệnh truy xuất đọc chỉ mục Qdrant với câu hỏi nguyên văn và lưu danh sách xếp hạng. Recall@5 và MRR@5 đối chiếu các trang vàng trong năm trang khác nhau đầu tiên, theo thứ tự trả về của retriever.
+
+Để đo cùng chỉ mục với E5 dense-only, thêm `--mode dense-only` và dùng đường dẫn đầu ra mới. Chế độ mặc định là `--mode hybrid`.
+
+[Báo cáo chạy lại 100 ca sau khi sửa Agent](../../docs/testing/2026-11-14_s4-retest-100.md) đối chiếu cùng manifest. Lệnh sau tổng hợp điểm đã chấm rồi ghi lượt đo vào PostgreSQL của môi trường đang chọn.
+
+```powershell
+.venv/Scripts/python.exe -X utf8 -m eval.summarize_scores --manifest eval/s4_evaluation_100.json --scores ../docs/testing/2026-11-14_s4-retest-100-scores.jsonl --name s4-auto-100-retest --output data/research_runs/s4-retest-scores.json
+.venv/Scripts/python.exe -X utf8 -m scripts.eval_runs add --from-json data/research_runs/s4-retest-scores.json
+```
+
+Nếu một ca đang chờ câu trả lời bổ sung, dùng `--resume --answer-pending CASE_ID "Câu trả lời thực tế"` cùng manifest, ngân sách và thư mục đã dùng. Runner tiếp tục từ ID hội thoại và ID hỏi bổ sung đã lưu. Ghi rõ các lượt bổ sung phát sinh khi đối chiếu kết quả.
+
+## Ma trận truy xuất và rewrite
+
+[Thiết kế thí nghiệm](../../docs/evaluation/s4-retrieval-ablation-meta-prompt.md) dùng 200 câu S4 và [12 câu bổ sung](s4_retrieval_supplement.jsonl). Harness chạy truy xuất một lần mỗi cấu hình, dùng context của cấu hình đó cho generator và ghi điểm theo [rubric](../../docs/evaluation/s4-rubric.md). Tắt hoặc bật rewrite để thay truy vấn tìm kiếm. Giữ nguyên bước nhận diện ý định, câu đưa vào generator, collection và bộ lọc của cả hai nhánh. Tavily Auto có tập 18 ca đặt trước. [Báo cáo kết quả](../../docs/testing/2026-11-14_s4-retrieval-matrix.md)
+
+```powershell
+.venv/Scripts/python.exe -X utf8 -m eval.s4_retrieval_matrix --output data/research_runs/s4-retrieval-matrix
+.venv/Scripts/python.exe -X utf8 -m eval.s4_retrieval_matrix --output data/research_runs/s4-retrieval-matrix --execute
+.venv/Scripts/python.exe -X utf8 -m eval.summarize_retrieval_matrix data/research_runs/s4-retrieval-matrix --output data/research_runs/s4-retrieval-matrix/summary.json
+```
+
+Lệnh đầu chỉ đếm ca. Lệnh có `--execute` gọi DeepSeek, thực hiện truy xuất Qdrant bằng encoder đã có cache và gọi Tavily trong nhóm Auto. Có thể chạy tiếp với cùng thư mục để dùng checkpoint. Dùng thư mục mới khi đổi tập câu, cấu hình hoặc muốn lặp lại thí nghiệm từ đầu.

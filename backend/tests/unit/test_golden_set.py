@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[2] / "eval"
 
 
 def test_sprint2_adds_thirty_cases_with_vi_sote_negatives_and_honest_review_gate():
-    result = validate(ROOT / "golden_set.jsonl", ROOT / "reviews/s2-golden-set-review.jsonl", require_reviewed=True)
-    rows = [json.loads(s) for s in (ROOT / "golden_set.jsonl").read_text(encoding="utf-8").splitlines()]
+    result = validate(ROOT / "golden_set_s3.jsonl", ROOT / "reviews/s2-golden-set-review.jsonl", require_reviewed=True)
+    rows = [json.loads(s) for s in (ROOT / "golden_set_s3.jsonl").read_text(encoding="utf-8").splitlines()]
     new = [r for r in rows if 31 <= int(r["id"].rsplit("-", 1)[1]) <= 60]
     assert len(new) == 30 and sum(r["lang"] == "vi" for r in new) >= 15
     assert sum(r["category"] == "out_of_scope" for r in new) == 6
@@ -26,6 +26,17 @@ def test_sprint2_adds_thirty_cases_with_vi_sote_negatives_and_honest_review_gate
     assert result["accepted"] is approved and result["review_gate_passed"] is approved
     pvp = next(r for r in rows if r["id"] == "IB-GS-027")
     assert pvp["category"] == "insufficient_evidence" and pvp["source_urls"] == []
+
+
+def test_s4_golden_coverage_and_baseline_are_disjoint():
+    result = validate(ROOT / "golden_set.jsonl", ROOT / "reviews/s4-golden-set-review.jsonl")
+    assert result["total"] == 200
+    assert result["languages"] == {"vi": 110, "en": 90}
+    assert result["difficulty"] == {"easy": 60, "medium": 90, "hard": 50}
+    golden = [json.loads(s) for s in (ROOT / "golden_set.jsonl").read_text(encoding="utf-8").splitlines()]
+    baseline = json.loads((ROOT / "s4_baseline_25.json").read_text(encoding="utf-8"))
+    assert len({row["id"] for row in baseline}) == 25
+    assert {row["question"] for row in golden}.isdisjoint(row["question"] for row in baseline)
 
 
 def draft():

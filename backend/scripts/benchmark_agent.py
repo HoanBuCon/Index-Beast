@@ -18,6 +18,14 @@ def main(argv=None):
     parser.add_argument("--continue-cases", action="store_true", help="Continue failed cases from their saved request")
     parser.add_argument("--recheck-case", action="append", default=[], help="Recheck a completed case by ID")
     parser.add_argument(
+        "--answer-pending",
+        nargs=2,
+        metavar=("CASE_ID", "REPLY"),
+        action="append",
+        default=[],
+        help="Answer an existing pending clarification without replaying the main question",
+    )
+    parser.add_argument(
         "--probe-images", action="store_true", help="GET/decode/hash returned images and save run-local copies"
     )
     parser.add_argument("--allow-llm", action="store_true")
@@ -71,10 +79,19 @@ def main(argv=None):
         return
     if not all((args.allow_llm, args.allow_web, args.allow_embedding, args.output)):
         parser.error("Execute requires all --allow-* flags and --output")
-    if (args.continue_cases or args.recheck_case) and (not args.resume or "budget_unit" not in manifest):
+    if (args.continue_cases or args.recheck_case or args.answer_pending) and (
+        not args.resume or "budget_unit" not in manifest
+    ):
         parser.error("Continuing cases requires --resume and a case budget")
-    if set(args.recheck_case) - ids:
-        parser.error("Unknown case ID")
+    pending = dict(args.answer_pending)
+    if (
+        (set(args.recheck_case) | pending.keys()) - ids
+        or set(args.recheck_case) & pending.keys()
+        or len(pending) != len(args.answer_pending)
+        or any(not reply.strip() for reply in pending.values())
+    ):
+        parser.error("Unknown or duplicate case ID, or empty pending reply")
+    args.answer_pending = pending
     from scripts.diagnose_agent_memory import execute
 
     status = asyncio.run(execute(args, manifest, cases))

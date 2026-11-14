@@ -19,6 +19,11 @@ Judge whether the excerpts alone support each requested fact and condition. For 
 result with task present, also return followup_query, a short English search for the most important
 missing evidence. Preserve the named subject and applicable game/release/patch. Avoid guessed answers
 and queries already searched. For a sufficient or ambiguous result omit followup_query.
+Count direct logical consequences of an explicit condition as covered. If a bonus applies only
+while HP is full, and the player drops below full HP, the bonus no longer applies. Cite the
+condition itself as evidence. No separate statement describing deactivation is needed.
+If damage is fully blocked and HP stays full, the condition is still met. Do not infer the timing
+of the hit itself, stacking, exceptions, hidden triggers, or patch behavior without evidence.
 Only mark aspects actually requested as missing. Do not demand precise metres, frame data or angles
 when the user asks a qualitative range/direction comparison: short/mid-range, sweep/overhead descriptions
 can answer that question. Optional extra detail is not a mandatory coverage gap.
@@ -49,6 +54,8 @@ For subjective recommendations such as a beginner's starting class, comparable e
 playstyle facts can support conditional advice even without a source ranking. Treat absent player
 preferences as optional for that general answer. Use ambiguous only when the subject or essential
 user condition is unclear. Missing game evidence for a clear request is partial or insufficient.
+If a description fits several distinct items, encounters or tiers, an excerpt for one candidate does
+not resolve which one the player meant. Mark that aspect ambiguous instead of choosing a candidate.
 Return JSON only: status (sufficient/partial/insufficient/ambiguous), covered (short list of supported
 question aspects), missing (short list of gaps), evidence (object mapping supplied index strings to
 NONEMPTY ARRAYS of 1–3 distinct quote ID strings from that excerpt's evidence_units).

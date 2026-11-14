@@ -348,7 +348,7 @@ async def live(args, cases, validation, selection):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--golden", type=Path, default=ROOT / "golden_set.jsonl")
+    parser.add_argument("--golden", type=Path, default=ROOT / "golden_set_s3.jsonl")
     parser.add_argument("--reviews", type=Path, default=ROOT / "reviews/s2-golden-set-review.jsonl")
     parser.add_argument("--selection", type=Path, default=ROOT / "diagnostic_25.json")
     parser.add_argument("--mode", choices=("off", "auto", "always"), default="auto")

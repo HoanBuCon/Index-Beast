@@ -43,6 +43,7 @@ Omit limitation when the requested answer is supported. Do not fill gaps with yo
 When evidence_coverage is present, use it as a checklist. The coverage assessment is a planning hint;
 the excerpts themselves must still support every cited claim. For sufficient coverage, state the answer
 directly and omit generic caution or limitations about evidence quantity, origin, or review status.
+State direct consequences of explicit conditions without a disclaimer when the cited excerpt supports them.
 For partial coverage, start with what the excerpts establish. Mention only unresolved requested details,
 once. Ignore gaps about optional extras. Never present a disputed value as established.
 

@@ -7,7 +7,9 @@ import pytest
 
 from app.rag.pipeline import ChatPipeline
 from core.config import Settings
+from eval.summarize_scores import summarize
 from scripts import diagnose_golden as diagnostic
+from scripts.diagnose_agent_memory import pending_case
 from tests.unit.test_live_chat import FakeLLM, FakeRetriever, SequenceLLM
 
 
@@ -21,6 +23,93 @@ def case(key="IB-GS-001"):
         "category": "character",
         "difficulty": "easy",
     }
+
+
+def test_eval_summary_counts_failed_cases_without_treating_them_as_uncited_claims():
+    question = case()
+    row = {
+        **question,
+        "status": "error",
+        "correctness": 0,
+        "faithfulness": None,
+        "behavior_ok": None,
+        "followup_correctness": None,
+    }
+    totals, groups = summarize([question], [row])
+    assert totals["accuracy"] == 0 and totals["accuracy_n"] == 1
+    assert totals["faithfulness_n"] == totals["terminal_responses"] == 0
+    assert groups["lang"]["vi"] == totals
+    with pytest.raises(ValueError, match="Duplicate case ID"):
+        summarize([question], [row, row])
+
+
+def test_pending_benchmark_reply_keeps_the_saved_clarification_and_conversation():
+    pending = {"status": "incomplete", "response": {"clarification": {"id": "clarification"}}}
+    group = {"conversation_id": "conversation", "conversation_token": "token"}
+    resumed, credentials = pending_case(case(), pending, group, "Mình hỏi tên NPC.")
+    assert resumed["question"] == "Mình hỏi tên NPC." and not resumed["clarification_answers"]
+    assert credentials == {**group, "clarification_id": "clarification"}
+    with pytest.raises(ValueError, match="No resumable pending clarification"):
+        pending_case(case(), pending, {}, "Mình hỏi tên NPC.")
+
+
+async def test_ablation_uses_one_dense_or_sparse_branch_without_rrf_and_preserves_filters():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from qdrant_client.models import SparseVector
+
+    from core.corpus import CorpusPolicy
+    from core.types import Encoded
+    from eval.s4_retrieval_matrix import rank
+
+    policy = CorpusPolicy("pilot", ("en",))
+    client = SimpleNamespace(query_points=AsyncMock(return_value=SimpleNamespace(points=[])))
+    store = SimpleNamespace(client=client, policy=policy, collection="fixed", search=AsyncMock(return_value=[]))
+    vector = Encoded([1.0], [7], [0.3])
+    for mode, name, query in (("e5", "dense", [1.0]), ("bm25", "bm25", SparseVector(indices=[7], values=[0.3]))):
+        assert await rank(store, vector, mode, 30) == []
+        client.query_points.assert_awaited_with(
+            "fixed", query=query, using=name, query_filter=policy.query_filter(), limit=30, with_payload=True
+        )
+    assert await rank(store, vector, "hybrid", 30) == []
+    store.search.assert_awaited_once_with(vector, limit=30, spoilers=True)
+
+
+def test_ablation_uses_same_case_keys_in_all_six_cells():
+    from eval.s4_retrieval_matrix import AUTO_IDS, combinations, load_cases
+
+    questions = load_cases()
+    keys = {key for key, *_ in combinations(questions)}
+    assert len(questions) == 212 and len(keys) == 1272
+    assert {q["id"] for q in questions if q["id"] in AUTO_IDS} == AUTO_IDS
+    assert {q["difficulty"] for q in questions if "calculation" in q["tags"]} == {"easy", "medium", "hard"}
+
+
+async def test_ablation_judge_accepts_provider_json_marker_and_hides_configuration():
+    from app.adapters.llm import LLMResponse
+    from eval.s4_retrieval_matrix import grade
+
+    class JudgeLLM(FakeLLM):
+        async def invoke_chain(self, chain, inputs):
+            assert set(json.loads(inputs["question"])) == {
+                "question",
+                "expected_answer",
+                "expected_language",
+                "behavior_case",
+                "answer",
+                "sources",
+            }
+            return LLMResponse(
+                '{"type":"json_object","correctness":2,"faithfulness":null,"reason":"valid"}',
+                "fake",
+                10,
+                10,
+                "stop",
+            )
+
+    result = await grade(case(), {"answer": "A response", "sources": [], "mode": "hybrid"}, JudgeLLM())
+    assert result == {"correctness": 2, "faithfulness": None, "reason": "valid"}
 
 
 def test_plan_uses_exact_25_distinct_golden_cases_without_settings_or_clients(capsys, monkeypatch):
@@ -89,7 +178,7 @@ def test_unknown_or_duplicate_selection_id_is_rejected(tmp_path):
     selection.write_text('{"ids":["IB-GS-001","IB-GS-001"]}', encoding="utf-8")
     with pytest.raises(ValueError):
         diagnostic.load_cases(
-            diagnostic.ROOT / "golden_set.jsonl", diagnostic.ROOT / "reviews/s2-golden-set-review.jsonl", selection
+            diagnostic.ROOT / "golden_set_s3.jsonl", diagnostic.ROOT / "reviews/s2-golden-set-review.jsonl", selection
         )
 
 

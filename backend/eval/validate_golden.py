@@ -1,6 +1,6 @@
 """Offline golden-set/review validation; no LLM, embedding, DB or HTTP clients.
 
-From backend: python -m eval.validate_golden --corpus data/chunk_runs/s2-full-v1/chunks.jsonl
+From backend: python -m eval.validate_golden --corpus data/chunk_runs/s4-wiki-release/chunks.jsonl
 Add --require-reviewed to gate release on actual TV2 approval rather than draft schema validity.
 """
 
@@ -114,27 +114,28 @@ def validate(path, review_path, *, corpus=None, require_reviewed=False):
                 raise ValueError(f"{where}: Sprint 2 cross-review must identify TV2 / UncleThing")
             if datetime.fromisoformat(review["reviewed_at"]).tzinfo is None:
                 raise ValueError(f"{where}: review date needs timezone")
-        for evidence in review.get("author_evidence", []):
-            if corpus is None:
-                continue
-            chunk = source.get(evidence.get("chunk_id"))
-            if chunk is None:
-                raise ValueError(f"{where}: missing evidence chunk")
-            quote, start = evidence.get("quote"), evidence.get("quote_start")
-            if (
-                not isinstance(quote, str)
-                or not quote
-                or type(start) is not int
-                or start < 0
-                or chunk["text"][start : start + len(quote)] != quote
-            ):
-                raise ValueError(f"{where}: quote is not an exact artifact slice")
-            if hashlib.sha256(chunk["text"].encode()).hexdigest() != evidence.get("text_sha256"):
-                raise ValueError(f"{where}: source text hash mismatch")
-            if evidence.get("source_url") != chunk["url"] or page(chunk["url"]) not in {
-                page(u) for u in by_id[review["id"]]["source_urls"]
-            }:
-                raise ValueError(f"{where}: source URL does not match the golden case")
+        evidence_groups = [(review.get("author_evidence", []), by_id[review["id"]]["source_urls"])]
+        if followup := review.get("followup"):
+            evidence_groups.append((followup.get("author_evidence", []), followup.get("source_urls", [])))
+        if corpus is not None:
+            for references, urls in evidence_groups:
+                for evidence in references:
+                    chunk = source.get(evidence.get("chunk_id"))
+                    if chunk is None:
+                        raise ValueError(f"{where}: missing evidence chunk")
+                    quote, start = evidence.get("quote"), evidence.get("quote_start")
+                    if (
+                        not isinstance(quote, str)
+                        or not quote
+                        or type(start) is not int
+                        or start < 0
+                        or chunk["text"][start : start + len(quote)] != quote
+                    ):
+                        raise ValueError(f"{where}: quote is not an exact artifact slice")
+                    if hashlib.sha256(chunk["text"].encode()).hexdigest() != evidence.get("text_sha256"):
+                        raise ValueError(f"{where}: source text hash mismatch")
+                    if evidence.get("source_url") != chunk["url"] or page(chunk["url"]) not in {page(u) for u in urls}:
+                        raise ValueError(f"{where}: source URL does not match the golden case")
     approved = sum(r["status"] == "approved" for r in reviews)
     return {
         "schema_valid": True,
@@ -147,6 +148,9 @@ def validate(path, review_path, *, corpus=None, require_reviewed=False):
         "sote_cases": sum(r.get("evaluation_scope") == "sote" for r in reviews),
         "author_evidence_cases": sum(bool(r.get("author_evidence")) for r in reviews),
         "artifact_quotes_verified": corpus is not None,
+        "followup_evidence_cases_verified": sum(bool(r.get("followup", {}).get("author_evidence")) for r in reviews)
+        if corpus is not None
+        else 0,
         "author_evidence_cases_verified": sum(bool(r.get("author_evidence")) for r in reviews)
         if corpus is not None
         else 0,
@@ -161,7 +165,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     root = Path(__file__).parent
     parser.add_argument("--input", type=Path, default=root / "golden_set.jsonl")
-    parser.add_argument("--reviews", type=Path, default=root / "reviews/s2-golden-set-review.jsonl")
+    parser.add_argument("--reviews", type=Path, default=root / "reviews/s4-golden-set-review.jsonl")
     parser.add_argument("--corpus", type=Path)
     parser.add_argument("--require-reviewed", action="store_true")
     args = parser.parse_args(argv)

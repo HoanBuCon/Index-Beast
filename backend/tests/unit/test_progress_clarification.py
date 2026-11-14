@@ -13,6 +13,30 @@ ROOT = "giờ đi đâu tiếp"
 REPLY = "vừa xong tutorial"
 
 
+async def test_invalid_name_lookup_can_repair_to_model_owned_clarification():
+    question = "Talisman rồng bản cộng đó tăng bao nhiêu kháng vậy?"
+    bad = plan(intent="mechanics", entities=["Dragoncrest Talisman"], name_to_check="Talisman rồng bản cộng")
+
+    def repair(payload):
+        issue = payload["repair"]["validation_error"][0]
+        assert issue["type"] == "invalid_name_lookup"
+        assert "choose clarify" in issue["message"]
+        return plan(
+            intent="mechanics",
+            action="clarify",
+            entities=[],
+            reply="Bạn nhớ tên bùa, loại kháng hoặc bùa cộng mấy không?",
+            missing=[{"key": "talisman", "label": "Bùa"}],
+            reason="ambiguous_subject",
+        )
+
+    live = service(llm=AgentLLM([bad, bad, repair]))
+    result = await live.answer(req(question, options={"web_search": "off"}))
+    assert result.clarification is not None
+    assert result.sources == []
+    assert live.pipeline.retriever.calls == []
+
+
 def route_decision(**changes):
     return plan(
         **{

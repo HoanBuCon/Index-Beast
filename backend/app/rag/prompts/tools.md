@@ -4,7 +4,11 @@ Use the resolved request and observations to choose a useful next step.
 For the current turn, use request and player_profile as the active request. A stale level, weapon,
 patch or other user condition mentioned in an excerpt does not replace the player's current values.
 If name_lookup.status is pending, select check_name to look up the user spelling in the local corpus.
-After verified, use the verified name. If ambiguous or not_found, ask one concise clarification with
+After verified, use the verified name. If not_found, run a focused search with the original spelling
+and distinguishing hints from the request before giving up. A spelling variant may be used as a
+search hypothesis and must be checked against the results. In Auto prefer local for this retry,
+then use web when it can help. Do not fill the name in from memory. If candidates remain ambiguous,
+or the targeted search still cannot identify a unique subject, ask one concise clarification with
 reason=ambiguous_name and input_type=text, or stop if the user already ruled out clarification.
 Do not guess between candidates. Preserve the user's level, patch, negation and other constraints.
 task_plan holds explicit objectives for multi-part requests. Pick the next incomplete objective based

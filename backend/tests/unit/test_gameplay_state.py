@@ -37,13 +37,13 @@ def live(**config):
 
 def test_golden_append_preserves_original_sixty_and_adds_exactly_forty():
     root = Path(__file__).parents[2] / "eval"
-    lines = (root / "golden_set.jsonl").read_bytes().splitlines(keepends=True)
+    lines = (root / "golden_set_s3.jsonl").read_bytes().splitlines(keepends=True)
     assert len(lines) == 100
     assert (
         hashlib.sha256(b"".join(lines[:60])).hexdigest()
         == "85267b394c8af3bee7c55cc17e2b6738b1812e54f14197f703089cca7d570a35"
     )
-    result = validate(root / "golden_set.jsonl", root / "reviews/s2-golden-set-review.jsonl")
+    result = validate(root / "golden_set_s3.jsonl", root / "reviews/s2-golden-set-review.jsonl")
     assert result["total"] == 100 and result["languages"]["vi"] >= 50
     assert sum(result["review_status"].values()) == 100
 

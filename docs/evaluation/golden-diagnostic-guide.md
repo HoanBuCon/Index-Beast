@@ -1,7 +1,7 @@
 # Chẩn đoán 25 câu IndexBeast
 
 Đây là tập phát triển để tìm lỗi hiện tại, không phải điểm đánh giá cuối của đồ án.
-Chọn nguyên câu từ [golden set](../../backend/eval/golden_set.jsonl) theo
+Chọn nguyên câu từ [golden set lưu trữ S3](../../backend/eval/golden_set_s3.jsonl) theo
 [manifest 25 ID](../../backend/eval/diagnostic_25.json). Không sửa câu hỏi/đáp án gốc, không thêm
 đáp án tham chiếu vào prompt hoặc index để tự làm đẹp kết quả.
 

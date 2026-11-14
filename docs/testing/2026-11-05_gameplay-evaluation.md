@@ -16,7 +16,7 @@ Query embedding dùng cache đã có, HF offline. Qdrant read-only, point count 
 
 ## Golden set
 
-File [golden_set.jsonl](../../backend/eval/golden_set.jsonl) có đúng 100 record, bảy field theo contract.
+File [golden set lưu trữ S3](../../backend/eval/golden_set_s3.jsonl) có đúng 100 record, bảy field theo contract.
 60 record đầu giữ nguyên byte, SHA-256 prefix:
 `85267b394c8af3bee7c55cc17e2b6738b1812e54f14197f703089cca7d570a35`.
 40 câu mới là IB-GS-061–100; tổng **64 VI / 36 EN**, độ khó **33 easy / 44 medium / 23 hard**.
