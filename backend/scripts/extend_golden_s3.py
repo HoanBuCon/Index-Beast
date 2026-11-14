@@ -454,7 +454,7 @@ BEHAVIOR = [
 
 
 def main():
-    golden, sidecar = ROOT / "eval/golden_set.jsonl", ROOT / "eval/reviews/s2-golden-set-review.jsonl"
+    golden, sidecar = ROOT / "eval/golden_set_s3.jsonl", ROOT / "eval/reviews/s2-golden-set-review.jsonl"
     original = golden.read_bytes()
     rows = [json.loads(s) for s in original.decode("utf-8").splitlines()]
     if len(rows) != 60 or rows[-1]["id"] != "IB-GS-060":

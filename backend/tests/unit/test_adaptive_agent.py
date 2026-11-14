@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 
 from app.rag.agent import AgentDecision, check_decision
-from app.rag.entity_spelling import close_spelling
+from app.rag.entity_spelling import close_spelling, correct_name
 from app.rag.pipeline import ChatPipeline
 from app.rag.rewrite import contains_name
 from app.services.chat import LiveChatService
@@ -15,6 +15,7 @@ from core.errors import BadRequestError
 from tests.unit.test_agent_durable import AgentLLM, plan, req, settings
 from tests.unit.test_live_chat import FakeRetriever, hit
 from tests.unit.test_tool_agent import ToolsLLM, step
+from tests.unit.test_vi_en import RankedRetriever
 
 
 @pytest.mark.parametrize("query", ["Leyndell Ashen Capital", "Leyndell,  Ashen Capital"])
@@ -65,6 +66,83 @@ async def test_unique_corpus_name_replaces_typo_but_preserves_original_message()
     assert payload["original_user_message"] == "Mooonveil lấy ở đâu?"
     assert [h.id for h in p.hits] == ["1"]
     assert "task_plan" not in payload
+
+
+@pytest.mark.parametrize(
+    ("typed", "canonical"),
+    [
+        ("Fire Knight Shortsword", "Fire Knight's Shortsword"),
+        ("Talisman Blessed Dew", "Blessed Dew Talisman"),
+        ("Guranq", "Gurranq, Beast Clergyman"),
+        ("St Trinna", "St. Trina"),
+        ("Greate Sword", "Greatsword"),
+    ],
+)
+async def test_name_lookup_accepts_a_reordered_full_title_or_omitted_possessive(typed, canonical):
+    question = f"Where can I get {typed}?"
+    decision = plan(
+        intent="acquisition", resolved_question=question, search_query=question, name_to_check=typed, entities=[typed]
+    )
+    llm = ToolsLLM([step("check_name"), step("finish", evidence_ids=["1"])], [decision])
+    retriever = RankedRetriever(rankings={typed: [hit(title=canonical)]})
+    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    assert prepared.trace["verified_name"]["canonical"] == canonical
+    assert [h.payload["title"] for h in prepared.hits] == [canonical]
+
+
+def test_expanding_a_shortened_title_does_not_duplicate_a_translated_full_title():
+    assert correct_name("Where is the Beast-Repellent Torch?", "Beast-Repellent", "Beast-Repellent Torch") == (
+        "Where is the Beast-Repellent Torch?"
+    )
+
+
+async def test_agent_can_verify_a_full_title_on_contextual_search():
+    name, title = "Beast-Repellent", "Beast-Repellent Torch"
+    question = f"Where is the {title} sold?"
+    decision = plan(
+        intent="acquisition", resolved_question=question, search_query=question, name_to_check=name, entities=[name]
+    )
+    llm = ToolsLLM([step("check_name"), step("local_search", question), step("finish", evidence_ids=["1"])], [decision])
+    retriever = RankedRetriever(rankings={question: [hit(title=title)]})
+    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    assert prepared.trace["verified_name"]["canonical"] == title
+    assert json.loads(prepared.values["payload"])["question"] == question
+
+
+@pytest.mark.parametrize("with_competitor", [False, True])
+@pytest.mark.parametrize("search_name", ["Dialloz", "Diallos"])
+async def test_agent_can_retry_a_name_miss_with_context_and_asks_when_candidates_conflict(with_competitor, search_name):
+    typed = "Dialloz"
+    question = f"Who was {typed} looking for at Roundtable Hold?"
+    query = f"{search_name} looking for person Roundtable Hold"
+    canonical = "Knight Diallos"
+    decision = plan(
+        intent="quest", resolved_question=question, search_query=question, name_to_check=typed, entities=[typed]
+    )
+    evidence = [hit(title=canonical, text="At Roundtable Hold, Diallos asks about his missing servant Lanya.")]
+    if with_competitor:
+        evidence.append(hit(2, title="Captain Diallos", text="A different candidate."))
+    last = (
+        step(
+            "clarify",
+            reason="ambiguous_name",
+            question="Do you mean Knight Diallos or Captain Diallos?",
+            missing=[{"key": "character", "label": "Character"}],
+        )
+        if with_competitor
+        else step("finish", evidence_ids=["1"])
+    )
+    llm = ToolsLLM([step("check_name"), step("local_search", query), last], [decision])
+    retriever = RankedRetriever(rankings={typed: [hit(title="Diallos's Mask")], query: evidence})
+    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    assert retriever.calls == [typed, query]
+    assert llm.observations[1]["name_lookup"]["status"] == "not_found"
+    if with_competitor:
+        assert prepared.clarification and not prepared.hits
+        assert "verified_name" not in prepared.trace
+    else:
+        assert prepared.trace["verified_name"]["canonical"] == canonical
+        assert [h.payload["title"] for h in prepared.hits] == [canonical]
 
 
 async def test_ambiguous_corpus_name_asks_and_does_not_choose_a_candidate():

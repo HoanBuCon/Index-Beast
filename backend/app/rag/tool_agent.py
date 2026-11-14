@@ -141,13 +141,13 @@ async def run_tools(pipe, state):
         if (local_limit is None or local_calls < local_limit) and pipe.retriever is not None:
             if name_status == "pending":
                 available.append("check_name")
-            if not unresolved_name:
+            if not unresolved_name or name_status == "not_found":
                 available.append("local_search")
         if (
             state["search_mode"] != "off"
             and (step_limit is None or not web_calls)
             and pipe.web_search is not None
-            and not unresolved_name
+            and (not unresolved_name or name_status == "not_found")
             and (not verify_coverage or no_new_web_evidence < 2)
         ):
             available.append("web_search")
@@ -440,25 +440,6 @@ async def run_tools(pipe, state):
                 async with asyncio.timeout(min(5, pipe.settings.rag_retrieval_timeout_seconds)):
                     docs = await retriever.ainvoke(raw_name if action == "check_name" else step.query)
                     found = [document_to_hit(d) for d in docs[: pipe.settings.rag_prefetch]]
-                if action == "check_name":
-                    matches, can_verify = matching_names(
-                        raw_name,
-                        [
-                            h
-                            for h in found
-                            if pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None
-                        ],
-                    )
-                    name_options = [title for title, _ in matches][:5]
-                    name_status = (
-                        "verified" if can_verify and len(matches) == 1 else "ambiguous" if matches else "not_found"
-                    )
-                    row["name_status"] = name_status
-                    found = matches[0][1] if name_status == "verified" else []
-                    if name_status == "verified":
-                        p.trace["verified_name"] = {"typed": raw_name, "canonical": name_options[0]}
-                        for field in ("resolved_question", "query"):
-                            state[field] = correct_name(state[field], raw_name, name_options[0])
             elif action == "web_search":
                 web_calls += 1
                 web_queries.append(step.query)
@@ -496,6 +477,28 @@ async def run_tools(pipe, state):
                     row["calculation"] = {k: v for k, v in p.checked_build.items() if k != "data"}
                 else:
                     row["calculation"] = check_allocation(step.allocation, profile)
+            if action == "check_name" or (name_status == "not_found" and action in {"local_search", "web_search"}):
+                candidates = [
+                    h
+                    for h in found
+                    if isinstance(h, WebHit)
+                    or pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None
+                ]
+                matches, can_verify = matching_names(
+                    raw_name,
+                    candidates,
+                    contextual_query=step.query if action in {"local_search", "web_search"} else "",
+                )
+                name_options = [title for title, _ in matches][:5]
+                name_status = (
+                    "verified" if can_verify and len(matches) == 1 else "ambiguous" if matches else "not_found"
+                )
+                row["name_status"] = name_status
+                found = matches[0][1] if name_status == "verified" else []
+                if name_status == "verified":
+                    p.trace["verified_name"] = {"typed": raw_name, "canonical": name_options[0]}
+                    for field in ("resolved_question", "query"):
+                        state[field] = correct_name(state[field], raw_name, name_options[0])
             admitted, novel = [], False
             for h in found:
                 eligible = (

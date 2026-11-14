@@ -1,0 +1,1367 @@
+[
+  {
+    "id": "IB-GS-101",
+    "question": "Muốn tăng số lần dùng bình máu và bình FP thì dùng Golden Sead để làm gì?",
+    "lang": "vi",
+    "expected_answer": "Hiểu là Golden Seed. Tăng số lượt dùng Sacred Flasks.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Golden_Seed"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-102",
+    "question": "How does using a Golden Seed change the Sacred Flasks?",
+    "lang": "en",
+    "expected_answer": "It increases their number of uses.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Golden_Seed"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-105",
+    "question": "Chìa Stoneswrod dùng với tượng nào?",
+    "lang": "vi",
+    "expected_answer": "Stonesword Key phá phong ấn tượng Imp.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Stonesword_Key"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-106",
+    "question": "What kind of seal takes a Stonesword Key?",
+    "lang": "en",
+    "expected_answer": "An Imp statue seal.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Stonesword_Key"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-107",
+    "question": "Mình đã trang bị Great Rune rồi, Rune Arcc dùng để làm gì?",
+    "lang": "vi",
+    "expected_answer": "Rune Arc kích hoạt phước lành của Great Rune đang trang bị.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Rune_Arc"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-108",
+    "question": "What does a Rune Arc do when a Great Rune is equipped?",
+    "lang": "en",
+    "expected_answer": "It activates the equipped Great Rune's blessing.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Rune_Arc"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-111",
+    "question": "Mua Craftting Kit xong sẽ mở menu nào?",
+    "lang": "vi",
+    "expected_answer": "Crafting Kit mở menu Item Crafting.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Crafting_Kit#Effects"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-112",
+    "question": "Which menu becomes available after obtaining the Crafting Kit?",
+    "lang": "en",
+    "expected_answer": "Item Crafting.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Crafting_Kit#Effects"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-117",
+    "question": "Chọc Bewiching Branch trúng quái có hiệu ứng gì?",
+    "lang": "vi",
+    "expected_answer": "Bewitching Branch có thể biến mục tiêu trúng đòn thành đồng minh tạm thời.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Bewitching_Branch#Effects"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-118",
+    "question": "What happens to a susceptible enemy pierced by a Bewitching Branch?",
+    "lang": "en",
+    "expected_answer": "It briefly becomes an ally.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Bewitching_Branch#Effects"
+    ],
+    "category": "mechanics",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-125",
+    "question": "Cần nguyên liệu gì cho Fire Pot ngoài vỏ Cracked Pot?",
+    "lang": "vi",
+    "expected_answer": "Một Mushroom và một Smoldering Butterfly.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-126",
+    "question": "What two ingredients are needed in addition to an empty Cracked Pot for a Fire Pot?",
+    "lang": "en",
+    "expected_answer": "One Mushroom and one Smoldering Butterfly.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-127",
+    "question": "Sleep Pott ném ra gây trạng thái gì?",
+    "lang": "vi",
+    "expected_answer": "Sleep Pot tích tụ Sleep.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sleep_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-128",
+    "question": "What status does a Sleep Pot build up?",
+    "lang": "en",
+    "expected_answer": "Sleep buildup.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sleep_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-131",
+    "question": "Phủ Freezing Grease giúp tích trạng thái nào?",
+    "lang": "vi",
+    "expected_answer": "Tích Frostbite trên vũ khí có thể phủ.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Freezing_Grease"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-132",
+    "question": "What buildup does Freezing Grease add to a coated weapon?",
+    "lang": "en",
+    "expected_answer": "Frostbite buildup.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Freezing_Grease"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-137",
+    "question": "Crakced Pot là loại nguyên liệu dùng làm gì?",
+    "lang": "vi",
+    "expected_answer": "Cracked Pot là vỏ để chế tạo các loại vật phẩm ném thuộc nhóm Cracked Pot.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Cracked_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-138",
+    "question": "What role does the Cracked Pot play in crafting?",
+    "lang": "en",
+    "expected_answer": "It is the container required for cracked-pot recipes.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Cracked_Pot"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-145",
+    "question": "Patches bán Margitt's Shackle ở hang nào?",
+    "lang": "vi",
+    "expected_answer": "Margit's Shackle bán ở Murkwater Cave.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Margit%27s_Shackle#Acquisition"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-146",
+    "question": "Where can I buy Margit's Shackle from Patches?",
+    "lang": "en",
+    "expected_answer": "Murkwater Cave.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Margit%27s_Shackle#Acquisition"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-147",
+    "question": "Sentrys Torch mua o thuong nhan nao?",
+    "lang": "vi",
+    "expected_answer": "Mua Sentry's Torch từ Hermit Merchant tại Hermit Merchant's Shack ở Capital Outskirts.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sentry%27s_Torch#Acquisition"
+    ],
+    "category": "location",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-148",
+    "question": "Who sells the Sentry's Torch in the Capital Outskirts?",
+    "lang": "en",
+    "expected_answer": "The Hermit Merchant at Hermit Merchant's Shack.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sentry%27s_Torch#Acquisition"
+    ],
+    "category": "location",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-149",
+    "question": "Đuốc Beast-Repellent mua ở đâu trong Dragonbarrow?",
+    "lang": "vi",
+    "expected_answer": "Isolated Merchant's Shack ở tây bắc Dragonbarrow.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Beast-Repellent_Torch#Acquisition"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-150",
+    "question": "Where in Dragonbarrow is the Beast-Repellent Torch sold?",
+    "lang": "en",
+    "expected_answer": "At the Isolated Merchant's Shack in northwestern Dragonbarrow.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Beast-Repellent_Torch#Acquisition"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-151",
+    "question": "Rùa ở Church of Vows là ai và am hiểu những loại phép nào?",
+    "lang": "vi",
+    "expected_answer": "Miriel, Pastor of Vows, am hiểu sorcery và incantation.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Miriel%2C_Pastor_of_Vows#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-152",
+    "question": "Who is the tortoise at the Church of Vows, and what kinds of magic does he know?",
+    "lang": "en",
+    "expected_answer": "Miriel, Pastor of Vows, knows sorceries and incantations.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Miriel%2C_Pastor_of_Vows#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-157",
+    "question": "Drylef Dane thuộc nhóm nào và thiên về đánh tay không kiểu gì?",
+    "lang": "vi",
+    "expected_answer": "Dryleaf Sect, đánh không vũ khí với thế mạnh là các đòn đá.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Dryleaf_Dane#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-158",
+    "question": "Which order does Dryleaf Dane belong to, and what does his unarmed fighting emphasize?",
+    "lang": "en",
+    "expected_answer": "The Dryleaf Sect, and his technique emphasizes kicks.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Dryleaf_Dane#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-163",
+    "question": "Muốn nhận Spirit Ash của Fire Knight Queelign thì đưa vật gì và giao ở đâu?",
+    "lang": "vi",
+    "expected_answer": "Đưa Iris of Grace trong Prayer Room ở Church District của Shadow Keep, sau các lần xâm lăng cần thiết.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Knight_Queelign#Acquisition"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-164",
+    "question": "What do I give Fire Knight Queelign to obtain his spirit ash, and where?",
+    "lang": "en",
+    "expected_answer": "An Iris of Grace in Shadow Keep Church District's Prayer Room, after the required invasions.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Knight_Queelign#Acquisition"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-165",
+    "question": "Để Latenna trao Spirit Ash, cần trình nửa huy chương nào?",
+    "lang": "vi",
+    "expected_answer": "Haligtree Secret Medallion (Right).",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Latenna_the_Albinauric#Quest_Items"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-166",
+    "question": "Which half of the medallion must I present to Latenna to obtain her spirit ash?",
+    "lang": "en",
+    "expected_answer": "Haligtree Secret Medallion (Right).",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Latenna_the_Albinauric#Quest_Items"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-167",
+    "question": "Guranq ở nơi nào và đang tìm vật phẩm gì?",
+    "lang": "vi",
+    "expected_answer": "Gurranq ở Bestial Sanctum, phía đông bắc Caelid, và tìm Deathroot.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Gurranq%2C_Beast_Clergyman#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-168",
+    "question": "What does Gurranq seek, and where does he reside?",
+    "lang": "en",
+    "expected_answer": "Deathroot, at the Bestial Sanctum in northeastern Caelid.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Gurranq%2C_Beast_Clergyman#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-171",
+    "question": "Có thể chuộc chiếc vòng cổ của Rya từ NPC nào?",
+    "lang": "vi",
+    "expected_answer": "Mua lại Rya's Necklace từ Blackguard Big Boggart.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Blackguard_Big_Boggart#Quest_Items"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-172",
+    "question": "Who can I buy back Rya's Necklace from?",
+    "lang": "en",
+    "expected_answer": "Blackguard Big Boggart.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Blackguard_Big_Boggart#Quest_Items"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-177",
+    "question": "Alexander là sinh vật gì và quê ở làng nào?",
+    "lang": "vi",
+    "expected_answer": "Một Living Jar, xuất thân từ Jarburg.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Alexander%2C_Warrior_Jar#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-178",
+    "question": "What kind of being is Alexander, and which village is he from?",
+    "lang": "en",
+    "expected_answer": "A Living Jar from Jarburg.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Alexander%2C_Warrior_Jar#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-183",
+    "question": "Sau Rykard, Patches đưa Dancer's Castanets ở đâu và nhờ trao cho ai?",
+    "lang": "vi",
+    "expected_answer": "Đưa tại Shaded Castle và nhờ trao cho Tanith.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Patches#Overview"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-184",
+    "question": "After Rykard, where does Patches hand over the Dancer's Castanets and who is meant to receive them?",
+    "lang": "en",
+    "expected_answer": "At the Shaded Castle, to be returned to Tanith.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Patches#Overview"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-185",
+    "question": "Dấu triệu hồi Great Horned Tragoth cho trận Magma Wyrm Makar ở chỗ nào?",
+    "lang": "vi",
+    "expected_answer": "Trước cổng sương của Makar tại Ruin-Strewn Precipice Overlook.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Great_Horned_Tragoth#Location"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-186",
+    "question": "Where is Great Horned Tragoth's summon sign for Magma Wyrm Makar?",
+    "lang": "en",
+    "expected_answer": "Outside Makar's fog gate at the Ruin-Strewn Precipice Overlook.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Great_Horned_Tragoth#Location"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-193",
+    "question": "St Trinna được gặp ở khu vực nào trong DLC?",
+    "lang": "vi",
+    "expected_answer": "St. Trina ở Stone Coffin Fissure.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/St._Trina"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-194",
+    "question": "What location is associated with St. Trina in the DLC?",
+    "lang": "en",
+    "expected_answer": "Stone Coffin Fissure.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/St._Trina"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-195",
+    "question": "Đối đầu Romina ở địa danh cụ thể nào và nhận Remembrance gì?",
+    "lang": "vi",
+    "expected_answer": "Church of the Bud tại Ancient Ruins of Rauh. Nhận Remembrance of the Saint of the Bud.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Romina%2C_Saint_of_the_Bud"
+    ],
+    "category": "event",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-196",
+    "question": "Where do I fight Romina and what remembrance does that encounter award?",
+    "lang": "en",
+    "expected_answer": "Church of the Bud in the Ancient Ruins of Rauh. Remembrance of the Saint of the Bud.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Romina%2C_Saint_of_the_Bud"
+    ],
+    "category": "event",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-201",
+    "question": "Metyr có quan hệ gì với Greater Will và Two Fingers?",
+    "lang": "vi",
+    "expected_answer": "Là con gái của Greater Will và sinh ra Two Fingers.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Metyr%2C_Mother_of_Fingers#Shooting_star"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-202",
+    "question": "How is Metyr related to the Greater Will and the Two Fingers?",
+    "lang": "en",
+    "expected_answer": "Metyr is a daughter of the Greater Will and gave birth to the Two Fingers.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Metyr%2C_Mother_of_Fingers#Shooting_star"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-205",
+    "question": "Boss Ancient Dragon Man ở Dragon Pit cho vũ khí gì?",
+    "lang": "vi",
+    "expected_answer": "Dragon-Hunter's Great Katana.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ancient_Dragon-Man"
+    ],
+    "category": "equipment",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-206",
+    "question": "Which weapon drops from the Ancient Dragon-Man boss in Dragon's Pit?",
+    "lang": "en",
+    "expected_answer": "Dragon-Hunter's Great Katana.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ancient_Dragon-Man"
+    ],
+    "category": "equipment",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-207",
+    "question": "Putrescent Knight hình thành như thế nào theo phần mô tả về mật của St. Trina?",
+    "lang": "vi",
+    "expected_answer": "Một khối thịt thối uống mật của St. Trina, biến thành hiệp sĩ phục vụ St. Trina.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Putrescent_Knight#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-208",
+    "question": "How did St. Trina's nectar change the Putrescent Knight?",
+    "lang": "en",
+    "expected_answer": "It transformed a mass of putrid flesh into a knight devoted to St. Trina.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Putrescent_Knight#Overview"
+    ],
+    "category": "character",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-211",
+    "question": "Hôn lễ giữa ai với ai diễn ra ở Churh of Vows?",
+    "lang": "vi",
+    "expected_answer": "Rennala và Radagon.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Church_of_Vows#Overview"
+    ],
+    "category": "event",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-212",
+    "question": "Whose marriage took place at the Church of Vows?",
+    "lang": "en",
+    "expected_answer": "Rennala and Radagon's.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Church_of_Vows#Overview"
+    ],
+    "category": "event",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-213",
+    "question": "Ở phía đông Ainsel River có phế tích nào và kiến trúc gì nổi bật?",
+    "lang": "vi",
+    "expected_answer": "Uhl Palace Ruins, nổi bật với lăng và tượng.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ainsel_River#Overview"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-214",
+    "question": "Which ruins dominate eastern Ainsel River, and what features characterize them?",
+    "lang": "en",
+    "expected_answer": "Uhl Palace Ruins, with mausoleums and statuary.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ainsel_River#Overview"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-215",
+    "question": "Deeproot Depths là đầu nguồn của hai dòng sông nào?",
+    "lang": "vi",
+    "expected_answer": "Ainsel River và Siofra River.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Deeproot_Depths#Overview"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-216",
+    "question": "Which two underground rivers have their source at Deeproot Depths?",
+    "lang": "en",
+    "expected_answer": "Ainsel River and Siofra River.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Deeproot_Depths#Overview"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-227",
+    "question": "Đang có nửa phải huy chương bí mật, cần đi đâu lấy nửa còn lại và dùng ở thang nào để tới vùng tuyết?",
+    "lang": "vi",
+    "expected_answer": "Lấy nửa trái trên tháp sau Commander Niall tại Castle Sol. Dùng hai nửa tại Grand Lift of Rold để đến Consecrated Snowfield.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Haligtree_Secret_Medallion_%28Left%29#Acquisition",
+      "https://eldenring.wiki.gg/wiki/Consecrated_Snowfield#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-228",
+    "question": "With Albus's medallion half already in hand, where is the missing half and what lift does the pair operate?",
+    "lang": "en",
+    "expected_answer": "Get the left half atop the tower beyond Commander Niall in Castle Sol, then use the pair at the Grand Lift of Rold for Consecrated Snowfield.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Haligtree_Secret_Medallion_%28Left%29#Acquisition",
+      "https://eldenring.wiki.gg/wiki/Consecrated_Snowfield#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-229",
+    "question": "Từ cuối Darklight Catacombs, qua ai và băng qua vùng nào để tới Midra's Manse?",
+    "lang": "vi",
+    "expected_answer": "Vượt Jori, Elder Inquisitor ở cuối hầm để vào Abyssal Woods, rồi đi qua khu rừng xuống Midra's Manse.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Abyssal_Woods#Overview",
+      "https://eldenring.wiki.gg/wiki/Midra%27s_Manse#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-230",
+    "question": "Which guardian and which region stand between Darklight Catacombs and Midra's Manse?",
+    "lang": "en",
+    "expected_answer": "Jori, Elder Inquisitor guards the entrance to Abyssal Woods. Traverse the woods to reach Midra's Manse.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Abyssal_Woods#Overview",
+      "https://eldenring.wiki.gg/wiki/Midra%27s_Manse#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-231",
+    "question": "Đã nhận vòng Hole-Laden Necklace của Ymir. Phế tích đầu tiên ở hướng nào từ Cerulean Coast và làm gì ở đó?",
+    "lang": "vi",
+    "expected_answer": "Theo bờ biển phía nam về phía đông, qua thuyền quan tài đá tới Finger Ruins of Rhia rồi rung chuông.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Count_Ymir#Questline_Progression",
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Rhia#Access"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-232",
+    "question": "After receiving Ymir's necklace, how do I approach the first ruins from the coast and advance the quest?",
+    "lang": "en",
+    "expected_answer": "Follow the southern Cerulean Coast shoreline east and climb the stone coffin ship to reach Finger Ruins of Rhia. Ring its bell.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Count_Ymir#Questline_Progression",
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Rhia#Access"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-233",
+    "question": "So sánh hai phế tích chuông đầu của Ymir và bùa mà mỗi phế tích trao.",
+    "lang": "vi",
+    "expected_answer": "Rhia trước, nhận Crimson Seed Talisman +1; Dheo thứ hai, nhận Cerulean Seed Talisman +1.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Rhia#Overview",
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Dheo#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-234",
+    "question": "How do the first and second Finger Ruins in Ymir's quest differ in order and rewards?",
+    "lang": "en",
+    "expected_answer": "Rhia is first and gives Crimson Seed Talisman +1. Dheo is second and gives Cerulean Seed Talisman +1.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Rhia#Overview",
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Dheo#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-237",
+    "question": "Hạ Tibia Mariner ở Summonwater rồi: cần giữ món gì, hỏi ai để được giới thiệu và mang món đó cho ai?",
+    "lang": "vi",
+    "expected_answer": "Giữ Deathroot, nói chuyện với D, Hunter of the Dead để được giới thiệu Gurranq và giao Deathroot cho Gurranq ở Bestial Sanctum.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/D%2C_Hunter_of_the_Dead#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Gurranq%2C_Beast_Clergyman#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Deathroot#Acquisition"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-238",
+    "question": "Trace what to do with the item from Summonwater's Tibia Mariner through D to its final recipient.",
+    "lang": "en",
+    "expected_answer": "Take Deathroot, speak to D after obtaining it, then give it to Gurranq at the Bestial Sanctum.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/D%2C_Hunter_of_the_Dead#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Gurranq%2C_Beast_Clergyman#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Deathroot#Acquisition"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-239",
+    "question": "Đã lỡ đánh một NPC khiến họ thù địch. Phải tới đúng nhà thờ ở vùng nào, chọn gì và mất món nào?",
+    "lang": "vi",
+    "expected_answer": "Tới Church of Vows ở Liurnia of the Lakes, chọn Atone tại tượng trong chậu, tốn một Celestial Dew.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Celestial_Dew#Effects",
+      "https://eldenring.wiki.gg/wiki/Church_of_Vows"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-240",
+    "question": "Where and how can I spend Celestial Dew to reconcile with angered NPCs?",
+    "lang": "en",
+    "expected_answer": "Church of Vows in Liurnia of the Lakes. Interact with the statue in the basin and select Atone.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Celestial_Dew#Effects",
+      "https://eldenring.wiki.gg/wiki/Church_of_Vows"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-253",
+    "question": "Đã có hai Cracked Pot rỗng. So sánh nguyên liệu và cách gây hiệu ứng của Fire Pot, Sleep Pot.",
+    "lang": "vi",
+    "expected_answer": "Cả hai cần Mushroom và vỏ Cracked Pot. Fire Pot thêm Smoldering Butterfly để gây sát thương lửa. Sleep Pot thêm Trina's Lily và dùng FP để tích Sleep.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Pot",
+      "https://eldenring.wiki.gg/wiki/Sleep_Pot"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-254",
+    "question": "Which materials overlap between Fire Pot and Sleep Pot, and what ingredient and effect distinguish them?",
+    "lang": "en",
+    "expected_answer": "An empty Cracked Pot and Mushroom are shared. Fire Pot adds Smoldering Butterfly and deals fire damage. Sleep Pot adds Trina's Lily and uses FP to build sleep.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Pot",
+      "https://eldenring.wiki.gg/wiki/Sleep_Pot"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-257",
+    "question": "Nếu bỏ đường Dectus để lên Altus từ Liurnia, khu nào thay thế và tìm dấu Tragoth ở đâu trước trận boss?",
+    "lang": "vi",
+    "expected_answer": "Qua Ruin-Strewn Precipice từ Liurnia, hạ Magma Wyrm Makar. Dấu Tragoth trước cổng sương tại Ruin-Strewn Precipice Overlook.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Great_Horned_Tragoth#Location",
+      "https://eldenring.wiki.gg/wiki/Ruin-Strewn_Precipice#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-258",
+    "question": "Taking the non-lift route to Altus from Liurnia, which passage and boss do I use and where is Tragoth's sign?",
+    "lang": "en",
+    "expected_answer": "Ruin-Strewn Precipice with Magma Wyrm Makar. Tragoth's sign is outside the fog at the Overlook.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Great_Horned_Tragoth#Location",
+      "https://eldenring.wiki.gg/wiki/Ruin-Strewn_Precipice#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-261",
+    "question": "Sau lần gặp Alexander cuối ở Farum Azula, vật phẩm nào liên quan đến phần thưởng ở Jarburg và giao cho ai?",
+    "lang": "vi",
+    "expected_answer": "Alexander's Innards từ kết thúc của Alexander, đem cho Jar-Bairn để nhận Companion Jar.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Jar-Bairn#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Alexander%2C_Warrior_Jar#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-262",
+    "question": "After Alexander's final duel in Farum Azula, what item connects his ending to a reward in Jarburg?",
+    "lang": "en",
+    "expected_answer": "Give Alexander's Innards to Jar-Bairn to receive Companion Jar.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Jar-Bairn#Quest_Items",
+      "https://eldenring.wiki.gg/wiki/Alexander%2C_Warrior_Jar#Overview"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-265",
+    "question": "Ở Dragon's Pit và Jagged Peak, phân biệt boss nào cho Great Katana và boss nào cho tim riêng.",
+    "lang": "vi",
+    "expected_answer": "Ancient Dragon-Man ở Dragon's Pit rơi Dragon-Hunter's Great Katana. Bayle the Dread ở Jagged Peak rơi Heart of Bayle.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ancient_Dragon-Man",
+      "https://eldenring.wiki.gg/wiki/Bayle_the_Dread"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-266",
+    "question": "Distinguish the boss reward in Dragon's Pit from the one awarded by Bayle at Jagged Peak.",
+    "lang": "en",
+    "expected_answer": "Ancient Dragon-Man drops Dragon-Hunter's Great Katana; Bayle drops Heart of Bayle.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ancient_Dragon-Man",
+      "https://eldenring.wiki.gg/wiki/Bayle_the_Dread"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-267",
+    "question": "Có thể đặt lịch cắt tóc tối nay hộ mình không?",
+    "lang": "vi",
+    "expected_answer": "Nêu ngắn gọn phạm vi Elden Ring; không hứa đặt lịch.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-268",
+    "question": "Tóm tắt giúp tôi ba định luật Newton.",
+    "lang": "vi",
+    "expected_answer": "Chuyển hướng về phạm vi hỗ trợ Elden Ring.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-269",
+    "question": "Mình cần công thức làm bánh flan bằng nồi cơm điện.",
+    "lang": "vi",
+    "expected_answer": "Nêu phạm vi hỗ trợ, không trả lời như chatbot nấu ăn.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat/stream"
+  },
+  {
+    "id": "IB-GS-270",
+    "question": "Trong Minecraft, đào ở tầng nào dễ thấy kim cương?",
+    "lang": "vi",
+    "expected_answer": "Nhận diện đây là trò chơi khác và nêu phạm vi Elden Ring.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-275",
+    "question": "How do I change my display name in Minecraft?",
+    "lang": "en",
+    "expected_answer": "Briefly explain the assistant's Elden Ring scope.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-276",
+    "question": "Does a Memory Stnoe consume a spell memory slot or increase my available spell slots?",
+    "lang": "en",
+    "expected_answer": "Recognize Memory Stone. It increases available spell memory slots.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Memory_Stone"
+    ],
+    "category": "equipment",
+    "difficulty": "easy",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-277",
+    "question": "Sau khi nghe tiếng báo Great Rune vỡ trong DLC, mình muốn quay lại gặp hiệp sĩ ở chỗ thánh giá. Phải về mốc nào?",
+    "lang": "vi",
+    "expected_answer": "Hỏi tên hiệp sĩ hoặc mốc thánh giá trước khi chỉ đường.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "clarification_answers": [
+      "Moore, vừa nghe Great Rune của Miquella vỡ. Mình nên quay về mốc nào để gặp ông ấy?"
+    ],
+    "expected_followup": "Main Gate Cross, Gravesite Plain.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Moore#Quest_progression"
+    ]
+  },
+  {
+    "id": "IB-GS-278",
+    "question": "Talisman rồng bản cộng đó tăng bao nhiêu kháng vậy?",
+    "lang": "vi",
+    "expected_answer": "Hỏi tên đầy đủ/loại kháng hoặc phiên bản + mấy và PvE/PvP nếu cần.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Spelldrake Talisman +2, mình chơi PvE."
+    ],
+    "expected_followup": "20% giảm sát thương phép trong PvE.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Spelldrake_Talismans#Overview"
+    ]
+  },
+  {
+    "id": "IB-GS-279",
+    "question": "Vừa nói chuyện với một hiệp sĩ ở Roundtable Hold. Lần tới nhiệm vụ của ông ấy dẫn mình đi đâu?",
+    "lang": "vi",
+    "expected_answer": "Hỏi tên NPC hoặc vị trí/mốc nhiệm vụ.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Đó là Diallos ở Roundtable Hold, chỉ giúp mình chỗ gặp ông tiếp theo."
+    ],
+    "expected_followup": "Phía bắc Site of Grace Academy Gate Town, Liurnia.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Knight_Diallos#Questline_Progression"
+    ]
+  },
+  {
+    "id": "IB-GS-280",
+    "question": "Mình đang cầm cái bùa hồi máu ấy, có đổi sang cái tăng thủ tốt hơn không?",
+    "lang": "vi",
+    "expected_answer": "Có thể hỏi rõ tên bùa, loại sát thương muốn giảm hoặc đưa lựa chọn có điều kiện. Nếu người chơi chuyển sang hỏi Sacred Tear, xử lý yêu cầu mới.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Ý mình là bình hồi máu. Mình muốn biết Sacred Tear cải thiện gì ở bình."
+    ],
+    "expected_followup": "Sacred Tear tăng lượng hồi mỗi lần dùng bình.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sacred_Tear"
+    ]
+  },
+  {
+    "id": "IB-GS-281",
+    "question": "Cần nửa trái của huy chương nhưng không nhớ của loại nào, chỉ mình nơi lấy với.",
+    "lang": "vi",
+    "expected_answer": "Hỏi người chơi muốn mở Grand Lift of Dectus hay đường bí mật bằng Grand Lift of Rold.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "clarification_answers": [
+      "Mình muốn tới Consecrated Snowfield qua Rold."
+    ],
+    "expected_followup": "Trên đỉnh tháp sau Commander Niall ở Castle Sol.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Haligtree_Secret_Medallion_%28Left%29#Acquisition"
+    ]
+  },
+  {
+    "id": "IB-GS-282",
+    "question": "Tai Count Ymr nhan cai vong deo co dau tien thi nhan them gi khong?",
+    "lang": "vi",
+    "expected_answer": "Nhận diện Count Ymir. Cùng Hole-Laden Necklace còn có Ruins Map tại Cathedral of Manus Metyr.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Count_Ymir#Questline_Progression"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-284",
+    "question": "Cây Greate Sword nặng 23 trong Caelid là loại vũ khí nào?",
+    "lang": "vi",
+    "expected_answer": "Nhận diện Greatsword, thuộc nhóm Colossal Sword.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Greatsword"
+    ],
+    "category": "equipment",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-287",
+    "question": "Brơther Corhyn dạy mình phép Two Fingers ở khu tập trung nào?",
+    "lang": "vi",
+    "expected_answer": "Nhận diện Brother Corhyn và Roundtable Hold.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Brother_Corhyn#Overview"
+    ],
+    "category": "quest",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-288",
+    "question": "Which axe does the Death Knight in the catacombs drop?",
+    "lang": "en",
+    "expected_answer": "Ask which catacomb or describe the variants conditionally. Do not give a single drop before the variant is known.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "clarification_answers": [
+      "I mean the Death Knight in Scorpion River Catacombs."
+    ],
+    "expected_followup": "The Death Knight in Scorpion River Catacombs drops the Death Knight's Longhaft Axe.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Death_Knight#Greataxe_Knight-0"
+    ]
+  },
+  {
+    "id": "IB-GS-289",
+    "question": "How do I access Fingre Ruins of Rhia from the southern shore?",
+    "lang": "en",
+    "expected_answer": "Recognize Finger Ruins of Rhia. Follow the Cerulean Coast's southern shoreline east and climb the stone coffin ship.",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Finger_Ruins_of_Rhia#Access"
+    ],
+    "category": "location",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-290",
+    "question": "Compare Baldur's Gate 3 class proficiencies for my next playthrough.",
+    "lang": "en",
+    "expected_answer": "Briefly state the Elden Ring scope.",
+    "source_urls": [],
+    "category": "out_of_scope",
+    "difficulty": "medium",
+    "web_search": "auto",
+    "endpoint": "chat"
+  },
+  {
+    "id": "IB-GS-291",
+    "question": "Tối ưu cho tôi build cho cây đại kiếm đang cầm, level hiện tại thì tôi chưa nói.",
+    "lang": "vi",
+    "expected_answer": "Hỏi tên vũ khí và cấp độ/lớp khởi đầu nếu định chia chỉ số cụ thể. Không đoán allocation.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Tên vũ khí là Claymore; bỏ yêu cầu chia chỉ số, mình muốn biết nó đi kèm kỹ năng gì."
+    ],
+    "expected_followup": "Lion's Claw.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Claymore"
+    ]
+  },
+  {
+    "id": "IB-GS-292",
+    "question": "Mình mới đánh xong một boss ở DLC, từ đó đi tiếp sang màn sương phía bắc sao?",
+    "lang": "vi",
+    "expected_answer": "Hỏi tên boss, địa danh hoặc Site of Grace để xác định mốc.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "clarification_answers": [
+      "Vừa thắng Rellana tại Castle Ensis và muốn tới Scadu Altus."
+    ],
+    "expected_followup": "Rời qua Ensis Moongazing Grounds để tới Scadu Altus.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Scadu_Altus#Accessing_Scadu_Altus"
+    ]
+  },
+  {
+    "id": "IB-GS-293",
+    "question": "Chỉ cho tôi chính xác sát thương theo giây của vũ khí mình cầm trên mọi boss.",
+    "lang": "vi",
+    "expected_answer": "Hỏi vũ khí, build, nâng cấp và mục tiêu nếu người chơi muốn kết quả có điều kiện. Không khẳng định một DPS chung.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Đổi câu hỏi: Greatsword bản cơ bản xếp vào nhóm vũ khí nào?"
+    ],
+    "expected_followup": "Colossal Sword.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Greatsword"
+    ]
+  },
+  {
+    "id": "IB-GS-294",
+    "question": "Mình cần tra hai món: cái rìu của kỵ sĩ chết và viên crystal tear xanh. Lấy ở đâu?",
+    "lang": "vi",
+    "expected_answer": "Hỏi rõ biến thể Death Knight và tên/hiệu ứng viên tear, vì cả hai tham chiếu chưa đủ rõ.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "Death Knight ở Scorpion River; bỏ viên tear, chỉ cần tên phần thưởng."
+    ],
+    "expected_followup": "Death Knight's Longhaft Axe.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Death_Knight#Greataxe_Knight-0"
+    ]
+  },
+  {
+    "id": "IB-GS-299",
+    "question": "I just got the first remembrance and I need the right next step for that NPC's quest. Where do I go?",
+    "lang": "en",
+    "expected_answer": "Ask which remembrance/boss and which NPC or quest. Do not infer a route from “first”.",
+    "source_urls": [],
+    "category": "insufficient_evidence",
+    "difficulty": "hard",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "clarification_answers": [
+      "I mean Enia and the Carian Regal Scepter. I defeated Rennala."
+    ],
+    "expected_followup": "Trade the Remembrance of the Full Moon Queen to Finger Reader Enia for the Carian Regal Scepter.",
+    "followup_source_urls": [
+      "https://eldenring.wiki.gg/wiki/Carian_Regal_Scepter#Acquisition"
+    ]
+  }
+]

@@ -94,7 +94,12 @@ class AgentDecision(BaseModel):
         if self.name_to_check and (
             self.action != "retrieve" or not any(name_key(n) == name_key(self.name_to_check) for n in self.entities)
         ):
-            raise ValueError("Name lookup requires an unresolved entity surface in retrieval")
+            raise PydanticCustomError(
+                "invalid_name_lookup",
+                "For a vague description with competing referents, choose clarify, ask which item or defining detail, "
+                "set missing to 1-2 text fields, and leave name_to_check empty. For a single likely misspelled proper "
+                "name, use the exact same user surface in entities and name_to_check. Do not infer a variant or tier.",
+            )
         if self.action == "retrieve" and (not self.search_query.strip() or not self.resolved_question.strip()):
             raise ValueError("Retrieval requires a resolved question and query")
         if self.action == "clarify" and (not self.missing or not self.reply.strip()):
@@ -429,11 +434,13 @@ async def decide(
                         if isinstance(exc, ValidationError)
                         else []
                     )
-                    duplicate_condition = any(e["type"] == "duplicate_constraint" for e in schema_issues)
+                    repairable_schema = any(
+                        e["type"] in {"duplicate_constraint", "invalid_name_lookup"} for e in schema_issues
+                    )
                     # Repair only a complete, recognizable decision; never turn arbitrary JSON into a fake success.
                     if (
                         attempt == 2
-                        or (attempt and not (condition_error or duplicate_condition))
+                        or (attempt and not (condition_error or repairable_schema))
                         or not isinstance(data, dict)
                         or not required <= data.keys()
                         or data.keys() - AgentDecision.model_fields.keys()

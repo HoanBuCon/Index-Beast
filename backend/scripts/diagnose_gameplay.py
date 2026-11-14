@@ -20,9 +20,8 @@ ROOT = REPO_ROOT / "backend"
 
 def plan():
     manifest = json.loads((ROOT / "eval/gameplay_diagnostic_25.json").read_text(encoding="utf-8"))
-    golden = {
-        r["id"]: r for r in map(json.loads, (ROOT / "eval/golden_set.jsonl").read_text(encoding="utf-8").splitlines())
-    }
+    archived = (ROOT / "eval/golden_set_s3.jsonl").read_text(encoding="utf-8").splitlines()
+    golden = {r["id"]: r for r in map(json.loads, archived)}
     scenarios = json.loads((ROOT / "eval/gameplay_scenarios.json").read_text(encoding="utf-8"))["scenarios"]
     rows = [{**golden[key], "mode": "auto", "group": None} for key in manifest["standalone_ids"]]
     for scenario in scenarios:
@@ -203,7 +202,7 @@ async def execute(args, manifest, cases):
         "hashes": {
             str(p.relative_to(REPO_ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in [
-                ROOT / "eval/golden_set.jsonl",
+                ROOT / "eval/golden_set_s3.jsonl",
                 ROOT / "eval/gameplay_diagnostic_25.json",
                 ROOT / "app/rag/knowledge/gameplay.json",
                 *sorted((ROOT / "app/rag/prompts").glob("*.md")),

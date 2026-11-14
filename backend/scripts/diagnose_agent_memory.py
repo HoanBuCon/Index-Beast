@@ -22,7 +22,7 @@ def plan():
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
     golden = {
         row["id"]: row
-        for row in map(json.loads, (ROOT / "eval/golden_set.jsonl").read_text(encoding="utf-8").splitlines())
+        for row in map(json.loads, (ROOT / "eval/golden_set_s3.jsonl").read_text(encoding="utf-8").splitlines())
     }
     rows = [{**golden[key], "group": None} for key in manifest["standalone_ids"]]
     for scenario in manifest["scenarios"]:
@@ -46,7 +46,20 @@ def save(directory, report, secrets=()):
             body = body.replace(secret, "[REDACTED]")
     temporary = directory / "report.tmp"
     temporary.write_text(body, encoding="utf-8")
-    temporary.replace(directory / "report.json")
+    replace_checkpoint(temporary, directory / "report.json")
+
+
+def replace_checkpoint(temporary, destination):
+    # On Windows a concurrent reader or file scanner can briefly block replacement.
+    for attempt in range(5):
+        try:
+            temporary.replace(destination)
+        except PermissionError:
+            if os.name != "nt" or attempt == 4:
+                raise
+            time.sleep(0.05 * (attempt + 1))
+        else:
+            return
 
 
 def remaining_cases(report, cases):
@@ -65,7 +78,7 @@ def private_state(path, groups):
     temp = path.with_suffix(".tmp")
     temp.write_text(json.dumps(groups), encoding="utf-8")
     temp.chmod(0o600)
-    temp.replace(path)
+    replace_checkpoint(temp, path)
 
 
 def chat_payload(response, endpoint):
@@ -156,6 +169,18 @@ def continuation_case(case, row, group):
     }, group
 
 
+def pending_case(case, row, group, reply):
+    pending = (row.get("response") or {}).get("clarification")
+    if (
+        row["status"] != "incomplete"
+        or not pending
+        or not group.get("conversation_id")
+        or not group.get("conversation_token")
+    ):
+        raise ValueError(f"No resumable pending clarification for {case['id']}")
+    return {**case, "question": reply, "clarification_answers": []}, {**group, "clarification_id": pending["id"]}
+
+
 async def execute(args, manifest, cases):
     # Set before importing model-related modules; no missing-cache downloads are allowed.
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -211,6 +236,7 @@ async def execute(args, manifest, cases):
     resume = getattr(args, "resume", False)
     continue_cases = getattr(args, "continue_cases", False)
     recheck_cases = set(getattr(args, "recheck_case", []))
+    pending_replies = getattr(args, "answer_pending", {})
     import tempfile
 
     state_path = Path(tempfile.gettempdir()) / (
@@ -222,15 +248,17 @@ async def execute(args, manifest, cases):
         if previous["manifest_sha256"] != report["manifest_sha256"] or previous[planned_field] != len(cases):
             raise ValueError("Resume manifest/budget differs")
         remaining_cases(previous, cases)
-        if case_budget and any(
-            row["status"] == "running" or (row["status"] == "incomplete" and row["id"] not in recheck_cases)
-            for row in previous["rows"]
-        ):
+        if case_budget and any(row["status"] == "running" for row in previous["rows"]):
             raise ValueError("Case checkpoint contains an unfinished question; inspect it before starting a new run")
         report = previous
         database, collection = report["test_database"], report["test_memory_collection"]
         suffix = database.rsplit("_", 1)[-1]
         groups = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+        rows_by_id = {row["id"]: row for row in report["rows"]}
+        if pending_replies.keys() - rows_by_id.keys():
+            raise ValueError("Pending reply needs an existing case checkpoint")
+        for key, reply in pending_replies.items():
+            pending_case({"id": key}, rows_by_id[key], groups.get(key, {}), reply)
         if report["attempted_turns"] and any(c.get("group") for c in cases) and not groups:
             raise ValueError("Private resume state missing; do not replay spent turns")
     else:
@@ -376,10 +404,16 @@ async def execute(args, manifest, cases):
                 for i, row in enumerate(report["rows"])
                 if row["id"] in recheck_cases and row["status"] in {"ok", "incomplete"}
             ]
-            queued = [*unfinished, *rechecks, *((case, None) for case in cases[report["attempted_turns"] :])]
+            pending = [(cases[i], row) for i, row in enumerate(report["rows"]) if row["id"] in pending_replies]
+            queued = [*unfinished, *rechecks, *pending, *((case, None) for case in cases[report["attempted_turns"] :])]
             for case, previous_row in queued:
                 group = groups.get(case["group"], {}) if case["group"] else {}
-                if previous_row is not None and previous_row["status"] == "error":
+                if case["id"] in pending_replies:
+                    case, group = pending_case(
+                        case, previous_row, groups.get(case["id"], {}), pending_replies[case["id"]]
+                    )
+                    previous_row.pop("response", None)
+                elif previous_row is not None and previous_row["status"] == "error":
                     # Use the exact failed message, and the last accepted clarification when present.
                     case, group = continuation_case(case, previous_row, groups.get(case["id"], group))
                 elif previous_row is not None:
