@@ -17,7 +17,7 @@ test("login preview offers clickable providers without pretending to authenticat
     assert.match(html, /Đăng nhập bằng Google/);
     assert.match(html, /Đăng nhập bằng Discord/);
     assert.match(html, /Đăng nhập hiện chưa khả dụng/);
-    assert.match(html, /href="\/chat"[^>]*>[\s\S]*?<span>Vào website/);
+    assert.match(html, /href="\/chat"[^>]*>[\s\S]*?<span>Dùng thử/);
     assert.doesNotMatch(html, /login-footer|login-guest-note|class="login-availability"/);
     assert.doesNotMatch(html, /<form|<input|login-divider|Tiếp tục bằng email|\/auth\/|access_token|service_token/);
     for (const path of ["/", "/login"]) {

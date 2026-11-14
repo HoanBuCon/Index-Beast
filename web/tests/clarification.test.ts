@@ -98,7 +98,9 @@ test("inline question accepts free text without dropdowns and retains expiration
     assert.match(html, /<textarea/);
     assert.doesNotMatch(html, /<select|type="number"/);
     assert.match(html, /Hủy yêu cầu/);
-    assert.match(html, /Trả lời bổ sung/);
+    assert.match(html, /<label[^>]*>PvE or PvP\?<\/label>/);
+    assert.doesNotMatch(html, /Trả lời bổ sung/);
+    assert.equal((html.match(/class="clarification-footer"/g) ?? []).length, 1);
     assert.match(html, /aria-keyshortcuts="Enter"/);
     assert.match(html, />OK<\/button>/);
     assert.doesNotMatch(html, /class="composer"|>E<|Tiếp tục/);
@@ -138,6 +140,16 @@ test("inline question accepts free text without dropdowns and retains expiration
     assert.match(message, /class="citation-link"/);
     assert.match(message, /aria-label="Nguồn tham khảo"/);
     assert.doesNotMatch(message, /Câu trả lời có hữu ích/);
+    const duplicate = renderToStaticMarkup(
+      createElement(MessageList, {
+        messages: [{ id: "pending", role: "assistant", content: clarification.question, sources: [], clarification }],
+        busy: false,
+        demo: false,
+        onClarification() {},
+      }),
+    );
+    assert.match(duplicate, /class="prose" hidden=""/);
+    assert.match(duplicate, /<label[^>]*>PvE or PvP\?<\/label>/);
   } finally {
     await server.close();
   }

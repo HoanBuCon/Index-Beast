@@ -272,3 +272,96 @@ Thêm text-wrap balance để cân dòng khi không đủ chỗ. Giữ nguyên n
 Prettier, build và browser fixture 1440/768/360 px đạt; đã xem screenshot desktop,
 tiêu đề nằm gọn trên một dòng ở 1440 px, không tràn ngang.
 
+## Luân phiên ảnh patches và patches-2
+
+Theo yêu cầu, LoginPage import thêm `web/src/assets/patches-2.jpg` và đặt chồng lên
+patches.png trong figure bên phải. CSS opacity chu kỳ 16 giây: đổi ảnh mỗi 8 giây,
+chuyển mờ trong 1 giây; ảnh đầu giữ kích thước vùng để bố cục không nhảy, cả hai
+object-fit contain. Giữ nền phủ, độ sáng và bố cục desktop/mobile.
+Reduced-motion giữ tĩnh ảnh đầu. Chỉ áp dụng trang đăng nhập, nền chat không đổi.
+Prettier, build và test login đạt. Browser fixture 1440/768/360 px xác nhận hai ảnh
+tải đủ, opacity đảo đúng ở mốc 0/8 giây, không tràn ngang, bố cục và điều hướng giữ nguyên.
+Đã xem screenshot desktop ở ảnh thứ hai; không gọi API/LLM thật.
+
+## Đổi chu kỳ ảnh sang 3 giây
+
+Theo yêu cầu tiếp theo, giảm chu kỳ animation từ 16 xuống 6 giây để hai ảnh
+luân phiên mỗi 3 giây. Giữ các mốc phần trăm nên chuyển mờ kéo dài khoảng 0.375 giây.
+Reduced-motion vẫn giữ ảnh tĩnh. Prettier CSS đạt.
+
+## Thay ảnh luân phiên bằng video trong thư mục video
+
+Theo yêu cầu mới, `LoginPage.tsx` dùng `src/video/ELDEN_RING_muted_trimmed.mp4`
+ở cột minh họa bên phải. Bỏ ảnh patches-2/animation luân phiên khỏi trang đăng nhập;
+không xóa các tệp ảnh gốc. patches.png giữ làm poster và fallback khi video lỗi.
+Video tự phát tắt tiếng, loop, playsInline, có controls để người dùng dừng/phát;
+preload metadata. Khi bật reduced-motion, effect dừng phát và gỡ listener khi unmount.
+Trình duyệt chặn autoplay vẫn có controls để phát thủ công, không tự bật âm thanh.
+
+`login.css` áp dụng contain, giới hạn chiều cao và độ sáng chung cho video/ảnh fallback,
+giữ mặt nạ hòa mép cùng nền. Không đổi sidebar, nền chat hoặc luồng xác thực.
+Đồng thời sửa lại ghi chú icon hi_01 bị lỗi dấu hỏi, giữ nguyên ý nghĩa.
+
+Video gốc khoảng 69 MB; build giữ nguyên nội dung, chưa nén hoặc chuyển mã.
+Nguồn/quyền sử dụng video chưa được xác minh trong lần chỉnh frontend này.
+Prettier, build TypeScript/Vite và test login đạt. Browser fixture ở 1440/768/360 px
+xác nhận video tải/phát được, muted/loop/controls đúng, contain và không tràn ngang;
+đổi reduced-motion dừng phát, giả lập lỗi video khôi phục ảnh, nút vào chat vẫn hoạt động.
+Đã xem screenshot desktop. Không gọi API/LLM thật hoặc thay nội dung video nguồn.
+
+## Phóng lớn video và ẩn thanh phát
+
+Theo phản hồi kèm ảnh thanh điều khiển, bỏ thuộc tính controls của video đăng nhập.
+Giữ autoPlay/muted/loop/playsInline và xử lý reduced-motion/fallback. CSS mở rộng
+layout tối đa 1600 px, tăng tỷ lệ cột video, giảm khoảng cách hai cột; tablet/mobile
+video tối đa 760 px và không tràn chiều ngang. Không đổi nền chat hoặc OAuth.
+Video giữ đúng tỷ lệ (contain), không kéo méo hoặc cắt nội dung.
+Prettier và build đạt. Browser 1440/768/360 px xác nhận video đang phát, muted/loop
+bật và controls tắt, bố cục đúng/không tràn; reduced-motion/fallback/điều hướng đạt.
+Đã xem screenshot desktop với vùng video lớn hơn và không có thanh phát.
+
+## Tắt công cụ nổi Picture-in-Picture
+
+Theo ảnh phản hồi, thêm disablePictureInPicture, disableRemotePlayback và controlsList
+vào video LoginPage; CSS pointer-events none cho video minh họa để không nhận hover/click.
+Giữ tự phát tắt tiếng, loop và reduced-motion. Không sửa thiết lập trình duyệt của người dùng.
+Các thuộc tính này yêu cầu trình duyệt tắt công cụ media; tiện ích hoặc công cụ riêng
+của trình duyệt có thể không tuân theo và không thuộc DOM của trang web.
+Prettier và TypeScript đạt.
+
+## Đổi Vào website thành Dùng thử
+
+Theo yêu cầu, đổi nhãn link khách thành **Dùng thử**, đồng bộ tên trong thông báo
+provider và mô tả cho công nghệ hỗ trợ. Giữ nguyên đích `/chat` và chức năng khách.
+Cập nhật kỳ vọng test login. Prettier và test login đạt.
+
+## Cắt bỏ 10 giây cuối video đăng nhập
+
+Giữ nguyên `src/video/ELDEN_RING_muted_trimmed.mp4` (174.73 giây). Tạo bản
+`src/video/ELDEN_RING_login_cut.mp4` dài 164.73 giây và đổi import LoginPage sang bản này.
+Dùng FFmpeg stream copy (`-t 164.730 -map 0:v:0 -c copy -movflags +faststart`), không
+encode lại; kiểm tra metadata xác nhận cắt 10.00 giây, giữ AV1 1920×1080 khoảng 59.94 fps,
+không audio. Giữ nguyên loop/muted/autoplay và giao diện hiện tại.
+
+Máy chưa có FFmpeg, dùng bản portable imageio-binaries v7.1 trong thư mục
+`web/.taste-skill/tools/` bị Git bỏ qua; không cài dependency/global hoặc thêm tool vào commit.
+Tệp gốc và tệp cắt đều được giữ theo yêu cầu khôi phục; bundle chỉ tham chiếu bản cắt.
+Prettier và build đạt. Browser fixture 1440/768/360 px xác nhận bản mới tải/phát,
+loop/muted bật, controls tắt, không tràn; reduced-motion, fallback và vào chat đạt.
+
+## Cắt cả tệp video gốc theo yêu cầu tiếp theo
+
+Người dùng yêu cầu cắt cả `ELDEN_RING_muted_trimmed.mp4`: kiểm tra thời lượng gốc
+174.73 giây và bản cắt 164.73 giây, sau đó thay nội dung tệp gốc bằng bản stream-copy
+đã cắt đúng 10 giây. Xác minh hai tệp SHA256 trùng và thời lượng gốc mới 164.73 giây.
+Không cắt tiếp bản `ELDEN_RING_login_cut.mp4` đang dùng trên web; không đổi import/UI.
+Từ thay đổi này, tệp có tên gốc không còn giữ bản 174.73 giây như các mục trước.
+
+## Ẩn thanh cuộn trang đăng nhập
+
+Theo ảnh phản hồi, `login.css` dùng selector html/body:has(.login-page) để ẩn scrollbar
+qua scrollbar-width và pseudo-element WebKit. Không dùng overflow hidden nên màn hình
+nhỏ vẫn cuộn bằng chuột/cảm ứng/bàn phím; route chat không chịu quy tắc này.
+Prettier/build đạt. Browser xác nhận scrollbar-width none ở login, 360×450 px vẫn
+cuộn được và chuyển /chat trả về scrollbar-width mặc định; video và điều hướng đạt.
+

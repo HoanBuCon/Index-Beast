@@ -1,10 +1,11 @@
 // TV4 · Giao diện trước: không gọi OAuth, không tạo tài khoản/phiên giả hoặc lưu token.
 // Discord sẽ nối theo docs/api/auth-tv4.md; Google cần contract và quyết định riêng của nhóm.
 import { Link } from "react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
 import loginArtwork from "../assets/patches.png";
-// TV4: bi?u t??ng menu g?c hi_01; nh?n b?n c?nh v?n x?c ??nh ??ng nh? cung c?p.
+import loginVideo from "../video/ELDEN_RING_login_cut.mp4";
+// TV4: biểu tượng menu gốc hi_01; nhãn bên cạnh vẫn xác định đúng nhà cung cấp.
 import googleMenuIcon from "../../item_/MENU_Tab_Net.png";
 import discordMenuIcon from "../../item_/MENU_Tab_Manual.png";
 import "../styles/login.css";
@@ -12,8 +13,21 @@ import "../styles/sidebar-menu.css";
 
 export default function LoginPage() {
   const [notice, setNotice] = useState("");
+  const [videoFailed, setVideoFailed] = useState(false);
+  const video = useRef<HTMLVideoElement>(null);
+  // Video minh họa không hiện thanh điều khiển; tôn trọng lựa chọn giảm chuyển động.
+  useEffect(() => {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePlayback = () => {
+      if (preference.matches) video.current?.pause();
+      else void video.current?.play().catch(() => {});
+    };
+    updatePlayback();
+    preference.addEventListener("change", updatePlayback);
+    return () => preference.removeEventListener("change", updatePlayback);
+  }, []);
   const previewLogin = (provider: string) =>
-    setNotice(`Đăng nhập bằng ${provider} chưa sẵn sàng. Bạn có thể chọn “Vào website” để tiếp tục.`);
+    setNotice(`Đăng nhập bằng ${provider} chưa sẵn sàng. Bạn có thể chọn “Dùng thử” để tiếp tục.`);
   return (
     <main id="main" className="login-page" aria-label="Đăng nhập INDEX BEAST">
       <header className="login-brand">
@@ -67,7 +81,7 @@ export default function LoginPage() {
             </div>
 
             <p id="login-availability" className="sr-only">
-              Đăng nhập hiện chưa khả dụng. Chọn Vào website để trò chuyện với tư cách khách.
+              Đăng nhập hiện chưa khả dụng. Chọn Dùng thử để trò chuyện với tư cách khách.
             </p>
             {notice && (
               <p className="login-notice" role="status">
@@ -77,13 +91,31 @@ export default function LoginPage() {
             <Link className="login-guest login-menu" to="/chat">
               <span className="login-menu__highlight" aria-hidden="true" />
               <span>
-                Vào website <span aria-hidden="true">↗</span>
+                Dùng thử <span aria-hidden="true">↗</span>
               </span>
             </Link>
           </div>
         </section>
         <figure className="login-visual">
-          <img src={loginArtwork} alt="" draggable={false} />
+          {videoFailed ? (
+            <img src={loginArtwork} alt="" draggable={false} />
+          ) : (
+            <video
+              ref={video}
+              src={loginVideo}
+              poster={loginArtwork}
+              autoPlay
+              muted
+              loop
+              playsInline
+              disablePictureInPicture
+              disableRemotePlayback
+              controlsList="nodownload nofullscreen noremoteplayback"
+              preload="metadata"
+              aria-label="Video minh họa Elden Ring"
+              onError={() => setVideoFailed(true)}
+            />
+          )}
         </figure>
       </div>
     </main>

@@ -1,4 +1,14 @@
 /* TV4: bố cục đăng nhập hai cột theo ảnh tham chiếu; giữ palette/font và hiệu ứng menu hiện có. */
+/* Chỉ ẩn thanh cuộn ở màn đăng nhập, không khóa khả năng cuộn hoặc ảnh hưởng chat. */
+html:has(.login-page),
+body:has(.login-page) {
+  scrollbar-width: none;
+}
+html:has(.login-page)::-webkit-scrollbar,
+body:has(.login-page)::-webkit-scrollbar {
+  display: none;
+}
+
 .login-page {
   position: relative;
   isolation: isolate;
@@ -41,10 +51,10 @@
 }
 .login-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
   align-items: center;
-  gap: clamp(48px, 7vw, 112px);
-  width: min(100%, 1320px);
+  gap: clamp(32px, 4vw, 64px);
+  width: min(100%, 1600px);
   min-height: calc(100dvh - 136px);
   margin: auto;
 }
@@ -181,7 +191,8 @@
     linear-gradient(to bottom, transparent, #000 16%, #000 82%, transparent);
   mask-composite: intersect;
 }
-.login-visual img {
+.login-visual img,
+.login-visual video {
   display: block;
   width: 100%;
   max-height: calc(100dvh - 136px);
@@ -189,6 +200,12 @@
   /* Giảm riêng độ chói của ảnh, không làm tối chữ hoặc nút đăng nhập. */
   filter: brightness(0.78) saturate(0.9);
 }
+
+/* Video chỉ minh họa: không nhận hover/click gọi các công cụ media nổi. */
+.login-visual video {
+  pointer-events: none;
+}
+
 @media (max-width: 900px) {
   .login-page {
     padding: 24px;
@@ -206,10 +223,11 @@
     padding: 24px;
   }
   .login-visual {
-    width: min(100%, 448px);
+    width: min(100%, 760px);
     margin: auto;
   }
-  .login-visual img {
+  .login-visual img,
+  .login-visual video {
     max-height: 600px;
   }
 }
