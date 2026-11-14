@@ -15,6 +15,8 @@
 
 - [TV1 · Sprint 4: feedback, eval, đăng nhập Discord (13/11/2026)](2026-11-13_s4-tv1_bao-cao-ban-giao.md)
 
+- [TV2 · Sprint 4: kiểm chứng Qdrant hybrid (13/11/2026)](2026-11-13_s4-tv2_hybrid-verification.md)
+
 - [TV2 · Sprint 4: chất lượng wiki, spoiler và eval local (12/11/2026)](2026-11-12_s4-tv2_wiki-quality.md)
 
 - [TV3 · README công việc TV2, TV4 và mục tra cứu thành viên (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv2-tv4.md)
