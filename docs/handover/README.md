@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Đánh giá RAG Sprint 4, bổ sung ngày 15/11/2026](2026-11-15_s4-tv3_danh-gia-rag.md)
+
 - [TV3 · Trợ lý chơi Elden Ring dùng nhiều nguồn (14/11/2026)](2026-11-14_s4-tv3_gameplay-multi-source.md)
 
 - [TV3 · Cập nhật điều kiện khi người dùng đổi yêu cầu (14/11/2026)](2026-11-14_s4-tv3_superseded-constraints.md)
