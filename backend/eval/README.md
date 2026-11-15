@@ -13,7 +13,7 @@ Câu hỏi bao phủ trang bị, cơ chế, nhân vật, sự kiện, tuyến đ
 
 [Rubric Sprint 4](../../docs/evaluation/s4-rubric.md) quy định cách chấm đáp án, hành vi, lượt bổ sung, trích dẫn và chỉ số truy xuất.
 
-[Phiếu review S4](reviews/s4-golden-set-review.jsonl) giữ quote nguyên văn, ID đoạn, URL và hash của nguồn S4 cho các ca có dữ kiện. Trường `case_tags` đánh dấu ca gõ sai, không dấu và hỏi bổ sung. `followup` lưu câu bổ sung, kết quả kỳ vọng và bằng chứng cho lượt cuối. `variant_pair` nhóm các biến thể cùng ý. Khi chia tập hoặc tính độ bất định, giữ các biến thể cùng ý trong cùng nhóm. Trường `assistant_review` ghi kết quả rà soát theo rubric TV2, do Codex thực hiện. Trạng thái ký duyệt của UncleThing vẫn là `pending`.
+[Phiếu review S4](reviews/s4-golden-set-review.jsonl) giữ quote nguyên văn, ID đoạn, URL và hash của nguồn S4 cho các ca có dữ kiện. Trường `case_tags` đánh dấu ca gõ sai, không dấu và hỏi bổ sung. `followup` lưu câu bổ sung, kết quả kỳ vọng và bằng chứng cho lượt cuối. `variant_pair` nhóm các biến thể cùng ý. Khi chia tập hoặc tính độ bất định, giữ các biến thể cùng ý trong cùng nhóm. Trường `assistant_review` giữ lượt rà Codex ngày 14/11. [Lượt rà thay TV2 ngày 16/11](../../docs/evaluation/2026-11-16_s4-tv2-local-review.md) ghi 198 `approved`, 2 `changes_requested` (IB-GS-265/279); `delegated_review` nêu rõ Codex thực hiện theo ủy quyền TV2 được TV3 cung cấp, không phải kiểm tra trực tiếp của con người. Bằng chứng bổ sung nằm riêng, không đổi `author_evidence`/đầu vào benchmark. Gate `--require-reviewed` chưa đạt.
 
 Từ thư mục backend, xác thực bộ mặc định và bằng chứng trong bản dữ liệu đã nạp.
 
