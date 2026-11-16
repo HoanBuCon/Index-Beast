@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
+
 - [TV2 · Rà soát 200 câu S4 bằng artifact local (16/11/2026)](2026-11-16_s4-tv2_ra-soat-golden-local.md)
 
 - [TV3 · Đánh giá RAG Sprint 4, bổ sung ngày 15/11/2026](2026-11-15_s4-tv3_danh-gia-rag.md)
