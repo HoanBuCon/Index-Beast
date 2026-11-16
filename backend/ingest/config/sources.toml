@@ -40,6 +40,11 @@ skip_sections = ["Gallery", "References", "External links", "See also", "Navigat
 min_chars_after_clean = 200
 
 
+[update]                      # python -m ingest update; xem docs/data-pipeline.md
+recentchanges_max_age_days = 30   # mốc cũ hơn: tự quét toàn bộ revision (recentchanges chỉ giữ giới hạn thời gian)
+overlap_minutes = 30              # lùi mốc để không sót thay đổi sát lúc chạy; trang đã khớp revision bị bỏ qua
+batch_pages = 50                  # trang mỗi lô crawl-clean-chunk-index; state được ghi sau mỗi lô
+
 [chunk]
 max_tokens = 450
 overlap_tokens = 50

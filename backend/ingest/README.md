@@ -1,5 +1,7 @@
 # Ingest
 
+Cập nhật tăng dần (`python -m ingest update --source wikigg`), luồng đầy đủ và cách thêm nguồn: xem [docs/data-pipeline.md](../../docs/data-pipeline.md).
+
 ## Chạy nhanh: `scripts/data_pipeline.py`
 
 Một lệnh cho mỗi bước, gọi lại đúng các CLI bên dưới với mặc định an toàn. Chạy từ `backend/`

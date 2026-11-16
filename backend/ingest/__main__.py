@@ -12,7 +12,7 @@ from ingest.sources.wikigg import WikiGG
 
 def main(argv=None):
     p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean, chunk and index (TV2/TV3)")
-    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index"])
+    p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index", "update"])
     p.add_argument("--input", type=Path, help="Reviewed chunk JSONL for index")
     p.add_argument("--policy", choices=["reviewed", "pilot"], help="Index admission; defaults to RAG_CORPUS_POLICY")
     p.add_argument("--languages", help="Index languages, e.g. en or en,ja; defaults to RAG_LANGUAGES")
@@ -32,6 +32,12 @@ def main(argv=None):
     p.add_argument("--refresh-discovery", action="store_true")
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--config", type=Path)
+    p.add_argument("--since", help="update: ISO 8601, quét thay đổi từ mốc này thay vì mốc đã lưu")
+    p.add_argument("--full-scan", action="store_true", help="update: so revision toàn corpus thay vì recentchanges")
+    p.add_argument("--bootstrap-from", type=Path, help="update: tạo state từ thư mục chunk đã nghiệm thu")
+    p.add_argument("--bootstrap-from-db", action="store_true", help="update: tạo state từ bảng documents")
+    p.add_argument("--max-pages", type=int, help="update: giới hạn số trang xử lý mỗi lượt, phần còn lại để lượt sau")
+    p.add_argument("--batch-pages", type=int, help="update: số trang mỗi lô crawl-clean-chunk-index (mặc định 50)")
     args = p.parse_args(argv)
     if args.command == "index":
         if args.input is None:
@@ -53,6 +59,10 @@ def main(argv=None):
     if args.limit < 1:
         p.error("--limit must be positive")
     config = load_settings(args.config)
+    if args.command == "update":
+        from ingest.update_cli import run_cli
+
+        return run_cli(args, config)
     if args.dry_run:
         print(
             json.dumps(
