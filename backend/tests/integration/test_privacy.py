@@ -241,9 +241,13 @@ async def test_retention_preserves_account_and_discord_history_but_prunes_old_ra
     guest, _ = await make_conversation(sessionmaker, age_days=120)
     owned, _ = await make_conversation(sessionmaker, user_id=user.id, age_days=120)
     discord, _ = await make_conversation(sessionmaker, age_days=120)
+    conversations = [guest, owned, discord]
+    retained_messages = Message.conversation_id.in_([owned, discord])
     async with sessionmaker() as session, session.begin():
         await session.execute(update(Conversation).where(Conversation.id == discord).values(channel="discord"))
-        await session.execute(update(Message).values(rag_trace={"debug": True}))
+        await session.execute(
+            update(Message).where(Message.conversation_id.in_(conversations)).values(rag_trace={"debug": True})
+        )
     dry = await privacy.apply_retention(
         sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now, dry_run=True
     )
@@ -252,9 +256,11 @@ async def test_retention_preserves_account_and_discord_history_but_prunes_old_ra
     assert done.conversations == 1 and done.traces == dry.traces
     assert await count(sessionmaker, Conversation, Conversation.id == guest) == 0
     assert await count(sessionmaker, Conversation, Conversation.id.in_([owned, discord])) == 2
-    assert await count(sessionmaker, Message, Message.conversation_id.in_([owned, discord])) == 4
-    assert await count(sessionmaker, Feedback) == 2
-    assert await count(sessionmaker, Message, Message.rag_trace.is_not(None)) == 0
+    assert await count(sessionmaker, Message, retained_messages) == 4
+    assert (
+        await count(sessionmaker, Feedback, Feedback.message_id.in_(select(Message.id).where(retained_messages))) == 2
+    )
+    assert await count(sessionmaker, Message, retained_messages, Message.rag_trace.is_not(None)) == 0
 
 
 async def test_retention_clears_completed_job_logs_in_batches_without_recounting_json_null(sessionmaker, monkeypatch):
