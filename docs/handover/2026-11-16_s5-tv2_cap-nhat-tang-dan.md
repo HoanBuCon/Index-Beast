@@ -1,5 +1,7 @@
 # TV2 Sprint 5 · Cập nhật dữ liệu tăng dần và tài liệu pipeline
 
+**Cập nhật quyết định ngày 16/11/2026.** Hoãn lịch cập nhật hằng tuần trên VPS. Nghiệm thu CLI trên staging và thiết lập lịch nằm trong backlog FR-ING-07. Xem [handover tài liệu pipeline](2026-11-16_s5-tv2_tai-lieu-pipeline.md). Nội dung bên dưới ghi lại trạng thái ở thời điểm bàn giao triển khai ban đầu.
+
 Ngày 16/11/2026, nhánh `feature/s5-tv2-cap-nhat-tang-dan` từ `origin/develop` (`3719e02`). Agent của TV1 thực hiện thay phần việc TV2 (Himmel) theo yêu cầu của trưởng nhóm: pipeline Crawl, Clean, Chunking, Ingest phải co giãn khi dữ liệu tăng hoặc đổi. Thẻ 5.4 và 5.6, FR-ING-07. Chưa push, chưa mở PR.
 
 ## Phạm vi

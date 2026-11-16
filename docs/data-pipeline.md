@@ -8,7 +8,7 @@ Tài liệu cho thẻ 5.6 và FR-ING-07 (cập nhật tăng dần). Phạm vi: t
                          wiki.gg (MediaWiki API, ≤ 1 request/giây, robots, contact email)
                                          │
         ┌────────────────────────────────┴───────────────────────────────┐
-        │ DỰNG TOÀN BỘ (lần đầu, hoặc đổi chính sách clean/chunk)          │ CẬP NHẬT TĂNG DẦN (hằng tuần)
+        │ DỰNG TOÀN BỘ (lần đầu, hoặc đổi chính sách clean/chunk)          │ CẬP NHẬT TĂNG DẦN (chạy thủ công)
         │                                                                 │
         │ 1 crawl   ingest.crawl.full  → data/crawl_runs/<run>/           │ python -m ingest update
         │            inventory category, raw HTML theo revision, ảnh       │   a. phát hiện: recentchanges từ mốc state
@@ -24,7 +24,7 @@ Tài liệu cho thẻ 5.6 và FR-ING-07 (cập nhật tăng dần). Phạm vi: t
    Qdrant (collection RAG_COLLECTION), bảng ingestion_jobs.               └──────────────────────────────────────────
 ```
 
-Thành phần dùng chung giữa dựng toàn bộ và cập nhật tăng dần: `WikiGG` (nguồn), `MediaStore` (ảnh), `transform.full.run`, `chunk.full.run`, `chunk_fields` (dòng PostgreSQL), `ChunkRecord`/`CorpusPolicy`/`QdrantStore` (index). Cập nhật tăng dần không có đường xử lý riêng nên không lệch kết quả so với dựng toàn bộ.
+Thành phần dùng chung giữa dựng toàn bộ và cập nhật tăng dần: `WikiGG` (nguồn), `MediaStore` (ảnh), `transform.full.run`, `chunk.full.run`, `chunk_fields` (dòng PostgreSQL), `ChunkRecord`/`CorpusPolicy`/`QdrantStore` (index). Cả hai đường xử lý dùng chung quy tắc clean/chunk. Khi đổi phiên bản hoặc cấu hình xử lý, xem mục 6 trước khi chạy.
 
 Id ổn định là điều kiện để mọi bước chạy lại an toàn (`core/ids.py`): `document_id = uuid5(source:source_id)`, `chunk_id = uuid5(document_id, ordinal)`, point Qdrant = `uuid5(document_id, chunk_id)`. Cùng trang, cùng thứ tự đoạn thì cùng id, nên upsert ghi đè đúng chỗ.
 
@@ -48,19 +48,17 @@ Chạy từ `backend/` (Docker: `python`; Windows: `.venv/Scripts/python.exe`). 
 
 | Cờ | Ý nghĩa |
 |---|---|
-| `--dry-run` | Phát hiện và phân loại new/changed/deleted/unchanged, in tiêu đề; không tải trang, không ghi state/DB/index. Vẫn gọi API chỉ-đọc của wiki. |
+| `--dry-run` | Gọi API chỉ đọc của wiki để phân loại new/changed/deleted/unchanged và in tiêu đề. Phần lập kế hoạch chỉ đọc, không tải nội dung hoặc ghi DB/index. Xem lưu ý về bootstrap lần đầu ở mục 4.1. |
 | `--since <ISO 8601>` | Quét thay đổi từ mốc này thay vì mốc đã lưu (xem chạy bù). Không đẩy mốc state nếu muộn hơn mốc hiện tại. |
-| `--full-scan` | Không dùng recentchanges: duyệt category rồi so `lastrevid` mọi trang đã biết. Chi phí tăng theo corpus nhưng chỉ đọc metadata. Dùng khi nghi ngờ sót (vd. mỗi tháng). |
-| `--max-pages N` | Chỉ xử lý N trang mỗi lượt; phần còn lại tự được phát hiện lại ở lượt sau (mốc không được đẩy). |
+| `--full-scan` | Duyệt category và so `lastrevid` của các trang đã biết. Bước phát hiện đọc metadata. Dùng khi cần đối chiếu hoặc nghi ngờ recentchanges bỏ sót. |
+| `--max-pages N` | Giới hạn N trang mới/đổi được tải và dựng lại mỗi lượt. Mốc quét giữ nguyên khi còn trang mới/đổi bị hoãn. Các trang đã xác nhận cần gỡ được xử lý riêng. |
 | `--batch-pages N` | Kích thước lô crawl-clean-chunk-index, mặc định 50 (`[update] batch_pages`). |
 | `--bootstrap-from <thư mục chunk>` / `--bootstrap-from-db` | Tạo state lần đầu (xem 4.1). |
 | `--tokenizer`, `--collection`, `--policy`, `--languages`, `--no-media` | Giống các lệnh khác; mặc định theo `RAG_*`. |
 
 Mã thoát: 0 khi `completed` hoặc `dry_run`; 2 khi `partial`/`failed`, thiếu state, hoặc đang có lượt khác giữ lock.
 
-Cron production: [`scripts/ingest-weekly.sh`](../scripts/ingest-weekly.sh) chạy `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app run --rm -T api python -m ingest update --source wikigg`. Script giữ `flock` (mã 75 khi lượt trước còn chạy), ghi log ngoài repo (`/var/log/indexbeast` hoặc `~/.local/state/indexbeast`, giữ 12 log) và trả mã thoát của lệnh. Nếu thiếu `docker-compose.prod.yml` (chưa merge PR #109), script ghi cảnh báo vào log và dùng `docker-compose.yml`. Crontab mẫu: `30 3 * * 0 /opt/indexbeast/scripts/ingest-weekly.sh`.
-
-Khuyến nghị thêm một cron **hằng tháng** chạy `--full-scan` để đối chiếu mọi thứ recentchanges có thể bỏ sót (đổi category không sửa nội dung, log bị cắt, lượt tuần bị lỡ), vd. `30 4 1 * * INGEST_ARGS="--full-scan" /opt/indexbeast/scripts/ingest-weekly.sh`. Lượt này chỉ đọc metadata nên rẻ; chỉ trang lệch revision mới được dựng lại.
+**Backlog vận hành FR-ING-07.** Lịch cập nhật hằng tuần trên VPS được hoãn. [`scripts/ingest-weekly.sh`](../scripts/ingest-weekly.sh) có sẵn cho bước nghiệm thu sau này. Script khóa bằng `flock` (mã 75 nếu đang bận), ghi log ngoài repo và gọi Compose với `docker-compose.prod.yml` khi file có sẵn. Xem [điều kiện nghiệm thu](handover/2026-11-16_s5-tv2_tai-lieu-pipeline.md) trước khi thiết lập lịch.
 
 ## 3. Cấu hình
 
@@ -70,7 +68,7 @@ Khuyến nghị thêm một cron **hằng tháng** chạy `--full-scan` để đ
 | `[sources.wikigg]` | `api_url`, `page_url`, `categories`, `category_depth`, `license` | Phạm vi nguồn; category gốc cũng là phạm vi của trang mới khi `update` |
 | `[update]` | `recentchanges_max_age_days` (30), `overlap_minutes` (30), `batch_pages` (50) | Mốc cũ hơn ngưỡng tự chuyển sang `--full-scan`; mốc được lùi `overlap_minutes` để không sót |
 | `[chunk]`, `[filter]`, `[clean]` | token tối đa/overlap, section bỏ qua | Đổi các khoá này là đổi chính sách: cần dựng toàn bộ (mục 6) |
-| `.env` | `INGEST_CONTACT_EMAIL`, `RAG_COLLECTION`, `RAG_CORPUS_POLICY`, `RAG_LANGUAGES`, `RAG_BATCH_SIZE`, `RAG_MODELS_DIR`, `QDRANT_URL`, `DATABASE_URL` | Đích index và chính sách nhận chunk |
+| `.env` | `INGEST_CONTACT_EMAIL`, `RAG_COLLECTION`, `RAG_CORPUS_POLICY`, `RAG_LANGUAGES`, `RAG_BATCH_SIZE`, `RAG_MODELS_DIR`, `QDRANT_HOST`, `QDRANT_PORT`, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Đích index và chính sách nhận chunk |
 | Môi trường script | `INGEST_LOG_DIR`, `INGEST_LOCK_FILE`, `INGEST_ARGS` | Vị trí log/khoá; tham số thêm cho `update` |
 
 Dữ liệu `data/` (mount `./backend/data:/app/data` trong Compose) giữ raw, media, state và báo cáo; không nằm trong Git. State cập nhật: `data/state/<source>-update.json`; báo cáo mỗi lượt: `data/reports/update-<id>.json` và một dòng `ingestion_jobs` (`kind=update`, `pages_ok`, `pages_failed`, `log` chứa số đếm và lỗi).
@@ -104,7 +102,9 @@ Tính chất:
 State chưa tồn tại thì `update` dừng với mã 2. Tạo state một lần, từ nguồn đã khớp với những gì đang index. **Mặc định trên VPS: `--bootstrap-from-db`** (bảng `documents` là thứ đang phục vụ, không cần mang theo thư mục chunk):
 
 - `python -m ingest update --source wikigg --bootstrap-from-db --dry-run`: tạo state từ bảng `documents` (status active; thiếu `fetched_at` thì mốc để trống và lượt đầu tự quét toàn bộ), rồi in kế hoạch.
-- Máy dev có sẵn thư mục chunk: `python -m ingest update --source wikigg --bootstrap-from data/chunk_runs/<bản đang phục vụ> --dry-run`: đọc `documents.jsonl` và `wikigg/*.jsonl` (revision, số chunk, mốc = `fetched_at` sớm nhất), rồi phát hiện thay đổi từ mốc đó. Bootstrap luôn ghi file state (một lần, không gọi mạng); bỏ `--dry-run` để chạy thật ngay.
+- Máy dev có sẵn thư mục chunk: `python -m ingest update --source wikigg --bootstrap-from data/chunk_runs/<bản đang phục vụ> --dry-run` đọc `documents.jsonl` và `wikigg/*.jsonl` để seed revision, số chunk và mốc `fetched_at` sớm nhất.
+
+Kiểm tra phiên bản CLI trước khi preview bootstrap. Bản tại `c5635ec` ghi file state ngay khi seed, kể cả khi dùng `--dry-run`. Bản sửa đi kèm Sprint 5 đặt seed trong bộ nhớ khi preview, chỉ lưu state trong lượt thật và ràng buộc state với đích cùng chính sách corpus. Nếu gặp state cũ chưa ràng buộc, hãy sao lưu state, xác minh dữ liệu đang phục vụ, rồi bootstrap lại trong môi trường đã xác minh.
 
 Bản dùng để bootstrap phải là bản đã nạp vào PostgreSQL/Qdrant đang phục vụ, nếu không `update` sẽ tin rằng trang đã được index.
 
@@ -131,28 +131,28 @@ Chi phí mỗi lượt (không tính lần dựng đầu):
 | Giai đoạn | Chi phí theo | Ghi chú |
 |---|---|---|
 | recentchanges | số thay đổi / 500 request | độc lập kích thước corpus |
-| describe | số ứng viên / 50 request | một lượt hằng tuần chỉ vài chục request |
+| describe | số ứng viên / 50 request cơ sở | có thêm request khi API phân trang metadata |
 | `--full-scan` | số trang / 50 request, cộng số category | chỉ đọc metadata; corpus 10× vẫn là hàng trăm request, tính theo `min_interval_seconds` |
 | fetch + ảnh | số trang đổi × (1 request parse + ảnh mới), ≥ 1 giây/request | nút cổ chai chính, do giới hạn lịch sự |
 | clean, chunk | số trang đổi (CPU) | vài trang một lô, bộ nhớ không tăng theo corpus |
 | encode + upsert | số chunk của trang đổi, mẻ `RAG_BATCH_SIZE` | CPU E5-small; không encode lại chunk trang không đổi |
 | state | O(số trang) | 4.164 mục là vài trăm KB |
 
-Cơ chế giữ chi phí tỉ lệ với thay đổi: lô cố định, state ghi theo lô (bộ nhớ không phụ thuộc corpus), upsert id ổn định (không cần đọc index để biết chunk nào đổi), xoá thừa theo bộ lọc `document_id` có payload index, `--max-pages` để chia nhỏ một đợt thay đổi lớn (vd. wiki cập nhật lớn sau patch hoặc DLC).
+Cơ chế giới hạn chi phí gồm xử lý nội dung theo lô, upsert theo ID ổn định, xoá theo `document_id` và dùng `--max-pages` cho đợt thay đổi lớn. State JSON và danh sách ứng viên vẫn chiếm bộ nhớ theo số trang. Mỗi lần lưu checkpoint ghi lại toàn bộ snapshot JSON, nên tổng chi phí ghi tăng theo số trang và số lô.
 
 Khi corpus lớn gấp 10 (khoảng 40 nghìn trang, hơn 300 nghìn chunk):
 
 - **Qdrant**: dense 384 chiều float32 xấp xỉ 1,5 KB mỗi point, nên vector chiếm vài trăm MB cộng sparse và payload. Đo lại RAM VPS; bật `on_disk` cho vector/payload hoặc quantization nếu thiếu RAM, và chụp snapshot trước đợt re-index lớn.
-- **Crawl**: giữ 1 request/giây là giới hạn chính; không tăng song song với cùng host. Chạy `update` hằng ngày thay vì hằng tuần để mỗi lượt nhỏ, và dùng `--max-pages` để lượt không vượt giờ thấp điểm.
-- **`--full-scan`**: vẫn rẻ (metadata) nhưng chạy mỗi tháng là đủ; nếu cần nhanh hơn, quét theo category có đánh dấu thay đổi.
-- **State**: vẫn là file JSON đến cỡ vài trăm nghìn mục; vượt thì chuyển sang bảng PostgreSQL (`documents.revision_id` đã có sẵn, chỉ cần thêm `watermark`).
+- **Crawl**: giữ tối đa 1 request/giây trên cùng host. Đo thời gian từng giai đoạn rồi đặt giới hạn trang/lô cho môi trường vận hành.
+- **`--full-scan`**: đo số category, request `describe` có phân trang và thời gian quét trước khi chọn lịch đối chiếu.
+- **State**: đo kích cỡ JSON, RAM và thời gian ghi checkpoint theo lô. Khi quá cửa sổ vận hành, chuyển revision theo trang và watermark sang kho có cập nhật từng dòng. Giữ ràng buộc theo nguồn, đích nạp và chính sách corpus khi di chuyển state.
 - **Encode**: tách tiến trình encode khỏi tiến trình crawl (hàng đợi lô), hoặc dùng GPU, nếu đợt thay đổi lớn làm lượt chạy vượt cửa sổ.
 - **PostgreSQL**: chỉ số hiện có (`document_id`, `ordinal`) đủ; thay đổi chỉ chạm chunk của trang đổi.
 
 Giới hạn đã biết:
 
 - Đổi chính sách clean/chunk (`[chunk]`, `[filter]`, version trong mã) không tự được phát hiện theo trang, vì revision trang không đổi; state lưu `pipeline_version` (phiên bản clean + chunk) và `update` in cảnh báo trong `warnings` khi nó khác phiên bản đã ghi. Khi đó dựng toàn bộ vào **collection mới**, kiểm eval, rồi đổi `RAG_COLLECTION`. State cần bootstrap lại từ bản mới.
-- Chỉ theo dõi namespace 0. Trang chỉ đổi category (không sửa nội dung) có thể không xuất hiện trong recentchanges; `--full-scan` định kỳ bù phần này. Trang rời phạm vi category mà vẫn tồn tại không bị gỡ (chỉ gỡ khi bị xoá, thành redirect hoặc dính tựa ngoài phạm vi).
+- Chỉ theo dõi namespace 0. Trang chỉ đổi category có thể không xuất hiện trong recentchanges. `--full-scan` giúp đối chiếu và có thể gỡ tài liệu đã rời toàn bộ cây category. Với bản CLI cũ, khi duyệt category báo lỗi, dừng lượt vận hành và kiểm tra phạm vi trước khi thử lại.
 - Bộ lọc admission (`CorpusPolicy`) loại chunk ngôn ngữ khác `RAG_LANGUAGES` khỏi Qdrant nhưng PostgreSQL vẫn giữ, giống đường nạp toàn bộ.
 - Lần đầu trên VPS cần `data/` và state được mang theo (mount `./backend/data`).
-- Lệnh `update` chưa được chạy với mạng, Qdrant và PostgreSQL thật; kiểm bằng `--dry-run` trước khi bật cron.
+- Tài liệu này chưa có kết quả nghiệm thu liên thông wiki.gg, PostgreSQL và Qdrant. Lịch tuần vẫn ở backlog.
