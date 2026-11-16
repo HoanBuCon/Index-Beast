@@ -89,7 +89,7 @@ Mỗi bước **đọc artifact của bước trước, ghi artifact của mình
 | 4 | chunk | `... chunk` | processed | `data/chunks/<source>/<id>.jsonl` |
 | 5 | index | `... index` | chunks | Qdrant `lore_chunks` + PG `documents`/`chunks` |
 | — | run | `... run` | | chạy 1→5 |
-| — | update | `... update` | | crawl trang có revision mới → 2→5 cho trang đó (cron hằng tuần) |
+| — | update | `... update` | | Gọi thủ công để crawl trang có revision mới rồi chạy bước 2–5. Lịch hằng tuần nằm trong backlog FR-ING-07. |
 
 Tuỳ chọn chung: `--source`, `--limit N`, `--page TITLE`, `--dry-run`.
 
