@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 (TV1 làm hộ) · Bot: lệnh cơ bản, /setup, /clear, trả lời mention (16/11/2026)](2026-11-16_s5-tv4_bot-lenh-co-ban.md)
+
 - [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
 
 - [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
