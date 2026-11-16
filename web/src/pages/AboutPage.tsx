@@ -74,6 +74,21 @@ export default function AboutPage() {
           đổi so với bản nguồn. Xem điều kiện cụ thể tại từng trang nguồn trước khi tái sử dụng.
         </p>
       </section>
+      <section id="quyen-rieng-tu" aria-labelledby="privacy-heading">
+        <h2 id="privacy-heading">{"Quyền riêng tư"}</h2>
+        <ul>
+          <li>{"Đăng nhập là tùy chọn. Khách vẫn dùng đầy đủ mà không cần tài khoản."}</li>
+          <li>{"Chỉ lưu mã Discord đã băm một chiều, không lưu mã gốc, email hay mật khẩu."}</li>
+          <li>{"Hội thoại được giữ 90 ngày rồi tự động xóa."}</li>
+          <li>
+            {
+              "Bạn có thể xóa sớm hơn: chọn “Xóa tài khoản” trong menu người dùng ở thanh bên (xóa toàn bộ hội thoại vĩnh viễn), hoặc dùng lệnh "
+            }
+            <code>/clear</code>
+            {" của Discord bot."}
+          </li>
+        </ul>
+      </section>
       <section>
         <h2>4 Hollows</h2>
         <div className="team-grid">

@@ -19,6 +19,7 @@ export function readConversations(): Conversation[] {
           (c.mode === "demo" || c.mode === "api" || c.mode === "api-stream") &&
           (c.serverId === null || typeof c.serverId === "string") &&
           (c.serverToken === undefined || isConversationToken(c.serverToken)) &&
+          (c.ownerUserId === undefined || typeof c.ownerUserId === "string") &&
           typeof c.updatedAt === "string" &&
           Array.isArray(c.messages) &&
           c.messages.every((m: unknown) => {
