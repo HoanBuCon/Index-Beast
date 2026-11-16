@@ -4,7 +4,7 @@
 #        scripts/restore.sh qdrant <file.snapshot>          khôi phục collection RAG (tên collection lấy từ tên file)
 #        scripts/restore.sh list                            liệt kê backup hiện có
 # Thêm --yes (đứng cuối) để bỏ qua câu hỏi xác nhận. Đường dẫn file phải nằm trong BACKUP_DIR (mặc định $HOME/indexbeast-backups).
-# Thử khôi phục an toàn: docs/production.md → "Thử khôi phục". Phụ trách: TV1 · [S5] Backup & monitoring
+# pg: DROP SCHEMA public rồi pg_restore (extension/schema khác trong DB không bị đụng). Thử khôi phục an toàn: docs/production.md → "Thử khôi phục". Phụ trách: TV1 · [S5] Backup & monitoring
 set -euo pipefail
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 cd "$REPO"
@@ -44,13 +44,15 @@ if [ "$MODE" = pg ]; then
   confirm "Sẽ XÓA và nạp lại toàn bộ cơ sở dữ liệu PostgreSQL từ $(basename "$FILE"). Hội thoại sau thời điểm backup sẽ mất."
   echo "==> Dừng api và bot"
   "${COMPOSE[@]}" stop api bot
-  echo "==> pg_restore --clean --if-exists"
+  echo "==> Xóa schema public rồi nạp lại (không dùng --clean: bảng do migration mới hơn bản dump sẽ còn sót, alembic upgrade head báo 'relation exists')"
+  "${COMPOSE[@]}" exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"'     || die "Không xóa được schema public. api/bot đang dừng; dữ liệu cũ còn nguyên."
   # --no-owner: không phụ thuộc tên role lúc dump. Lỗi giữa chừng thì dừng ngay (--exit-on-error) và báo rõ.
-  "${COMPOSE[@]}" exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner --exit-on-error' <"$FILE" \
-    || die "pg_restore lỗi. api/bot đang dừng; kiểm tra rồi chạy lại restore hoặc khôi phục bản khác."
-  echo "==> Khởi động lại api và bot (api chạy alembic upgrade head nên schema khớp mã hiện tại)"
-  "${COMPOSE[@]}" up -d api bot
-  echo "Xong. Kiểm tra: scripts/deploy.sh không cần chạy lại; xem docker compose ps và /api/v1/health."
+  "${COMPOSE[@]}" exec -T postgres sh -c 'pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner --exit-on-error' <"$FILE"     || die "pg_restore lỗi. api/bot đang dừng và schema có thể dở dang; chạy lại restore với bản dump khác."
+  echo "==> Khởi động lại api (và bot nếu có DISCORD_TOKEN); api chạy alembic upgrade head nên schema khớp mã hiện tại"
+  SCALE=()
+  grep -qE '^DISCORD_TOKEN=.+' .env || { echo "    (không có DISCORD_TOKEN: bỏ qua bot)"; SCALE=(--scale bot=0); }
+  "${COMPOSE[@]}" up -d "${SCALE[@]}" api bot
+  echo "Xong. Kiểm tra: docker compose ps và /api/v1/health."
 else
   name=$(basename "$FILE")
   case "$name" in qdrant-*.snapshot) ;; *) die "Mong đợi tên qdrant-<collection>-<thời-gian>.snapshot" ;; esac

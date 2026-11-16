@@ -172,11 +172,13 @@ Tạo thư mục `~/indexbeast-backups` trước (`mkdir -p` rồi `chmod 700`),
 
 ```bash
 scripts/restore.sh list
-scripts/restore.sh pg ~/indexbeast-backups/pg-20261122-031500.dump          # dừng api/bot, pg_restore --clean, bật lại
+scripts/restore.sh pg ~/indexbeast-backups/pg-20261122-031500.dump          # dừng api/bot, DROP SCHEMA public, pg_restore, bật lại (bot chỉ bật nếu có DISCORD_TOKEN)
 scripts/restore.sh qdrant ~/indexbeast-backups/qdrant-lore_chunks-20261122-040000.snapshot
 ```
 
 Cả hai hỏi xác nhận (gõ `restore`) và chỉ nhận file nằm trong `BACKUP_DIR`.
+
+Khôi phục PostgreSQL xóa hẳn schema `public` (`DROP SCHEMA public CASCADE`) rồi nạp lại, không dùng `pg_restore --clean`: `--clean` chỉ xóa bảng có trong bản dump nên bảng do migration mới hơn sẽ còn sót, và `alembic upgrade head` của api sẽ lỗi "relation already exists" rồi restart liên tục. Sau khôi phục api chạy lại migration để đưa schema về khớp mã hiện tại.
 
 **Thử khôi phục một lần (thẻ 5.3, bắt buộc trước khi tin backup):** sau khi chạy `backup.sh all` lần đầu, (1) ghi số dòng bảng chính: `docker compose ... exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from chunks"'`; (2) `scripts/restore.sh pg <dump mới nhất>`; (3) đếm lại, phải bằng; (4) hỏi một câu RAG qua web để chắc api đọc được. Làm trước khi mở cho người dùng thật, hoặc trên một VPS tạm. Với Qdrant: `restore.sh qdrant` bản mới nhất rồi hỏi một câu RAG. Ghi ngày và kết quả vào handover.
 
