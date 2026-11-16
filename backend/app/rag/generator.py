@@ -621,6 +621,7 @@ class Generator:
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
+        buffer_until_complete = False
         try:
             spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(
@@ -630,9 +631,16 @@ class Generator:
                     raw += token
                     if len(raw) > MAX_OUTPUT_CHARS:
                         raise UpstreamError("Câu trả lời vượt giới hạn stream.")
+                    if buffer_until_complete:
+                        continue
                     try:
                         text = answer_prefix(raw) if prepared.mode == "rag" else raw
                     except UpstreamError:
+                        if not emitted:
+                            # JSON object keys may arrive in any order. Do not expose
+                            # metadata; decode and validate the bounded response at EOF.
+                            buffer_until_complete = True
+                            continue
                         raise OutputFormatError(
                             {"json_error": "invalid_answer_prefix", "output_chars": len(raw)}
                         ) from None

@@ -476,6 +476,35 @@ async def test_rag_stream_decodes_fragmented_json_and_never_exposes_evidence_jso
     assert frames[-1][1].grounded is True and llm.closed
 
 
+async def test_rag_stream_accepts_valid_json_with_answer_after_evidence():
+    llm = FakeLLM()
+    reordered = {"evidence": llm.data["evidence"], "insufficient": False, "answer": llm.data["answer"]}
+    llm.tokens = list(json.dumps(reordered, ensure_ascii=True))
+    live = service("rag", llm, FakeRetriever())
+    async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
+        frames = [frame async for frame in events]
+    assert "".join(p.token for n, p in frames if n == "token") == llm.data["answer"]
+    assert frames[-1][0] == "done" and frames[-1][1].grounded is True
+
+
+@pytest.mark.parametrize("kind", ["malformed", "duplicate", "invalid_citation"])
+async def test_rag_stream_buffered_json_still_requires_valid_output(kind):
+    llm = FakeLLM()
+    reordered = {"evidence": llm.data["evidence"], "insufficient": False, "answer": llm.data["answer"]}
+    if kind == "invalid_citation":
+        reordered["answer"] = "Unsupported citation [2]."
+    raw = json.dumps(reordered)
+    if kind == "malformed":
+        raw = raw[:-1]
+    elif kind == "duplicate":
+        raw = raw[:-1] + ', "insufficient": false}'
+    llm.tokens = list(raw)
+    live = service("rag", llm, FakeRetriever(), rag_format_retries=0)
+    with pytest.raises(UpstreamError):
+        await live.open_stream(ChatRequest(**BODY))
+    assert not live.traces
+
+
 def test_json_stream_unicode_and_split_escape_boundaries():
     raw = json.dumps({"answer": 'Tiếng Việt: "Ranni"\nCô ấy.'}, ensure_ascii=True)
     decoded = [answer_prefix(raw[:i]) for i in range(1, len(raw) + 1)]
