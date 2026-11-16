@@ -37,6 +37,13 @@ async def sessionmaker(db_url: str):  # noqa: F811
         await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+async def _empty_guild_channels(sessionmaker):
+    """DB là của cả module (scope=module): dọn kênh /setup trước mỗi test để các test không thấy dữ liệu của nhau."""
+    async with sessionmaker() as session, session.begin():
+        await session.execute(DiscordGuildChannel.__table__.delete())
+
+
 class FakeVectors:
     def __init__(self):
         self.calls = []
