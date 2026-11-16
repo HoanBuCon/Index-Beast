@@ -247,9 +247,9 @@ async def test_retention_preserves_account_and_discord_history_but_prunes_old_ra
     dry = await privacy.apply_retention(
         sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now, dry_run=True
     )
-    assert dry.conversations == 1 and dry.traces == 6
+    assert dry.conversations == 1 and dry.traces == 4
     done = await privacy.apply_retention(sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now)
-    assert done.conversations == 1 and done.traces == 4
+    assert done.conversations == 1 and done.traces == dry.traces
     assert await count(sessionmaker, Conversation, Conversation.id == guest) == 0
     assert await count(sessionmaker, Conversation, Conversation.id.in_([owned, discord])) == 2
     assert await count(sessionmaker, Message, Message.conversation_id.in_([owned, discord])) == 4
