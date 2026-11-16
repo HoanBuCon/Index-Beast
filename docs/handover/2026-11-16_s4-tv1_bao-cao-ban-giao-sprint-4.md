@@ -10,7 +10,7 @@
 
 ## 1. Tóm tắt
 
-- **Pipeline RAG đã hoàn thiện và đo được**: Hybrid + rewrite trên corpus S4 (34.070 điểm EN) đạt **Recall@5 90,34%, MRR@5 0,767, Accuracy 160/195 (82,05%)**; Agent đầy đủ với DeepSeek + Tavily Auto chạy 100 ca, 111/111 request HTTP 200, Accuracy lượt đầu 76/83 (91,57%). Vượt mục tiêu kế hoạch (Recall@5 ≥ 0,80, correctness ≥ 70%). **Người chấm là AI** (Codex, DeepSeek), chưa có người chấm độc lập.
+- **Pipeline RAG đã hoàn thiện và đo được** (cấp đo giải thích ở mục 4.0): chỉ truy xuất (C1), Hybrid + rewrite trên corpus S4 (34.070 điểm EN) đạt **Recall@5 90,34%, MRR@5 0,767**; truy xuất + sinh một lượt (C2) đạt **Accuracy 160/195 (82,05%)**; Agent đầy đủ qua API (C3) với DeepSeek + Tavily Auto chạy 100 ca, 111/111 request HTTP 200, **Accuracy lượt đầu 76/83 (91,57%)**. Chưa có đợt nào qua giao diện web hay Discord với người dùng thật (C4). Vượt mục tiêu kế hoạch (Recall@5 ≥ 0,80, correctness ≥ 70%). **Người chấm là AI** (Codex, DeepSeek), chưa có người chấm độc lập.
 - **Dữ liệu wiki đủ**: 4.164 trang, 39.574 chunk (34.070 EN), có `spoiler_level`, `game_scope`, đã index hybrid và kiểm bộ lọc.
 - **Đăng nhập: backend xong, giao diện chưa nối.** Backend Discord OAuth (TV1) đã merge; trang đăng nhập web (TV4) chỉ là giao diện, nút Google/Discord báo "chưa sẵn sàng". GitNexus xác nhận 6 endpoint `/auth/*`, `/me/*` **chưa có client nào gọi**. Chưa thử với Discord thật.
 - **Golden set 200/400 câu**, review do AI thực hiện theo ủy quyền TV2 (198 duyệt, 2 cần sửa).
@@ -51,25 +51,45 @@ Mục tiêu kế hoạch ban đầu (golden set 120 câu, Recall@5 ≥ 0,80, cor
 
 Mọi số dưới đây lấy nguyên từ báo cáo và handover đã merge; **chưa có lượt nào do người chấm độc lập**. Người chấm ghi ở từng bảng. Báo cáo thô nằm trong `backend/data/research_runs/` trên máy người chạy (Git bỏ qua). Mã `IB-GS-*` là golden set S4, `IB-BL-*` là 25 ca chẩn đoán, `IB-SUP-*` là 12 câu bổ sung.
 
+### 4.0 Các cấp đo
+
+Mỗi số đo thuộc một cấp. Số ở cấp khác nhau **không so trực tiếp được**: cấp càng cao thì càng nhiều thành phần tham gia (và càng nhiều chỗ có thể sai).
+
+| Cấp | Tên | Đi qua những gì | Không đi qua | Gọi API thật | Đo được |
+|---|---|---|---|---|---|
+| **C0** | Kiểm dữ liệu offline | Đọc artifact: đếm, so quote với chunk, hash | Retriever, LLM | Không | Số trang/chunk, nhãn, quote khớp |
+| **C1** | Chỉ truy xuất | Câu hỏi (nguyên văn hoặc đã rewrite) → encoder → Qdrant (E5, BM25 hoặc Hybrid RRF) → xếp hạng top 5 trang | Agent, generator, Tavily | Không (encoder local) | Recall@5, MRR@5, context chunk recall |
+| **C2** | Truy xuất + sinh một lượt (harness) | `agent.decide()` (ý định, rewrite) → một lần truy xuất → chọn ngữ cảnh → `generator.generate()` → LLM chấm. Bản Auto thêm tối đa một lượt Tavily Search + Extract | Vòng lặp công cụ của Agent, bộ nhớ hội thoại, API HTTP, PostgreSQL | DeepSeek (+ Tavily ở Auto) | Accuracy, bám nguồn, ảnh hưởng của retriever và rewrite |
+| **C3** | Agent đầy đủ qua API | `create_app()` thật, gọi `POST /api/v1/chat` và `/chat/stream` (JSON và SSE) qua `httpx.ASGITransport` trong cùng tiến trình: middleware, guard, Agent quyết định, vòng lặp công cụ (`check_name`, tìm local, Tavily Auto), assessor, generator, kiểm trích dẫn, lưu PostgreSQL, hỏi bổ sung nhiều lượt | Máy chủ HTTP thật (uvicorn, Caddy), giao diện web, bot Discord, người dùng thật | DeepSeek + Tavily | Accuracy cuối, hành vi, bám nguồn, HTTP 200/502, độ trễ, số lượt gọi |
+| **C4** | End-to-end với người dùng | Web hoặc Discord thật, qua mạng, người thật thao tác | — | — | **Chưa có đợt nào trong S4** |
+
+Ngoài ra có **kiểm thử phần mềm** (mục 4.8): unit test dùng LLM và retriever giả; integration test dùng PostgreSQL, Qdrant, Redis thật nhưng LLM và encoder giả. Các test này chứng minh mã chạy đúng, **không đo chất lượng câu trả lời**.
+
+Hệ quả cần nhớ khi trình bày:
+
+- **Recall@5 và MRR@5 chỉ có ở C1.** Ở C3, trace chưa ghi đủ danh sách truy xuất có thứ hạng nên chưa tính được Recall của Agent đầy đủ.
+- **Accuracy có ở hai cấp:** C2 (ma trận, 160/195 = 82,05%, DeepSeek chấm) và C3 (100 ca, 76/83 = 91,57%, Codex chấm). Hai con số khác tập câu, khác luồng và khác người chấm.
+- **Không có số nào ở C4.** Chưa thử qua giao diện web, bot Discord thật hay máy chủ đã deploy.
+
 ### 4.1 Tổng hợp theo thời gian
 
-| Ngày | Đợt đo | Người chạy | Tập | Kết quả chính | Nguồn |
-|---|---|---|---|---|---|
-| 12/11 | Dữ liệu wiki S4, đo lại local FTS5/E5 | TV2 | 25 câu golden cũ + 6 truy vấn bằng chứng | 4.164 trang, 39.574 chunk; source top 5 qua E5: 19/25 ở cả S3 và S4 | [handover](2026-11-12_s4-tv2_wiki-quality.md) |
-| 13/11 | Re-index hybrid + eval qua API | TV2 | 25 câu golden cũ | 34.070 point; 20/22 trang đúng ở top 5; 25/25 HTTP 200 | [handover](2026-11-13_s4-tv2_hybrid-verification.md) |
-| 13/11 | Agent thích ứng, chạy thật | TV3 | 5 ca chẩn đoán | 5/5 HTTP 200 | [handover](2026-11-13_s4-tv3_adaptive-agent.md) |
-| 14/11 | Hỏi đường theo tiến độ, chạy thật | TV3 | 6 lượt | 2 hội thoại SSE thành công, 1 ca 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_progress-clarification.md) |
-| 14/11 | Điều kiện bị thay, chạy thật | TV3 | 4 lượt | 2/4 HTTP 200, 2/4 HTTP 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_superseded-constraints.md) |
-| 14/11 | Gameplay nhiều nguồn, chạy thật | TV3 | 5 ca | 5/5 có câu trả lời cuối sau sửa | [handover](2026-11-14_s4-tv3_gameplay-multi-source.md) |
-| 14/11 | Baseline S4 + chạy lại sau sửa | TV3 | 25 ca chẩn đoán | 25/25 phản hồi cuối, 27/27 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-baseline-25.md) |
-| 14/11 | Đánh giá 100 ca (trước sửa) | TV3, Codex chấm | 100 ca từ golden S4 | Accuracy 71/83 (85,54%) | [báo cáo](../testing/2026-11-14_s4-evaluation-100.md) |
-| 14/11 | Nghiệm thu 100 ca (sau sửa) | TV3, Codex chấm | cùng 100 ca | Accuracy 76/83 (91,57%), 111/111 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-retest-100.md) |
-| 14/11 | Ma trận truy xuất 6 cấu hình | TV3, DeepSeek chấm | 212 câu | Hybrid + rewrite: Recall@5 90,34%, Accuracy 82,05% | [báo cáo](../testing/2026-11-14_s4-retrieval-matrix.md) |
-| 16/11 | Rà soát golden set | Codex thay TV2 | 200 câu | 198 duyệt, 2 cần chỉnh; 256 lượt quote khớp corpus | [báo cáo](../evaluation/2026-11-16_s4-tv2-local-review.md) |
+| Ngày | Đợt đo | Cấp | Người chạy | Tập | Kết quả chính | Nguồn |
+|---|---|---|---|---|---|---|
+| 12/11 | Dữ liệu wiki S4, đo lại local FTS5/E5 | C0 + C1 | TV2 | 25 câu golden cũ + 6 truy vấn bằng chứng | 4.164 trang, 39.574 chunk; source top 5 qua E5: 19/25 ở cả S3 và S4 | [handover](2026-11-12_s4-tv2_wiki-quality.md) |
+| 13/11 | Re-index hybrid + eval qua API | C1 (20/22, 6 truy vấn) + C3 (25 câu API) | TV2 | 25 câu golden cũ | 34.070 point; 20/22 trang đúng ở top 5; 25/25 HTTP 200 | [handover](2026-11-13_s4-tv2_hybrid-verification.md) |
+| 13/11 | Agent thích ứng, chạy thật | C3 | TV3 | 5 ca chẩn đoán | 5/5 HTTP 200 | [handover](2026-11-13_s4-tv3_adaptive-agent.md) |
+| 14/11 | Hỏi đường theo tiến độ, chạy thật | C3 | TV3 | 6 lượt | 2 hội thoại SSE thành công, 1 ca 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_progress-clarification.md) |
+| 14/11 | Điều kiện bị thay, chạy thật | C3 | TV3 | 4 lượt | 2/4 HTTP 200, 2/4 HTTP 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_superseded-constraints.md) |
+| 14/11 | Gameplay nhiều nguồn, chạy thật | C3 | TV3 | 5 ca | 5/5 có câu trả lời cuối sau sửa | [handover](2026-11-14_s4-tv3_gameplay-multi-source.md) |
+| 14/11 | Baseline S4 + chạy lại sau sửa | C3 | TV3 | 25 ca chẩn đoán | 25/25 phản hồi cuối, 27/27 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-baseline-25.md) |
+| 14/11 | Đánh giá 100 ca (trước sửa) | C3 (Accuracy) + C1 (Recall 83 câu) | TV3, Codex chấm | 100 ca từ golden S4 | Accuracy 71/83 (85,54%) | [báo cáo](../testing/2026-11-14_s4-evaluation-100.md) |
+| 14/11 | Nghiệm thu 100 ca (sau sửa) | C3 | TV3, Codex chấm | cùng 100 ca | Accuracy 76/83 (91,57%), 111/111 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-retest-100.md) |
+| 14/11 | Ma trận truy xuất 6 cấu hình | C1 (Recall, MRR) + C2 (Accuracy, bám nguồn) | TV3, DeepSeek chấm | 212 câu | Hybrid + rewrite: Recall@5 90,34%, Accuracy 82,05% | [báo cáo](../testing/2026-11-14_s4-retrieval-matrix.md) |
+| 16/11 | Rà soát golden set | C0 | Codex thay TV2 | 200 câu | 198 duyệt, 2 cần chỉnh; 256 lượt quote khớp corpus | [báo cáo](../evaluation/2026-11-16_s4-tv2-local-review.md) |
 
 Cấu hình chung của các lượt chạy thật: DeepSeek `deepseek-flash`, temperature 0,2, Tavily Auto (trừ ma trận Off), corpus `indexbeast_s4_wiki_ca98c06b` 34.070 điểm (trừ các lượt Agent ngày 13–14/11 dùng collection cũ 18.383 điểm), timeout 45 giây mỗi request.
 
-### 4.2 Dữ liệu (TV2)
+### 4.2 Dữ liệu (TV2) — C0, C1, một đợt C3
 
 | Số đo | Giá trị |
 |---|---|
@@ -83,11 +103,11 @@ Cấu hình chung của các lượt chạy thật: DeepSeek `deepseek-flash`, t
 | Mẫu đọc `game_scope` | 50 trang (seed 4164), không thấy trang thuộc game khác |
 | Re-index hybrid 34.070 chunk EN | 642,38 giây; mọi point có `dense` + `bm25` |
 | Bộ lọc `spoilers=false` | Trả đúng 33 ID mức 0; truy vấn ending Ranni loại 30 ứng viên mức cao |
-| Hybrid trên 25 câu golden cũ | 20/22 câu có URL kỳ vọng ở top 5 (2 câu trỏ trang ngoài cohort, 3 câu hành vi không có URL) |
-| 6 truy vấn đối chiếu bằng chứng | 6/6 ở top 2 |
-| Eval qua API 25 câu (13/11) | 25/25 HTTP 200 (baseline 24/25; IB-GS-086 hết 502); 93 lượt gọi model; 519.450 token vào, 12.857 token ra; 0 lượt Tavily |
+| **C1** · Hybrid trên 25 câu golden cũ | 20/22 câu có URL kỳ vọng ở top 5 (2 câu trỏ trang ngoài cohort, 3 câu hành vi không có URL) |
+| **C1** · 6 truy vấn đối chiếu bằng chứng | 6/6 ở top 2 |
+| **C3** · Eval qua API 25 câu (13/11) | 25/25 HTTP 200 (baseline 24/25; IB-GS-086 hết 502); 93 lượt gọi model; 519.450 token vào, 12.857 token ra; 0 lượt Tavily |
 
-Hạng bằng chứng local trước/sau chunk lại (12/11, FTS5 BM25 top 16 rồi E5):
+Hạng bằng chứng local trước/sau chunk lại (**C1**, 12/11, FTS5 BM25 top 16 rồi E5, không qua Qdrant):
 
 | Ca | Token bằng chứng S3 → S4 | Hạng BM25 | Hạng E5 |
 |---|---|---|---|
@@ -95,7 +115,7 @@ Hạng bằng chứng local trước/sau chunk lại (12/11, FTS5 BM25 top 16 r�
 | IB-GS-052 | 442 → 218 | 10 → 8 | 7 → 10 |
 | IB-GS-065, 031, 041, 086 | không đổi | không đổi (1, 1, 1, 4) | không đổi (1, 1, 3, 3) |
 
-### 4.3 Golden set S4
+### 4.3 Golden set S4 — C0
 
 | Số đo | Giá trị |
 |---|---|
@@ -108,9 +128,9 @@ Hạng bằng chứng local trước/sau chunk lại (12/11, FTS5 BM25 top 16 r�
 | Quote khớp corpus | 183/183 ca dữ kiện, 11/11 lượt bổ sung, 256 lượt quote |
 | Gate `--require-reviewed` | **Chưa đạt** |
 
-### 4.4 Ma trận truy xuất, Tavily Off (212 câu)
+### 4.4 Ma trận truy xuất (212 câu) — C1 và C2
 
-Mẫu số: Recall@5 và MRR@5 trên 195 câu có nguồn; context chunk recall trên 183 câu; Accuracy trên 195 câu dữ kiện; 17 ca hành vi chấm riêng (cả sáu cấu hình 17/17). 152/212 ca dùng truy vấn đã viết lại. Chấm: DeepSeek Flash, ẩn cấu hình.
+Recall@5, MRR@5, context chunk recall là **C1**; Accuracy và bám nguồn là **C2** (một lần truy xuất rồi sinh, không có vòng lặp công cụ). Tavily Off. Mẫu số: Recall@5 và MRR@5 trên 195 câu có nguồn; context chunk recall trên 183 câu; Accuracy trên 195 câu dữ kiện; 17 ca hành vi chấm riêng (cả sáu cấu hình 17/17). 152/212 ca dùng truy vấn đã viết lại. Chấm: DeepSeek Flash, ẩn cấu hình.
 
 | Truy xuất | Query | Recall@5 | MRR@5 | Context chunk recall | Accuracy | Bám nguồn đủ |
 |---|---|---:|---:|---:|---:|---:|
@@ -139,7 +159,7 @@ Accuracy theo nhóm:
 
 Recall@5 của Hybrid khi bật rewrite: câu Việt 80,58% → 87,22%; câu khó 62,24% → 71,77%; Việt không dấu 50,00% → 93,75%. Nhóm nhiễu: Hybrid + rewrite có Recall@5 92,86% nhưng đúng 3/7, còn BM25 + rewrite đúng 5/7. TV3 đề xuất giữ **Hybrid + rewrite** làm mặc định (hơn BM25 + rewrite 2/195 câu).
 
-**Tavily Auto** trên 18 câu × 6 cấu hình (16 câu dữ kiện): 35 lượt tìm web (32 có kết quả, 3 timeout); 21/108 câu trả lời dẫn nguồn web.
+**Tavily Auto (C2 + một lượt web)** trên 18 câu × 6 cấu hình (16 câu dữ kiện): 35 lượt tìm web (32 có kết quả, 3 timeout); 21/108 câu trả lời dẫn nguồn web.
 
 | Cấu hình | Đúng đủ Off | Đúng đủ Auto | Lượt Auto có trích dẫn web |
 |---|---:|---:|---:|
@@ -150,9 +170,9 @@ Recall@5 của Hybrid khi bật rewrite: câu Việt 80,58% → 87,22%; câu kh�
 | Hybrid gốc | 9/16 | 11/16 | 3/18 |
 | Hybrid rewrite | 12/16 | 12/16 | 2/18 |
 
-Kiểm riêng Agent đầy đủ qua API trên 6 câu đại diện: 6/6 phản hồi cuối, 7/7 request HTTP 200, không gọi Tavily.
+Kiểm riêng **C3** (Agent đầy đủ qua API) trên 6 câu đại diện: 6/6 phản hồi cuối, 7/7 request HTTP 200, không gọi Tavily.
 
-### 4.5 Agent đầy đủ trên 100 ca (Tavily Auto)
+### 4.5 Agent đầy đủ trên 100 ca (Tavily Auto) — C3, kèm một phép C1
 
 Tập: 55 Việt / 45 Anh; 30 dễ / 45 trung bình / 25 khó; có 20 ca lỗi gõ, 11 ca có lượt bổ sung, 6 ca ngoài phạm vi. 75 ca JSON, 25 ca SSE. Chấm: Codex theo [rubric S4](../evaluation/s4-rubric.md). Hai lượt dùng cùng 100 câu, trong đó có các câu từng dùng để sửa Agent, nên đây là đo hồi quy, không phải tập kiểm tra độc lập.
 
@@ -179,7 +199,7 @@ Tập: 55 Việt / 45 Anh; 30 dễ / 45 trung bình / 25 khó; có 20 ca lỗi g
 
 Sau sửa: 76 đúng đủ, 6 đúng một phần, 1 hỏi lại thừa; 7 ca tăng điểm, 2 ca giảm. Trước sửa, IB-GS-278 trả 502.
 
-Truy xuất local trên 83 câu có trang tham chiếu (truy vấn nguyên văn, không gọi DeepSeek hay Tavily):
+Phép **C1** đi kèm: truy xuất local trên 83 câu có trang tham chiếu (truy vấn nguyên văn, không gọi DeepSeek hay Tavily, không qua Agent):
 
 | Nhóm | n | Recall@5 | MRR@5 |
 |---|---:|---:|---:|
@@ -198,7 +218,7 @@ Truy xuất local trên 83 câu có trang tham chiếu (truy vấn nguyên văn,
 | Recall@5 Việt / Anh | 70,24% / 90,65% | 74,21% / 90,65% |
 | Recall@5 câu khó | 43,33% | 51,67% |
 
-### 4.6 Baseline 25 ca chẩn đoán (trước khi sửa pipeline)
+### 4.6 Baseline 25 ca chẩn đoán (trước khi sửa pipeline) — C3
 
 14 Việt / 11 Anh; mỗi ca một hội thoại mới.
 
@@ -213,7 +233,7 @@ Truy xuất local trên 83 câu có trang tham chiếu (truy vấn nguyên văn,
 
 Chạy lại 5 ca lỗi sau sửa (IB-BL-001, 010, 018, 020, 023): 5/5 có trích dẫn, 6/6 HTTP 200, không gọi Tavily; p50 trên 5 ca **12,88 s → 8,44 s**. Đợt này không có Accuracy đã chấm và trace chưa đủ để tính Recall@5.
 
-### 4.7 Các lượt chạy thật nhỏ của Agent
+### 4.7 Các lượt chạy thật nhỏ của Agent — C3
 
 | Đợt | Lượt | HTTP | Gọi model / Tavily | Quan sát |
 |---|---|---|---|---|
@@ -222,7 +242,7 @@ Chạy lại 5 ca lỗi sau sửa (IB-BL-001, 010, 018, 020, 023): 5/5 có tríc
 | Hỏi đường theo tiến độ (14/11) | 6 lượt | 2 hội thoại thành công, 1 ca 502 | không ghi | Lỗi Reduvia (`changed_numeric_constraints`) đã phát lại offline thành công |
 | Điều kiện bị thay (14/11) | 4 lượt | 2/4 200 (44,36 s; 44,13 s), 2/4 502 (4,11 s; 4,35 s) | 34 / 17 | Bản sửa chỉ kiểm offline |
 
-### 4.8 Kiểm thử phần mềm
+### 4.8 Kiểm thử phần mềm (không đo chất lượng)
 
 | Số đo | Giá trị | Nguồn |
 |---|---|---|
