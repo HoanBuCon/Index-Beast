@@ -61,7 +61,7 @@ def test_compose_publishes_only_project_ports_on_the_host():
 def test_api_process_never_listens_on_default_port():
     sources = {
         "backend/Dockerfile": r'"--port", "(\d+)"|EXPOSE (\d+)',
-        "infra/Caddyfile": r"reverse_proxy api:(\d+)",
+        "infra/caddy/snippets.caddy": r"reverse_proxy api:(\d+)",
         "Makefile": r"\),(\d+)\)",
         "web/vite.config.ts": r'DEFAULT_\w+_PORT = "(\d+)"',
         "docker-compose.yml": r"api:(\d+)|127\.0\.0\.1:(\d+)/api",
@@ -70,3 +70,14 @@ def test_api_process_never_listens_on_default_port():
         ports = {int(group) for m in re.finditer(pattern, _read(path)) for group in m.groups() if group}
         assert ports, f"không tìm thấy cổng trong {path}"
         assert not ports & DEFAULT_PORTS, f"{path} dùng cổng mặc định: {sorted(ports & DEFAULT_PORTS)}"
+
+
+def test_every_caddyfile_proxies_api_through_the_shared_snippet():
+    # Cổng proxy nằm ở snippet dùng chung; mỗi Caddyfile phải nạp snippet và dùng `import api_proxy`,
+    # và không được tự khai báo reverse_proxy riêng (nếu có thì cũng không được dùng cổng mặc định).
+    for path in ("infra/Caddyfile", "infra/Caddyfile.staging", "infra/Caddyfile.prod"):
+        lines = _active_lines(_read(path))
+        assert any(line.strip() == "import /etc/caddy/snippets.caddy" for line in lines), f"{path} không nạp snippet"
+        assert any(line.strip().startswith("import api_proxy") for line in lines), f"{path} không dùng api_proxy"
+        own = {int(m) for line in lines for m in re.findall(r"reverse_proxy \w+:(\d+)", line)}
+        assert not own & DEFAULT_PORTS, f"{path} proxy tới cổng mặc định: {sorted(own & DEFAULT_PORTS)}"
