@@ -11,7 +11,7 @@
 #   - log container ghi bằng driver local (xoay vòng 5x20 MB) để còn xem được khi sự cố; đặt DOCKER_LOG_DRIVER=none để tắt
 #   - ảnh minh họa tắt mặc định (backend/data/media nặng ~7,5 GB); mount backend/models vào api (.dockerignore không đưa model vào image)
 #   - Caddy dùng infra/Caddyfile.prod: HTTPS tự động, header bảo mật, không basic auth
-#   - healthcheck cho mọi container; giới hạn CPU/RAM (tổng mem_limit ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành)
+#   - healthcheck cho mọi container có cổng (trừ bot, xem bên dưới); giới hạn CPU/RAM (tổng mem_limit ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành)
 #   - api, bot, caddy: no-new-privileges + cap_drop ALL (Caddy thêm lại NET_BIND_SERVICE). PostgreSQL/Qdrant/Redis KHÔNG bỏ capability:
 #     entrypoint của image chown thư mục dữ liệu rồi hạ quyền (cần CHOWN/SETUID/SETGID/DAC_OVERRIDE), chưa thử trên VPS nên không liều
 # Cần Docker Compose >= 2.24 (thẻ !reset). Docker không tự khởi động lại container "unhealthy": restart: unless-stopped
@@ -61,12 +61,8 @@ services:
     logging: *prod-logging
     environment:
       WEB_URL: https://${DOMAIN:-tarnished.liemdai.io.vn}
-    # Bot không mở cổng nào, nên không có endpoint để hỏi. Kiểm tra này chỉ xác nhận tiến trình node (PID 1) còn sống
-    # (restart: unless-stopped đã lo trường hợp tiến trình thoát); sức khỏe thật của bot xem log và trạng thái online trên Discord.
-    healthcheck:
-      test: ["CMD", "node", "-e", "process.kill(1, 0)"]
-      interval: 30s
-      retries: 3
+    # Bot không mở cổng nào nên không có healthcheck (một kiểm tra giả luôn "healthy" chỉ gây hiểu lầm): restart: unless-stopped
+    # lo trường hợp tiến trình thoát; sức khỏe bot xem log và trạng thái online trên Discord (docs/production.md mục Giám sát).
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]    # bot chạy user node, không cần capability nào
     cpus: 0.5

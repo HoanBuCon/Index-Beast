@@ -31,7 +31,7 @@ Quyết định đáng biết:
 - uvicorn chạy với `--forwarded-allow-ips "*"` (trong `backend/Dockerfile`): chấp nhận được vì api không công khai cổng, chỉ Caddy trong mạng Docker chạm tới nó, và Caddy ghi đè `X-Forwarded-For`. Nếu sau này có thêm service khác trong mạng, đổi `*` thành IP của Caddy.
 - `no-new-privileges` + `cap_drop: [ALL]` cho api, bot, Caddy (Caddy thêm lại `NET_BIND_SERVICE`). PostgreSQL/Qdrant/Redis **không** bỏ capability vì entrypoint của image cần `chown`/hạ quyền; chưa thử nên không liều.
 - Caddy chặn ở lớp proxy `/api/v1/dev/*`, `/api/docs`, `/api/redoc`, `/api/openapi.json` (404), phòng khi backend lỡ chạy chế độ dev. Giới hạn thân yêu cầu: 64 KB cho `/api/*` (lớn nhất là `/chat`, tin nhắn ≤ 2.000 ký tự), 512 KB cho `/api/v1/answer-shares` (câu trả lời tới 100.000 ký tự).
-- Kiểm tra sức khỏe bot chỉ xác nhận tiến trình còn sống (bot không mở cổng).
+- Bot không có healthcheck (không mở cổng, một kiểm tra giả sẽ luôn "healthy"): sức khỏe bot = `docker compose ... logs bot` + trạng thái online trên Discord; `restart: unless-stopped` chỉ lo trường hợp tiến trình thoát.
 
 ## 2. Ngân sách tài nguyên
 
@@ -143,7 +143,7 @@ scripts/deploy.sh v1.0.1        # checkout tag/commit/nhánh rồi deploy
 
 Script từ chối chạy nếu working tree có thay đổi chưa commit, `.env` quyền ≠ 600, còn `change-me` hay thiếu biến bắt buộc. Có PostgreSQL đang chạy thì nó **backup trước** (`SKIP_PRE_BACKUP=1` để bỏ qua). Migration chạy tự động khi api khởi động (`alembic upgrade head` trong CMD của `backend/Dockerfile`); migration lỗi thì api không lên và lỗi hiện trong `docker compose logs api`.
 
-**Rollback mã:** `scripts/deploy.sh <tag-hoặc-commit-cũ>` (script in sẵn commit trước đó khi kết thúc). Sau rollback VPS ở HEAD tách rời; quay lại bình thường bằng `scripts/deploy.sh main`.
+**Rollback mã:** `scripts/deploy.sh <tag-hoặc-commit-cũ>` (script in sẵn commit trước đó khi kết thúc). Chỉ rollback về **tag production đầu tiên hoặc mới hơn** (bản cũ hơn không có `docker-compose.prod.yml` và `infra/Caddyfile.prod`; script tự quay về bản đang chạy và báo lỗi). Sau rollback VPS ở HEAD tách rời; quay lại bình thường bằng `scripts/deploy.sh main`.
 
 **Rollback có migration:** chạy lại bản cũ KHÔNG hoàn tác schema. Nếu bản mới có migration không tương thích bản cũ, hoặc dữ liệu hỏng:
 

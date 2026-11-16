@@ -19,9 +19,9 @@ die() { echo "LỖI: $*" >&2; exit 1; }
 [ -f .env ] || die "Thiếu .env. Chạy: cp .env.prod.example .env && chmod 600 .env, rồi điền (docs/production.md)."
 perm=$(stat -c '%a' .env)
 [ "$perm" = 600 ] || die ".env đang có quyền $perm, phải là 600. Chạy: chmod 600 .env"
-if grep -qE '^[A-Za-z_]+=change-me$' .env; then
+if grep -qE '^[A-Za-z_]+=["'"'"']?change-me["'"'"']?[[:space:]]*$' .env; then
   echo "Còn giá trị mẫu change-me trong .env:" >&2
-  grep -E '^[A-Za-z_]+=change-me$' .env | cut -d= -f1 | sed 's/^/  /' >&2
+  grep -E '^[A-Za-z_]+=["'"'"']?change-me["'"'"']?[[:space:]]*$' .env | cut -d= -f1 | sed 's/^/  /' >&2
   exit 1
 fi
 missing=()
@@ -34,10 +34,18 @@ done
 # --- Mã nguồn ---
 [ -z "$(git status --porcelain)" ] || { git status --short >&2; die "Working tree có thay đổi chưa commit. Dọn sạch trước khi deploy (không sửa tay trên VPS)."; }
 PREV=$(git rev-parse --short HEAD)
+PREV_REF=$(git symbolic-ref -q --short HEAD || git rev-parse HEAD)   # nhánh nếu đang ở nhánh, không thì commit
 git fetch --tags origin
 if [ -n "$REF" ]; then
   echo "==> Mã nguồn: $REF"
   git checkout "$REF"
+  # Bản cũ hơn bản production đầu tiên không có overlay/Caddyfile prod: deploy sẽ hỏng giữa chừng, nên hoàn tác ngay
+  for f in docker-compose.prod.yml infra/Caddyfile.prod; do
+    if [ ! -f "$f" ]; then
+      git checkout "$PREV_REF"
+      die "$REF không có $f (cũ hơn bản production đầu tiên). Đã quay về $PREV_REF. Chỉ rollback về tag production đầu tiên hoặc mới hơn."
+    fi
+  done
   # Nhánh thì kéo về bản mới nhất; tag/commit thì giữ nguyên (HEAD tách rời)
   if git show-ref --verify --quiet "refs/remotes/origin/$REF"; then git merge --ff-only "origin/$REF"; fi
 else
