@@ -233,6 +233,20 @@
         "title": "AuthUserOut",
         "type": "object"
       },
+      "ChannelsRemoved": {
+        "properties": {
+          "deleted": {
+            "description": "Số kênh vừa tắt; 0 khi kênh chưa bật (gọi lại vẫn 200).",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "ChannelsRemoved",
+        "type": "object"
+      },
       "ChatCapabilities": {
         "properties": {
           "auth_available": {
@@ -709,6 +723,90 @@
         "title": "ClarificationField",
         "type": "object"
       },
+      "ClearAllMemory": {
+        "properties": {
+          "scope": {
+            "const": "all",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "ClearAllMemory",
+        "type": "object"
+      },
+      "ClearMemoryResult": {
+        "properties": {
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "feedback": {
+            "title": "Feedback",
+            "type": "integer"
+          },
+          "guild_id": {
+            "title": "Guild Id",
+            "type": "string"
+          },
+          "memories": {
+            "description": "Dòng ký ức dài hạn trong PostgreSQL.",
+            "title": "Memories",
+            "type": "integer"
+          },
+          "messages": {
+            "title": "Messages",
+            "type": "integer"
+          },
+          "scope": {
+            "enum": [
+              "user",
+              "all"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "vector_points": {
+            "description": "Điểm ký ức ngữ nghĩa trong Qdrant; 0 khi không có kho vector.",
+            "title": "Vector Points",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "guild_id",
+          "scope",
+          "conversations",
+          "messages",
+          "feedback",
+          "memories",
+          "vector_points"
+        ],
+        "title": "ClearMemoryResult",
+        "type": "object"
+      },
+      "ClearUserMemory": {
+        "properties": {
+          "scope": {
+            "const": "user",
+            "title": "Scope",
+            "type": "string"
+          },
+          "user_hash": {
+            "description": "SHA-256 hex của Discord user id (bot băm, không gửi ID thô).",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "User Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "user_hash"
+        ],
+        "title": "ClearUserMemory",
+        "type": "object"
+      },
       "ConversationOut": {
         "properties": {
           "channel": {
@@ -802,6 +900,52 @@
           "rating"
         ],
         "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "GuildChannelOut": {
+        "properties": {
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "enabled_at": {
+            "format": "date-time",
+            "title": "Enabled At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "enabled_at"
+        ],
+        "title": "GuildChannelOut",
+        "type": "object"
+      },
+      "GuildChannelsOut": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/GuildChannelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "guild_id": {
+            "title": "Guild Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Số kênh tối đa mỗi server.",
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "guild_id",
+          "channels"
+        ],
+        "title": "GuildChannelsOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -2186,6 +2330,372 @@
         "summary": "Lịch sử hội thoại",
         "tags": [
           "conversations"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/channels": {
+      "delete": {
+        "operationId": "disable_all_channels_api_v1_discord_guilds__guild_id__channels_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelsRemoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Tắt mọi kênh của server",
+        "tags": [
+          "discord-guild"
+        ]
+      },
+      "get": {
+        "operationId": "list_channels_api_v1_discord_guilds__guild_id__channels_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuildChannelsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Kênh bot tự trả lời của một server",
+        "tags": [
+          "discord-guild"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/channels/{channel_id}": {
+      "delete": {
+        "operationId": "disable_channel_api_v1_discord_guilds__guild_id__channels__channel_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelsRemoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Tắt một kênh (idempotent)",
+        "tags": [
+          "discord-guild"
+        ]
+      },
+      "put": {
+        "operationId": "enable_channel_api_v1_discord_guilds__guild_id__channels__channel_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuildChannelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Bật một kênh (idempotent)",
+        "tags": [
+          "discord-guild"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/memory/clear": {
+      "post": {
+        "operationId": "clear_memory_api_v1_discord_guilds__guild_id__memory_clear_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "all": "#/components/schemas/ClearAllMemory",
+                    "user": "#/components/schemas/ClearUserMemory"
+                  },
+                  "propertyName": "scope"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClearUserMemory"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClearAllMemory"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearMemoryResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa ký ức hội thoại của một người hoặc cả server (idempotent)",
+        "tags": [
+          "discord-guild"
         ]
       }
     },
