@@ -197,13 +197,18 @@ class LiveChatService:
     async def _refresh(self, state, req):
         if self.repository is None or state.revision == 0:
             return
-        stored = await self.repository.load(
-            state.conversation.id,
-            channel=req.channel,
-            external_ref=req.external_ref,
-            token=req.conversation_token,
-            user_id=req.user_id,
-        )
+        try:
+            stored = await self.repository.load(
+                state.conversation.id,
+                channel=req.channel,
+                external_ref=req.external_ref,
+                token=req.conversation_token,
+                user_id=req.user_id,
+            )
+        except NotFoundError:
+            # Hội thoại đã bị xóa bền (vd. /clear chạy ở worker khác): bỏ bản RAM, lượt gửi lại sẽ tạo hội thoại mới
+            self.forget([state.conversation.id])
+            raise UnavailableError("Ký ức hội thoại vừa được xóa. Vui lòng gửi lại câu hỏi.") from None
         state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
 
     async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):

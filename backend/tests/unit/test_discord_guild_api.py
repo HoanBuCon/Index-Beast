@@ -260,6 +260,29 @@ def test_forget_drops_cached_conversation_and_its_external_ref_index():
     assert conv.id not in live._conversations and ("discord", "discord:thread:1") not in live._by_ref
 
 
+def test_stale_ram_copy_of_a_cleared_conversation_is_dropped_with_a_retryable_error():
+    from app.api.schemas.chat import ChatRequest
+    from core.errors import NotFoundError
+    from tests.unit.test_live_chat import service
+
+    class GoneRepository:
+        async def load(self, *args, **kwargs):
+            raise NotFoundError()
+
+    live = service()
+    live.repository = GoneRepository()
+    conv = ConversationOut(id=uuid4(), channel="discord", created_at=datetime.now(UTC), messages=[])
+    state = ConversationState(conv, "discord:thread:1", revision=3)
+    live._conversations[conv.id] = state
+    live._by_ref[("discord", "discord:thread:1")] = conv.id
+    req = ChatRequest(message="Ranni?", channel="discord", external_ref="discord:thread:1")
+
+    with pytest.raises(UnavailableError):
+        asyncio.run(live._refresh(state, req))
+
+    assert conv.id not in live._conversations and not live._by_ref
+
+
 # --- guild_id chỉ được tin khi có service token ---
 
 
