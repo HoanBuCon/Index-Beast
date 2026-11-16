@@ -297,8 +297,9 @@ class LiveChatService:
             logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
             return []
 
-    async def _prepare(self, req, state):
+    async def _prepare(self, req, state, started=None):
         kwargs = {"gameplay": True, "handle_gameplay": True, "player": state.player} if self.gameplay_enabled else {}
+        kwargs["started"] = started
         if self.repository is not None:
             kwargs["memory_scope"] = MemoryScope(state.conversation.id, state.owner)
             kwargs["player"] = state.player
@@ -400,7 +401,7 @@ class LiveChatService:
                     await self._refresh(state, req)
                     if replay := await self._replay(req, state, started):
                         return replay
-                    prepared, player = await self._prepare(req, state)
+                    prepared, player = await self._prepare(req, state, started)
                     result = await self.pipeline.generator.generate(prepared)
                     images = await self._images(req, prepared, result, started)
                     return await self._save(req, state, prepared, result, started, images, player)
@@ -431,7 +432,7 @@ class LiveChatService:
                     tokens = replay_tokens()
                     first = await anext(tokens)
                 else:
-                    prepared, player = await self._prepare(req, state)
+                    prepared, player = await self._prepare(req, state, started)
                     tokens = self.pipeline.generator.stream(prepared)
                     first = await anext(tokens)
         except BaseException as exc:

@@ -66,6 +66,7 @@ async def run_tools(pipe, state):
     from app.rag.pipeline import context_item, select_context
 
     p, req = state["prepared"], state["req"]
+    turn_started = state.get("started", time.perf_counter())
     inactive = (p.player_state or {}).get("inactive_conditions", [])
     comparison = req.message if p.agent_decision.get("intent") in {"comparison", "gameplay_comparison"} else ""
     if p.trace["web_search"]["requested"] == "always" and not pipe.settings.web_search_available:
@@ -435,9 +436,17 @@ async def run_tools(pipe, state):
             if action in {"check_name", "local_search"}:
                 local_calls += 1
                 retriever = pipe.retriever.model_copy(
-                    update={"spoilers": req.options.spoilers, "limit": pipe.settings.rag_prefetch}
+                    update={
+                        "spoilers": req.options.spoilers,
+                        "limit": pipe.settings.rag_prefetch,
+                        "search_timeout_seconds": min(5, pipe.settings.rag_retrieval_timeout_seconds),
+                        "rerank_deadline": turn_started + pipe.settings.chat_timeout_seconds - reserve,
+                    }
                 )
-                async with asyncio.timeout(min(5, pipe.settings.rag_retrieval_timeout_seconds)):
+                retrieval_timeout = min(5, pipe.settings.rag_retrieval_timeout_seconds)
+                rerank_timeout = getattr(retriever, "reranker_timeout_seconds", 0)
+                retrieval_timeout += rerank_timeout + (0.1 if rerank_timeout else 0)
+                async with asyncio.timeout(retrieval_timeout):
                     docs = await retriever.ainvoke(raw_name if action == "check_name" else step.query)
                     found = [document_to_hit(d) for d in docs[: pipe.settings.rag_prefetch]]
             elif action == "web_search":

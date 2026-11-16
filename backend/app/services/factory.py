@@ -27,6 +27,9 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
             FastEmbedEncoder(BACKEND_ROOT / settings.rag_models_dir, threads=settings.rag_encoder_threads),
             QdrantStore(ctx.qdrant, settings.rag_collection, CorpusPolicy.from_settings(settings)),
             settings.rag_prefetch,
+            reranker=getattr(ctx, "reranker", None),
+            reranker_timeout_seconds=settings.rag_reranker_timeout_seconds if getattr(ctx, "reranker", None) else 0,
+            search_timeout_seconds=settings.rag_retrieval_timeout_seconds,
         )
     repository, memory = None, None
     if settings.chat_persistence == "postgres":

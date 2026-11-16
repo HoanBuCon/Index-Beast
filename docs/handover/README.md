@@ -17,6 +17,8 @@
 - [TV2 · Sprint 5: giới hạn lưu giữ 90 ngày (16/11/2026)](2026-11-16_s5-tv2_retention-gioi-han.md)
 
 - [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
+- [TV3 · Jina Reranker API tùy chọn (16/11/2026)](2026-11-16_s4-tv3_jina-reranker.md)
+- [TV3 · Review và kiểm chứng live Jina reranker (16/11/2026)](2026-11-16_s4-tv3_review-reranker-live.md)
 
 - [TV2 · Rà soát 200 câu S4 bằng artifact local (16/11/2026)](2026-11-16_s4-tv2_ra-soat-golden-local.md)
 

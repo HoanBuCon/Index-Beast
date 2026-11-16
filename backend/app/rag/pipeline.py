@@ -312,7 +312,9 @@ class ChatPipeline:
         store = getattr(retriever, "store", None)
         if store is not None and store.policy != self.policy:
             raise ValueError("Retriever and pipeline must use the same corpus policy/languages")
-        self.reranker = (reranker or NoReranker()) if settings.chat_mode == "rag" else None
+        self.reranker = (
+            (reranker or getattr(retriever, "reranker", None) or NoReranker()) if settings.chat_mode == "rag" else None
+        )
         self.generator = (
             Generator(llm, thinking=settings.rag_thinking_enabled, format_retries=settings.rag_format_retries)
             if llm is not None
@@ -387,11 +389,12 @@ class ChatPipeline:
         handle_gameplay: bool = False,
         player=None,
         memory_scope=None,
+        started: float | None = None,
     ) -> Prepared:
         state = {
             "req": req,
             "history": history,
-            "started": time.perf_counter(),
+            "started": started if started is not None else time.perf_counter(),
             "diagnostic_queries": diagnostic_queries,
             "gameplay": gameplay,
             "handle_gameplay": handle_gameplay,
@@ -711,6 +714,7 @@ class ChatPipeline:
                 update={
                     "spoilers": state["req"].options.spoilers,
                     "limit": self.settings.rag_prefetch,
+                    "reranker": None,
                 }
             )
             original = state.get("resolved_question", state["req"].message)
@@ -730,8 +734,12 @@ class ChatPipeline:
                     timeout = self.settings.rag_retrieval_timeout_seconds
                     if state.get("search_mode", "off") != "off":
                         timeout = min(timeout, 5)
-                    async with asyncio.timeout(timeout / len(queries)):
-                        documents = await retriever.ainvoke(query)
+                    search_timeout = timeout / len(queries)
+                    bounded = retriever.model_copy(update={"search_timeout_seconds": search_timeout})
+                    rerank_timeout = getattr(bounded, "reranker_timeout_seconds", 0)
+                    timeout = search_timeout + rerank_timeout + (0.1 if rerank_timeout else 0)
+                    async with asyncio.timeout(timeout):
+                        documents = await bounded.ainvoke(query)
                     hits = [document_to_hit(d) for d in documents[: self.settings.rag_prefetch]]
                     rows.append(hits)
                     row.update(status="ok", candidates=len(hits))
@@ -761,7 +769,11 @@ class ChatPipeline:
     async def _rerank(self, state: dict) -> dict:
         if state["prepared"].static_answer is None:
             hits = [document_to_hit(d) for d in state["documents"]]
-            ranked = await self.reranker.rank(state["query"], hits)
+            from app.rag.retriever import rank_with_deadline
+
+            reserve = min(19, self.settings.chat_timeout_seconds / 2)
+            deadline = state["started"] + self.settings.chat_timeout_seconds - reserve
+            ranked = await rank_with_deadline(self.reranker, state["query"], hits, deadline)
             if self.settings.gameplay_knowledge_enabled and state.get("gameplay"):
                 from app.rag.gameplay_knowledge import supplements
 
