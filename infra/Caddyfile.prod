@@ -3,6 +3,9 @@
 # tự chuyển HTTP -> HTTPS. Chứng chỉ nằm trong volume caddy_data: đừng xóa volume này giữa các lần deploy
 # (xin lại quá nhiều lần sẽ chạm giới hạn của Let's Encrypt).
 # Caddy không ghi access log mặc định, nên IP người dùng không bị lưu lại (NFR-PRIV-01).
+# Phần proxy /api và web tĩnh dùng chung ở infra/caddy/snippets.caddy (COPY vào image, xem infra/caddy.Dockerfile).
+import /etc/caddy/snippets.caddy
+
 {$DOMAIN:tarnished.liemdai.io.vn} {
 	encode zstd gzip
 
@@ -35,9 +38,7 @@
 		request_body {
 			max_size 512KB
 		}
-		reverse_proxy api:18000 {
-			flush_interval -1
-		}
+		import api_proxy
 	}
 
 	handle /api/* {
@@ -46,9 +47,7 @@
 		request_body {
 			max_size 64KB
 		}
-		reverse_proxy api:18000 {
-			flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm
-		}
+		import api_proxy    # kèm SSE không đệm
 	}
 
 	# Tên file trong /assets có băm nội dung: cache vô hạn được
@@ -59,9 +58,7 @@
 	}
 
 	handle {
-		root * /srv/web
 		header Cache-Control "no-cache"
-		try_files {path} /index.html
-		file_server
+		import spa
 	}
 }

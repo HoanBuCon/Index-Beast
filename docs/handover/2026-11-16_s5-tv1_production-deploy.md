@@ -9,7 +9,7 @@
 
 ## 1. Đã làm
 
-- `docker-compose.prod.yml`: overlay cho 1 VPS 4 vCPU/8 GB, tên miền `tarnished.liemdai.io.vn`. `ENVIRONMENT=prod`, `CHAT_MODE=rag`, `CHAT_PERSISTENCE=postgres`, `CHAT_AGENT_ENABLED=true` đặt cứng; `WEB_URL`, `CORS_ORIGINS`, `AUTH_REDIRECT_URI` suy ra từ `DOMAIN`; cookie `Secure`; bỏ cổng `127.0.0.1` của PostgreSQL/Qdrant/Redis (`ports: !reset []`), chỉ Caddy công khai 80/443; healthcheck cho mọi container (bot chỉ kiểm tiến trình sống, Caddy hỏi admin API nội bộ); giới hạn CPU, log driver `local` xoay vòng.
+- `docker-compose.prod.yml`: overlay cho 1 VPS 4 vCPU/8 GB, tên miền `tarnished.liemdai.io.vn`. `ENVIRONMENT=prod`, `CHAT_MODE=rag`, `CHAT_PERSISTENCE=postgres`, `CHAT_AGENT_ENABLED=true` đặt cứng; `WEB_URL`, `CORS_ORIGINS`, `AUTH_REDIRECT_URI` suy ra từ `DOMAIN`; cookie `Secure`; bỏ cổng `127.0.0.1` của PostgreSQL/Qdrant/Redis (`ports: !reset []`), chỉ Caddy công khai 80/443; healthcheck cho mọi container có cổng (bot không có, xem mục Sửa sau review; Caddy hỏi admin API nội bộ); giới hạn CPU, log driver `local` xoay vòng.
 - `infra/Caddyfile.prod`: `DOMAIN` từ env (mặc định `tarnished.liemdai.io.vn`), HTTPS và chuyển HTTP→HTTPS tự động, không basic auth, `-Server`, HSTS (1 năm, không preload), `nosniff`, `Referrer-Policy`, `X-Frame-Options: DENY` + `frame-ancestors 'none'`, `Permissions-Policy`, CSP viết theo bản build Vite (không script nội tuyến, không font/CDN ngoài; `style 'unsafe-inline'` vì React; `img-src https:` cho ảnh wiki), SSE `flush_interval -1`, cache vô hạn cho `/assets/*`, `no-cache` cho HTML.
 - `.env.prod.example` (toàn placeholder, kèm URL callback Discord, `AUTH_ADMIN_DISCORD_IDS`, `DOMAIN`, ghi chú `chmod 600`) và `!.env.prod.example` trong `.gitignore`.
 - `backend/Dockerfile`: CMD chạy `alembic upgrade head && exec uvicorn ...` (trước đó thiếu, staging phải chạy tay). Lệnh `docker compose run --rm api <lệnh>` ghi đè CMD nên không đổi hành vi.
@@ -36,6 +36,22 @@
 | M4: header bảo mật | Xong: HSTS, nosniff, X-Frame-Options, `frame-ancestors`, Referrer-Policy, Permissions-Policy, CSP. **CSP chưa thử trên trình duyệt với bản build thật**; dự kiến có thể phải nới sau lần chạy đầu |
 | Low: `no-new-privileges`, `cap_drop` | Xong cho api, bot, Caddy (`cap_drop: ALL`, Caddy thêm `NET_BIND_SERVICE`). **Không áp dụng** cho PostgreSQL/Qdrant/Redis (entrypoint cần chown và hạ quyền, chưa thử, đã ghi trong overlay). Chưa chạy container thật để xác nhận Caddy/api/bot khởi động được với `cap_drop: ALL` |
 | `--forwarded-allow-ips "*"` | Giữ nguyên (`backend/Dockerfile`, file thuộc nhánh này); đã ghi lý do và điều kiện đổi vào `docs/production.md` mục 1 |
+
+## Sửa sau review
+
+| # | Vấn đề | Cách sửa | Trạng thái |
+|---|---|---|---|
+| 1 | `pg_restore --clean` để sót bảng của migration mới hơn dump, api restart lặp vì `relation exists` | `restore.sh pg`: dừng api/bot, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` bằng `POSTGRES_USER` trong container, rồi `pg_restore --no-owner --exit-on-error` (bỏ `--clean`). Đã cập nhật `docs/production.md` | Xong; chưa chạy với PostgreSQL thật |
+| 2 | `restore.sh` bật lại bot dù deploy đã scale bot=0 | Lặp một dòng kiểm tra `DISCORD_TOKEN` của deploy.sh (không tách helper dùng chung cho một dòng) | Xong |
+| 3 | Healthcheck bot `process.kill(1,0)` không bao giờ lỗi | Bỏ healthcheck và comment; docs ghi sức khỏe bot = log + trạng thái online Discord | Xong |
+| 4 | Kiểm `change-me` bỏ sót giá trị có nháy hoặc khoảng trắng cuối | Mẫu `^[A-Za-z_]+=["']?change-me["']?[[:space:]]*$` (kiểm với `A=change-me`, `B="change-me"`, `C='change-me'  ` bắt đủ; `D=change-me-not` không bắt) | Xong |
+| 5 | Rollback về ref cũ hơn `docker-compose.prod.yml` hỏng giữa chừng | Sau checkout, thiếu `docker-compose.prod.yml` hoặc `infra/Caddyfile.prod` thì checkout lại nhánh/commit trước đó và dừng với thông báo rõ; docs ghi chỉ rollback về tag production đầu tiên trở đi | Xong; chưa thử với ref thật |
+| 6 | `scripts/staging/deploy.sh` còn bước `alembic upgrade head` thừa | Bỏ bước, để comment trỏ tới CMD trong `backend/Dockerfile`; cập nhật `docs/staging.md` | Xong |
+| 7 | Ba Caddyfile chép lại khối proxy `/api` và SPA | `infra/caddy/snippets.caddy` có `(api_proxy)` và `(spa)`, nạp bằng `import /etc/caddy/snippets.caddy` ở cả ba Caddyfile; `infra/caddy.Dockerfile` COPY file này vào image (overlay không cần mount thêm, sửa snippet cần `--build`, deploy.sh đã build). Giới hạn body, 404 dev, header, cache vẫn ở `Caddyfile.prod` | Xong; **chưa `caddy validate`** (Docker không chạy), rủi ro chính là cú pháp `import` file chứa snippet, kiểm trước deploy đầu |
+
+File `infra/Caddyfile.staging;C` (tên lạ) **không tồn tại** trong worktree này và không nằm trong `git ls-files infra` (chỉ có `Caddyfile`, `Caddyfile.prod`, `Caddyfile.staging`, `caddy.Dockerfile`); không xóa gì. Nếu thấy ở máy khác thì đó là file rác chưa theo dõi.
+
+Kiểm sau sửa: `bash -n` toàn bộ `scripts/*.sh` và `scripts/staging/*.sh` đạt; `docker compose config --quiet` đạt cho overlay prod (`--env-file .env.prod.example`) và staging (đặt `STAGING_PASSWORD_HASH`); `git diff --check` sạch; `caddy validate` không chạy được (Docker daemon tắt).
 
 ## 4. Kiểm tra đã chạy
 

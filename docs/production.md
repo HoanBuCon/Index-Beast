@@ -17,6 +17,7 @@ bot Discord ──────────────────────�
 |---|---|
 | `docker-compose.prod.yml` | overlay chồng lên `docker-compose.yml`: `ENVIRONMENT=prod`, RAG thật, lưu hội thoại vào PostgreSQL, không công khai cổng DB, healthcheck, giới hạn CPU/RAM |
 | `infra/Caddyfile.prod` | tên miền từ `DOMAIN`, HTTP→HTTPS, HSTS/CSP/..., SSE không đệm, chặn `/api/docs`, `/api/v1/dev/*` |
+| `infra/caddy/snippets.caddy` | đoạn proxy `/api` và web tĩnh dùng chung cho ba Caddyfile (COPY vào image Caddy) |
 | `.env.prod.example` | mẫu `.env` (không có giá trị thật) |
 | `scripts/deploy.sh` | deploy và rollback |
 | `scripts/backup.sh`, `scripts/restore.sh` | backup cho cron và khôi phục |
