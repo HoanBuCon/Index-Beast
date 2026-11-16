@@ -98,6 +98,32 @@ class WikiGG:
             "game_scope": None,
         }
 
+    def recent_changes(self, since):
+        """Các thay đổi ns0 (sửa, tạo mới, log xoá/đổi tên) từ mốc `since` (ISO 8601); chi phí theo số thay đổi."""
+        entries, continuation, seen = [], {}, set()
+        while True:
+            result = self.api(
+                action="query",
+                list="recentchanges",
+                rcstart=since,
+                rcdir="newer",
+                rcnamespace=0,
+                rctype="edit|new|log",
+                rcprop="title|ids|timestamp|loginfo",
+                rclimit=500,
+                **continuation,
+            )
+            if "recentchanges" not in result.get("query", {}):
+                raise CrawlError("Missing recentchanges")
+            entries.extend(result["query"]["recentchanges"])
+            continuation = result.get("continue", {})
+            if not continuation:
+                return entries
+            token = repr(sorted(continuation.items()))
+            if token in seen:
+                raise CrawlError("Repeated recentchanges continuation")
+            seen.add(token)
+
     def image_info(self, titles):
         output = {}
         titles = list(dict.fromkeys(titles))
