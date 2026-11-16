@@ -9,14 +9,22 @@ import AdminPage from "./pages/AdminPage";
 import SharedAnswerPage from "./pages/SharedAnswerPage";
 import LoginPage from "./pages/LoginPage";
 import { lazy, Suspense } from "react";
+import { useAuth } from "./hooks/useAuth";
+import { AuthContext } from "./hooks/AuthContext";
 // TV4: chỉ mở fixture khi DEV và truy cập URL rõ ràng; không đóng gói fixture vào production.
 const AnswerMediaPreviewPage = import.meta.env.DEV ? lazy(() => import("./pages/AnswerMediaPreviewPage")) : null;
 export default function App() {
   const { pathname } = useLocation();
+  const auth = useAuth(); // một lần cho cả web: capabilities + /auth/me + hội thoại của tôi
   // Màn vào không nằm trong ChatPage: chưa hiện sidebar/composer trước khi chọn vào web.
-  if (pathname === "/" || pathname === "/login") return <LoginPage />;
+  if (pathname === "/" || pathname === "/login")
+    return (
+      <AuthContext.Provider value={auth}>
+        <LoginPage />
+      </AuthContext.Provider>
+    );
   return (
-    <>
+    <AuthContext.Provider value={auth}>
       <a className="skip-link" href="#main">
         {"Đến nội dung chính"}
       </a>
@@ -53,6 +61,6 @@ export default function App() {
           />
         </Routes>
       </ChatPage>
-    </>
+    </AuthContext.Provider>
   );
 }

@@ -180,12 +180,12 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-WEB-01 | Giao diện chat: nhập câu hỏi, hiển thị trả lời streaming dạng Markdown. | M | Stable | S2–S3 | Done |
 | FR-WEB-02 | Hiển thị danh sách nguồn trích dẫn có link; hover/click số trích dẫn để xem đoạn nguồn. | M | Volatile | S3–S4 | Done — đã bỏ danh sách nguồn dưới câu trả lời (05/11); giữ trích dẫn `[n]` và popover |
 | FR-WEB-03 | Tạo cuộc trò chuyện mới, xem lại lịch sử (localStorage cho khách; server nếu đăng nhập). | S | Volatile | S4 | In Progress — localStorage + token hội thoại; chưa đăng nhập |
-| FR-WEB-04 | Nút feedback 👍/👎 + lý do tuỳ chọn cho mỗi câu trả lời. | M | Stable | S4 | Deferred — nút đã gỡ khỏi giao diện (05/11); `/feedback` mới xác nhận request, chưa lưu |
+| FR-WEB-04 | Nút feedback 👍/👎 + lý do tuỳ chọn cho mỗi câu trả lời. | M | Stable | S4 | Done (S5) — nút 👍/👎 hiện dưới mỗi câu trả lời hoàn tất; 👎 có lý do tuỳ chọn; khách gửi kèm token hội thoại, người đăng nhập dùng cookie |
 | FR-WEB-05 | Câu hỏi gợi ý trên màn hình trống. | S | Volatile | S4 | Done |
-| FR-WEB-06 | Responsive mobile, theme tối phong cách Elden Ring. | S | Volatile | S5 | In Progress |
+| FR-WEB-06 | Responsive mobile, theme tối phong cách Elden Ring. | S | Volatile | S5 | In Progress — S5 rà soát phần đã sửa ở 360px và bàn phím; chưa kiểm thử trên thiết bị thật |
 | FR-WEB-07 | Trang About: giới thiệu, ghi nguồn & giấy phép CC BY-SA, disclaimer fan project. | M | Stable | S5 | Done — cần sửa câu "không gồm DLC" (xem TBD-08) |
-| FR-WEB-08 | Trang admin: xem log hội thoại, feedback, trạng thái ingestion, kết quả eval. | S | Volatile | S5 | In Progress — có `/admin/stats` và xem trace theo `message_id` (câu trả lời có liên kết "Xem trace" khi bật `ADMIN_TOKEN`); feedback còn trống do TBD-09, eval chưa có dữ liệu |
-| FR-WEB-09 | Đăng nhập (Discord OAuth) để đồng bộ lịch sử. | C | Volatile | S4 | Changed → In Progress — nay thuộc FR-AUTH-*; giao diện (TV4) chưa làm |
+| FR-WEB-08 | Trang admin: xem log hội thoại, feedback, trạng thái ingestion, kết quả eval. | S | Volatile | S5 | Done (S5) — vào bằng token hoặc phiên quản trị viên (cookie); hiện hội thoại gần đây, 👎, job ingestion, eval và trace |
+| FR-WEB-09 | Đăng nhập (Discord OAuth) để đồng bộ lịch sử. | C | Volatile | S4 | Done (S5) — xem FR-AUTH-09 |
 
 ### 3.6 FR-BOT — Discord Bot
 
@@ -223,8 +223,8 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-AUTH-05 | Hội thoại gắn với người dùng (`conversations.user_id`); chủ sở hữu đọc và tiếp tục từ thiết bị khác không cần token; nhận lại hội thoại khách bằng `conversation_token`; liệt kê hội thoại của tôi. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
 | FR-AUTH-06 | Quản trị viên theo `AUTH_ADMIN_DISCORD_IDS` (suy ra mỗi request, thu hồi có hiệu lực ngay); `ADMIN_TOKEN` giữ cho vận hành. | M | Volatile | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
 | FR-AUTH-07 | Chống lạm dụng: giới hạn tần suất bắt đầu đăng nhập theo IP; kiểm `Origin` trên lệnh ghi dùng cookie; không bao giờ ghi mã đăng nhập hay token vào log. | M | Stable | S4 | In Progress — backend trên nhánh `feature/s4-tv1-feedback-eval-auth` (chưa merge, chưa thử với Discord thật) |
-| FR-AUTH-08 | Xóa tài khoản và dữ liệu hội thoại theo yêu cầu người dùng. | S | Volatile | S5 | Proposed |
-| FR-AUTH-09 | Giao diện web: nút đăng nhập/đăng xuất, tên người dùng, danh sách hội thoại, nhận lại hội thoại khách (TV4, hợp đồng `docs/api/auth-tv4.md`). | M | Volatile | S4 | Proposed |
+| FR-AUTH-08 | Xóa tài khoản và dữ liệu hội thoại theo yêu cầu người dùng. | S | Volatile | S5 | Done (S5) — backend `DELETE /me` (test PostgreSQL thật) + nút "Xóa tài khoản" trên web; chưa thử với Discord/Qdrant thật |
+| FR-AUTH-09 | Giao diện web: nút đăng nhập/đăng xuất, tên người dùng, danh sách hội thoại, nhận lại hội thoại khách (TV4, hợp đồng `docs/api/auth-tv4.md`). | M | Volatile | S4 | Done (S5) — nút Discord (ẩn khi `auth_available=false`), tên + đăng xuất + Xóa tài khoản, danh sách hội thoại, nhận lại hội thoại khách; Google khóa "sắp có" |
 
 ## 4. Yêu cầu phi chức năng
 
@@ -239,7 +239,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | NFR-SEC-01 | Bảo mật | Không commit secret; dùng `.env`/Docker secrets; HTTPS bắt buộc | M | S1, S5 | In Progress: `ENVIRONMENT=prod` từ chối `change-me`; HTTPS staging mới kiểm cú pháp |
 | NFR-SEC-02 | Bảo mật | Chống prompt injection cơ bản: tách system prompt / ngữ cảnh / câu hỏi, không cho câu hỏi ghi đè chỉ dẫn | S | S4 | In Progress: tách chỉ dẫn/ngữ cảnh/câu hỏi, chặn injection cơ bản; chưa đánh giá đối kháng |
 | NFR-SEC-03 | Bảo mật | Endpoint admin yêu cầu xác thực; CORS chỉ cho domain web | M | S4 | In Progress: `X-Admin-Token` (PR #79), CORS theo `CORS_ORIGINS` |
-| NFR-PRIV-01 | Riêng tư | Chỉ lưu Discord user id dạng hash; có chính sách xoá log sau 90 ngày | S | S5 | In Progress: chủ sở hữu hội thoại lưu dạng băm; chưa có chính sách xóa 90 ngày |
+| NFR-PRIV-01 | Riêng tư | Chỉ lưu Discord user id dạng hash; có chính sách xoá log sau 90 ngày | S | S5 | In Progress: chủ sở hữu hội thoại lưu dạng băm; lệnh `python -m scripts.retention --days 90` và [chính sách](privacy.md) trên nhánh `feature/s5-tv1-quyen-rieng-tu` (chưa merge); chưa đặt cron thật |
 | NFR-COST-01 | Chi phí | Chi phí LLM ≤ $30/tháng ở 1.000 câu/ngày; giới hạn token mỗi request | S | S4 | Chưa đo: có giới hạn token và rate-limit; chi phí Tavily chưa tính |
 | NFR-LEG-01 | Pháp lý | Ghi nguồn CC BY-SA ở mọi câu trả lời và trang About; disclaimer không liên kết FromSoftware/Bandai Namco | M | S3, S5 | In Progress: trang About có CC BY-SA và disclaimer; chưa kiểm nhãn trên từng câu trả lời |
 | NFR-MNT-01 | Bảo trì | Lint + test tự động trên CI; coverage module RAG lõi ≥ 60% | S | S2–S5 | Done: CI chạy lint, test, kiểm `openapi.json`; chưa đo coverage |

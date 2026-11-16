@@ -2859,6 +2859,61 @@
         ]
       }
     },
+    "/api/v1/me": {
+      "delete": {
+        "description": "FR-AUTH-08. Xóa người dùng, mọi phiên, hội thoại gắn với tài khoản (gồm hội thoại khách đã nhận qua claim)\nkèm tin nhắn, feedback, ký ức và điểm Qdrant. Hội thoại khách chưa nhận (thiết bị khác) và hội thoại Discord\nkhông gắn với tài khoản nên không bị xóa ở đây: retention 90 ngày hoặc `/clear` của bot xóa chúng.\nGọi lại sau khi xóa thì cookie không còn hiệu lực nên nhận 401; dịch vụ xóa tự nó idempotent.",
+        "operationId": "delete_me_api_v1_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa tài khoản và các hội thoại đã gắn với nó, gồm hội thoại khách đã nhận (không hoàn tác)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me/conversations": {
       "get": {
         "operationId": "my_conversations_api_v1_me_conversations_get",
