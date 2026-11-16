@@ -58,7 +58,9 @@ Chạy từ `backend/` (Docker: `python`; Windows: `.venv/Scripts/python.exe`). 
 
 Mã thoát: 0 khi `completed` hoặc `dry_run`; 2 khi `partial`/`failed`, thiếu state, hoặc đang có lượt khác giữ lock.
 
-Cron production: [`scripts/ingest-weekly.sh`](../scripts/ingest-weekly.sh) chạy `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app run --rm -T api python -m ingest update --source wikigg`. Script giữ `flock` (mã 75 khi lượt trước còn chạy), ghi log ngoài repo (`/var/log/indexbeast` hoặc `~/.local/state/indexbeast`, giữ 12 log) và trả mã thoát của lệnh. Crontab mẫu: `30 3 * * 0 /opt/indexbeast/scripts/ingest-weekly.sh`.
+Cron production: [`scripts/ingest-weekly.sh`](../scripts/ingest-weekly.sh) chạy `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app run --rm -T api python -m ingest update --source wikigg`. Script giữ `flock` (mã 75 khi lượt trước còn chạy), ghi log ngoài repo (`/var/log/indexbeast` hoặc `~/.local/state/indexbeast`, giữ 12 log) và trả mã thoát của lệnh. Nếu thiếu `docker-compose.prod.yml` (chưa merge PR #109), script ghi cảnh báo vào log và dùng `docker-compose.yml`. Crontab mẫu: `30 3 * * 0 /opt/indexbeast/scripts/ingest-weekly.sh`.
+
+Khuyến nghị thêm một cron **hằng tháng** chạy `--full-scan` để đối chiếu mọi thứ recentchanges có thể bỏ sót (đổi category không sửa nội dung, log bị cắt, lượt tuần bị lỡ), vd. `30 4 1 * * INGEST_ARGS="--full-scan" /opt/indexbeast/scripts/ingest-weekly.sh`. Lượt này chỉ đọc metadata nên rẻ; chỉ trang lệch revision mới được dựng lại.
 
 ## 3. Cấu hình
 
@@ -77,12 +79,12 @@ Dữ liệu `data/` (mount `./backend/data:/app/data` trong Compose) giữ raw, 
 
 State là một file JSON nhỏ: `watermark` (mốc thời gian quét tới), `pages[source_id] = {revision_id, title, chunks}` và `scope_categories` (cache cây category). Nguồn sự thật cho nội dung vẫn là PostgreSQL và Qdrant; state chỉ cho biết revision nào đã được áp dụng.
 
-1. **Phát hiện.** Mặc định gọi `list=recentchanges` (namespace 0; sửa, tạo mới, log xoá/đổi tên) từ `watermark`. Một lời gọi trả tối đa 500 thay đổi, nên chi phí theo số thay đổi chứ không theo corpus. Dòng log xoá không có `pageid` được ánh xạ qua tiêu đề trong state. Nếu `watermark` trống hoặc cũ hơn `recentchanges_max_age_days`, hoặc có `--full-scan`: duyệt category (1 request mỗi category) rồi lấy mọi id đã biết.
+1. **Phát hiện.** Mặc định gọi `list=recentchanges` (namespace 0; sửa, tạo mới, log xoá/đổi tên) từ `watermark`. Một lời gọi trả tối đa 500 thay đổi, nên chi phí theo số thay đổi chứ không theo corpus. Dòng log xoá không có `pageid` được ánh xạ qua tiêu đề trong state; dòng log `move` cập nhật tiêu đề trong state sang tên mới (trang giữ `pageid`) và đưa trang vào ứng viên, nên log xoá theo tên mới về sau vẫn khớp. Nếu `watermark` trống hoặc cũ hơn `recentchanges_max_age_days`, hoặc có `--full-scan`: duyệt category (1 request mỗi category) rồi lấy mọi id đã biết.
 2. **Phân loại.** `describe` lấy `lastrevid`, redirect, namespace và category theo lô 50 id, so với state:
    - **unchanged**: cùng revision (sửa rồi hoàn tác, hoặc đã xử lý ở lượt trước). Bỏ qua.
    - **changed**: revision khác. Xử lý lại.
    - **new**: chưa có trong state và thuộc category phạm vi (hoặc category con đã duyệt). Ngoài phạm vi thì tính `skipped_out_of_scope`.
-   - **deleted**: trang bị xoá, thành redirect, rời namespace 0 hoặc dính tựa/category Nightreign/Tarnished Edition. Chỉ tính khi đã có trong state.
+   - **deleted**: trang bị xoá, thành redirect, rời namespace 0, dính tựa/category Nightreign/Tarnished Edition, hoặc rời mọi category thuộc phạm vi (chỉ khi describe có trả category; cây category được duyệt lại tối đa một lần mỗi lượt để chắc chắn). Chỉ tính khi đã có trong state.
 3. **Xoá.** Với trang bị xoá: xoá mọi point Qdrant có `document_id` của trang, xoá chunk PostgreSQL và đặt document `deleted`, bỏ khỏi state.
 4. **Dựng lại theo lô** (`--batch-pages`, mặc định 50): `PipelineBuilder` tải raw theo revision (snapshot `raw/<source>/snapshots/<id>/<rev>-<hash>.json`), ảnh qua `MediaStore`, rồi chạy đúng `transform.full` (S3 structured) và `chunk.full --wiki-quality` trên một run nhỏ `data/update_runs/<id>/`. Lô lỗi được tách từng trang để cô lập trang hỏng.
 5. **Index.** Chunk qua `ChunkRecord` và `CorpusPolicy` (chunk bị chính sách loại không vào Qdrant). Encode theo mẻ `RAG_BATCH_SIZE`, upsert theo point id ổn định, **sau đó** xoá point của chính tài liệu đó không còn trong tập mới (trang co từ 8 xuống 5 đoạn thì 3 point cuối bị xoá; nếu dừng giữa chừng, tài liệu vẫn có đủ dữ liệu hợp lệ). Collection được tạo/kiểm bằng `ensure_collection`, không bao giờ drop.
@@ -99,10 +101,10 @@ Tính chất:
 
 ### 4.1 Lần đầu (bootstrap)
 
-State chưa tồn tại thì `update` dừng với mã 2. Tạo state một lần, từ nguồn đã khớp với những gì đang index:
+State chưa tồn tại thì `update` dừng với mã 2. Tạo state một lần, từ nguồn đã khớp với những gì đang index. **Mặc định trên VPS: `--bootstrap-from-db`** (bảng `documents` là thứ đang phục vụ, không cần mang theo thư mục chunk):
 
-- `python -m ingest update --source wikigg --bootstrap-from data/chunk_runs/<bản đang phục vụ> --dry-run`: đọc `documents.jsonl` và `wikigg/*.jsonl` (revision, số chunk, mốc = `fetched_at` sớm nhất), rồi phát hiện thay đổi từ mốc đó. Bootstrap luôn ghi file state (một lần, không gọi mạng); bỏ `--dry-run` để chạy thật ngay.
-- Hoặc `--bootstrap-from-db`: lấy từ bảng `documents` (status active). Nếu thiếu `fetched_at` thì mốc để trống và lượt đầu tự quét toàn bộ.
+- `python -m ingest update --source wikigg --bootstrap-from-db --dry-run`: tạo state từ bảng `documents` (status active; thiếu `fetched_at` thì mốc để trống và lượt đầu tự quét toàn bộ), rồi in kế hoạch.
+- Máy dev có sẵn thư mục chunk: `python -m ingest update --source wikigg --bootstrap-from data/chunk_runs/<bản đang phục vụ> --dry-run`: đọc `documents.jsonl` và `wikigg/*.jsonl` (revision, số chunk, mốc = `fetched_at` sớm nhất), rồi phát hiện thay đổi từ mốc đó. Bootstrap luôn ghi file state (một lần, không gọi mạng); bỏ `--dry-run` để chạy thật ngay.
 
 Bản dùng để bootstrap phải là bản đã nạp vào PostgreSQL/Qdrant đang phục vụ, nếu không `update` sẽ tin rằng trang đã được index.
 
@@ -149,7 +151,7 @@ Khi corpus lớn gấp 10 (khoảng 40 nghìn trang, hơn 300 nghìn chunk):
 
 Giới hạn đã biết:
 
-- Đổi chính sách clean/chunk (`[chunk]`, `[filter]`, version trong mã) không tự được phát hiện, vì revision trang không đổi. Khi đó dựng toàn bộ vào **collection mới**, kiểm eval, rồi đổi `RAG_COLLECTION`. State cần bootstrap lại từ bản mới.
+- Đổi chính sách clean/chunk (`[chunk]`, `[filter]`, version trong mã) không tự được phát hiện theo trang, vì revision trang không đổi; state lưu `pipeline_version` (phiên bản clean + chunk) và `update` in cảnh báo trong `warnings` khi nó khác phiên bản đã ghi. Khi đó dựng toàn bộ vào **collection mới**, kiểm eval, rồi đổi `RAG_COLLECTION`. State cần bootstrap lại từ bản mới.
 - Chỉ theo dõi namespace 0. Trang chỉ đổi category (không sửa nội dung) có thể không xuất hiện trong recentchanges; `--full-scan` định kỳ bù phần này. Trang rời phạm vi category mà vẫn tồn tại không bị gỡ (chỉ gỡ khi bị xoá, thành redirect hoặc dính tựa ngoài phạm vi).
 - Bộ lọc admission (`CorpusPolicy`) loại chunk ngôn ngữ khác `RAG_LANGUAGES` khỏi Qdrant nhưng PostgreSQL vẫn giữ, giống đường nạp toàn bộ.
 - Lần đầu trên VPS cần `data/` và state được mang theo (mount `./backend/data`).

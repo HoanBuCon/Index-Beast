@@ -10,6 +10,8 @@ import json
 import sys
 
 from ingest.artifacts import save
+from ingest.chunk.full import WIKI_QUALITY_VERSION
+from ingest.transform.full import VERSION as CLEAN_VERSION
 from ingest.update import (
     StateMissing,
     bootstrap_from_chunk_dir,
@@ -18,6 +20,8 @@ from ingest.update import (
     run_update,
     state_path,
 )
+
+PIPELINE_VERSION = f"{CLEAN_VERSION}+{WIKI_QUALITY_VERSION}"
 
 
 def fail(message):
@@ -90,6 +94,7 @@ async def run(args, config):
             dry_run=args.dry_run,
             max_pages=args.max_pages,
             batch_pages=args.batch_pages,
+            pipeline_version=PIPELINE_VERSION,
         )
     finally:
         client.close()

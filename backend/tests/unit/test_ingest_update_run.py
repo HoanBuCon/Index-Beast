@@ -3,6 +3,7 @@
 Phụ trách: TV2 · [S5] Cập nhật dữ liệu tăng dần
 """
 
+import threading
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -23,7 +24,7 @@ class Wiki:
 
     def __init__(self, pages, changes=()):
         self.pages, self.changes = pages, list(changes)
-        self.describe_calls, self.since_seen = [], []
+        self.describe_calls, self.since_seen, self.category_calls = [], [], []
 
     def recent_changes(self, since):
         self.since_seen.append(since)
@@ -44,6 +45,7 @@ class Wiki:
         return out
 
     def list_category(self, category):
+        self.category_calls.append(category)
         members = [
             {"ns": 0, "pageid": i, "title": p["title"]}
             for i, p in self.pages.items()
@@ -55,8 +57,10 @@ class Wiki:
 class Builder:
     def __init__(self, wiki, chunks=2, fail=()):
         self.wiki, self.chunks, self.fail, self.built = wiki, chunks, set(fail), []
+        self.threads = []
 
     def build(self, pages):
+        self.threads.append(threading.get_ident())
         built, errors = {}, {}
         for page in pages:
             key = str(page["pageid"])
@@ -273,3 +277,66 @@ async def test_deletion_log_entry_without_pageid_resolves_through_state_titles(e
     wiki.changes = [{"pageid": 0, "title": "Godrick", "type": "log", "logtype": "delete"}]
     report = await update(env)
     assert report["deleted"] == 1 and docs.deleted == ["3"]
+
+
+async def test_scope_is_refreshed_at_most_once_per_run_for_many_unknown_pages(env):
+    config, wiki, builder, index, docs, jobs = env
+    for i in (5, 6, 7):
+        wiki.pages[i] = {"title": f"X{i}", "rev": 50 + i, "cats": ["Misc"]}
+    wiki.changes = [{"pageid": i, "title": f"X{i}", "type": "new"} for i in (5, 6, 7)]
+    report = await update(env)
+    assert report["skipped_out_of_scope"] == 3 and wiki.category_calls == ["NPC"]  # một lần duyệt cây
+
+
+async def test_known_page_that_left_the_scope_categories_is_deleted(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[2] = {"title": "Melina", "rev": 21, "cats": ["Misc"]}
+    edits(wiki, 2)
+    report = await update(env)
+    assert report["deleted"] == 1 and report["changed"] == 0 and docs.deleted == ["2"] and not builder.built
+
+
+async def test_known_page_without_returned_categories_is_not_deleted(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[2] = {"title": "Melina", "rev": 21, "cats": []}  # describe không trả category
+    edits(wiki, 2)
+    report = await update(env)
+    assert report["deleted"] == 0 and report["changed"] == 1 and builder.built == ["2"]
+
+
+async def test_move_updates_the_title_so_a_later_deletion_by_new_title_resolves(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[2] = {"title": "Melina the Maiden", "rev": 21}
+    wiki.changes = [
+        {
+            "pageid": 99,
+            "title": "Melina",
+            "type": "log",
+            "logtype": "move",
+            "logparams": {"target_title": "Melina the Maiden"},
+        }
+    ]
+    report = await update(env)
+    assert report["changed"] == 1 and read(state_path(config, "wikigg"))["pages"]["2"]["title"] == "Melina the Maiden"
+    wiki.pages[2] = {"missing": True}
+    wiki.changes = [{"pageid": 0, "title": "Melina the Maiden", "type": "log", "logtype": "delete"}]
+    again = await update(env)
+    assert again["deleted"] == 1 and docs.deleted == ["2"]
+
+
+async def test_build_runs_off_the_event_loop_thread(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[1]["rev"] = 11
+    edits(wiki, 1)
+    await update(env)
+    assert builder.threads and builder.threads[0] != threading.get_ident()
+
+
+async def test_pipeline_version_is_recorded_then_warns_when_it_changes(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[1]["rev"] = 11
+    edits(wiki, 1)
+    first = await update(env, pipeline_version="v1")
+    assert first["warnings"] == [] and read(state_path(config, "wikigg"))["pipeline_version"] == "v1"
+    second = await update(env, pipeline_version="v2")
+    assert "v1 -> v2" in second["warnings"][0]

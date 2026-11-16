@@ -15,6 +15,7 @@ Các thành phần ngoài được tiêm vào để test không cần mạng/mod
 Phụ trách: TV2 · [S5] Cập nhật dữ liệu tăng dần
 """
 
+import asyncio
 import time
 import uuid
 from collections import Counter
@@ -22,7 +23,8 @@ from datetime import UTC, datetime, timedelta
 
 from core.ids import document_id
 from ingest.artifacts import now, read, save
-from ingest.crawl.runner import OUT_OF_SCOPE, discover
+from ingest.crawl.http import CrawlError
+from ingest.crawl.runner import OUT_OF_SCOPE
 
 STATE_VERSION = 1
 DEFAULTS = {"recentchanges_max_age_days": 30, "overlap_minutes": 30, "batch_pages": 50}
@@ -85,10 +87,26 @@ def category_names(page):
 
 
 def refresh_scope(source, config, state):
-    """Duyệt cây category (chỉ list category, không tải trang) và nhớ tập category thuộc phạm vi."""
-    result = discover(source, config)
-    state["scope_categories"] = sorted({x["category"] for x in result["categories"] if x["status"] == "ok"})
-    return result
+    """Duyệt toàn bộ cây category như crawl.full.inventory (không giới hạn độ sâu, chỉ list category).
+
+    Trả {pageid: item} của trang ns0 và lưu tập category thuộc phạm vi vào state."""
+    pending, visited, pages = list(config["sources"]["wikigg"]["categories"]), set(), {}
+    while pending:
+        category = pending.pop(0)
+        if category in visited or OUT_OF_SCOPE.search(category):
+            continue
+        visited.add(category)
+        try:
+            items = source.list_category(category)
+        except CrawlError:
+            continue  # category lỗi không làm hỏng cả lượt; trang của nó được phát hiện qua lượt sau
+        for item in items:
+            if item.get("ns") == 0 and not OUT_OF_SCOPE.search(item["title"]):
+                pages[str(item["pageid"])] = item
+            elif item.get("ns") == 14:
+                pending.append(item["title"].removeprefix("Category:"))
+    state["scope_categories"] = sorted(visited)
+    return pages
 
 
 def detect(source, config, state, *, since, full_scan):
@@ -98,13 +116,22 @@ def detect(source, config, state, *, since, full_scan):
     start = since or watermark
     too_old = start is None or parse_time(start) < datetime.now(UTC) - timedelta(days=cfg["recentchanges_max_age_days"])
     if full_scan or too_old:
-        found = refresh_scope(source, config, state)
-        scoped = {str(x["pageid"]) for x in found["pages"]}
+        scoped = set(refresh_scope(source, config, state))
+        state["_scope_fresh"] = True
         return "full_scan", sorted(scoped | set(state["pages"]), key=int), scoped
     titles = {p["title"]: key for key, p in state["pages"].items()}
     ids = set()
     for entry in source.recent_changes(start):
-        key = str(entry.get("pageid") or "") if entry.get("pageid") else titles.get(entry.get("title"), "")
+        title = entry.get("title")
+        if (entry.get("logtype") or entry.get("log_type")) == "move" and titles.get(title):
+            # Trang giữ pageid khi đổi tên; log ghi tên cũ. Cập nhật tên để log xoá về sau theo tên mới vẫn khớp.
+            key = titles.pop(title)
+            target = (entry.get("logparams") or entry.get("params") or {}).get("target_title")
+            if target:
+                state["pages"][key]["title"] = target
+                titles[target] = key
+        else:  # log xoá có thể có pageid 0: tra theo tên trong state
+            key = str(entry["pageid"]) if entry.get("pageid") else titles.get(title, "")
         if key:
             ids.add(key)
     return "recentchanges", sorted(ids, key=int), None
@@ -113,7 +140,19 @@ def detect(source, config, state, *, since, full_scan):
 def classify(source, config, state, ids, scoped):
     """Chia ứng viên thành new/changed/deleted/unchanged/skipped dựa vào lastrevid hiện tại của wiki."""
     plan = {"new": [], "changed": [], "deleted": [], "unchanged": [], "skipped": []}
-    scope = set(state.get("scope_categories", [])) | set(config["sources"]["wikigg"].get("categories", []))
+    roots = set(config["sources"]["wikigg"].get("categories", []))
+    fresh = state.pop("_scope_fresh", False)  # đã duyệt category trong detect: không duyệt lại
+
+    def scope():
+        return set(state.get("scope_categories", [])) | roots
+
+    def refreshed_scope():
+        nonlocal fresh
+        if not fresh:  # tối đa một lần mỗi lượt
+            refresh_scope(source, config, state)
+            fresh = True
+        return scope()
+
     for page in source.describe([int(i) for i in ids]):
         key = str(page["pageid"])
         known = state["pages"].get(key)
@@ -124,6 +163,9 @@ def classify(source, config, state, ids, scoped):
             or page.get("ns", 0) != 0
             or OUT_OF_SCOPE.search(title + " " + " ".join(cats))
         )
+        # Chỉ coi là rời phạm vi khi describe có trả category (không xoá trang chỉ vì không hỏi category).
+        if not gone and known and cats and not cats & scope():
+            gone = not cats & refreshed_scope()
         if gone:
             plan["deleted" if known else "skipped"].append(
                 {"id": key, "title": title or (known or {}).get("title", "")}
@@ -133,11 +175,9 @@ def classify(source, config, state, ids, scoped):
         elif known:
             plan["changed"].append(page)
         else:
-            in_scope = key in scoped if scoped is not None else bool(cats & scope)
+            in_scope = key in scoped if scoped is not None else bool(cats & scope())
             if scoped is None and not in_scope:
-                refresh_scope(source, config, state)  # trang mới có thể nằm trong category con chưa biết
-                scope = set(state["scope_categories"]) | set(config["sources"]["wikigg"].get("categories", []))
-                in_scope = bool(cats & scope)
+                in_scope = bool(cats & refreshed_scope())  # category con mới chưa biết
             plan["new" if in_scope else "skipped"].append(page if in_scope else {"id": key, "title": title})
     return plan
 
@@ -155,6 +195,7 @@ async def run_update(
     dry_run=False,
     max_pages=None,
     batch_pages=None,
+    pipeline_version=None,
 ):
     cfg = settings_of(config)
     path = state_path(config, source.name)
@@ -162,6 +203,15 @@ async def run_update(
     if state is None:
         raise StateMissing(f"Chưa có state {path}: dùng --bootstrap-from hoặc --bootstrap-from-db")
     started = datetime.now(UTC)
+    warnings = []
+    recorded = state.get("pipeline_version")
+    if pipeline_version and recorded and recorded != pipeline_version:
+        warnings.append(
+            f"pipeline_version đổi ({recorded} -> {pipeline_version}): trang không đổi revision vẫn mang chunk cũ; "
+            "cần dựng toàn bộ vào collection mới (docs/data-pipeline.md, mục 6)"
+        )
+    elif pipeline_version and not recorded:
+        state["pipeline_version"] = pipeline_version
     old_watermark = state.get("watermark")
     mode, ids, scoped = detect(source, config, state, since=since, full_scan=full_scan)
     plan = classify(source, config, state, ids, scoped)
@@ -179,6 +229,7 @@ async def run_update(
         "unchanged": len(plan["unchanged"]),
         "skipped_out_of_scope": len(plan["skipped"]),
         "deferred": deferred,
+        "warnings": warnings,
     }
     if dry_run:
         return {
@@ -207,7 +258,7 @@ async def run_update(
         size = batch_pages or cfg["batch_pages"]
         for offset in range(0, len(work), size):
             batch = work[offset : offset + size]
-            built, failed = builder.build(batch)
+            built, failed = await asyncio.to_thread(builder.build, batch)
             errors.extend({"id": str(k), "phase": "build", "error": v} for k, v in failed.items())
             if built:
                 await index.sync({str(document_id(source.name, k)): v["chunks"] for k, v in built.items()})

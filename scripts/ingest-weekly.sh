@@ -31,10 +31,16 @@ ls -1t "$LOG_DIR"/ingest-weekly-*.log 2>/dev/null | tail -n +13 | xargs -r rm -f
 {
   echo "$(date -u +%FT%TZ) ingest-weekly: bắt đầu"
   cd "$ROOT"
+  COMPOSE=(-f docker-compose.yml)
+  if [ -f docker-compose.prod.yml ]; then
+    COMPOSE+=(-f docker-compose.prod.yml)
+  else
+    echo "$(date -u +%FT%TZ) ingest-weekly: CẢNH BÁO thiếu docker-compose.prod.yml (PR #109), dùng docker-compose.yml"
+  fi
   set +e
   # -T: cron không có TTY. INGEST_ARGS cố ý không đặt trong ngoặc kép để tách từ.
   # shellcheck disable=SC2086
-  docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app run --rm -T api \
+  docker compose "${COMPOSE[@]}" --profile app run --rm -T api \
     python -m ingest update --source wikigg ${INGEST_ARGS:-}
   code=$?
   set -e
