@@ -18,10 +18,10 @@ from uuid import UUID
 import httpx
 from qdrant_client import models as qm
 from qdrant_client.http.exceptions import ApiException, ResponseHandlingException
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, null, select, update
 from sqlalchemy.exc import SQLAlchemyError
 
-from core.db.models import AuthSession, Conversation, Feedback, Message, User
+from core.db.models import AuthSession, Conversation, Feedback, IngestionJob, Message, User
 from core.errors import UnavailableError
 
 log = logging.getLogger(__name__)
@@ -38,6 +38,8 @@ class Counts:
     feedback: int = 0
     sessions: int = 0
     users: int = 0
+    traces: int = 0
+    ingestion_logs: int = 0
 
     def add(self, other: "Counts") -> None:
         for f in fields(self):
@@ -115,32 +117,60 @@ async def delete_account(sessionmaker, qdrant, memory_collection: str, user_id: 
 
 
 def _stale_ids(cutoff: datetime):
-    """Một lượt quét: hoạt động cuối = tin nhắn mới nhất (GROUP BY), hoặc lúc tạo nếu hội thoại chưa có tin."""
-    last = (
-        select(Message.conversation_id.label("cid"), func.max(Message.created_at).label("last"))
-        .group_by(Message.conversation_id)
-        .subquery()
+    """Đọc tin mới nhất theo index (conversation_id, created_at); nếu chưa có tin thì dùng lúc tạo."""
+    newest = (
+        select(Message.created_at)
+        .where(Message.conversation_id == Conversation.id)
+        .order_by(Message.created_at.desc())
+        .limit(1)
+        .scalar_subquery()
     )
     return (
         select(Conversation.id)
-        .outerjoin(last, last.c.cid == Conversation.id)
-        .where(func.coalesce(last.c.last, Conversation.created_at) < cutoff)
+        .where(Conversation.channel == "web", Conversation.user_id.is_(None))
+        .where(func.coalesce(newest, Conversation.created_at) < cutoff)
     )
 
 
 def _still_stale(cutoff: datetime, ids: Sequence[UUID]):
-    """Kiểm lại một lô nhỏ theo khóa chính (truy vấn tương quan chỉ chạy cho các id này, không quét lại toàn bảng)."""
-    newest = select(func.max(Message.created_at)).where(Message.conversation_id == Conversation.id).scalar_subquery()
+    return _stale_ids(cutoff).where(Conversation.id.in_(ids))
+
+
+def _guest_batch(cutoff: datetime, after=None):
+    query = _stale_ids(cutoff)
+    if after is not None:
+        query = query.where(Conversation.id > after)
+    return query.order_by(Conversation.id).limit(BATCH_SIZE).with_for_update(of=Conversation)
+
+
+def _old_traces(cutoff: datetime):
+    return select(Message.id).where(
+        Message.created_at < cutoff, Message.rag_trace.is_not(None), func.jsonb_typeof(Message.rag_trace) != "null"
+    )
+
+
+def _old_ingestion_logs(cutoff: datetime):
+    return select(IngestionJob.id).where(
+        IngestionJob.finished_at < cutoff, IngestionJob.log.is_not(None), func.jsonb_typeof(IngestionJob.log) != "null"
+    )
+
+
+def _clear_old_traces(cutoff: datetime):
+    return update(Message).where(Message.id.in_(_old_traces(cutoff).limit(BATCH_SIZE))).values(rag_trace=null())
+
+
+def _clear_old_ingestion_logs(cutoff: datetime):
     return (
-        select(Conversation.id)
-        .where(Conversation.id.in_(ids))
-        .where(func.coalesce(newest, Conversation.created_at) < cutoff)
+        update(IngestionJob)
+        .where(IngestionJob.id.in_(_old_ingestion_logs(cutoff).limit(BATCH_SIZE)))
+        .values(log=null())
     )
 
 
 async def _count_retention(session, cutoff: datetime, now: datetime) -> Counts:
     stale = _stale_ids(cutoff).subquery()
     stale_ids = select(stale.c.id)
+    traces_to_clear = _old_traces(cutoff).where(Message.conversation_id.not_in(stale_ids))
     return Counts(
         conversations=(await session.execute(select(func.count()).select_from(stale))).scalar_one(),
         messages=(
@@ -156,6 +186,10 @@ async def _count_retention(session, cutoff: datetime, now: datetime) -> Counts:
                 .where(Message.conversation_id.in_(stale_ids))
             )
         ).scalar_one(),
+        traces=(await session.execute(select(func.count()).select_from(traces_to_clear.subquery()))).scalar_one(),
+        ingestion_logs=(
+            await session.execute(select(func.count()).select_from(_old_ingestion_logs(cutoff).subquery()))
+        ).scalar_one(),
         sessions=(
             await session.execute(select(func.count()).select_from(AuthSession).where(AuthSession.expires_at < now))
         ).scalar_one(),
@@ -165,28 +199,40 @@ async def _count_retention(session, cutoff: datetime, now: datetime) -> Counts:
 async def apply_retention(
     sessionmaker, qdrant, memory_collection: str, *, cutoff: datetime, now: datetime, dry_run: bool = False
 ) -> Counts:
-    """NFR-PRIV-01: xóa hội thoại có hoạt động cuối trước `cutoff` và phiên đăng nhập hết hạn trước `now`.
-    Trace RAG nằm trong `messages.rag_trace` nên đi cùng hội thoại. `dry_run` chỉ đếm.
+    """Xóa khách web quá hạn, trace cũ của mọi kênh và phiên hết hạn; `dry_run` chỉ đếm.
 
-    Danh sách hội thoại quá hạn lấy MỘT lần (một lượt GROUP BY), rồi xóa theo lô trên danh sách đó; mỗi lô kiểm lại
-    còn quá hạn không (hội thoại vừa có tin mới thì giữ)."""
+    Khóa từng lô hội thoại trước khi kiểm lại và xóa; giữ khóa tới khi giao dịch xong.
+    """
     purger = VectorPurger(qdrant, memory_collection)
     try:
         if dry_run:
             async with sessionmaker() as session:
                 return await _count_retention(session, cutoff, now)
         total = Counts()
-        async with sessionmaker() as session:
-            stale = list((await session.execute(_stale_ids(cutoff))).scalars())
-        for start in range(0, len(stale), BATCH_SIZE):
-            chunk = stale[start : start + BATCH_SIZE]
-            async with sessionmaker() as session:
-                ids = list((await session.execute(_still_stale(cutoff, chunk))).scalars())
-            if not ids:
-                continue
-            await purger.delete_conversations(ids)
+        after = None
+        while True:
             async with sessionmaker() as session, session.begin():
-                total.add(await _delete_conversations(session, ids, count=True))
+                candidates = list((await session.execute(_guest_batch(cutoff, after))).scalars())
+                if not candidates:
+                    break
+                after = candidates[-1]
+                ids = list((await session.execute(_still_stale(cutoff, candidates))).scalars())
+                if ids:
+                    await purger.delete_conversations(ids)
+                    total.add(await _delete_conversations(session, ids, count=True))
+        while True:
+            async with sessionmaker() as session, session.begin():
+                result = await session.execute(_clear_old_traces(cutoff))
+                removed = result.rowcount
+            total.traces += removed
+            if removed < BATCH_SIZE:
+                break
+        while True:
+            async with sessionmaker() as session, session.begin():
+                removed = (await session.execute(_clear_old_ingestion_logs(cutoff))).rowcount
+            total.ingestion_logs += removed
+            if removed < BATCH_SIZE:
+                break
         while True:
             async with sessionmaker() as session, session.begin():
                 batch = select(AuthSession.id).where(AuthSession.expires_at < now).limit(BATCH_SIZE)

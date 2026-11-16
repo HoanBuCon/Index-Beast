@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.services import auth, privacy
 from core.config import Settings
 from core.db import repositories as repo
-from core.db.models import AuthSession, Conversation, ConversationMemory, Feedback, Message, User
+from core.db.models import AuthSession, Conversation, ConversationMemory, Feedback, IngestionJob, Message, User
 from tests.integration.test_db_schema import db_url  # noqa: F401  (fixture dùng chung)
 
 pytestmark = pytest.mark.integration
@@ -138,15 +138,20 @@ async def test_retention_deletes_only_conversations_idle_longer_than_the_window(
     revived, _ = await make_conversation(sessionmaker, age_days=200, with_memory=False)
     async with sessionmaker() as session, session.begin():
         await session.execute(update(Message).where(Message.conversation_id == revived).values(created_at=now))
+        await session.execute(
+            update(Message).where(Message.conversation_id.in_(old)).values(rag_trace={"stage": "retrieve"})
+        )
 
     qdrant = RecordingQdrant()
     cutoff = now - timedelta(days=90)
     dry = await privacy.apply_retention(sessionmaker, qdrant, COLLECTION, cutoff=cutoff, now=now, dry_run=True)
     assert (dry.conversations, dry.messages, dry.feedback) == (4, 6, 3) and qdrant.deleted == []
+    assert dry.traces == 0  # Trace của khách này đi cùng hội thoại khi xóa.
     assert await count(sessionmaker, Conversation, Conversation.id.in_([*old, old_empty])) == 4  # dry-run không xóa
 
     done = await privacy.apply_retention(sessionmaker, qdrant, COLLECTION, cutoff=cutoff, now=now)
     assert (done.conversations, done.messages, done.feedback) == (4, 6, 3)
+    assert done.traces == dry.traces
     assert sorted(i for batch in qdrant.deleted for i in batch) == sorted(str(i) for i in [*old, old_empty])
     assert await count(sessionmaker, Conversation, Conversation.id.in_([*old, old_empty])) == 0
     assert await count(sessionmaker, Conversation, Conversation.id.in_([fresh, edge, revived])) == 3
@@ -230,19 +235,61 @@ async def test_delete_account_also_removes_a_claimed_guest_conversation_but_not_
     assert await count(sessionmaker, Conversation, Conversation.id == unclaimed) == 1  # chỉ retention hoặc /clear xóa
 
 
-async def test_retention_scans_the_stale_list_once_not_per_batch(sessionmaker, monkeypatch):
-    """Danh sách quá hạn lấy một lần: 5 hội thoại với lô 2 vẫn chỉ phát một câu truy vấn GROUP BY."""
-    from sqlalchemy import event
+async def test_retention_preserves_account_and_discord_history_but_prunes_old_rag_trace(sessionmaker):
+    now = datetime.now(UTC)
+    user = await auth.upsert_user(sessionmaker, SETTINGS, "9600", "Owner")
+    guest, _ = await make_conversation(sessionmaker, age_days=120)
+    owned, _ = await make_conversation(sessionmaker, user_id=user.id, age_days=120)
+    discord, _ = await make_conversation(sessionmaker, age_days=120)
+    async with sessionmaker() as session, session.begin():
+        await session.execute(update(Conversation).where(Conversation.id == discord).values(channel="discord"))
+        await session.execute(update(Message).values(rag_trace={"debug": True}))
+    dry = await privacy.apply_retention(
+        sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now, dry_run=True
+    )
+    assert dry.conversations == 1 and dry.traces == 6
+    done = await privacy.apply_retention(sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now)
+    assert done.conversations == 1 and done.traces == 4
+    assert await count(sessionmaker, Conversation, Conversation.id == guest) == 0
+    assert await count(sessionmaker, Conversation, Conversation.id.in_([owned, discord])) == 2
+    assert await count(sessionmaker, Message, Message.conversation_id.in_([owned, discord])) == 4
+    assert await count(sessionmaker, Feedback) == 2
+    assert await count(sessionmaker, Message, Message.rag_trace.is_not(None)) == 0
+
+
+async def test_retention_clears_completed_job_logs_in_batches_without_recounting_json_null(sessionmaker, monkeypatch):
+    from sqlalchemy import JSON, null
 
     monkeypatch.setattr(privacy, "BATCH_SIZE", 2)
-    for _ in range(5):
-        await make_conversation(sessionmaker, age_days=120)
-    scans = []
-    engine = sessionmaker.kw["bind"].sync_engine
-    event.listen(
-        engine, "before_cursor_execute", lambda c, cur, stmt, *a: scans.append(stmt) if "max" in stmt.lower() else None
-    )
     now = datetime.now(UTC)
+    old = now - timedelta(days=100)
+    async with sessionmaker() as session, session.begin():
+        jobs = [
+            IngestionJob(kind="update", status="succeeded", finished_at=old, pages_ok=3, log={"x": 1}) for _ in range(3)
+        ]
+        empty = IngestionJob(kind="update", status="succeeded", finished_at=old, log=JSON.NULL)
+        fresh = IngestionJob(kind="update", status="succeeded", finished_at=now, log={"x": 1})
+        running = IngestionJob(kind="update", status="running", log={"x": 1})
+        session.add_all([*jobs, empty, fresh, running])
+        await session.flush()
+        ids, fresh_id, running_id = [j.id for j in jobs], fresh.id, running.id
+    dry = await privacy.apply_retention(
+        sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now, dry_run=True
+    )
+    assert dry.ingestion_logs == 3
     done = await privacy.apply_retention(sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now)
-    assert done.conversations == 5
-    assert len([s for s in scans if "GROUP BY" in s]) == 1
+    assert done.ingestion_logs == 3
+    async with sessionmaker() as session:
+        rows = (await session.execute(select(IngestionJob).where(IngestionJob.id.in_(ids)))).scalars().all()
+        assert all(row.log is None and row.pages_ok == 3 and row.status == "succeeded" for row in rows)
+        assert (await session.get(IngestionJob, fresh_id)).log == {"x": 1}
+        assert (await session.get(IngestionJob, running_id)).log == {"x": 1}
+        assert (
+            await session.execute(
+                select(func.count())
+                .select_from(IngestionJob)
+                .where(IngestionJob.id.in_(ids), IngestionJob.log.is_(null()))
+            )
+        ).scalar_one() == 3
+    again = await privacy.apply_retention(sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now)
+    assert again.ingestion_logs == 0
