@@ -59,7 +59,12 @@ class WikiGG:
                     cllimit=500,
                     **continuation,
                 )
-                for page in result.get("query", {}).get("pages", []):
+                page_rows = result.get("query", {}).get("pages")
+                if not isinstance(page_rows, list):
+                    raise CrawlError("Missing page metadata during description")
+                for page in page_rows:
+                    if not isinstance(page, dict) or not isinstance(page.get("pageid"), int):
+                        raise CrawlError("Missing pageid in description metadata")
                     entry = batch.setdefault(page["pageid"], dict(page, categories=[]))
                     entry["categories"].extend(page.get("categories", []))
                 continuation = result.get("continue", {})

@@ -2,6 +2,8 @@
 
 import re
 
+from bs4 import BeautifulSoup
+
 VERSION = "tv2-spoiler-1"
 EARLY_LOCATIONS = {
     "limgrave",
@@ -39,7 +41,17 @@ ENDING = re.compile(
 )
 PROGRESSION = re.compile(r"quest|dialogue|lore|history|story|acquisition|walkthrough", re.I)
 DLC = re.compile(r"shadow of the erdtree|realm of shadow", re.I)
-EXTERNAL = re.compile(r"^(?:elden ring\s*:?\s*)?(?:nightreign|tarnished edition)$", re.I)
+EXTERNAL = re.compile(r"^(?:elden ring\s*:?\s*)?(?:nightreign|tarnished edition|tarnished pack)$", re.I)
+TARNISHED_MARKER = re.compile(r"tarnished|TP\.webp", re.I)
+TARNISHED_EXCLUSIVE = re.compile(
+    r"\b(?:exclusive to|only appears in|only available in|only obtainable in|it was introduced with)\b.{0,120}"
+    r"\b(?:elden ring\s+)?tarnished (?:edition|pack)\b|"
+    r"\btarnished (?:edition|pack)\b.{0,120}\b(?:exclusive|only appears|only available|only obtainable)\b",
+    re.I,
+)
+ARMOR_ARTICLE = re.compile(r"\b(?:is|are) an armor (?:piece|set)\b", re.I)
+TARNISHED_BADGE = 'a[title="Tarnished Pack"] img[src*="TP.webp"]'
+OUT_OF_SCOPE_REASONS = frozenset({"external_title", "external_tarnished_edition_content"})
 ORIGIN_LEAD = re.compile(r"[^.\n]+ is one of the starting origins in ELDEN RING \(2022\)\.", re.I)
 REGION_LEAD = re.compile(
     r"[^.\n]+ is (?:a region in the Lands Between|a sub-region (?:of|in|located in) Limgrave|"
@@ -48,13 +60,45 @@ REGION_LEAD = re.compile(
 )
 
 
+def _tarnished_exclusive(content):
+    if not TARNISHED_MARKER.search(content):
+        return False
+    soup = BeautifulSoup(content, "html.parser")
+    body = soup.select_one(".mw-parser-output, #page-content, main") or soup
+    lead = next((p for p in body.find_all("p") if p.get_text(strip=True)), None)
+    if lead is None:
+        return False
+    text = lead.get_text(" ", strip=True)
+    if TARNISHED_EXCLUSIVE.search(text) or (
+        re.search(r"\bit is exclusive to\b", text, re.I) and lead.select_one(TARNISHED_BADGE)
+    ):
+        return True
+    # Equipment links in a skill's Acquisition section mark individual items.
+    if not ARMOR_ARTICLE.search(text):
+        return False
+    if body.select_one('.portable-infobox img[src*="TP.webp"]'):
+        return True
+    headline = body.select_one("h2 .mw-headline#Acquisition")
+    if headline is None:
+        return False
+    for sibling in headline.find_parent("h2").find_next_siblings():
+        if sibling.name == "h2":
+            break
+        if sibling.select_one(TARNISHED_BADGE):
+            return True
+    return False
+
+
 def wiki_context(raw, doc):
     categories = sorted({s.replace("_", " ") for s in raw["categories"]})
-    # Edition names mentioned inside an Elden Ring article do not change its game identity.
-    excluded = EXTERNAL.fullmatch(doc["title"].strip())
+    reason = "accepted_wikigg_elden_ring_cohort"
+    if EXTERNAL.fullmatch(doc["title"].strip()):
+        reason = "external_title"
+    elif _tarnished_exclusive(raw.get("content", "")):
+        reason = "external_tarnished_edition_content"
     return {
-        "game_scope": "out_of_scope" if excluded else "elden_ring",
-        "game_scope_reason": "external_title" if excluded else "accepted_wikigg_elden_ring_cohort",
+        "game_scope": "out_of_scope" if reason in OUT_OF_SCOPE_REASONS else "elden_ring",
+        "game_scope_reason": reason,
         "wiki_categories": categories,
         "spoiler_rule_version": VERSION,
     }

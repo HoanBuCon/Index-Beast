@@ -10,7 +10,8 @@ import pytest
 
 from core.ids import document_id
 from ingest.artifacts import read, save
-from ingest.update import StateMissing, bootstrap_from_documents, run_update, state_path
+from ingest.crawl.http import CrawlError
+from ingest.update import StateMissing, bootstrap_from_documents, refresh_scope, run_update, state_path
 
 
 def iso(days_ago=1):
@@ -137,6 +138,34 @@ async def update(env, **kw):
 
 def edits(wiki, *ids):
     wiki.changes = [{"pageid": i, "title": wiki.pages[i]["title"], "type": "edit"} for i in ids]
+
+
+def test_scope_refresh_keeps_the_approved_sote_category():
+    class Source:
+        def list_category(self, category):
+            assert category == "Shadow of the Erdtree"
+            return [{"ns": 0, "pageid": 5, "title": "Messmer"}]
+
+    state = {"scope_categories": []}
+    pages = refresh_scope(Source(), {"sources": {"wikigg": {"categories": ["Shadow of the Erdtree"]}}}, state)
+    assert set(pages) == {"5"}
+    assert state["scope_categories"] == ["Shadow of the Erdtree"]
+
+
+async def test_full_scan_keeps_a_new_sote_page_in_scope(env):
+    config, wiki, builder, index, docs, jobs = env
+    wiki.pages[5] = {"title": "Messmer", "rev": 50, "cats": ["Shadow of the Erdtree"]}
+
+    def list_category(category):
+        if category == "NPC":
+            return [{"ns": 14, "title": "Category:Shadow of the Erdtree"}]
+        if category == "Shadow of the Erdtree":
+            return [{"ns": 0, "pageid": 5, "title": "Messmer"}]
+        return []
+
+    wiki.list_category = list_category
+    report = await update(env, full_scan=True, dry_run=True)
+    assert report["new"] == 1 and report["titles"]["new"] == ["Messmer"]
 
 
 async def test_missing_state_is_an_explicit_error(tmp_path):
@@ -286,6 +315,29 @@ async def test_scope_is_refreshed_at_most_once_per_run_for_many_unknown_pages(en
     wiki.changes = [{"pageid": i, "title": f"X{i}", "type": "new"} for i in (5, 6, 7)]
     report = await update(env)
     assert report["skipped_out_of_scope"] == 3 and wiki.category_calls == ["NPC"]  # một lần duyệt cây
+
+
+async def test_incomplete_scope_discovery_aborts_without_deleting_known_pages(env):
+    config, wiki, builder, index, docs, jobs = env
+    state = read(state_path(config, "wikigg"))
+    state["scope_categories"] = ["NPC", "Deep Category"]
+    save(state_path(config, "wikigg"), state)
+    wiki.pages[2]["cats"] = ["Deep Category"]
+    wiki.pages[2]["rev"] = 21
+    edits(wiki, 2)
+
+    def list_category(category):
+        if category == "Deep Category":
+            raise CrawlError("temporary category failure")
+        return [{"ns": 14, "title": "Category:Deep Category"}]
+
+    wiki.list_category = list_category
+
+    with pytest.raises(CrawlError, match="Deep Category"):
+        await update(env, full_scan=True)
+
+    assert not index.deleted and not docs.deleted
+    assert read(state_path(config, "wikigg"))["scope_categories"] == ["NPC", "Deep Category"]
 
 
 async def test_known_page_that_left_the_scope_categories_is_deleted(env):

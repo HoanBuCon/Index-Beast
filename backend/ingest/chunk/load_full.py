@@ -17,6 +17,7 @@ from core.db.repositories import finish_job, replace_chunks, start_job, upsert_d
 from core.db.session import create_engine, create_sessionmaker
 from core.ids import chunk_id, document_id
 from ingest.artifacts import local_snapshot, read, save, sha256
+from ingest.transform.wiki_quality import OUT_OF_SCOPE_REASONS
 from ingest.transform.wiki_quality import VERSION as SPOILER_VERSION
 
 
@@ -31,7 +32,7 @@ def validate_document(doc, rows, cap):
     identity = document_id(doc["source"], doc["source_id"])
     if str(identity) != doc["doc_id"] or doc["game_scope"] not in {"elden_ring", "out_of_scope"}:
         raise ValueError("Document scope/identity mismatch")
-    if doc["game_scope"] == "out_of_scope" and (rows or doc.get("game_scope_reason") != "external_title"):
+    if doc["game_scope"] == "out_of_scope" and (rows or doc.get("game_scope_reason") not in OUT_OF_SCOPE_REASONS):
         raise ValueError("Document scope/identity mismatch")
     version = doc.get("spoiler_rule_version")
     if version is not None and (
@@ -94,6 +95,7 @@ def preflight(directory):
         "s3-full-chunk-1.3",
         "s3-full-chunk-2.0",
         "s4-full-chunk-1.0",
+        "s4-full-chunk-1.1",
     }:
         raise ValueError("Versioned full chunk artifact required")
     for name, digest in report["artifact_sha256"].items():

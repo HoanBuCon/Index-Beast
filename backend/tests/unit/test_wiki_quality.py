@@ -1,5 +1,6 @@
 import pytest
 
+from core.ids import document_id
 from core.text.quest_stages import stage_locations
 from ingest.chunk.full import build_chunks
 from ingest.chunk.load_full import validate_document
@@ -21,6 +22,142 @@ def test_spoiler_labels_are_conservative():
     assert (
         wiki_context({"categories": []}, {"title": "Nightreign mentions in Elden Ring"})["game_scope"] == "elden_ring"
     )
+
+
+def test_tarnished_exclusive_content_is_out_of_scope_but_mentions_and_sote_are_not():
+    exclusive_lead = {
+        "title": "Idus Sword",
+        "content": (
+            '<div class="mw-parser-output"><p>This weapon is exclusive to ELDEN RING Tarnished Edition '
+            "or to those who purchased the Tarnished Pack DLC.</p></div>"
+        ),
+        "categories": ["Light_Greatswords"],
+    }
+    scoped = wiki_context(exclusive_lead, {"title": exclusive_lead["title"]})
+    assert scoped["game_scope"] == "out_of_scope"
+    assert scoped["game_scope_reason"] == "external_tarnished_edition_content"
+
+    mentions = {
+        "title": "A base game weapon",
+        "content": (
+            '<div class="mw-parser-output"><p>A weapon in Elden Ring.</p>'
+            "<p>Trivia: its description changed in the Tarnished Pack DLC. "
+            '<a href="/wiki/Tarnished_Pack"><img src="/images/TP.webp"></a></p></div>'
+        ),
+        "categories": ["Weapons"],
+    }
+    sote = {
+        "title": "Messmer",
+        "content": '<div class="mw-parser-output"><p>Messmer appears in Shadow of the Erdtree.</p></div>',
+        "categories": ["NPC"],
+    }
+    assert wiki_context(mentions, {"title": mentions["title"]})["game_scope"] == "elden_ring"
+    assert wiki_context(sote, {"title": sote["title"]})["game_scope"] == "elden_ring"
+    assert wiki_context({"categories": [], "content": ""}, {"title": "Tarnished Pack"})["game_scope"] == "out_of_scope"
+
+
+def test_tarnished_pack_infobox_badge_marks_equipment_page_out_of_scope():
+    raw = {
+        "title": "Silver Grooved Helm",
+        "content": (
+            '<div class="mw-parser-output"><aside class="portable-infobox">'
+            '<img src="/images/thumb/TP.webp/25px-TP.webp"></aside>'
+            "<p>The Silver Grooved Helm is an armor piece found in ELDEN RING.</p></div>"
+        ),
+        "categories": ["Head"],
+    }
+    assert wiki_context(raw, {"title": raw["title"]})["game_scope"] == "out_of_scope"
+
+
+def test_tarnished_pack_acquisition_badge_marks_item_but_see_also_badge_does_not():
+    acquisition = {
+        "title": "Silver Grooved Helm",
+        "content": (
+            '<div class="mw-parser-output"><p>The Silver Grooved Helm is an armor piece found in ELDEN RING.</p>'
+            '<h2><span class="mw-headline" id="Acquisition">Acquisition</span></h2>'
+            "<ul><li>Starting armor for Idus Knight "
+            '<a href="/wiki/Tarnished_Pack" title="Tarnished Pack">'
+            '<img src="/images/thumb/TP.webp/25px-TP.webp"></a></li></ul></div>'
+        ),
+        "categories": ["Head"],
+    }
+    cross_link = {
+        "title": "Base game article",
+        "content": (
+            '<div class="mw-parser-output"><h2><span class="mw-headline" id="See_Also">See Also</span></h2>'
+            '<ul><li><a href="/wiki/Tarnished_Pack" title="Tarnished Pack">'
+            '<img src="/images/thumb/TP.webp/25px-TP.webp"></a></li></ul></div>'
+        ),
+        "categories": ["Items"],
+    }
+    assert wiki_context(acquisition, {"title": acquisition["title"]})["game_scope"] == "out_of_scope"
+    assert wiki_context(cross_link, {"title": cross_link["title"]})["game_scope"] == "elden_ring"
+
+
+def test_pack_badge_in_skill_acquisition_does_not_exclude_the_skill_page():
+    raw = {
+        "title": "Skill: Overhead Stance",
+        "content": (
+            '<div class="mw-parser-output"><p>Overhead Stance is a skill in ELDEN RING.</p>'
+            '<h2><span class="mw-headline" id="Acquisition">Acquisition</span></h2>'
+            "<ul><li>Found on the Sword of Night.</li>"
+            "<li>Found on a Tarnished Pack weapon "
+            '<a href="/wiki/Tarnished_Pack" title="Tarnished Pack">'
+            '<img src="/images/thumb/TP.webp/25px-TP.webp"></a></li></ul></div>'
+        ),
+        "categories": ["Skills"],
+    }
+    assert wiki_context(raw, {"title": raw["title"]})["game_scope"] == "elden_ring"
+
+
+def test_pack_badge_applies_to_armor_with_plural_title():
+    raw = {
+        "categories": ["Arms"],
+        "content": (
+            "<p>The Silver Grooved Gauntlets are an armor piece found in ELDEN RING.</p>"
+            '<h2><span class="mw-headline" id="Acquisition">Acquisition</span></h2>'
+            '<ul><li>Starting armor <a title="Tarnished Pack"><img src="/images/TP.webp"></a></li></ul>'
+        ),
+    }
+    assert wiki_context(raw, {"title": "Silver Grooved Gauntlets"})["game_scope"] == "out_of_scope"
+
+
+def test_tarnished_edition_release_explicitly_applies_to_item_in_lead():
+    raw = {
+        "categories": ["Items"],
+        "content": "<p>Regalia is a Key Item in ELDEN RING. It was introduced with ELDEN RING Tarnished Edition.</p>",
+    }
+    assert wiki_context(raw, {"title": "Spectral Steed Regalia: Tree Sentinel"})["game_scope"] == "out_of_scope"
+
+
+def test_tarnished_badge_in_exclusive_skill_lead_applies_to_the_skill():
+    raw = {
+        "categories": ["Skill", "Unique_Skill"],
+        "content": (
+            "<p>Muleta is a Skill in ELDEN RING. It is exclusive to Leontiel's Greatsword "
+            '<a title="Tarnished Pack"><img src="/images/TP.webp"></a>.</p>'
+        ),
+    }
+    assert wiki_context(raw, {"title": "Unique Skill: Muleta"})["game_scope"] == "out_of_scope"
+
+
+def test_external_dlc_document_contract_allows_zero_chunks_with_scope_reason():
+    doc = {
+        "doc_id": str(document_id("wikigg", "34037")),
+        "source": "wikigg",
+        "source_id": "34037",
+        "game_scope": "out_of_scope",
+        "game_scope_reason": "external_tarnished_edition_content",
+    }
+    assert validate_document(doc, [], 450)
+
+
+def test_external_dlc_page_builds_no_chunks_and_one_review_record():
+    doc, tok = fixture()
+    doc.update(game_scope="out_of_scope", game_scope_reason="external_tarnished_edition_content")
+    chunks, reviews, coverage = build_chunks(doc, tok)
+    assert chunks == [] and coverage == []
+    assert reviews == [{"reason": "external_tarnished_edition_content", "source_snapshot": "raw.json"}]
 
 
 def test_source_quest_stage_boundary_keeps_evidence_and_splits_ending():
