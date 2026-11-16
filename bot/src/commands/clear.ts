@@ -63,12 +63,12 @@ export function createClearCommand(api: () => Pick<ApiClient, "clearMemory"> = d
         }
         const target = interaction.options.getUser("member") ?? interaction.user;
         const self = target.id === interaction.user.id;
-        if (!self && !isGuildAdmin(interaction)) {
-          await reply("Bạn chỉ xóa được ký ức của chính mình. Xóa của người khác cần quyền **Manage Server**.");
-          return;
-        }
         if (target.bot) {
           await reply("Bot không có ký ức hội thoại để xóa.");
+          return;
+        }
+        if (!self && !isGuildAdmin(interaction)) {
+          await reply("Bạn chỉ xóa được ký ức của chính mình. Xóa của người khác cần quyền **Manage Server**.");
           return;
         }
         const result = await api().clearMemory(guildId, { scope: "user", userHash: userHash(target.id) });

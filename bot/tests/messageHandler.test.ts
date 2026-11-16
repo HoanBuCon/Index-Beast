@@ -148,3 +148,19 @@ test("long answers continue in follow-up messages without pings", async () => {
   assert.ok(mock.sent.length > 0);
   for (const payload of mock.sent) assert.deepEqual(payload.allowedMentions, { parse: [] });
 });
+
+test("reply ping alone is not a mention; only an explicit bot mention in the content is", async () => {
+  const { bodies, run } = setup([]);
+  await run({ content: "cảm ơn nhé", mentioned: true });
+  assert.equal(bodies.length, 0);
+});
+
+test("other user/role/channel mentions never reach the backend as raw IDs", async () => {
+  const { bodies, run } = setup();
+  await run({
+    content: `<@${BOT_ID}> <@123456789012345678> và <@&222222222222222222> ở <#333333333333333333> <:ok:444444444444444444>?`,
+    mentioned: true,
+  });
+  assert.equal(bodies[0].message, "@ai đó và @ai đó ở #kênh :ok:?");
+  assert.ok(!/\d{10}/.test(bodies[0].message));
+});

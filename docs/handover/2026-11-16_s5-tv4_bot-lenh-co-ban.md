@@ -48,7 +48,7 @@ Ngày 16/11/2026, nhánh `feature/s5-bot-lenh-co-ban` (tách từ `feature/s5-tv
 ## Kiểm tra (trong `bot/`, Node và npm của máy này, `npm ci` sạch)
 
 - `npm run typecheck`: sạch.
-- `npm test`: **59 test pass, 0 fail**; thêm `guildApi.test.ts`, `guildCommands.test.ts`, `messageHandler.test.ts`, cập nhật `ask`, `bot`, `info`).
+- `npm test`: **59 test pass, 0 fail** (sau review: 64, xem cuối file); thêm `guildApi.test.ts`, `guildCommands.test.ts`, `messageHandler.test.ts`, cập nhật `ask`, `bot`, `info`).
   Bao phủ: đường dẫn/phương thức/token của client guild, `clearMemory` và kiểm tra dữ liệu, 409, `health` 200/503/lỗi, cache (TTL, gộp tải, bản cũ khi lỗi, invalidate),
   rate limit, `/setup` (quyền, ánh xạ API, làm mới cache, ẩn lỗi thô), `/clear` (tự xóa, quyền, `threads_kept`, DM, bot), `/ping`, `/help` có đủ mọi lệnh trong registry,
   `/ask` gửi `guild_id`, handler tin nhắn (kênh bật, mention, thread, bot/webhook/system/DM, rate limit, tin dài, lỗi API, tin dài chia nhiều tin, không ping).
@@ -67,3 +67,16 @@ Ngày 16/11/2026, nhánh `feature/s5-bot-lenh-co-ban` (tách từ `feature/s5-tv
 - Giữ 5 tin/phút/người và TTL 30 giây hay đổi.
 - Có muốn mention trong kênh chưa bật `/setup` (hiện cho phép mọi kênh) chỉ hoạt động ở kênh đã bật không.
 - FR-BOT-07: bỏ phần "chế độ spoiler theo server" hay làm sau.
+
+## Sửa sau review
+
+TV1 review nhánh; đã sửa cùng nhánh, mỗi thay đổi có test (`npm test`: **64 pass, 0 fail**; typecheck và prettier sạch).
+
+1. **Rate limiter tự dọn**: `check()` gọi `sweep()` khi Map vượt 1000 người dùng, không cần timer.
+2. **Không lưu ID Discord thô**: câu hỏi bỏ mention của bot, rồi thay `<@id>`, `<@&id>`, `<#id>` bằng `@ai đó` / `#kênh` và emoji tùy chỉnh bằng `:tên:` trước khi gửi backend/LLM (NFR-PRIV-01).
+3. **Reply-ping không còn là mention**: chỉ `<@botId>` tường minh trong nội dung mới tính; mention vẫn hoạt động ở mọi kênh (quyết định TV1). Đính chính mục "Mention" ở bảng phạm vi: reply vào tin của bot **không** tính nữa.
+4. **Cache lùi khi lỗi**: refresh lỗi mà còn bản cũ thì gia hạn bản cũ 10 giây.
+5. **Cache danh sách rỗng 5 phút** (khác không: 30 giây); `/setup` vẫn `invalidate` nên tức thì trên cùng bản bot. Bản bot khác thấy thay đổi chậm tối đa 5 phút khi danh sách đang rỗng.
+6. **`/clear`**: kiểm `target.bot` trước kiểm quyền.
+
+Quyết định TV1: 5 tin/phút/người và TTL 30 giây giữ nguyên; chế độ spoiler theo server hoãn (FR-BOT-07 vẫn In Progress).

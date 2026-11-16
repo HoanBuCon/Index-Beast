@@ -17,6 +17,14 @@ import type { UserRateLimiter } from "../utils/rateLimit.ts";
 // Không bao giờ ping ai: tên người dùng/role trong câu trả lời chỉ là chữ.
 const NO_MENTIONS = { parse: [] as never[], repliedUser: false };
 
+// Không lưu ID Discord thô của người khác (NFR-PRIV-01): thay bằng chỗ giữ chỗ trung tính trước khi gửi backend/LLM.
+export function sanitizeMentions(text: string): string {
+  return text
+    .replace(/<@[!&]?\d+>/g, "@ai đó")
+    .replace(/<#\d+>/g, "#kênh")
+    .replace(/<a?:(\w+):\d+>/g, ":$1:");
+}
+
 export interface MessageHandlerDeps {
   cache?: Pick<GuildChannelCache, "has">;
   limiter?: Pick<UserRateLimiter, "check">;
@@ -30,7 +38,9 @@ export function createMessageHandler(deps: MessageHandlerDeps = {}) {
     if (message.author.bot || message.webhookId || message.system || !message.guildId) return;
     const botId = message.client.user?.id;
     if (!botId) return;
-    const mentioned = message.mentions.has(botId, { ignoreEveryone: true, ignoreRoles: true });
+    // Chỉ mention tường minh trong nội dung; reply-ping tới tin của bot (message.mentions) không tính, tránh "cảm ơn" gọi LLM.
+    const botMention = new RegExp(`<@!?${botId}>`, "g");
+    const mentioned = botMention.test(message.content);
     const isThread = message.channel.isThread();
     if (!mentioned) {
       // Không có mention: chỉ trả lời ở kênh /setup (hoặc thread con của kênh đó). Tin trống/đính kèm thuần bị bỏ.
@@ -51,7 +61,7 @@ export function createMessageHandler(deps: MessageHandlerDeps = {}) {
       message.reply({ content, allowedMentions: NO_MENTIONS }).catch((error: unknown) => {
         log("warn", "Không gửi được phản hồi tin nhắn.", { error: errorName(error) });
       });
-    const question = message.content.replace(new RegExp(`<@!?${botId}>`, "g"), "").trim();
+    const question = sanitizeMentions(message.content.replace(botMention, "")).trim();
     if (!question) {
       if (mentioned) await reply("Bạn muốn hỏi gì về Elden Ring? Hãy gõ câu hỏi sau khi nhắc tên tôi.");
       return;

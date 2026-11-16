@@ -174,3 +174,11 @@ test("ping shows websocket latency and API health, and survives an API outage", 
   assert.match(third.edits[0].content!, /chưa đo được[\s\S]*không truy cập được/);
   assert.ok(!third.edits[0].content!.includes("PRIVATE_SECRET"));
 });
+
+test("clear rejects a bot target before any permission message", async () => {
+  const { calls, command } = clearApi();
+  const mock = fakeInteraction({ sub: "user", member: { id: "5", bot: true } });
+  await command.execute(mock.value);
+  assert.deepEqual(calls, []);
+  assert.match(mock.edits[0].content!, /Bot không có ký ức/);
+});

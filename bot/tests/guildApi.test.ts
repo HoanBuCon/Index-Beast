@@ -132,3 +132,46 @@ test("external_ref keeps the documented formula", () => {
   assert.match(externalRef("5", false, "1"), /^discord:channel:5:[0-9a-f]{64}$/);
   assert.equal(externalRef("5", true, "1"), "discord:thread:5");
 });
+
+test("channel cache backs off for 10s after a failed refresh and caches empty lists for 5 minutes", async () => {
+  let now = 0;
+  let fetches = 0;
+  let fail = false;
+  let list: string[] = [CHANNEL];
+  const cache = createGuildChannelCache(
+    async () => {
+      fetches++;
+      if (fail) throw new Error("down");
+      return list;
+    },
+    { ttlMs: 1000, now: () => now },
+  );
+  await cache.has(GUILD, CHANNEL);
+  now = 1001;
+  fail = true;
+  for (let i = 0; i < 5; i++) assert.equal(await cache.has(GUILD, CHANNEL), true);
+  assert.equal(fetches, 2, "one failed GET, then backoff serves the stale entry");
+  now = 1001 + 10_001;
+  await cache.has(GUILD, CHANNEL);
+  assert.equal(fetches, 3);
+  fail = false;
+  list = [];
+  cache.invalidate(GUILD);
+  await cache.has(GUILD, CHANNEL);
+  now += 60_000;
+  assert.equal(await cache.has(GUILD, CHANNEL), false);
+  assert.equal(fetches, 4, "empty list still cached after a minute");
+  now += 300_000;
+  await cache.has(GUILD, CHANNEL);
+  assert.equal(fetches, 5);
+});
+
+test("rate limiter prunes expired users inside check() when the map grows", () => {
+  let now = 0;
+  const limiter = createUserRateLimiter({ now: () => now });
+  for (let i = 0; i < 1001; i++) limiter.check(`u${i}`);
+  assert.equal(limiter.size(), 1001);
+  now = 61_000;
+  limiter.check("new");
+  assert.equal(limiter.size(), 1);
+});
