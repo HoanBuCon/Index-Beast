@@ -94,7 +94,7 @@ $COMPOSE run --rm api python -m scripts.memory_admin setup --apply   # collectio
 cd ~/Index-Beast && scripts/staging/deploy.sh develop
 ```
 
-Script lấy mã theo nhánh hoặc tag, build, khởi động PostgreSQL/Qdrant/Redis, chỉnh quyền thư mục, chạy `alembic upgrade head`, rồi khởi động toàn bộ và chờ healthy. Không có `DISCORD_TOKEN` thì bỏ qua container bot. **Rollback:** chạy lại với tag hoặc commit cũ; dữ liệu trong volume được giữ.
+Script lấy mã theo nhánh hoặc tag, build, khởi động PostgreSQL/Qdrant/Redis, chỉnh quyền thư mục, rồi khởi động toàn bộ và chờ healthy (api tự chạy `alembic upgrade head` khi khởi động, xem CMD trong `backend/Dockerfile`). Không có `DISCORD_TOKEN` thì bỏ qua container bot. **Rollback:** chạy lại với tag hoặc commit cũ; dữ liệu trong volume được giữ.
 
 Kiểm tra:
 
