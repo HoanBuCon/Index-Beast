@@ -32,6 +32,7 @@ Người dùng bấm "Từ chối" trên Discord thì được đưa về `/?log
 | POST | `/auth/logout` | Xóa phiên, 204. Gọi bằng `fetch` từ trang của mình | 403 nếu `Origin` lạ |
 | GET | `/me/conversations` | Hội thoại của tôi, mới nhất trước, tối đa 50: `[{"id", "title", "created_at"}]` | 401 chưa đăng nhập |
 | POST | `/me/conversations/claim` | Nhận hội thoại khách: body `{"conversation_id", "conversation_token"}`, trả 204 | 401 sai token hoặc chưa đăng nhập; 404 không có hoặc đã có chủ khác; 403 `Origin` lạ |
+| DELETE | `/me` | Xóa tài khoản, mọi phiên và các hội thoại đã gắn với tài khoản (gồm hội thoại khách đã nhận qua `claim`) cùng tin nhắn, feedback, ký ức; hội thoại khách chưa nhận và hội thoại Discord không gắn tài khoản nên không bị xóa ở đây (retention 90 ngày hoặc `/clear` của bot xóa chúng); xóa cookie phiên; trả 204, **không hoàn tác**. Web nên hỏi xác nhận trước | 401 chưa đăng nhập (gồm cả khi gọi lại sau khi đã xóa); 403 `Origin` lạ; 503 không xóa được, chưa mất dữ liệu nào, thử lại |
 
 Tiền tố chung `/api/v1`.
 

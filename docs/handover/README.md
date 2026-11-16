@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Quyền riêng tư và xóa tài khoản (16/11/2026)](2026-11-16_s5-tv1_quyen-rieng-tu-xoa-tai-khoan.md)
 - [TV1 · Sprint 5: deploy production, script deploy, backup (16/11/2026)](2026-11-16_s5-tv1_production-deploy.md)
 
 - [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
