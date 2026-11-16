@@ -1,6 +1,8 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
 - [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)
+- [TV1 · Sprint 5: deploy production, script deploy, backup (16/11/2026)](2026-11-16_s5-tv1_production-deploy.md)
+
 - [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
 
 - [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)

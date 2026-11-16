@@ -8,4 +8,5 @@ RUN npm run build
 
 FROM caddy:2.11.7-alpine
 COPY infra/Caddyfile /etc/caddy/Caddyfile
+COPY infra/caddy/snippets.caddy /etc/caddy/snippets.caddy
 COPY --from=web /web/dist /srv/web

@@ -2,6 +2,9 @@
 # STAGING_HOST là IP của VPS khi chưa có tên miền: Caddy tự dùng CA nội bộ cho IP (trình duyệt cảnh báo một lần,
 # nhưng mật khẩu vẫn đi qua HTTPS). Có tên miền thì đặt STAGING_HOST=<tên miền>, Caddy tự xin chứng chỉ Let's Encrypt.
 # STAGING_PASSWORD_HASH rỗng thì Caddy không khởi động: staging không bao giờ mở không mật khẩu.
+# Phần proxy /api và web tĩnh dùng chung ở infra/caddy/snippets.caddy.
+import /etc/caddy/snippets.caddy
+
 {$STAGING_HOST:localhost} {
 	encode zstd gzip
 
@@ -18,14 +21,10 @@
 	}
 
 	handle /api/* {
-		reverse_proxy api:18000 {
-			flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm
-		}
+		import api_proxy
 	}
 
 	handle {
-		root * /srv/web
-		try_files {path} /index.html
-		file_server
+		import spa
 	}
 }

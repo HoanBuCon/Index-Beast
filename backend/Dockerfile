@@ -21,7 +21,10 @@ USER app
 
 # S2 (TV3): tải sẵn model ONNX vào /models ở bước build — `RUN python -m core.encoders.onnx`
 # S2 (TV1): chạy migration trước khi khởi động — `alembic upgrade head && uvicorn ...`
+# Migration chạy MỘT lần ở tiến trình cha, trước khi uvicorn sinh các worker (không có tranh chấp giữa worker).
+# Migration lỗi thì container thoát và restart lặp lại: lỗi hiện rõ trong log, không chạy trên schema cũ.
+# Lệnh khác (`docker compose run --rm api python -m ingest ...`, `alembic ...`) ghi đè CMD nên không bị ảnh hưởng.
 # Số worker: biến WEB_CONCURRENCY (compose đặt từ API_WORKERS trong .env)
 # Cổng nội bộ 18000 (không dùng 8000 mặc định của uvicorn — docs/quy_uoc.md → "Quy ước cổng")
 EXPOSE 18000
-CMD ["uvicorn", "--factory", "app.main:create_app", "--host", "0.0.0.0", "--port", "18000", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-access-log"]
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn --factory app.main:create_app --host 0.0.0.0 --port 18000 --proxy-headers --forwarded-allow-ips '*' --no-access-log"]
