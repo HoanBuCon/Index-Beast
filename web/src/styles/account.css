@@ -1,0 +1,53 @@
+/* Tài khoản trong thanh bên: hộp xác nhận (<dialog> modal) và lời hỏi nhận hội thoại khách; vừa 360px. */
+.sidebar-account {
+  flex-wrap: wrap;
+}
+.sidebar-account__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #f2b8b0;
+  font-size: 12px;
+}
+.account-confirm {
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid #d9bc78;
+  background: #151a11;
+  color: #eee8db;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: normal;
+}
+.account-confirm::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+.account-confirm h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.account-confirm p,
+.claim-prompt p {
+  margin: 0 0 12px;
+}
+.account-confirm__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.account-confirm button,
+.claim-prompt button {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.account-confirm button.danger {
+  border-color: #c4574a;
+  color: #f2b8b0;
+}
+.claim-prompt {
+  padding: 8px 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d4d7c9;
+  white-space: normal;
+}

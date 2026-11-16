@@ -8,8 +8,11 @@ import type {
   FeedbackRequest,
   StreamEvent,
   AnswerShareCreated,
+  GuildChannel,
+  HealthResult,
+  MemoryClearResult,
 } from "./types.ts";
-import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
+import { isSnowflake, isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 import { loadApiConfig } from "../config.ts";
 
 export class ApiError extends Error {
@@ -34,7 +37,10 @@ function validateQuestion(body: ChatRequest) {
   ) {
     throw new ApiError("Thông tin hội thoại không hợp lệ.", 422);
   }
+  if (body.guild_id != null && !isSnowflake(body.guild_id)) throw new ApiError("Mã server không hợp lệ.", 422);
 }
+
+export type ApiClient = ReturnType<typeof createApiClient>;
 
 // Sao chép và thích nghi client công khai của web: URL tuyệt đối, service token và fetch tiêm được cho test.
 // Không import web/, không sửa OpenAPI; không tự retry POST để tránh gửi câu hỏi hai lần.
@@ -65,7 +71,7 @@ export function createApiClient(
       throw friendly(error);
     }
   }
-  async function request(path: string, init: RequestInit = {}) {
+  async function request(path: string, init: RequestInit = {}, acceptStatuses: number[] = []) {
     const response = await fetcher(`${config.baseUrl}${path}`, {
       ...init,
       signal: init.signal
@@ -79,17 +85,19 @@ export function createApiClient(
         ...init.headers,
       },
     });
-    if (!response.ok) {
+    if (!response.ok && !acceptStatuses.includes(response.status)) {
       const message =
         response.status === 429
           ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
-          : response.status === 404
-            ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
-            : response.status === 422
-              ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
-              : response.status === 401 || response.status === 403
-                ? "Không có quyền truy cập. Kiểm tra cấu hình dịch vụ của bot."
-                : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+          : response.status === 409
+            ? "Server đã bật tối đa số kênh cho phép (50). Hãy tắt bớt kênh trước."
+            : response.status === 404
+              ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
+              : response.status === 422
+                ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
+                : response.status === 401 || response.status === 403
+                  ? "Không có quyền truy cập. Kiểm tra cấu hình dịch vụ của bot."
+                  : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
       await response.body?.cancel().catch(() => {});
       throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
     }
@@ -258,7 +266,65 @@ export function createApiClient(
     return { token: data.token, expires_at: data.expires_at };
   }
 
+  // --- /discord/guilds/{guild_id}: chỉ nhận service token; bot tự kiểm quyền admin trước khi gọi ghi/xóa. ---
+  const guildPath = (guildId: string) => {
+    if (!isSnowflake(guildId)) throw new ApiError("Mã server không hợp lệ.", 422);
+    return `/discord/guilds/${guildId}`;
+  };
+  const channelPath = (guildId: string, channelId: string) => {
+    if (!isSnowflake(channelId)) throw new ApiError("Mã kênh không hợp lệ.", 422);
+    return `${guildPath(guildId)}/channels/${channelId}`;
+  };
+  const isCount = (value: unknown): value is number => Number.isInteger(value) && Number(value) >= 0;
+  async function listGuildChannels(guildId: string): Promise<string[]> {
+    const data = await (await request(`${guildPath(guildId)}/channels`)).json();
+    if (!Array.isArray(data?.channels) || !data.channels.every((c: GuildChannel) => isSnowflake(c?.channel_id)))
+      throw new Error("Dữ liệu kênh không hợp lệ.");
+    return data.channels.map((c: GuildChannel) => c.channel_id);
+  }
+  async function enableGuildChannel(guildId: string, channelId: string): Promise<void> {
+    const data = await (await request(channelPath(guildId, channelId), { method: "PUT" })).json();
+    if (data?.channel_id !== channelId) throw new Error("Dữ liệu kênh không hợp lệ.");
+  }
+  async function deleteChannels(path: string): Promise<number> {
+    const data = await (await request(path, { method: "DELETE" })).json();
+    if (!isCount(data?.deleted)) throw new Error("Dữ liệu kênh không hợp lệ.");
+    return data.deleted;
+  }
+  async function clearMemory(
+    guildId: string,
+    target: { scope: "all" } | { scope: "user"; userHash: string },
+  ): Promise<MemoryClearResult> {
+    if (target.scope === "user" && !/^[0-9a-f]{64}$/.test(target.userHash))
+      throw new ApiError("Mã người dùng không hợp lệ.", 422);
+    const body = target.scope === "all" ? { scope: "all" } : { scope: "user", user_hash: target.userHash };
+    const data = await (
+      await request(`${guildPath(guildId)}/memory/clear`, { method: "POST", body: JSON.stringify(body) })
+    ).json();
+    if (!isCount(data?.conversations) || !isCount(data?.threads_kept) || !isCount(data?.vector_conversations))
+      throw new Error("Dữ liệu xóa ký ức không hợp lệ.");
+    return data;
+  }
+  // 503 vẫn có thân {status:"degraded", checks}; các lỗi khác (mạng, 401...) ném ApiError.
+  async function health(): Promise<HealthResult> {
+    const started = performance.now();
+    const response = await request("/health", { signal: AbortSignal.timeout(5000) }, [503]);
+    const data = await response.json().catch(() => undefined);
+    const rtt = Math.round(performance.now() - started);
+    if (!["ok", "degraded"].includes(data?.status) || !data.checks || typeof data.checks !== "object")
+      throw new Error("Dữ liệu health không hợp lệ.");
+    return { status: data.status, checks: data.checks, http_status: response.status, rtt_ms: rtt };
+  }
+
   return {
+    listGuildChannels: (guildId: string) => safe(() => listGuildChannels(guildId)),
+    enableGuildChannel: (guildId: string, channelId: string) => safe(() => enableGuildChannel(guildId, channelId)),
+    disableGuildChannel: (guildId: string, channelId: string) =>
+      safe(() => deleteChannels(channelPath(guildId, channelId))),
+    disableAllGuildChannels: (guildId: string) => safe(() => deleteChannels(`${guildPath(guildId)}/channels`)),
+    clearMemory: (guildId: string, target: Parameters<typeof clearMemory>[1]) =>
+      safe(() => clearMemory(guildId, target)),
+    health: () => safe(health),
     createAnswerShare: (conversationId: string, messageId: string) =>
       safe(() => createAnswerShare(conversationId, messageId)),
     chat: (body: ChatRequest, signal?: AbortSignal) => safe(() => chat(body, signal)),

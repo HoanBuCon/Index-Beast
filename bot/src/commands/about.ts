@@ -14,6 +14,11 @@ export const about: Command = {
           .setTitle("INDEX BEAST · 4 Hollows")
           .setDescription(
             "Dự án hỏi đáp Elden Ring của nhóm 4 Hollows, dùng chung backend cho website và Discord.\n\n" +
+              "**Nhóm 4 Hollows**\n" +
+              "• Quỷ Tháng 5 Khóc — Tech Lead\n" +
+              "• Himmel — dữ liệu\n" +
+              "• Thợ Săn Lợn Sang — RAG/AI\n" +
+              "• Riley — web/bot\n\n" +
               "Nguồn văn bản chính: [Elden Ring Wiki](https://eldenring.wiki.gg/), đóng góp bởi cộng đồng wiki. " +
               "Theo khảo sát nguồn của dự án, văn bản được ghi nhận theo " +
               "[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/): ghi công, dẫn nguồn/giấy phép, " +

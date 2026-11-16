@@ -141,6 +141,9 @@ npm run dev
 
 Trong server thử nghiệm, chọn lệnh `/ping` của bot → nhận `Pong!`. S1 không cần API hay Docker để thử `/ping`.
 Giữ terminal mở để bot online; nhấn Ctrl+C để dừng. PowerShell chặn `npm.ps1` thì dùng `npm.cmd` thay `npm`.
+**Sprint 5 — Message Content Intent:** bot nghe tin nhắn thường (trả lời khi được mention và ở kênh `/setup`) nên cần bật
+**Message Content Intent** trong Discord Developer Portal (Bot → Privileged Gateway Intents). Chưa bật thì bot không đăng nhập được
+(`Used disallowed intents`). Lệnh mới `/setup`, `/clear` cần chạy lại `npm run deploy-commands`.
 Đăng ký lại lệnh khi thay đổi định nghĩa lệnh, không cần đăng ký mỗi lần khởi động bot.
 Lệnh deploy đăng ký global cho mọi server đã cài bot (Discord có thể mất vài phút để hiện lệnh mới) và
 thay thế toàn bộ danh sách slash command của ứng dụng bằng registry hiện tại (`/ping`, `/ask`).

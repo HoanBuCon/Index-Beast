@@ -3,16 +3,30 @@
 
 import { Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { commands } from "./commands/index.ts";
+import { createMessageHandler } from "./handlers/message.ts";
 import { loadConfig } from "./config.ts";
 import { errorName, log } from "./utils/logger.ts";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// MessageContent là intent đặc quyền: phải bật trong Discord Developer Portal (Bot → Privileged Gateway Intents),
+// nếu không client.login báo "Used disallowed intents". Cần cho @mention và trả lời kênh /setup.
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
+const handleMessage = createMessageHandler();
 
 client.once(Events.ClientReady, (readyClient) => {
   log("info", "Bot đã online.", { user: readyClient.user.tag });
 });
 
 client.on(Events.Error, (error) => log("error", "Discord client gặp lỗi.", { error: errorName(error) }));
+
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    await handleMessage(message);
+  } catch (error) {
+    log("error", "Không xử lý được tin nhắn.", { error: errorName(error) });
+  }
+});
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;

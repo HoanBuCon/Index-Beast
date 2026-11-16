@@ -12,6 +12,7 @@ import AnswerIllustrations from "./AnswerIllustrations";
 import { backendIllustrations, canShowIllustrations } from "./answerMedia";
 import type { AnswerIllustration, IllustrationPreviewState } from "./answerMedia";
 import ClarificationForm from "./ClarificationForm";
+import FeedbackButtons from "./FeedbackButtons";
 import SourceList from "./SourceList";
 export default function MessageList({
   messages,
@@ -22,6 +23,7 @@ export default function MessageList({
   onClarification,
   traceLinks = false,
   autoScroll = true,
+  conversationToken,
 }: {
   messages: Message[];
   busy: boolean;
@@ -33,6 +35,8 @@ export default function MessageList({
   // API có bật /admin/* (capabilities.trace_available): hiện mã câu trả lời và liên kết sang trang trace.
   traceLinks?: boolean;
   autoScroll?: boolean;
+  // Token hội thoại khách để chứng minh quyền gửi feedback; người đã đăng nhập không cần (cookie phiên).
+  conversationToken?: string;
 }) {
   const [selected, setSelected] = useState<Source | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -130,6 +134,15 @@ export default function MessageList({
                   question={message.clarification}
                   disabled={busy}
                   onAnswer={onClarification}
+                />
+              )}
+              {/* Chỉ câu trả lời thật đã hoàn tất; không hiện cho câu hỏi bổ sung (clarification) hay chế độ minh họa. */}
+              {!demo && !message.clarification && message.serverId && !message.incomplete && message.content.trim() && (
+                <FeedbackButtons
+                  key={message.serverId}
+                  messageId={message.serverId}
+                  demo={demo}
+                  token={conversationToken}
                 />
               )}
               {traceLinks && message.serverId && !message.incomplete && (

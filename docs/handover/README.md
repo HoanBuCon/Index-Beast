@@ -1,6 +1,9 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
 - [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)
+- [TV2 · Sprint 5: cập nhật dữ liệu tăng dần và tài liệu pipeline (16/11/2026)](2026-11-16_s5-tv2_cap-nhat-tang-dan.md)
+- [TV4 (TV1 làm hộ) · Bot: lệnh cơ bản, /setup, /clear, trả lời mention (16/11/2026)](2026-11-16_s5-tv4_bot-lenh-co-ban.md)
+- [TV1 · Quyền riêng tư và xóa tài khoản (16/11/2026)](2026-11-16_s5-tv1_quyen-rieng-tu-xoa-tai-khoan.md)
 - [TV1 · Sprint 5: deploy production, script deploy, backup (16/11/2026)](2026-11-16_s5-tv1_production-deploy.md)
 
 - [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
@@ -232,3 +235,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |
 - [TV4 · Câu hỏi động và hai nút trong bảng bổ sung (14/11/2026)](2026-11-14_s4-tv4_cau-hoi-va-hai-nut-bo-sung.md)
 - [TV4 · Dọn ảnh không sử dụng (14/11/2026)](2026-11-14_s4-tv4_don-anh-khong-su-dung.md)
+- [TV4 · Web: đăng nhập Discord, feedback, admin, xóa tài khoản (16/11/2026, TV1 làm hộ)](2026-11-16_s5-tv4_web-dang-nhap-feedback-admin.md)

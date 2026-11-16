@@ -65,6 +65,24 @@ def validate_document(doc, rows, cap):
     return identity
 
 
+def chunk_fields(identity, rows):
+    """Dòng chunk ghi vào PostgreSQL; dùng chung cho nạp toàn bộ và cập nhật tăng dần."""
+    return [
+        {
+            "id": chunk_id(identity, c["ordinal"]),
+            "ordinal": c["ordinal"],
+            "section": c["section"],
+            "text": c["embedding_text"],
+            "token_count": c["token_count"],
+            "game_scope": "elden_ring",
+            "source_type": c["source_type"],
+            "lang": c["lang"],
+            **({"spoiler_level": c["spoiler_level"]} if "spoiler_level" in c else {}),
+        }
+        for c in rows
+    ]
+
+
 def preflight(directory):
     report = read(directory / "report.json")
     if report.get("chunking_version") not in {
@@ -138,20 +156,7 @@ async def load(directory, *, validate_only=False):
                 identity = validate_document(doc, rows, report["max_tokens"])
                 if doc["game_scope"] == "out_of_scope":
                     continue
-                fields = [
-                    {
-                        "id": chunk_id(identity, c["ordinal"]),
-                        "ordinal": c["ordinal"],
-                        "section": c["section"],
-                        "text": c["embedding_text"],
-                        "token_count": c["token_count"],
-                        "game_scope": "elden_ring",
-                        "source_type": c["source_type"],
-                        "lang": c["lang"],
-                        **({"spoiler_level": c["spoiler_level"]} if "spoiler_level" in c else {}),
-                    }
-                    for c in rows
-                ]
+                fields = chunk_fields(identity, rows)
                 async with sessions() as session, session.begin():
                     old = (
                         (
