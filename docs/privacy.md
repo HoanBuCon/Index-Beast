@@ -27,8 +27,9 @@ Chúng tôi **không** lưu Discord ID thô, email, mật khẩu, số điện t
 
 ## Cách xóa dữ liệu của bạn
 
-- **Xóa tài khoản trên web** (gọi `DELETE /api/v1/me` khi đã đăng nhập): xóa tài khoản, mọi phiên, mọi hội thoại đã gắn với tài khoản, tin nhắn, đánh giá và ký ức, kể cả vector tìm kiếm. Không hoàn tác được. Nếu việc xóa lỗi giữa chừng, hệ thống trả lỗi và chưa xóa gì, bạn thử lại được.
+- **Xóa tài khoản trên web** (gọi `DELETE /api/v1/me` khi đã đăng nhập): xóa tài khoản, mọi phiên và các hội thoại **đã gắn với tài khoản** (kể cả hội thoại khách bạn đã "nhận" sau khi đăng nhập), cùng tin nhắn, đánh giá và ký ức, kể cả vector tìm kiếm. Không hoàn tác được. Hội thoại khách chưa nhận (ví dụ trên thiết bị khác) và hội thoại Discord **không gắn với tài khoản** nên không bị xóa ở bước này; chúng tự xóa sau 90 ngày không hoạt động, hoặc bạn xóa Discord bằng `/clear`. Nếu việc xóa lỗi giữa chừng, hệ thống trả lỗi và chưa xóa gì, bạn thử lại được.
 - **Trong Discord**: lệnh `/clear` của bot (dự kiến, chưa có ở thời điểm viết) sẽ xóa ngữ cảnh hội thoại của bạn với bot. Trong lúc chờ, dữ liệu hội thoại Discord tự xóa sau 90 ngày không hoạt động.
+- **Liên kết chia sẻ câu trả lời**: khi bạn tạo liên kết chia sẻ, bản sao câu trả lời được lưu tạm (Redis) và tự hết hạn sau **24 giờ** (`SHARE_TTL_SECONDS`); xóa tài khoản hay hội thoại không xóa bản sao này trước hạn. Nếu muốn nó biến mất sớm hơn, đừng chia sẻ, hoặc liên hệ quản trị viên để xóa.
 - **Hội thoại của khách** không gắn với tài khoản: tự xóa sau 90 ngày không hoạt động, hoặc liên hệ nhóm để xóa sớm kèm mã hội thoại.
 
 Muốn hỏi thêm hay yêu cầu xóa dữ liệu mà không đăng nhập được, liên hệ nhóm qua kênh hỗ trợ trên máy chủ Discord của dự án.

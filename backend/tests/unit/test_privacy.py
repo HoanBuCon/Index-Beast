@@ -29,7 +29,7 @@ class FakeQdrant:
 async def test_vectors_are_deleted_by_conversation_id_filter_in_bounded_chunks():
     client = FakeQdrant()
     ids = [uuid4() for _ in range(privacy._VECTOR_FILTER_CHUNK + 1)]
-    await privacy.purge_memory_vectors(client, "conversation_memories", ids)
+    await privacy.VectorPurger(client, "conversation_memories").delete_conversations(ids)
     assert len(client.deletes) == 2 and all(c == "conversation_memories" and wait for c, _, wait in client.deletes)
     condition = client.deletes[0][1].filter.must[0]
     assert condition.key == "conversation_id" and condition.match.any == [str(i) for i in ids[:200]]
@@ -37,14 +37,24 @@ async def test_vectors_are_deleted_by_conversation_id_filter_in_bounded_chunks()
 
 @pytest.mark.parametrize("client,ids", [(None, [uuid4()]), (FakeQdrant(), []), (FakeQdrant(exists=False), [uuid4()])])
 async def test_nothing_to_purge_is_a_quiet_no_op(client, ids):
-    await privacy.purge_memory_vectors(client, "conversation_memories", ids)
+    await privacy.VectorPurger(client, "conversation_memories").delete_conversations(ids)
     assert client is None or client.deletes == []
 
 
-async def test_a_qdrant_failure_becomes_a_generic_503_without_internals():
-    with pytest.raises(UnavailableError) as raised:
-        await privacy.purge_memory_vectors(FakeQdrant(fail=True), "conversation_memories", [uuid4()])
+async def test_a_qdrant_failure_becomes_a_generic_503_without_internals_and_is_logged(caplog):
+    with pytest.raises(UnavailableError) as raised, caplog.at_level("WARNING"):
+        await privacy.VectorPurger(FakeQdrant(fail=True), "conversation_memories").delete_conversations([uuid4()])
     assert "qdrant down" not in str(raised.value)
+    assert any(r.exc_info for r in caplog.records)  # chi tiết chỉ vào log máy chủ
+
+
+async def test_a_programming_error_is_not_swallowed_as_a_qdrant_outage():
+    class Broken(FakeQdrant):
+        async def delete(self, *args, **kwargs):
+            raise KeyError("bug")
+
+    with pytest.raises(KeyError):
+        await privacy.VectorPurger(Broken(), "conversation_memories").delete_conversations([uuid4()])
 
 
 def test_counts_add_and_the_cli_prints_counts_only():

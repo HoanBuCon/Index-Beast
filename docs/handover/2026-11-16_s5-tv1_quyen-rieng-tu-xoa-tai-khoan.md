@@ -36,7 +36,7 @@ Chạy với venv của checkout chính (worktree không có venv riêng).
 | `python -m pytest tests/integration/test_privacy.py -m integration` (PostgreSQL 18 thật trong Docker, DB tạm) | 5 passed |
 | `python -m scripts.export_openapi` | ghi lại `docs/api/openapi.json` (+ route `DELETE /me`) |
 
-Test mới: 5 test route trong `tests/unit/test_auth.py` (401 khách và cookie giả, 403 Origin lạ, id lấy từ phiên không từ client, cookie bị xóa, 503 không xóa cookie, admin/stats 401/404 với phiên thường), 6 test trong `tests/unit/test_privacy.py` (bộ lọc Qdrant theo lô, no-op, lỗi chung 503 không lộ chi tiết, in số đếm, cutoff, `--days 0`), 5 test PostgreSQL thật (xóa đúng người và chỉ dữ liệu của họ, idempotent, Qdrant lỗi thì không mất gì và thử lại được, retention theo mốc kể cả hội thoại rỗng và hội thoại cũ vừa có tin mới, lô nhỏ, phiên hết hạn).
+Test mới: 5 test route trong `tests/unit/test_auth.py` (401 khách và cookie giả, 403 Origin lạ, id lấy từ phiên không từ client, cookie bị xóa, 503 không xóa cookie, admin/stats 401/404 với phiên thường), 9 test trong `tests/unit/test_privacy.py` (bộ lọc Qdrant theo lô, no-op, lỗi chung 503 không lộ chi tiết, in số đếm, cutoff, `--days 0`), 5 test PostgreSQL thật (xóa đúng người và chỉ dữ liệu của họ, idempotent, Qdrant lỗi thì không mất gì và thử lại được, retention theo mốc kể cả hội thoại rỗng và hội thoại cũ vừa có tin mới, lô nhỏ, phiên hết hạn).
 
 ## Chưa kiểm chứng
 

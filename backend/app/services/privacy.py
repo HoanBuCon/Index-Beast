@@ -3,26 +3,32 @@
 Hai việc dùng chung các hàm xóa hội thoại: điểm ngữ nghĩa trong Qdrant xóa TRƯỚC, PostgreSQL xóa SAU. Qdrant lỗi thì
 không xóa gì và người dùng thử lại được; ngược lại sẽ để lại vector mồ côi mà không còn cách tìm ra chúng.
 
-Lưu ý hợp nhất: PR #110 thêm `MemoryVectors.delete_conversations` làm cùng việc với `purge_memory_vectors` ở đây;
-khi merge, giữ một bản (nên giữ phương thức của #110 và để `purge_memory_vectors` gọi nó).
+Lưu ý hợp nhất: PR #110 thêm `MemoryVectors.delete_conversations(ids)` làm cùng việc với `VectorPurger` ở đây (cùng
+tên, cùng đối số); khi merge, thay `VectorPurger(client, collection)` bằng `MemoryVectors(...)` rồi xóa lớp này.
 
 Phụ trách: TV1 · [S5] Quyền riêng tư và xóa tài khoản
 """
 
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass, fields
 from datetime import datetime
 from uuid import UUID
 
+import httpx
 from qdrant_client import models as qm
+from qdrant_client.http.exceptions import ApiException, ResponseHandlingException
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 
 from core.db.models import AuthSession, Conversation, Feedback, Message, User
 from core.errors import UnavailableError
 
+log = logging.getLogger(__name__)
+
 BATCH_SIZE = 500  # số hội thoại mỗi lần xóa: giữ transaction và bộ lọc Qdrant nhỏ
 _VECTOR_FILTER_CHUNK = 200
+_QDRANT_ERRORS = (ApiException, ResponseHandlingException, httpx.HTTPError, OSError)
 
 
 @dataclass
@@ -38,82 +44,117 @@ class Counts:
             setattr(self, f.name, getattr(self, f.name) + getattr(other, f.name))
 
 
-async def purge_memory_vectors(client, collection: str, conversation_ids: Sequence[UUID]) -> None:
-    """Xóa mọi điểm ký ức của các hội thoại này khỏi Qdrant (lọc theo payload `conversation_id`).
-    `client` None (chế độ llm_only) hoặc chưa có collection thì không có gì để xóa."""
-    if client is None or not conversation_ids:
-        return
-    try:
-        if not await client.collection_exists(collection):
+class VectorPurger:
+    """Cùng dáng với `MemoryVectors.delete_conversations(ids)` của PR #110: lọc theo payload `conversation_id`, không
+    đếm. `client` None (chế độ llm_only) hoặc chưa có collection thì không có gì để xóa."""
+
+    def __init__(self, client, collection: str):
+        self.client, self.collection = client, collection
+
+    async def delete_conversations(self, conversation_ids: Sequence[UUID]) -> None:
+        if self.client is None or not conversation_ids:
             return
-        for start in range(0, len(conversation_ids), _VECTOR_FILTER_CHUNK):
-            ids = [str(i) for i in conversation_ids[start : start + _VECTOR_FILTER_CHUNK]]
-            selector = qm.FilterSelector(
-                filter=qm.Filter(must=[qm.FieldCondition(key="conversation_id", match=qm.MatchAny(any=ids))])
-            )
-            await client.delete(collection, points_selector=selector, wait=True)
-    except Exception:
-        raise UnavailableError("Không xóa được ký ức hội thoại. Chưa có dữ liệu nào bị xóa, hãy thử lại.") from None
+        try:
+            if not await self.client.collection_exists(self.collection):
+                return
+            for start in range(0, len(conversation_ids), _VECTOR_FILTER_CHUNK):
+                ids = [str(i) for i in conversation_ids[start : start + _VECTOR_FILTER_CHUNK]]
+                selector = qm.FilterSelector(
+                    filter=qm.Filter(must=[qm.FieldCondition(key="conversation_id", match=qm.MatchAny(any=ids))])
+                )
+                await self.client.delete(self.collection, points_selector=selector, wait=True)
+        except _QDRANT_ERRORS:
+            log.warning("memory vector purge failed", exc_info=True)
+            raise UnavailableError("Không xóa được ký ức hội thoại. Chưa có dữ liệu nào bị xóa, hãy thử lại.") from None
 
 
-async def _delete_conversations(session, ids: Sequence[UUID]) -> Counts:
-    """Đếm rồi xóa; tin nhắn, feedback, ký ức, runtime đi theo khóa ngoại ON DELETE CASCADE."""
-    messages = select(Message.id).where(Message.conversation_id.in_(ids))
-    counts = Counts(
-        messages=(await session.execute(select(func.count()).where(Message.conversation_id.in_(ids)))).scalar_one(),
-        feedback=(
+async def _delete_conversations(session, ids: Sequence[UUID], *, count: bool) -> Counts:
+    """Xóa; tin nhắn, feedback, ký ức, runtime đi theo khóa ngoại ON DELETE CASCADE. `count` bật thì đếm thêm."""
+    counts = Counts()
+    if count:
+        messages = select(Message.id).where(Message.conversation_id.in_(ids))
+        counts.messages = (
+            await session.execute(select(func.count()).select_from(Message).where(Message.conversation_id.in_(ids)))
+        ).scalar_one()
+        counts.feedback = (
             await session.execute(select(func.count()).select_from(Feedback).where(Feedback.message_id.in_(messages)))
-        ).scalar_one(),
-    )
+        ).scalar_one()
     counts.conversations = (await session.execute(delete(Conversation).where(Conversation.id.in_(ids)))).rowcount
     return counts
 
 
 async def delete_account(sessionmaker, qdrant, memory_collection: str, user_id: UUID) -> Counts:
-    """Xóa người dùng, mọi phiên, mọi hội thoại gắn với họ (kèm tin nhắn, feedback, ký ức) và điểm Qdrant tương ứng.
-    Idempotent: người dùng đã mất thì trả số đếm 0, không lỗi."""
-    total = Counts()
+    """Xóa người dùng, mọi phiên, mọi hội thoại gắn `user_id` (gồm cả hội thoại khách đã nhận) kèm tin nhắn, feedback,
+    ký ức và điểm Qdrant. Idempotent: người dùng đã mất thì trả 0, không lỗi.
+
+    Thứ tự chống đua: xóa phiên TRƯỚC (không còn ghi mới bằng tài khoản này), rồi xóa hội thoại theo lô, cuối cùng xóa
+    nốt hội thoại còn sót cùng dòng người dùng trong một transaction (nếu không, khóa ngoại SET NULL sẽ biến hội thoại
+    sót thành hội thoại khách mà vẫn còn dữ liệu)."""
+    purger, total = VectorPurger(qdrant, memory_collection), Counts()
     try:
+        async with sessionmaker() as session, session.begin():
+            await session.execute(delete(AuthSession).where(AuthSession.user_id == user_id))
         while True:
             async with sessionmaker() as session:
-                ids = list(
-                    (
-                        await session.execute(
-                            select(Conversation.id).where(Conversation.user_id == user_id).limit(BATCH_SIZE)
-                        )
-                    ).scalars()
-                )
+                found = select(Conversation.id).where(Conversation.user_id == user_id).limit(BATCH_SIZE)
+                ids = list((await session.execute(found)).scalars())
             if not ids:
                 break
-            await purge_memory_vectors(qdrant, memory_collection, ids)
+            await purger.delete_conversations(ids)
             async with sessionmaker() as session, session.begin():
-                total.add(await _delete_conversations(session, ids))
+                total.add(await _delete_conversations(session, ids, count=False))
         async with sessionmaker() as session, session.begin():
-            total.sessions = (
-                await session.execute(
-                    select(func.count()).select_from(AuthSession).where(AuthSession.user_id == user_id)
-                )
-            ).scalar_one()
-            total.users = (await session.execute(delete(User).where(User.id == user_id))).rowcount  # phiên: CASCADE
+            leftover = delete(Conversation).where(Conversation.user_id == user_id).returning(Conversation.id)
+            stragglers = list((await session.execute(leftover)).scalars())
+            total.conversations += len(stragglers)
+            total.users = (await session.execute(delete(User).where(User.id == user_id))).rowcount
+        await purger.delete_conversations(stragglers)  # hiếm: hội thoại tạo xen giữa vòng lặp và giao dịch cuối
     except SQLAlchemyError:
         raise UnavailableError("Không xóa được tài khoản. Hãy thử lại.") from None
     return total
 
 
-def _stale(cutoff: datetime):
-    """Hoạt động cuối = tin nhắn mới nhất, hoặc lúc tạo nếu hội thoại chưa có tin."""
+def _stale_ids(cutoff: datetime):
+    """Một lượt quét: hoạt động cuối = tin nhắn mới nhất (GROUP BY), hoặc lúc tạo nếu hội thoại chưa có tin."""
+    last = (
+        select(Message.conversation_id.label("cid"), func.max(Message.created_at).label("last"))
+        .group_by(Message.conversation_id)
+        .subquery()
+    )
+    return (
+        select(Conversation.id)
+        .outerjoin(last, last.c.cid == Conversation.id)
+        .where(func.coalesce(last.c.last, Conversation.created_at) < cutoff)
+    )
+
+
+def _still_stale(cutoff: datetime, ids: Sequence[UUID]):
+    """Kiểm lại một lô nhỏ theo khóa chính (truy vấn tương quan chỉ chạy cho các id này, không quét lại toàn bảng)."""
     newest = select(func.max(Message.created_at)).where(Message.conversation_id == Conversation.id).scalar_subquery()
-    return func.coalesce(newest, Conversation.created_at) < cutoff
+    return (
+        select(Conversation.id)
+        .where(Conversation.id.in_(ids))
+        .where(func.coalesce(newest, Conversation.created_at) < cutoff)
+    )
 
 
 async def _count_retention(session, cutoff: datetime, now: datetime) -> Counts:
-    stale_ids = select(Conversation.id).where(_stale(cutoff))
-    messages = select(Message.id).where(Message.conversation_id.in_(stale_ids))
+    stale = _stale_ids(cutoff).subquery()
+    stale_ids = select(stale.c.id)
     return Counts(
-        conversations=(await session.execute(select(func.count()).select_from(stale_ids.subquery()))).scalar_one(),
-        messages=(await session.execute(select(func.count()).select_from(messages.subquery()))).scalar_one(),
+        conversations=(await session.execute(select(func.count()).select_from(stale))).scalar_one(),
+        messages=(
+            await session.execute(
+                select(func.count()).select_from(Message).where(Message.conversation_id.in_(stale_ids))
+            )
+        ).scalar_one(),
         feedback=(
-            await session.execute(select(func.count()).select_from(Feedback).where(Feedback.message_id.in_(messages)))
+            await session.execute(
+                select(func.count())
+                .select_from(Feedback)
+                .join(Message, Message.id == Feedback.message_id)
+                .where(Message.conversation_id.in_(stale_ids))
+            )
         ).scalar_one(),
         sessions=(
             await session.execute(select(func.count()).select_from(AuthSession).where(AuthSession.expires_at < now))
@@ -125,22 +166,27 @@ async def apply_retention(
     sessionmaker, qdrant, memory_collection: str, *, cutoff: datetime, now: datetime, dry_run: bool = False
 ) -> Counts:
     """NFR-PRIV-01: xóa hội thoại có hoạt động cuối trước `cutoff` và phiên đăng nhập hết hạn trước `now`.
-    Trace RAG nằm trong `messages.rag_trace` nên đi cùng hội thoại. `dry_run` chỉ đếm."""
+    Trace RAG nằm trong `messages.rag_trace` nên đi cùng hội thoại. `dry_run` chỉ đếm.
+
+    Danh sách hội thoại quá hạn lấy MỘT lần (một lượt GROUP BY), rồi xóa theo lô trên danh sách đó; mỗi lô kiểm lại
+    còn quá hạn không (hội thoại vừa có tin mới thì giữ)."""
+    purger = VectorPurger(qdrant, memory_collection)
     try:
         if dry_run:
             async with sessionmaker() as session:
                 return await _count_retention(session, cutoff, now)
         total = Counts()
-        while True:
+        async with sessionmaker() as session:
+            stale = list((await session.execute(_stale_ids(cutoff))).scalars())
+        for start in range(0, len(stale), BATCH_SIZE):
+            chunk = stale[start : start + BATCH_SIZE]
             async with sessionmaker() as session:
-                ids = list(
-                    (await session.execute(select(Conversation.id).where(_stale(cutoff)).limit(BATCH_SIZE))).scalars()
-                )
+                ids = list((await session.execute(_still_stale(cutoff, chunk))).scalars())
             if not ids:
-                break
-            await purge_memory_vectors(qdrant, memory_collection, ids)
+                continue
+            await purger.delete_conversations(ids)
             async with sessionmaker() as session, session.begin():
-                total.add(await _delete_conversations(session, ids))
+                total.add(await _delete_conversations(session, ids, count=True))
         while True:
             async with sessionmaker() as session, session.begin():
                 batch = select(AuthSession.id).where(AuthSession.expires_at < now).limit(BATCH_SIZE)

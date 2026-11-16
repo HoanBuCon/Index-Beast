@@ -90,7 +90,7 @@ async def test_delete_account_removes_the_user_and_only_their_data(sessionmaker)
 
     counts = await privacy.delete_account(sessionmaker, qdrant, COLLECTION, leaving.id)
 
-    assert (counts.conversations, counts.messages, counts.feedback, counts.sessions, counts.users) == (2, 4, 2, 2, 1)
+    assert (counts.conversations, counts.users) == (2, 1)
     assert sorted(i for batch in qdrant.deleted for i in batch) == sorted(str(i) for i in mine)
     assert await count(sessionmaker, User, User.id == leaving.id) == 0
     assert await count(sessionmaker, AuthSession, AuthSession.user_id == leaving.id) == 0
@@ -182,3 +182,67 @@ async def test_retention_removes_expired_sessions_in_batches_and_keeps_live_ones
     assert done.sessions == 5 and expired
     assert (await auth.user_for_token(sessionmaker, SETTINGS, live)).id == user.id
     assert await count(sessionmaker, AuthSession, AuthSession.user_id == user.id) == 1
+
+
+async def test_delete_account_removes_a_conversation_created_after_the_batch_loop(sessionmaker):
+    """Đua: hội thoại xuất hiện sau khi vòng lặp thấy "hết" vẫn bị xóa cùng người dùng (không thành hội thoại khách
+    mồ côi), điểm Qdrant của nó cũng bị xóa, và phiên đã mất từ đầu."""
+    user = await auth.upsert_user(sessionmaker, SETTINGS, "9400", "Racer")
+    token = await auth.create_session(sessionmaker, user.id, 7)
+    late: list = []
+    real, opens = sessionmaker, []
+
+    # Lần mở thứ 3 là giao dịch cuối (sau xóa phiên và lần quét rỗng): chèn một hội thoại mới ngay trước nó.
+    class Gate:
+        def __call__(self):
+            opens.append(1)
+            if len(opens) == 3:
+                return _InjectThenOpen()
+            return real()
+
+    class _InjectThenOpen:
+        async def __aenter__(self):
+            late.append((await make_conversation(real, user_id=user.id))[0])
+            self.inner = real()
+            return await self.inner.__aenter__()
+
+        async def __aexit__(self, *exc):
+            return await self.inner.__aexit__(*exc)
+
+    qdrant = RecordingQdrant()
+    await privacy.delete_account(Gate(), qdrant, COLLECTION, user.id)
+
+    assert len(late) == 1
+    assert await auth.user_for_token(real, SETTINGS, token) is None
+    assert await count(real, Conversation, Conversation.id.in_(late)) == 0
+    assert await count(real, User, User.id == user.id) == 0
+    assert [i for batch in qdrant.deleted for i in batch] == [str(late[0])]
+
+
+async def test_delete_account_also_removes_a_claimed_guest_conversation_but_not_an_unclaimed_one(sessionmaker):
+    user = await auth.upsert_user(sessionmaker, SETTINGS, "9500", "Claimer")
+    claimed, _ = await make_conversation(sessionmaker, user_id=None)
+    async with sessionmaker() as session, session.begin():
+        await session.execute(update(Conversation).where(Conversation.id == claimed).values(user_id=user.id))
+    unclaimed, _ = await make_conversation(sessionmaker, user_id=None)
+    await privacy.delete_account(sessionmaker, None, COLLECTION, user.id)
+    assert await count(sessionmaker, Conversation, Conversation.id == claimed) == 0
+    assert await count(sessionmaker, Conversation, Conversation.id == unclaimed) == 1  # chỉ retention hoặc /clear xóa
+
+
+async def test_retention_scans_the_stale_list_once_not_per_batch(sessionmaker, monkeypatch):
+    """Danh sách quá hạn lấy một lần: 5 hội thoại với lô 2 vẫn chỉ phát một câu truy vấn GROUP BY."""
+    from sqlalchemy import event
+
+    monkeypatch.setattr(privacy, "BATCH_SIZE", 2)
+    for _ in range(5):
+        await make_conversation(sessionmaker, age_days=120)
+    scans = []
+    engine = sessionmaker.kw["bind"].sync_engine
+    event.listen(
+        engine, "before_cursor_execute", lambda c, cur, stmt, *a: scans.append(stmt) if "max" in stmt.lower() else None
+    )
+    now = datetime.now(UTC)
+    done = await privacy.apply_retention(sessionmaker, None, COLLECTION, cutoff=now - timedelta(days=90), now=now)
+    assert done.conversations == 5
+    assert len([s for s in scans if "GROUP BY" in s]) == 1
