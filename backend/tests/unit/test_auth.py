@@ -385,6 +385,73 @@ def test_a_logged_in_non_admin_still_needs_the_token(harness):
     assert h.client.get(f"/api/v1/admin/trace/{uuid4()}", headers={"X-Admin-Token": "wrong"}).status_code == 401
 
 
+# ---------- xóa tài khoản (FR-AUTH-08) và phân quyền admin/stats ----------
+
+
+def test_delete_me_requires_a_session_and_the_same_origin(harness, monkeypatch):
+    from app.services import privacy
+
+    deleted = []
+
+    async def fake_delete(sessionmaker, qdrant, collection, user_id):
+        deleted.append((collection, user_id))
+
+    monkeypatch.setattr(privacy, "delete_account", fake_delete)
+    h = harness(user=USER)
+    assert h.client.delete("/api/v1/me").status_code == 401  # khách
+    h.client.cookies.set(SESSION_COOKIE, "forged-token")
+    assert h.client.delete("/api/v1/me").status_code == 401  # cookie giả
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    assert h.client.delete("/api/v1/me", headers={"Origin": "https://evil.example"}).status_code == 403
+    assert deleted == []  # chưa xóa gì
+
+
+def test_delete_me_deletes_the_callers_data_only_and_clears_the_cookie(harness, monkeypatch):
+    from app.services import privacy
+
+    deleted = []
+
+    async def fake_delete(sessionmaker, qdrant, collection, user_id):
+        deleted.append((qdrant, collection, user_id))
+
+    monkeypatch.setattr(privacy, "delete_account", fake_delete)
+    h = harness(user=USER)
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    response = h.client.delete("/api/v1/me?user_id=" + str(uuid4()), headers={"Origin": "http://localhost:15173"})
+    assert response.status_code == 204 and response.content == b""
+    assert deleted == [(h.fakes["qdrant"], "conversation_memories", USER.id)]  # id lấy từ phiên, không từ client
+    assert f"{SESSION_COOKIE}=" in response.headers["set-cookie"] and "Max-Age=0" in response.headers["set-cookie"]
+    assert response.headers["cache-control"] == "no-store"
+
+
+def test_delete_me_reports_a_failed_purge_without_clearing_the_cookie(harness, monkeypatch):
+    from app.services import privacy
+    from core.errors import UnavailableError
+
+    async def fake_delete(*args):
+        raise UnavailableError("Không xóa được ký ức hội thoại.")
+
+    monkeypatch.setattr(privacy, "delete_account", fake_delete)
+    h = harness(user=USER)
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    response = h.client.delete("/api/v1/me")
+    assert response.status_code == 503 and "set-cookie" not in response.headers
+
+
+def test_a_non_admin_session_cannot_read_admin_stats(harness):
+    h = harness(user=USER, admin_token="s3cret-token")
+    assert h.client.get("/api/v1/admin/stats").status_code == 401  # khách
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    assert h.client.get("/api/v1/admin/stats").status_code == 401  # đăng nhập nhưng không phải admin, không token
+    assert h.client.get("/api/v1/admin/stats", headers={"X-Admin-Token": "wrong"}).status_code == 401
+
+
+def test_admin_stats_is_hidden_when_no_admin_exists_for_a_non_admin_session(harness):
+    h = harness(user=USER)  # không ADMIN_TOKEN, người dùng không thuộc AUTH_ADMIN_DISCORD_IDS
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    assert h.client.get("/api/v1/admin/stats").status_code == 404
+
+
 # ---------- /chat gắn người dùng ----------
 
 
