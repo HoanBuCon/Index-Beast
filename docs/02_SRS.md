@@ -197,10 +197,10 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-BOT-04 | Hỏi tiếp trong thread (giữ ngữ cảnh theo thread). | S | Volatile | S4 | In Progress — hội thoại theo `external_ref` |
 | FR-BOT-05 | Nút feedback 👍/👎 trên tin nhắn trả lời. | S | Stable | S4 | Deferred |
 | FR-BOT-06 | `/help`, `/about` (nguồn & giấy phép). | M | Stable | S3 | Done |
-| FR-BOT-07 | Cấu hình theo guild: kênh được phép, chế độ spoiler (`/config`, chỉ admin server). | C | Volatile | S5 | Proposed |
-| FR-BOT-08 | Trả lời khi được mention `@Index Beast`. | C | Volatile | S5 | Proposed |
-| FR-BOT-09 | `/setup #kênh` bật kênh để bot trả lời mọi tin nhắn không cần `/ask`; `/setup disable #kênh` và `/setup disable all` tắt. Cấu hình lưu bền theo server (bot không giữ trạng thái). | S | Volatile | S5 | In Progress — backend xong (`/discord/guilds/{guild_id}/channels`, tối đa 50 kênh), lệnh bot (TV4) chưa làm |
-| FR-BOT-10 | `/clear @user` và `/clear all` xóa ký ức hội thoại của một người hoặc cả server (bot tự kiểm tra quyền admin Discord trước khi gọi). | S | Volatile | S5 | In Progress — backend xong (`POST /discord/guilds/{guild_id}/memory/clear`), lệnh bot (TV4) chưa làm; chỉ xóa được hội thoại có `guild_id` (bot phải gửi `guild_id` trong `/chat`) |
+| FR-BOT-07 | Cấu hình theo guild: kênh được phép, chế độ spoiler (`/config`, chỉ admin server). | C | Volatile | S5 | In Progress — kênh được phép đã có qua `/setup` (FR-BOT-09), `/config` đã bỏ; chế độ spoiler theo server chưa làm |
+| FR-BOT-08 | Trả lời khi được mention `@Index Beast`. | C | Volatile | S5 | Done — mention `@bot câu hỏi` (test giả; chưa thử Discord thật) |
+| FR-BOT-09 | `/setup #kênh` bật kênh để bot trả lời mọi tin nhắn không cần `/ask`; `/setup disable #kênh` và `/setup disable all` tắt. Cấu hình lưu bền theo server (bot không giữ trạng thái). | S | Volatile | S5 | Done — backend + `/setup enable\|disable\|disable-all` và trả lời kênh đã bật (test giả; chưa thử Discord thật) |
+| FR-BOT-10 | `/clear @user` và `/clear all` xóa ký ức hội thoại của một người hoặc cả server (bot tự kiểm tra quyền admin Discord trước khi gọi). | S | Volatile | S5 | Done — backend + `/clear user\|all`, `/ask` gửi `guild_id` (test giả; chưa thử Discord thật) |
 
 ### 3.7 FR-EVAL — Đánh giá & quản trị
 
