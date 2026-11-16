@@ -78,23 +78,32 @@ Với tin nhắn trong kênh `/setup` (không phải thread) dùng cùng công t
 { "scope": "all" }
 ```
 
-`user_hash` = `sha256(discordUserId)` hex thường 64 ký tự, **bot tự băm**; backend không nhận ID người dùng thô
-(NFR-PRIV-01) và từ chối giá trị không đúng dạng băm bằng `422`. Ví dụ phản hồi `200`:
+`user_hash` = `sha256(discordUserId)` hex thường 64 ký tự, **bot tự băm**; backend không nhận ID người dùng thô và từ chối
+giá trị không đúng dạng băm bằng `422`. Lưu ý: đây là **bút danh (pseudonym), không phải ẩn danh**: SHA-256 không muối của
+một số công khai (snowflake) có thể bị đảo bằng cách băm lại danh sách ID thành viên đã biết. Cùng giá trị này đã nằm trong
+`external_ref` của `/ask`. Muốn mạnh hơn cần HMAC với khóa bí mật chung bot-backend, tức phải sửa bot và migrate dữ liệu cũ
+(rủi ro để TV1/TV4 quyết định). Ví dụ phản hồi `200`:
 
 ```json
 {
   "guild_id": "1000000000000000001",
   "scope": "user",
   "conversations": 2,
-  "messages": 4,
-  "feedback": 1,
-  "memories": 2,
-  "vector_points": 2
+  "threads_kept": 1,
+  "vector_conversations": 2
 }
 ```
 
-Gọi lại ngay sau đó trả `200` với mọi số bằng 0. Nên hiển thị cho người dùng một câu trung tính (ví dụ
-"Đã xóa X cuộc hội thoại"), không bắt buộc hiện từng số.
+| Trường | Ý nghĩa |
+|---|---|
+| `conversations` | Số hội thoại đã xóa. Tin nhắn, đánh giá, trạng thái và ký ức của chúng xóa theo (cascade) và **không** đếm riêng |
+| `threads_kept` | `scope=user`: số hội thoại **thread** của server được giữ nguyên (thread dùng chung, không biết ai viết gì nên chỉ `/clear all` xóa). `scope=all`: luôn 0. Đây là mọi thread của server, không phải riêng của người đó |
+| `vector_conversations` | Số hội thoại đã xóa điểm ký ức ở Qdrant (không phải số điểm); 0 khi không có kho vector |
+
+Gọi lại ngay sau đó trả `200` với `conversations = 0` và `vector_conversations = 0` (`threads_kept` vẫn tính các thread còn lại).
+**Bot phải nói rõ với người dùng khi `threads_kept > 0` sau `/clear @user`**, ví dụ "Đã xóa N cuộc hội thoại riêng; các
+cuộc trò chuyện trong thread dùng chung chỉ bị xóa bằng `/clear all`". Nếu `conversations = 0` và `threads_kept = 0`, nói
+là không có dữ liệu để xóa.
 
 ### Xóa những gì
 
@@ -106,7 +115,9 @@ Trong **đúng server `guild_id`** và chỉ hội thoại `channel = discord`:
 | `all` | Mọi hội thoại Discord của server, **kể cả hội thoại thread** |
 
 Với mỗi hội thoại xóa: các tin nhắn (kèm trace RAG và số đo), đánh giá 👍/👎, trạng thái làm việc (`conversation_runtime`),
-ký ức dài hạn (`conversation_memories`) và các điểm vector tương ứng trong collection ký ức của Qdrant.
+ký ức dài hạn (`conversation_memories`) và các điểm vector tương ứng trong collection ký ức của Qdrant (xóa trước và sau
+khi xóa PostgreSQL để một lượt lập chỉ mục chạy song song không để sót điểm; điểm mồ côi nếu còn chỉ chứa ID, không chứa
+nội dung chat, và recall bỏ qua chúng).
 **Không** xóa: cấu hình kênh `/setup` (dùng `DELETE channels` riêng), kho tri thức Elden Ring, link chia sẻ
 `/answer-shares` đã tạo (snapshot Redis, tự hết hạn sau 24 giờ), hội thoại ở server khác hoặc trên web.
 
@@ -118,8 +129,8 @@ ký ức dài hạn (`conversation_memories`) và các điểm vector tương �
    (chỉ `/clear all` xóa). Lệnh nên nói rõ điều này với người dùng.
 3. Không xóa được tin nhắn Discord thật, chỉ xóa dữ liệu bot lưu.
 4. Backend có một bản sao hội thoại trong RAM; `memory/clear` làm rỗng bản của worker xử lý lệnh. Nếu chạy nhiều worker API,
-   worker khác còn giữ bản cũ sẽ trả `503 unavailable` ("Ký ức hội thoại vừa được xóa. Vui lòng gửi lại câu hỏi.") đúng một lần
-   ở lượt hỏi kế tiếp của hội thoại đó rồi tự bỏ bản cũ; gửi lại là được. Dữ liệu đã xóa không bao giờ được khôi phục.
+   worker khác còn giữ bản cũ sẽ nhận ra hội thoại đã bị xóa ở lượt hỏi kế tiếp và bắt đầu lại một hội thoại rỗng ngay
+   trong lượt đó (như lần hỏi đầu tiên); bot không thấy lỗi. Dữ liệu đã xóa không bao giờ được khôi phục.
 5. Một lượt `/chat` đang chạy đồng thời với `/clear` có thể ghi lại hội thoại mới ngay sau khi xóa.
 
 ## Mã lỗi

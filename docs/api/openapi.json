@@ -740,25 +740,13 @@
       "ClearMemoryResult": {
         "properties": {
           "conversations": {
+            "description": "Số hội thoại đã xóa; tin nhắn, đánh giá và ký ức của chúng xóa theo (cascade), không đếm riêng.",
             "title": "Conversations",
-            "type": "integer"
-          },
-          "feedback": {
-            "title": "Feedback",
             "type": "integer"
           },
           "guild_id": {
             "title": "Guild Id",
             "type": "string"
-          },
-          "memories": {
-            "description": "Dòng ký ức dài hạn trong PostgreSQL.",
-            "title": "Memories",
-            "type": "integer"
-          },
-          "messages": {
-            "title": "Messages",
-            "type": "integer"
           },
           "scope": {
             "enum": [
@@ -768,9 +756,14 @@
             "title": "Scope",
             "type": "string"
           },
-          "vector_points": {
-            "description": "Điểm ký ức ngữ nghĩa trong Qdrant; 0 khi không có kho vector.",
-            "title": "Vector Points",
+          "threads_kept": {
+            "description": "Số hội thoại thread của server được giữ nguyên khi scope=user (thread dùng chung, chỉ `all` xóa); luôn 0 khi scope=all.",
+            "title": "Threads Kept",
+            "type": "integer"
+          },
+          "vector_conversations": {
+            "description": "Số hội thoại đã xóa điểm ký ức ở Qdrant (không phải số điểm); 0 nếu không có kho vector.",
+            "title": "Vector Conversations",
             "type": "integer"
           }
         },
@@ -778,10 +771,8 @@
           "guild_id",
           "scope",
           "conversations",
-          "messages",
-          "feedback",
-          "memories",
-          "vector_points"
+          "threads_kept",
+          "vector_conversations"
         ],
         "title": "ClearMemoryResult",
         "type": "object"
@@ -794,7 +785,7 @@
             "type": "string"
           },
           "user_hash": {
-            "description": "SHA-256 hex của Discord user id (bot băm, không gửi ID thô).",
+            "description": "SHA-256 hex của Discord user id (bot băm; bút danh, không phải ẩn danh).",
             "pattern": "^[0-9a-f]{64}$",
             "title": "User Hash",
             "type": "string"
