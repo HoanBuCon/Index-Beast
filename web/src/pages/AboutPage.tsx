@@ -79,7 +79,11 @@ export default function AboutPage() {
         <ul>
           <li>{"Đăng nhập là tùy chọn. Khách vẫn dùng đầy đủ mà không cần tài khoản."}</li>
           <li>{"Chỉ lưu mã Discord đã băm một chiều, không lưu mã gốc, email hay mật khẩu."}</li>
-          <li>{"Hội thoại được giữ 90 ngày rồi tự động xóa."}</li>
+          <li>
+            {
+              "Hội thoại khách trên web được xóa sau 90 ngày không hoạt động khi job lưu giữ chạy; hội thoại gắn tài khoản và Discord được giữ. Trace RAG được xóa sau 90 ngày."
+            }
+          </li>
           <li>
             {
               "Bạn có thể xóa sớm hơn: chọn “Xóa tài khoản” trong menu người dùng ở thanh bên (xóa toàn bộ hội thoại vĩnh viễn), hoặc dùng lệnh "

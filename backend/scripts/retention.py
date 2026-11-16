@@ -1,4 +1,5 @@
-"""NFR-PRIV-01: xóa dữ liệu quá N ngày (mặc định 90): hội thoại kèm tin nhắn, feedback, ký ức, trace và điểm Qdrant;
+"""NFR-PRIV-01: xóa dữ liệu quá N ngày (mặc định 90): hội thoại khách web kèm tin nhắn, feedback, ký ức và điểm Qdrant;
+trace RAG của mọi hội thoại;
 phiên đăng nhập hết hạn. Chỉ in số đếm, không in nội dung hay mã định danh.
 
     python -m scripts.retention --days 90 --dry-run     # chỉ đếm
@@ -12,18 +13,41 @@ Phụ trách: TV1 · [S5] Quyền riêng tư và xóa tài khoản
 
 import argparse
 import asyncio
+import re
+import stat
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from app.services.privacy import Counts, apply_retention
 
 DEFAULT_DAYS = 90
 
 
+def prune_ingest_logs(directory: Path, *, cutoff: datetime, dry_run: bool) -> int:
+    """Only timestamped logs from ingest-weekly.sh; never follow links or recurse."""
+    if not directory.is_dir() or directory.is_symlink():
+        return 0
+    count = 0
+    for path in directory.iterdir():
+        if not re.fullmatch(r"ingest-weekly-\d{8}-\d{6}\.log", path.name):
+            continue
+        try:
+            info = path.lstat()
+            if stat.S_ISREG(info.st_mode) and info.st_mtime < cutoff.timestamp():
+                if not dry_run:
+                    path.unlink()
+                count += 1
+        except FileNotFoundError:
+            continue  # Log rotation may have removed the file while listing.
+    return count
+
+
 def format_counts(counts: Counts, *, dry_run: bool) -> str:
     verb = "would delete" if dry_run else "deleted"
     return (
         f"{verb}: conversations={counts.conversations} messages={counts.messages} "
-        f"feedback={counts.feedback} expired_sessions={counts.sessions}"
+        f"feedback={counts.feedback} expired_sessions={counts.sessions} traces={counts.traces} "
+        f"ingestion_logs={counts.ingestion_logs}"
     )
 
 
@@ -52,6 +76,9 @@ async def amain(args) -> None:
             create_sessionmaker(engine), client, settings.chat_memory_collection, days=args.days, dry_run=args.dry_run
         )
         print(format_counts(counts, dry_run=args.dry_run))
+        if args.ingest_log_dir:
+            cutoff = datetime.now(UTC) - timedelta(days=args.days)
+            print(f"ingest_logs={prune_ingest_logs(args.ingest_log_dir, cutoff=cutoff, dry_run=args.dry_run)}")
     finally:
         await engine.dispose()
         if client is not None:
@@ -63,6 +90,7 @@ def main(argv=None) -> None:
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
     parser.add_argument("--dry-run", action="store_true", help="chỉ đếm, không xóa")
     parser.add_argument("--no-vectors", action="store_true", help="không xóa điểm ký ức trong Qdrant")
+    parser.add_argument("--ingest-log-dir", type=Path, help="thư mục log ingest-weekly trên máy chạy lệnh")
     args = parser.parse_args(argv)
     if args.days < 1:
         parser.error("--days phải >= 1")

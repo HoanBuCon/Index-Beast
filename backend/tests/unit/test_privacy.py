@@ -62,7 +62,7 @@ def test_counts_add_and_the_cli_prints_counts_only():
     total.add(privacy.Counts(conversations=2, feedback=1, sessions=4))
     assert total == privacy.Counts(conversations=3, messages=2, feedback=1, sessions=4)
     assert retention.format_counts(total, dry_run=True) == (
-        "would delete: conversations=3 messages=2 feedback=1 expired_sessions=4"
+        "would delete: conversations=3 messages=2 feedback=1 expired_sessions=4 traces=0 ingestion_logs=0"
     )
     assert retention.format_counts(total, dry_run=False).startswith("deleted: ")
 
@@ -84,3 +84,72 @@ def test_the_cli_rejects_a_non_positive_window(capsys):
     with pytest.raises(SystemExit):
         retention.main(["--days", "0"])
     assert "--days" in capsys.readouterr().err
+
+
+def test_retention_queries_target_only_guest_web_and_old_traces():
+    from sqlalchemy.dialects import postgresql
+
+    sql = str(privacy._stale_ids(datetime(2026, 8, 18, tzinfo=UTC)).compile(dialect=postgresql.dialect()))
+    assert "conversations.channel" in sql and "conversations.user_id IS NULL" in sql
+    assert "FOR UPDATE" in str(
+        privacy._guest_batch(datetime(2026, 8, 18, tzinfo=UTC)).compile(dialect=postgresql.dialect())
+    )
+    assert "rag_trace IS NOT NULL" in str(
+        privacy._old_traces(datetime(2026, 8, 18, tzinfo=UTC)).compile(dialect=postgresql.dialect())
+    )
+
+
+def test_log_cleanup_limits_scope_and_honors_cutoff_and_dry_run(tmp_path):
+    import os
+    from datetime import timedelta
+
+    now = datetime(2026, 11, 16, tzinfo=UTC)
+    old = tmp_path / "ingest-weekly-20260101-000000.log"
+    fresh = tmp_path / "ingest-weekly-20261115-000000.log"
+    unrelated = tmp_path / "other.log"
+    old.write_text("old")
+    fresh.write_text("new")
+    unrelated.write_text("other")
+    timestamp = (now - timedelta(days=91)).timestamp()
+    os.utime(old, (timestamp, timestamp))
+    os.utime(unrelated, (timestamp, timestamp))
+    assert retention.prune_ingest_logs(tmp_path, cutoff=now - timedelta(days=90), dry_run=True) == 1
+    assert old.exists()
+    assert retention.prune_ingest_logs(tmp_path, cutoff=now - timedelta(days=90), dry_run=False) == 1
+    assert not old.exists() and fresh.exists() and unrelated.exists()
+
+
+def test_log_cleanup_excludes_boundary_links_and_subdirectories(tmp_path):
+    import os
+    from contextlib import suppress
+
+    cutoff = datetime(2026, 8, 18, tzinfo=UTC)
+    boundary = tmp_path / "ingest-weekly-20260818-000000.log"
+    boundary.write_text("keep")
+    os.utime(boundary, (cutoff.timestamp(), cutoff.timestamp()))
+    nested = tmp_path / "nested"
+    nested.mkdir()
+    (nested / "ingest-weekly-20200101-000000.log").write_text("keep")
+    link = tmp_path / "ingest-weekly-20200101-000000.log"
+    with suppress(OSError):  # Windows may not permit creating symlinks
+        link.symlink_to(boundary)
+    assert retention.prune_ingest_logs(tmp_path, cutoff=cutoff, dry_run=False) == 0
+    assert boundary.exists() and nested.exists()
+
+
+def test_old_trace_and_ingestion_log_updates_write_sql_null_and_exclude_json_null():
+    from sqlalchemy.dialects import postgresql
+
+    cutoff = datetime(2026, 8, 18, tzinfo=UTC)
+    for statement in (privacy._clear_old_traces(cutoff), privacy._clear_old_ingestion_logs(cutoff)):
+        sql = str(statement.compile(dialect=postgresql.dialect()))
+        assert "SET " in sql and "=NULL" in sql
+        assert "jsonb_typeof" in sql and "IS NOT NULL" in sql
+        assert "LIMIT" in sql
+
+
+def test_ingestion_log_query_uses_completion_time_and_keeps_unfinished_jobs():
+    from sqlalchemy.dialects import postgresql
+
+    sql = str(privacy._old_ingestion_logs(datetime(2026, 8, 18, tzinfo=UTC)).compile(dialect=postgresql.dialect()))
+    assert "ingestion_jobs.finished_at" in sql and "ingestion_jobs.log" in sql
