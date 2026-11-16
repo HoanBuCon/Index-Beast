@@ -1,0 +1,16 @@
+# Đoạn dùng chung cho infra/Caddyfile, Caddyfile.staging, Caddyfile.prod (nạp bằng `import /etc/caddy/snippets.caddy`).
+# File này được COPY vào image Caddy ở infra/caddy.Dockerfile (cần `--build` khi sửa).
+
+# Proxy /api sang FastAPI
+(api_proxy) {
+	reverse_proxy api:18000 {
+		flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm
+	}
+}
+
+# Web tĩnh (Vite build trong /srv/web); mọi đường dẫn không phải file rơi về index.html cho React Router
+(spa) {
+	root * /srv/web
+	try_files {path} /index.html
+	file_server
+}
