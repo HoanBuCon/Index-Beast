@@ -47,18 +47,193 @@ Mục tiêu kế hoạch ban đầu (golden set 120 câu, Recall@5 ≥ 0,80, cor
 | Bot: thread + nút feedback | TV4 | Không đổi trong S4 | Đã có từ S3; 33 test bot đạt |
 | Sprint 4 Review & Retro | ALL | Chưa ghi nhận | Không có tài liệu retro hay quyết định model LLM cuối cùng trong repo |
 
-## 4. Số đo chất lượng
+## 4. Số đo trong Sprint 4
 
-| Truy xuất | Query | Recall@5 | MRR@5 | Accuracy | Bám nguồn đủ |
-|---|---|---:|---:|---:|---:|
-| E5 | Gốc | 82,82% | 0,728 | 149/195 · 76,41% | 95,32% |
-| BM25 | Rewrite | 87,69% | 0,690 | 158/195 · 81,03% | 98,90% |
-| Hybrid | Gốc | 86,41% | 0,701 | 155/195 · 79,49% | 96,61% |
-| **Hybrid** | **Rewrite** | **90,34%** | **0,767** | **160/195 · 82,05%** | 98,38% |
+Mọi số dưới đây lấy nguyên từ báo cáo và handover đã merge; **chưa có lượt nào do người chấm độc lập**. Người chấm ghi ở từng bảng. Báo cáo thô nằm trong `backend/data/research_runs/` trên máy người chạy (Git bỏ qua). Mã `IB-GS-*` là golden set S4, `IB-BL-*` là 25 ca chẩn đoán, `IB-SUP-*` là 12 câu bổ sung.
 
-Trích từ [ma trận truy xuất](../testing/2026-11-14_s4-retrieval-matrix.md): 212 câu, Tavily Off, chấm bằng DeepSeek. TV3 đề xuất giữ **Hybrid + rewrite** làm mặc định. Hybrid cải thiện mạnh ở tiếng Việt không dấu (Recall@5 50% → 93,75%) nhưng nhóm này nhỏ, cần đo thêm.
+### 4.1 Tổng hợp theo thời gian
 
-Kiểm thử trên `develop` tại `65a9b73` (máy TV1, 16/11): **1.161 unit test backend** đạt, ruff và format sạch, OpenAPI khớp; web 49 test, bot 33 test đạt. Integration test không chạy được trên máy TV1 vì Docker tắt; CI trên commit này (có PostgreSQL, Redis, Qdrant) **success**. GitNexus không tìm thấy vòng import nào.
+| Ngày | Đợt đo | Người chạy | Tập | Kết quả chính | Nguồn |
+|---|---|---|---|---|---|
+| 12/11 | Dữ liệu wiki S4, đo lại local FTS5/E5 | TV2 | 25 câu golden cũ + 6 truy vấn bằng chứng | 4.164 trang, 39.574 chunk; source top 5 qua E5: 19/25 ở cả S3 và S4 | [handover](2026-11-12_s4-tv2_wiki-quality.md) |
+| 13/11 | Re-index hybrid + eval qua API | TV2 | 25 câu golden cũ | 34.070 point; 20/22 trang đúng ở top 5; 25/25 HTTP 200 | [handover](2026-11-13_s4-tv2_hybrid-verification.md) |
+| 13/11 | Agent thích ứng, chạy thật | TV3 | 5 ca chẩn đoán | 5/5 HTTP 200 | [handover](2026-11-13_s4-tv3_adaptive-agent.md) |
+| 14/11 | Hỏi đường theo tiến độ, chạy thật | TV3 | 6 lượt | 2 hội thoại SSE thành công, 1 ca 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_progress-clarification.md) |
+| 14/11 | Điều kiện bị thay, chạy thật | TV3 | 4 lượt | 2/4 HTTP 200, 2/4 HTTP 502 (đã sửa, kiểm offline) | [handover](2026-11-14_s4-tv3_superseded-constraints.md) |
+| 14/11 | Gameplay nhiều nguồn, chạy thật | TV3 | 5 ca | 5/5 có câu trả lời cuối sau sửa | [handover](2026-11-14_s4-tv3_gameplay-multi-source.md) |
+| 14/11 | Baseline S4 + chạy lại sau sửa | TV3 | 25 ca chẩn đoán | 25/25 phản hồi cuối, 27/27 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-baseline-25.md) |
+| 14/11 | Đánh giá 100 ca (trước sửa) | TV3, Codex chấm | 100 ca từ golden S4 | Accuracy 71/83 (85,54%) | [báo cáo](../testing/2026-11-14_s4-evaluation-100.md) |
+| 14/11 | Nghiệm thu 100 ca (sau sửa) | TV3, Codex chấm | cùng 100 ca | Accuracy 76/83 (91,57%), 111/111 HTTP 200 | [báo cáo](../testing/2026-11-14_s4-retest-100.md) |
+| 14/11 | Ma trận truy xuất 6 cấu hình | TV3, DeepSeek chấm | 212 câu | Hybrid + rewrite: Recall@5 90,34%, Accuracy 82,05% | [báo cáo](../testing/2026-11-14_s4-retrieval-matrix.md) |
+| 16/11 | Rà soát golden set | Codex thay TV2 | 200 câu | 198 duyệt, 2 cần chỉnh; 256 lượt quote khớp corpus | [báo cáo](../evaluation/2026-11-16_s4-tv2-local-review.md) |
+
+Cấu hình chung của các lượt chạy thật: DeepSeek `deepseek-flash`, temperature 0,2, Tavily Auto (trừ ma trận Off), corpus `indexbeast_s4_wiki_ca98c06b` 34.070 điểm (trừ các lượt Agent ngày 13–14/11 dùng collection cũ 18.383 điểm), timeout 45 giây mỗi request.
+
+### 4.2 Dữ liệu (TV2)
+
+| Số đo | Giá trị |
+|---|---|
+| Tài liệu / có chunk | 4.164 / 4.163 (1 trang template vào review) |
+| Chunk / tiếng Anh / mục review | 39.574 / 34.070 / 1.543 |
+| Đơn vị chunk có coverage, giới hạn 450 token | 39.480/39.480 |
+| Giữ nguyên qua S3 → S4 | 74.840 bộ định vị nguồn, 45.204 fact ID; số chunk +23 do đổi ranh giới |
+| Chunk có nhãn chặng lấy từ HTML | 40 chunk trên 18 trang |
+| `release_scope` | base 767, SotE 283, mixed/SotE 366, unknown 2.748 |
+| `spoiler_level` 0 / 1 / 2 | 33 / 38.505 / 1.036 chunk |
+| Mẫu đọc `game_scope` | 50 trang (seed 4164), không thấy trang thuộc game khác |
+| Re-index hybrid 34.070 chunk EN | 642,38 giây; mọi point có `dense` + `bm25` |
+| Bộ lọc `spoilers=false` | Trả đúng 33 ID mức 0; truy vấn ending Ranni loại 30 ứng viên mức cao |
+| Hybrid trên 25 câu golden cũ | 20/22 câu có URL kỳ vọng ở top 5 (2 câu trỏ trang ngoài cohort, 3 câu hành vi không có URL) |
+| 6 truy vấn đối chiếu bằng chứng | 6/6 ở top 2 |
+| Eval qua API 25 câu (13/11) | 25/25 HTTP 200 (baseline 24/25; IB-GS-086 hết 502); 93 lượt gọi model; 519.450 token vào, 12.857 token ra; 0 lượt Tavily |
+
+Hạng bằng chứng local trước/sau chunk lại (12/11, FTS5 BM25 top 16 rồi E5):
+
+| Ca | Token bằng chứng S3 → S4 | Hạng BM25 | Hạng E5 |
+|---|---|---|---|
+| IB-GS-075 | 383 → 152 | 15 → 2 | 7 → 1 |
+| IB-GS-052 | 442 → 218 | 10 → 8 | 7 → 10 |
+| IB-GS-065, 031, 041, 086 | không đổi | không đổi (1, 1, 1, 4) | không đổi (1, 1, 3, 3) |
+
+### 4.3 Golden set S4
+
+| Số đo | Giá trị |
+|---|---|
+| Số câu | 200 (IB-GS-101–300) + 12 câu bổ sung |
+| Ngôn ngữ | Việt 110, Anh 90 |
+| Độ khó | Dễ 60, trung bình 90, khó 50 |
+| Loại | 183 ca dữ kiện, 17 ca hành vi, 11 lượt bổ sung |
+| Rà soát (Codex thay TV2) | 198 `approved`, 2 `changes_requested` (IB-GS-265, IB-GS-279), 0 `pending` |
+| 26 ca từng sửa | 25 đạt, 1 cần chỉnh |
+| Quote khớp corpus | 183/183 ca dữ kiện, 11/11 lượt bổ sung, 256 lượt quote |
+| Gate `--require-reviewed` | **Chưa đạt** |
+
+### 4.4 Ma trận truy xuất, Tavily Off (212 câu)
+
+Mẫu số: Recall@5 và MRR@5 trên 195 câu có nguồn; context chunk recall trên 183 câu; Accuracy trên 195 câu dữ kiện; 17 ca hành vi chấm riêng (cả sáu cấu hình 17/17). 152/212 ca dùng truy vấn đã viết lại. Chấm: DeepSeek Flash, ẩn cấu hình.
+
+| Truy xuất | Query | Recall@5 | MRR@5 | Context chunk recall | Accuracy | Bám nguồn đủ |
+|---|---|---:|---:|---:|---:|---:|
+| E5 | Gốc | 82,82% | 0,728 | 61,38% | 149/195 · 76,41% | 95,32% |
+| E5 | Rewrite | 88,63% | 0,742 | 59,84% | 152/195 · 77,95% | 97,19% |
+| BM25 | Gốc | 79,83% | 0,590 | 46,63% | 138/195 · 70,77% | 95,88% |
+| BM25 | Rewrite | 87,69% | 0,690 | 55,83% | 158/195 · 81,03% | 98,90% |
+| Hybrid | Gốc | 86,41% | 0,701 | 62,80% | 155/195 · 79,49% | 96,61% |
+| **Hybrid** | **Rewrite** | **90,34%** | **0,767** | **64,07%** | **160/195 · 82,05%** | 98,38% |
+
+Accuracy theo nhóm:
+
+| Nhóm | n | E5 gốc | E5 rewrite | BM25 gốc | BM25 rewrite | Hybrid gốc | Hybrid rewrite |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| S4 có đáp án | 183 | 78,14% | 79,23% | 71,04% | 81,42% | 80,87% | 83,06% |
+| Tập bổ sung | 12 | 50,00% | 58,33% | 66,67% | 75,00% | 58,33% | 66,67% |
+| Tiếng Việt | 103 | 66,99% | 70,87% | 59,22% | 78,64% | 70,87% | 78,64% |
+| Tiếng Anh | 92 | 86,96% | 85,87% | 83,70% | 83,70% | 89,13% | 85,87% |
+| Dễ | 59 | 86,44% | 84,75% | 81,36% | 84,75% | 88,14% | 86,44% |
+| Trung bình | 87 | 82,76% | 82,76% | 72,41% | 87,36% | 86,21% | 86,21% |
+| Khó | 49 | 53,06% | 61,22% | 55,10% | 65,31% | 57,14% | 69,39% |
+| Tính toán | 9 | 6/9 | 7/9 | 5/9 | 5/9 | 6/9 | 7/9 |
+| Lỗi gõ hoặc tên | 32 | 21/32 | 22/32 | 18/32 | 22/32 | 22/32 | 22/32 |
+| Truy vấn nhiễu | 7 | 1/7 | 2/7 | 4/7 | 5/7 | 3/7 | 3/7 |
+| Tiếng Việt không dấu | 8 | 0/8 | 5/8 | 5/8 | 7/8 | 3/8 | 6/8 |
+
+Recall@5 của Hybrid khi bật rewrite: câu Việt 80,58% → 87,22%; câu khó 62,24% → 71,77%; Việt không dấu 50,00% → 93,75%. Nhóm nhiễu: Hybrid + rewrite có Recall@5 92,86% nhưng đúng 3/7, còn BM25 + rewrite đúng 5/7. TV3 đề xuất giữ **Hybrid + rewrite** làm mặc định (hơn BM25 + rewrite 2/195 câu).
+
+**Tavily Auto** trên 18 câu × 6 cấu hình (16 câu dữ kiện): 35 lượt tìm web (32 có kết quả, 3 timeout); 21/108 câu trả lời dẫn nguồn web.
+
+| Cấu hình | Đúng đủ Off | Đúng đủ Auto | Lượt Auto có trích dẫn web |
+|---|---:|---:|---:|
+| E5 gốc | 10/16 | 11/16 | 3/18 |
+| E5 rewrite | 10/16 | 12/16 | 3/18 |
+| BM25 gốc | 8/16 | 10/16 | 6/18 |
+| BM25 rewrite | 11/16 | 11/16 | 4/18 |
+| Hybrid gốc | 9/16 | 11/16 | 3/18 |
+| Hybrid rewrite | 12/16 | 12/16 | 2/18 |
+
+Kiểm riêng Agent đầy đủ qua API trên 6 câu đại diện: 6/6 phản hồi cuối, 7/7 request HTTP 200, không gọi Tavily.
+
+### 4.5 Agent đầy đủ trên 100 ca (Tavily Auto)
+
+Tập: 55 Việt / 45 Anh; 30 dễ / 45 trung bình / 25 khó; có 20 ca lỗi gõ, 11 ca có lượt bổ sung, 6 ca ngoài phạm vi. 75 ca JSON, 25 ca SSE. Chấm: Codex theo [rubric S4](../evaluation/s4-rubric.md). Hai lượt dùng cùng 100 câu, trong đó có các câu từng dùng để sửa Agent, nên đây là đo hồi quy, không phải tập kiểm tra độc lập.
+
+| Chỉ số | Trước sửa | Sau sửa |
+|---|---:|---:|
+| Ca có phản hồi cuối | 99/100 | **100/100** |
+| Request chat HTTP 200 | 107/108 | **111/111** |
+| Accuracy dữ kiện ở lượt đầu | 71/83 · 85,54% | **76/83 · 91,57%** |
+| Hành vi đạt | 15/17 · 88,24% | **17/17** |
+| Bám nguồn đầy đủ (trong ca có trích dẫn) | 78/89 · 87,64% | **90/94 · 95,74%** |
+| Lượt bổ sung đúng đủ | 7/8 | **10/11** |
+| Độ trễ theo ca p50 / p95 | 9,68 s / 20,73 s | 8,84 s / 24,73 s |
+| Lượt gọi mô hình logic | 629 | 652 |
+| Request Tavily / ca có nguồn web | 32 / 3 | 27 / 7 |
+
+| Nhóm (đúng đủ) | Trước sửa | Sau sửa |
+|---|---:|---:|
+| Việt | 35/42 | 39/42 |
+| Anh | 36/41 | 37/41 |
+| Dễ | 23/25 | 23/25 |
+| Trung bình | 35/38 | 38/38 |
+| Khó | 13/20 | 15/20 |
+| Lỗi gõ hoặc sai tên | 17/20 | chưa tách |
+
+Sau sửa: 76 đúng đủ, 6 đúng một phần, 1 hỏi lại thừa; 7 ca tăng điểm, 2 ca giảm. Trước sửa, IB-GS-278 trả 502.
+
+Truy xuất local trên 83 câu có trang tham chiếu (truy vấn nguyên văn, không gọi DeepSeek hay Tavily):
+
+| Nhóm | n | Recall@5 | MRR@5 |
+|---|---:|---:|---:|
+| Toàn bộ | 83 | 81,33% | 0,748 |
+| Việt | 42 | 73,41% | 0,633 |
+| Anh | 41 | 89,43% | 0,866 |
+| Dễ | 25 | 92,00% | 0,810 |
+| Trung bình | 38 | 92,11% | 0,792 |
+| Khó | 20 | 47,50% | 0,588 |
+
+| So sánh (83 câu, chạy lại) | E5 dense-only | E5 + BM25 (RRF) |
+|---|---:|---:|
+| Recall@5 | 80,32% | 82,33% |
+| MRR@5 | 0,733 | 0,748 |
+| Câu có ít nhất một trang đúng ở top 5 | 71/83 | 73/83 |
+| Recall@5 Việt / Anh | 70,24% / 90,65% | 74,21% / 90,65% |
+| Recall@5 câu khó | 43,33% | 51,67% |
+
+### 4.6 Baseline 25 ca chẩn đoán (trước khi sửa pipeline)
+
+14 Việt / 11 Anh; mỗi ca một hội thoại mới.
+
+| Số đo | Giá trị |
+|---|---:|
+| Ca có phản hồi cuối | 25/25 |
+| Request HTTP 200 | 27/27 |
+| Ca có trích dẫn / có trích dẫn web | 22/25 / 3/25 |
+| Độ trễ p50 / p95 | 9,26 s / 22,01 s |
+| Lượt gọi mô hình logic | 164 |
+| Request Tavily | 14 (8 Search, 2 lỗi; 6 Extract) |
+
+Chạy lại 5 ca lỗi sau sửa (IB-BL-001, 010, 018, 020, 023): 5/5 có trích dẫn, 6/6 HTTP 200, không gọi Tavily; p50 trên 5 ca **12,88 s → 8,44 s**. Đợt này không có Accuracy đã chấm và trace chưa đủ để tính Recall@5.
+
+### 4.7 Các lượt chạy thật nhỏ của Agent
+
+| Đợt | Lượt | HTTP | Gọi model / Tavily | Quan sát |
+|---|---|---|---|---|
+| Agent thích ứng (13/11, collection 18.383 điểm) | 5 ca | 5/5 200 | 24 / 2 | Độ trễ 1,99–20,01 s; ADAPT-02 thiếu vị trí và trích dẫn, ADAPT-04 hỏi lại sớm |
+| Gameplay nhiều nguồn (14/11) | 5 ca, 10 request | 5/5 có câu trả lời cuối | 54 / 4 | PLAY-02 và PLAY-04 có 502 trước khi sửa |
+| Hỏi đường theo tiến độ (14/11) | 6 lượt | 2 hội thoại thành công, 1 ca 502 | không ghi | Lỗi Reduvia (`changed_numeric_constraints`) đã phát lại offline thành công |
+| Điều kiện bị thay (14/11) | 4 lượt | 2/4 200 (44,36 s; 44,13 s), 2/4 502 (4,11 s; 4,35 s) | 34 / 17 | Bản sửa chỉ kiểm offline |
+
+### 4.8 Kiểm thử phần mềm
+
+| Số đo | Giá trị | Nguồn |
+|---|---|---|
+| Unit test backend trên `develop` `65a9b73` | **1.161 đạt**, 2 cảnh báo; ruff, format, OpenAPI khớp | Chạy trên máy TV1, 16/11 |
+| Web / bot | 49 / 33 test đạt | Chạy trên máy TV1, 16/11 |
+| Integration test | CI success trên `65a9b73`; máy TV1 không chạy được (Docker tắt) | GitHub Actions |
+| Test e2e pipeline (Qdrant + PostgreSQL thật, LLM giả) | 3 test đạt | TV1, PR #96 |
+| Coverage `app/rag` | 95% (ngưỡng CI 60%) | TV1, 13/11 |
+| Đăng nhập | Có test unit và integration; chưa thử Discord thật | TV1 |
+| `eval_runs` | 2 lượt `s4-auto-100-task3`, `s4-auto-100-retest` lưu trong PostgreSQL local; `/admin/stats` đọc được | [báo cáo](../testing/2026-11-14_s4-retest-100.md) |
+| Vòng import (GitNexus) | 0 | Index tại `65a9b73` |
 
 ## 5. Rủi ro và nợ kỹ thuật
 
