@@ -98,6 +98,13 @@ class LiveChatService:
             return {"message_id": message_id, "trace": public_trace(live), "source": "memory"}
         raise NotFoundError("Không tìm thấy trace của câu trả lời này.")
 
+    def forget(self, conversation_ids) -> None:
+        """Bỏ hội thoại khỏi bộ nhớ RAM sau khi đã xóa bền: không thì lượt hỏi kế tiếp dùng lại bản cũ và báo lỗi."""
+        for conversation_id in set(conversation_ids):
+            state = self._conversations.pop(conversation_id, None)
+            if state is not None and state.external_ref:
+                self._by_ref.pop((state.conversation.channel, state.external_ref), None)
+
     def history(self, conversation_id: UUID) -> ConversationOut:
         if conversation_id not in self._conversations:
             raise NotFoundError("Không tìm thấy hội thoại.")
@@ -190,13 +197,24 @@ class LiveChatService:
     async def _refresh(self, state, req):
         if self.repository is None or state.revision == 0:
             return
-        stored = await self.repository.load(
-            state.conversation.id,
-            channel=req.channel,
-            external_ref=req.external_ref,
-            token=req.conversation_token,
-            user_id=req.user_id,
-        )
+        try:
+            stored = await self.repository.load(
+                state.conversation.id,
+                channel=req.channel,
+                external_ref=req.external_ref,
+                token=req.conversation_token,
+                user_id=req.user_id,
+            )
+        except NotFoundError:
+            if req.channel != "discord":
+                raise
+            # Hội thoại Discord đã bị xóa bền (vd. /clear chạy ở worker khác): coi như cache miss, bắt đầu lại hội thoại
+            # rỗng cùng khóa (id cố định theo owner) ngay trong state này; lượt lưu tới sẽ tạo lại dòng với revision 0
+            state.conversation = ConversationOut(
+                id=state.conversation.id, channel=state.conversation.channel, created_at=datetime.now(UTC), messages=[]
+            )
+            state.player, state.revision = None, 0
+            return
         state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
 
     async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):
@@ -319,7 +337,13 @@ class LiveChatService:
         if self.repository is not None:
             working = working or {}
             snapshot = Snapshot(
-                state.conversation, state.external_ref, state.owner, state.revision, working, user_id=req.user_id
+                state.conversation,
+                state.external_ref,
+                state.owner,
+                state.revision,
+                working,
+                user_id=req.user_id,
+                guild_id=req.guild_id,
             )
             tokens_in, tokens_out = token_usage(prepared.trace)
             record = {
