@@ -26,7 +26,10 @@ class Client:
 def test_recent_changes_follows_continuation_and_passes_since():
     client = Client(
         [
-            {"query": {"recentchanges": [{"pageid": 1, "title": "A", "type": "edit"}]}, "continue": {"rccontinue": "x"}},
+            {
+                "query": {"recentchanges": [{"pageid": 1, "title": "A", "type": "edit"}]},
+                "continue": {"rccontinue": "x"},
+            },
             {"query": {"recentchanges": [{"pageid": 2, "title": "B", "type": "new"}]}},
         ]
     )

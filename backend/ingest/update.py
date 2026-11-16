@@ -125,7 +125,9 @@ def classify(source, config, state, ids, scoped):
             or OUT_OF_SCOPE.search(title + " " + " ".join(cats))
         )
         if gone:
-            plan["deleted" if known else "skipped"].append({"id": key, "title": title or (known or {}).get("title", "")})
+            plan["deleted" if known else "skipped"].append(
+                {"id": key, "title": title or (known or {}).get("title", "")}
+            )
         elif known and known["revision_id"] == page.get("lastrevid"):
             plan["unchanged"].append(key)
         elif known:
@@ -231,7 +233,9 @@ async def run_update(
             save(path, state)
         report.update(status="completed" if complete else "partial", counts=dict(counts), errors=errors)
     except BaseException as exc:
-        report.update(status="failed", fatal_error=type(exc).__name__ + ": " + str(exc), counts=dict(counts), errors=errors)
+        report.update(
+            status="failed", fatal_error=type(exc).__name__ + ": " + str(exc), counts=dict(counts), errors=errors
+        )
         await jobs.finish(handle, counts["pages_ok"], counts["pages_failed"] + 1, report)
         save(config["data_dir"] / "reports" / (job_id + ".json"), report)
         raise
@@ -239,4 +243,3 @@ async def run_update(
     await jobs.finish(handle, ok, counts["pages_failed"], report)
     save(config["data_dir"] / "reports" / (job_id + ".json"), report)
     return report
-

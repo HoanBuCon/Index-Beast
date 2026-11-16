@@ -1,4 +1,4 @@
-"""Điều phối cập nhật tăng dần (FR-ING-07) với fake wiki/builder/index/DB/jobs: không mạng, không model, không embedding.
+"""Điều phối cập nhật tăng dần (FR-ING-07) với fake wiki/builder/index/DB/jobs: không mạng, không model.
 
 Phụ trách: TV2 · [S5] Cập nhật dữ liệu tăng dần
 """
