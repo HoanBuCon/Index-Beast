@@ -42,6 +42,12 @@ class NotFoundError(AppError):
     message = "Không tìm thấy tài nguyên."
 
 
+class ConflictError(AppError):
+    status_code = 409
+    code = "conflict"
+    message = "Yêu cầu xung đột với trạng thái hiện tại."
+
+
 class RateLimitedError(AppError):
     status_code = 429
     code = "rate_limited"
