@@ -21,6 +21,8 @@ test("global registry includes help/about with private, bounded and attributed r
     assert.ok(embed.description.length <= 4096);
     if (name === "help") assert.match(embed.description, /\/ask[\s\S]*\/ping[\s\S]*\/about/);
     else {
+      for (const member of ["Quỷ Tháng 5 Khóc", "Himmel", "Thợ Săn Lợn Sang", "Riley"])
+        assert.match(embed.description, new RegExp(member));
       assert.match(embed.description, /https:\/\/eldenring.wiki.gg\//);
       assert.match(embed.description, /https:\/\/creativecommons.org\/licenses\/by-sa\/4.0\//);
       assert.match(embed.description, /FromSoftware[\s\S]*Bandai Namco/);
