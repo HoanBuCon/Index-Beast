@@ -9,6 +9,10 @@ import GraceMenuItem from "../components/layout/GraceMenuItem";
 import type { Conversation } from "../api/types";
 import { useConversations } from "../hooks/useConversations";
 import { useChatStream } from "../hooks/useChatStream";
+import { useAuth } from "../hooks/useAuth";
+import AccountMenu from "../components/layout/AccountMenu";
+import { claimGuestConversations, discordLoginUrl, toLocalConversation } from "../api/auth";
+import { getConversation } from "../api/client";
 import MessageInput from "../components/chat/MessageInput";
 import type { SearchMode } from "../components/chat/searchMode";
 import MessageList from "../components/chat/MessageList";
@@ -58,6 +62,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const [searchMode, setSearchMode] = useState<SearchMode>("auto");
   const [searchAvailable, setSearchAvailable] = useState(false);
   const [traceAvailable, setTraceAvailable] = useState(false);
+  const auth = useAuth();
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/v1/chat/capabilities", { signal: controller.signal })
@@ -73,6 +78,34 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const [active, setActive] = useState(draft.id);
   const conversation = history.conversations.find((c) => c.id === active) ?? draft;
   const stream = useChatStream(history.update);
+  // Sau khi đăng nhập: nhận lại hội thoại khách đang lưu ở trình duyệt (mỗi tài khoản một lần mỗi lần tải trang).
+  const claimedFor = useRef<string | null>(null);
+  const [claimedIds, setClaimedIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (!auth.user || claimedFor.current === auth.user.id) return;
+    claimedFor.current = auth.user.id;
+    void claimGuestConversations(history.conversations).then(setClaimedIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi người dùng đăng nhập, không theo từng tin nhắn
+  }, [auth.user]);
+  // Hội thoại trên server chưa có bản trong trình duyệt này (đăng nhập từ thiết bị khác).
+  const localServerIds = new Set(history.conversations.map((c) => c.serverId));
+  const remoteOnly = auth.myConversations.filter((c) => !localServerIds.has(c.id) && !claimedIds.includes(c.id));
+  const [openError, setOpenError] = useState("");
+  async function openRemote(id: string, title: string) {
+    setOpenError("");
+    try {
+      // Không gửi X-Conversation-Token: server nhận ra chủ sở hữu qua cookie phiên.
+      const loaded = toLocalConversation(await getConversation(id), title);
+      history.update(loaded);
+      setActive(loaded.id);
+      setMode(loaded.mode);
+      stream.clearError();
+      navigate("/chat");
+      closeMobileSidebar();
+    } catch {
+      setOpenError("Không mở được hội thoại này. Vui lòng thử lại.");
+    }
+  }
   function reset(nextMode: Conversation["mode"] = "api-stream") {
     setMode(nextMode);
     const next = fresh(nextMode);
@@ -239,7 +272,53 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
             </div>
           </section>
         )}
+        {remoteOnly.length > 0 && (
+          <section className="conversation-history" aria-labelledby="remote-history-title">
+            <h2 id="remote-history-title" className="history-heading">
+              Của tài khoản
+            </h2>
+            <div className="history">
+              {remoteOnly.map((c) => (
+                <div key={c.id} className="history-row">
+                  <button disabled={stream.busy} onClick={() => void openRemote(c.id, c.title)}>
+                    <span>{c.title}</span>
+                    <small>{new Date(c.created_at).toLocaleDateString("vi-VN")}</small>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {openError && <p role="alert">{openError}</p>}
         {history.storageError && <p role="status">{"Trình duyệt không lưu được lịch sử."}</p>}
+        {(auth.user || auth.authAvailable) && (
+          <div className="sidebar-account">
+            {auth.user ? (
+              <AccountMenu
+                name={auth.user.display_name}
+                disabled={stream.busy}
+                onLogout={() => {
+                  void auth.logout();
+                  setClaimedIds([]);
+                  claimedFor.current = null;
+                }}
+                onDeleted={() => {
+                  // Server đã xóa mọi hội thoại của tài khoản: bỏ luôn bản lưu trong trình duyệt để không còn dữ liệu cũ.
+                  const gone = new Set([...claimedIds, ...auth.myConversations.map((c) => c.id)]);
+                  history.conversations
+                    .filter((c) => c.serverId && gone.has(c.serverId))
+                    .forEach((c) => history.remove(c.id));
+                  auth.clearUser();
+                  setClaimedIds([]);
+                  claimedFor.current = null;
+                  reset();
+                }}
+              />
+            ) : (
+              <a href={discordLoginUrl("/chat")}>Đăng nhập Discord</a>
+            )}
+          </div>
+        )}
         <GraceMenuItem
           className="sidebar-admin"
           to="/admin"
@@ -277,6 +356,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                 messages={conversation.messages}
                 busy={stream.busy}
                 demo={mode === "demo"}
+                conversationToken={conversation.serverToken}
                 traceLinks={traceAvailable}
                 onClarification={(text, id) => {
                   const failed = retryInput(conversation);

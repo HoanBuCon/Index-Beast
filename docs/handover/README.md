@@ -227,3 +227,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |
 - [TV4 · Câu hỏi động và hai nút trong bảng bổ sung (14/11/2026)](2026-11-14_s4-tv4_cau-hoi-va-hai-nut-bo-sung.md)
 - [TV4 · Dọn ảnh không sử dụng (14/11/2026)](2026-11-14_s4-tv4_don-anh-khong-su-dung.md)
+- [TV4 · Web: đăng nhập Discord, feedback, admin, xóa tài khoản (16/11/2026, TV1 làm hộ)](2026-11-16_s5-tv4_web-dang-nhap-feedback-admin.md)

@@ -257,3 +257,23 @@ body:has(.login-page)::-webkit-scrollbar {
     font-size: 16px;
   }
 }
+/* Google chưa có backend: hàng bị khóa, mờ đi nhưng vẫn đọc được (tương phản ≥ 3:1 cho nhãn "sắp có"). */
+.login-providers button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.login-soon {
+  font-size: 13px;
+  color: var(--ui-muted);
+}
+.login-providers a.login-menu {
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px 16px;
+  color: var(--ui-text);
+  text-decoration: none;
+  font-size: 17px;
+}

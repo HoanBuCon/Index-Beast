@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { AdminStats } from "../api/types";
 import { getAdminStats, getTrace } from "../api/client";
+import { getMe } from "../api/auth";
 export default function AdminPage() {
   // Liên kết "Xem trace" ở câu trả lời mang theo message_id; token không đi theo URL, phải nhập tại đây.
   const [params] = useSearchParams();
@@ -16,6 +17,24 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
+  // Quản trị viên đăng nhập Discord (is_admin) vào bằng cookie phiên, không cần dán token.
+  const [sessionAdmin, setSessionAdmin] = useState<string | null>(null);
+  useEffect(() => {
+    const abort = new AbortController();
+    getMe(abort.signal)
+      .then((user) => {
+        if (user?.is_admin) setSessionAdmin(user.display_name);
+      })
+      .catch(() => {});
+    return () => abort.abort();
+  }, []);
+  useEffect(() => {
+    if (sessionAdmin) void load(messageId.trim() ? ["stats", "trace"] : ["stats"]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ tự tải một lần khi biết là quản trị viên
+  }, [sessionAdmin]);
+  const hasAccess = Boolean(token.trim()) || sessionAdmin !== null;
+  // Token nhập tay (nếu có) được ưu tiên; không thì dựa vào cookie phiên.
+  const credential = () => token.trim() || null;
   async function load(kinds: ("stats" | "trace")[]) {
     controller.current?.abort();
     const next = new AbortController();
@@ -25,8 +44,8 @@ export default function AdminPage() {
     const errors = new Set<string>();
     for (const kind of kinds) {
       try {
-        if (kind === "stats") setStats(await getAdminStats(token.trim(), next.signal));
-        else setTrace(await getTrace(token.trim(), messageId.trim(), next.signal));
+        if (kind === "stats") setStats(await getAdminStats(credential(), next.signal));
+        else setTrace(await getTrace(credential(), messageId.trim(), next.signal));
       } catch (cause) {
         if (next.signal.aborted) return;
         errors.add(cause instanceof Error ? cause.message : "Không tải được dữ liệu.");
@@ -49,7 +68,9 @@ export default function AdminPage() {
       <h1>{"Quản trị kho lore"}</h1>
       <p className="lead">{"Hội thoại, phản hồi và chất lượng dữ liệu."}</p>
       <p className="mode-note">
-        {"Giao diện kết nối API quản trị do TV1 phụ trách. Chưa có dữ liệu thật khi API chưa sẵn sàng."}
+        {sessionAdmin
+          ? `Đã đăng nhập với tư cách quản trị viên: ${sessionAdmin}. Không cần token.`
+          : "Đăng nhập Discord bằng tài khoản quản trị, hoặc nhập token quản trị để vận hành."}
       </p>
       <form
         className="admin-auth"
@@ -64,6 +85,7 @@ export default function AdminPage() {
           id="admin-token"
           type="password"
           autoComplete="off"
+          required={sessionAdmin === null}
           value={token}
           onChange={(e) => {
             controller.current?.abort();
@@ -73,9 +95,8 @@ export default function AdminPage() {
             setStats(null);
             setTrace(null);
           }}
-          required
         />
-        <button className="primary" disabled={busy || !token.trim()}>
+        <button className="primary" disabled={busy || !hasAccess}>
           {busy ? "Đang tải…" : "Kết nối"}
         </button>
         <button type="button" onClick={logout}>
@@ -95,7 +116,7 @@ export default function AdminPage() {
               <li key={c.id}>
                 <strong>{c.title}</strong>
                 <small>
-                  {c.created_at} · {c.id}
+                  {new Date(c.created_at).toLocaleString("vi-VN")} · {c.id}
                 </small>
               </li>
             ))}
@@ -123,10 +144,12 @@ export default function AdminPage() {
             onChange={(e) => setMessageId(e.target.value)}
             required
           />
-          <button disabled={!token.trim() || !messageId.trim() || busy}>{"Xem trace"}</button>
+          <button disabled={!hasAccess || !messageId.trim() || busy}>{"Xem trace"}</button>
         </form>
         {trace === null && messageId.trim() && !error && (
-          <p className="muted">{"Nhập token quản trị rồi bấm Kết nối (hoặc Xem trace) để xem trace của mã này."}</p>
+          <p className="muted">
+            {"Đăng nhập quản trị hoặc nhập token rồi bấm Kết nối (hoặc Xem trace) để xem trace của mã này."}
+          </p>
         )}
         {trace !== null && <pre>{JSON.stringify(trace, null, 2)}</pre>}
       </section>

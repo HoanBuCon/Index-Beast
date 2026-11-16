@@ -18,6 +18,7 @@ export class ApiError extends Error {
 }
 async function request(path: string, init: RequestInit = {}) {
   const response = await fetch(`/api/v1${path}`, {
+    credentials: "same-origin", // cookie phiên đăng nhập (cùng origin qua Caddy/proxy Vite)
     ...init,
     headers: { "Content-Type": "application/json", "X-Request-ID": createUuid(), ...init.headers },
   });
@@ -207,9 +208,13 @@ export async function getConversation(id: string, signal?: AbortSignal, token?: 
     ),
   };
 }
+// Quản trị viên đăng nhập (is_admin) vào /admin/* bằng cookie phiên: không có token thì không gửi header.
+function adminHeaders(token: string | null): Record<string, string> {
+  return token ? { "X-Admin-Token": token } : {};
+}
 // Token admin chỉ giữ trong state của trang, không ghi vào localStorage hay bundle.
-export async function getAdminStats(token: string, signal?: AbortSignal): Promise<AdminStats> {
-  const data = await (await request("/admin/stats", { headers: { "X-Admin-Token": token }, signal })).json();
+export async function getAdminStats(token: string | null, signal?: AbortSignal): Promise<AdminStats> {
+  const data = await (await request("/admin/stats", { headers: adminHeaders(token), signal })).json();
   if (
     !data ||
     !Array.isArray(data.conversations) ||
@@ -244,8 +249,8 @@ export async function getAdminStats(token: string, signal?: AbortSignal): Promis
   }
   return data;
 }
-export async function getTrace(token: string, messageId: string, signal?: AbortSignal): Promise<unknown> {
+export async function getTrace(token: string | null, messageId: string, signal?: AbortSignal): Promise<unknown> {
   return (
-    await request(`/admin/trace/${encodeURIComponent(messageId)}`, { headers: { "X-Admin-Token": token }, signal })
+    await request(`/admin/trace/${encodeURIComponent(messageId)}`, { headers: adminHeaders(token), signal })
   ).json();
 }

@@ -38,11 +38,11 @@ test("the admin page is prefilled from ?message_id and never reads a token from 
       renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [route] }, createElement(AdminPage)));
     const withId = render(`/admin?message_id=${id}&token=secret-from-url`);
     assert.match(withId, new RegExp(`id="message-id"[^>]*value="${id}"`));
-    assert.match(withId, /Nhập token quản trị rồi bấm Kết nối/);
+    assert.match(withId, /nhập token rồi bấm Kết nối/);
     assert.doesNotMatch(withId, /secret-from-url/);
     assert.match(withId, /id="admin-token"[^>]*type="password"/);
     const plain = render("/admin");
-    assert.doesNotMatch(plain, /Nhập token quản trị rồi bấm Kết nối/);
+    assert.doesNotMatch(plain, /nhập token rồi bấm Kết nối/);
   } finally {
     await server.close();
   }
