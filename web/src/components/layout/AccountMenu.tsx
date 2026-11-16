@@ -1,4 +1,4 @@
-// Tên người dùng + Đăng xuất + Xóa tài khoản (có hộp xác nhận); dùng trong thanh bên khi đã đăng nhập.
+// Tên người dùng + Đăng xuất + Xóa tài khoản (hộp xác nhận <dialog> modal); dùng trong thanh bên khi đã đăng nhập.
 // Phụ trách: TV4 · [S5] (viết hộ bởi agent của TV1). DELETE /me thuộc nhánh feature/s5-tv1-quyen-rieng-tu.
 
 import { useEffect, useRef, useState } from "react";
@@ -8,12 +8,14 @@ import "../../styles/account.css";
 export default function AccountMenu({
   name,
   disabled = false,
+  logoutError = "",
   onLogout,
   onDeleted,
   initialConfirming = false,
 }: {
   name: string;
   disabled?: boolean;
+  logoutError?: string;
   onLogout: () => void;
   onDeleted: () => void;
   initialConfirming?: boolean;
@@ -21,11 +23,15 @@ export default function AccountMenu({
   const [confirming, setConfirming] = useState(initialConfirming);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const dialog = useRef<HTMLDialogElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
-  // Hộp xác nhận nhận focus ở nút an toàn (Hủy) và trả focus về nút mở khi đóng.
+  // <dialog>.showModal(): trình duyệt tự khóa focus trong hộp và đóng bằng Esc; vẫn đặt focus đầu vào nút an toàn "Hủy".
   useEffect(() => {
-    if (confirming) cancelRef.current?.focus();
+    const element = dialog.current;
+    if (!confirming || !element || element.open) return;
+    element.showModal?.();
+    cancelRef.current?.focus();
   }, [confirming]);
   function close() {
     setConfirming(false);
@@ -54,17 +60,22 @@ export default function AccountMenu({
       <button type="button" ref={openerRef} disabled={disabled} onClick={() => setConfirming(true)}>
         Xóa tài khoản
       </button>
+      {logoutError && (
+        <p className="sidebar-account__error" role="alert">
+          {logoutError}
+        </p>
+      )}
       {confirming && (
-        <div
+        <dialog
+          ref={dialog}
           className="account-confirm"
           role="alertdialog"
           aria-labelledby="account-confirm-title"
           aria-describedby="account-confirm-desc"
-          onKeyDown={(event) => {
-            if (event.key === "Escape" && !busy) {
-              event.stopPropagation();
-              close();
-            }
+          onCancel={(event) => {
+            // Esc: đóng hộp, trừ khi đang xóa dở
+            event.preventDefault();
+            if (!busy) close();
           }}
         >
           <h2 id="account-confirm-title">Xóa tài khoản?</h2>
@@ -80,7 +91,7 @@ export default function AccountMenu({
               {busy ? "Đang xóa…" : "Xóa vĩnh viễn"}
             </button>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

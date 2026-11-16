@@ -18,17 +18,27 @@ Cookie: mọi `fetch` dùng `credentials: "same-origin"` (production cùng origi
 ## Quyết định
 
 - Repo dùng `node --test` + render SSR qua Vite, **không có vitest/testing-library**; tôi theo đó và không thêm dependency.
-- Hội thoại mở từ tài khoản được ghi vào localStorage như hội thoại thường (cần cho lịch sử/gửi tiếp); trên máy dùng chung, đăng xuất không xóa chúng. Xóa tài khoản thì xóa.
+- Hội thoại tạo/mở khi đang đăng nhập mang `ownerUserId` và bị xóa khỏi localStorage khi đăng xuất thành công hoặc xóa tài khoản (xem "Sửa sau review").
 - Không có script `lint` trong `web/package.json`; kiểm tra bằng `tsc --noEmit` (trong `build`) và `prettier --check`.
 
 ## Kiểm tra
 
 - `cd web && npm ci`: ok.
-- `npm test`: 63 pass / 0 fail (thêm `tests/auth.test.ts`, `tests/account.test.ts`; sửa `login.test.ts`, `traceLink.test.ts`).
+- `npm test`: 71 pass / 0 fail (sau review; trước review 63) (thêm `tests/auth.test.ts`, `tests/account.test.ts`, `tests/review.test.ts`; sửa `login.test.ts`, `traceLink.test.ts`).
 - `npm run build` (gồm `tsc --noEmit`): ok. `npx prettier --check .`: ok.
+
+## Sửa sau review
+
+1. `Conversation.ownerUserId`: gắn cho hội thoại tạo/mở khi đã đăng nhập (`stampOwner`); hội thoại khách đã có trên server giữ trạng thái khách. Xóa tài khoản xóa mọi bản cục bộ có chủ đó, đã nhận, hoặc có trong danh sách server của tài khoản (`accountConversationIds`).
+2. `logout` chỉ về chế độ khách khi POST `/auth/logout` thành công, hoặc POST lỗi nhưng `/auth/me` báo hết phiên (`logoutVerified`); không thì giữ người dùng và hiện lỗi.
+3. Đăng xuất thành công cũng xóa các bản cục bộ thuộc tài khoản (kể cả bản đã nhận, vốn đã bỏ `serverToken`).
+4. Nhận hội thoại khách chỉ sau khi người dùng bấm Đồng ý ở hộp "Chuyển N hội thoại khách trong trình duyệt này vào tài khoản?"; "Không" được nhớ trong `sessionStorage` của phiên. Nhận xong thì bỏ `serverToken` và gắn chủ.
+5. `useAuth` chạy một lần ở `App` và chia sẻ qua `AuthContext` (capabilities gồm `authAvailable/searchAvailable/traceAvailable`, user, hội thoại của tôi); ChatPage bỏ fetch capabilities riêng, AdminPage bỏ `/auth/me` riêng.
+6. Xác nhận xóa tài khoản dùng `<dialog>` + `showModal()` (khóa focus, Esc có sẵn), focus đầu vào "Hủy".
 
 ## Chưa kiểm chứng
 
 - **`DELETE /api/v1/me` đến từ nhánh `feature/s5-tv1-quyen-rieng-tu`, chưa gộp vào develop**: nút "Xóa tài khoản" chỉ chạy được sau khi nhánh đó vào.
 - Chưa thử với Discord thật, backend thật hay trình duyệt (không có backend/OAuth trong môi trường này). Luồng bấm xác nhận chưa test bằng DOM (không có testing-library); chỉ test `deleteAccount` bằng fetch giả và việc hộp xác nhận hiển thị trước khi gọi API.
+- `showModal()`, Esc và khóa focus của `<dialog>` chỉ kiểm bằng đọc code/markup SSR, chưa chạy trong trình duyệt.
 - Chưa kiểm responsive/bàn phím trên thiết bị thật.

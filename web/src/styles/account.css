@@ -1,12 +1,14 @@
-/* Tài khoản trong thanh bên: hộp xác nhận xóa tài khoản nổi giữa màn hình, vừa 360px. */
+/* Tài khoản trong thanh bên: hộp xác nhận (<dialog> modal) và lời hỏi nhận hội thoại khách; vừa 360px. */
 .sidebar-account {
   flex-wrap: wrap;
 }
+.sidebar-account__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: #f2b8b0;
+  font-size: 12px;
+}
 .account-confirm {
-  position: fixed;
-  z-index: 50;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
   width: min(360px, calc(100vw - 32px));
   padding: 16px;
   border: 1px solid #d9bc78;
@@ -16,11 +18,15 @@
   line-height: 1.6;
   white-space: normal;
 }
+.account-confirm::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
 .account-confirm h2 {
   margin: 0 0 8px;
   font-size: 16px;
 }
-.account-confirm p {
+.account-confirm p,
+.claim-prompt p {
   margin: 0 0 12px;
 }
 .account-confirm__actions {
@@ -28,7 +34,8 @@
   gap: 8px;
   justify-content: flex-end;
 }
-.account-confirm button {
+.account-confirm button,
+.claim-prompt button {
   min-height: 36px;
   padding: 6px 12px;
   font-size: 13px;
@@ -36,4 +43,11 @@
 .account-confirm button.danger {
   border-color: #c4574a;
   color: #f2b8b0;
+}
+.claim-prompt {
+  padding: 8px 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d4d7c9;
+  white-space: normal;
 }

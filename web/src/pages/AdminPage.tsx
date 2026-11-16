@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import type { AdminStats } from "../api/types";
 import { getAdminStats, getTrace } from "../api/client";
-import { getMe } from "../api/auth";
+import { useAuthContext } from "../hooks/AuthContext";
 export default function AdminPage() {
   // Liên kết "Xem trace" ở câu trả lời mang theo message_id; token không đi theo URL, phải nhập tại đây.
   const [params] = useSearchParams();
@@ -17,17 +17,9 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const controller = useRef<AbortController | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
-  // Quản trị viên đăng nhập Discord (is_admin) vào bằng cookie phiên, không cần dán token.
-  const [sessionAdmin, setSessionAdmin] = useState<string | null>(null);
-  useEffect(() => {
-    const abort = new AbortController();
-    getMe(abort.signal)
-      .then((user) => {
-        if (user?.is_admin) setSessionAdmin(user.display_name);
-      })
-      .catch(() => {});
-    return () => abort.abort();
-  }, []);
+  // Quản trị viên đăng nhập Discord (is_admin) vào bằng cookie phiên; trạng thái lấy từ AuthContext, không gọi /auth/me lần nữa.
+  const { user } = useAuthContext();
+  const sessionAdmin = user?.is_admin ? user.display_name : null;
   useEffect(() => {
     if (sessionAdmin) void load(messageId.trim() ? ["stats", "trace"] : ["stats"]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ tự tải một lần khi biết là quản trị viên

@@ -77,6 +77,12 @@ export async function logout(): Promise<boolean> {
   }
 }
 
+// Đăng xuất chỉ coi là xong khi POST thành công, hoặc /auth/me xác nhận đã không còn phiên (POST lỗi mạng nhưng phiên hết).
+export async function logoutVerified(): Promise<boolean> {
+  if (await logout()) return true;
+  return (await getMe()) === null;
+}
+
 export async function listMyConversations(signal?: AbortSignal): Promise<MyConversation[]> {
   try {
     const response = await fetch(`${BASE}/me/conversations`, { ...SAME_ORIGIN, signal });

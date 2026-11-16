@@ -9,12 +9,12 @@ import loginVideo from "../video/ELDEN_RING_login_cut.mp4";
 import googleMenuIcon from "../../item_/MENU_Tab_Net.png";
 import discordMenuIcon from "../../item_/MENU_Tab_Manual.png";
 import { discordLoginUrl } from "../api/auth";
-import { useAuth } from "../hooks/useAuth";
+import { useAuthContext } from "../hooks/AuthContext";
 import "../styles/login.css";
 import "../styles/sidebar-menu.css";
 
 export default function LoginPage() {
-  const auth = useAuth();
+  const auth = useAuthContext();
   const [params] = useSearchParams();
   // Người dùng bấm "Từ chối" trên Discord được đưa về /?login=denied.
   const notice = params.get("login") === "denied" ? "Bạn đã từ chối cấp quyền. Bạn vẫn có thể chọn “Dùng thử”." : "";
