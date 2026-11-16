@@ -34,8 +34,7 @@ echo "==> Build image"
 echo "==> Hạ tầng (PostgreSQL, Qdrant, Redis)"
 "${COMPOSE[@]}" up -d --wait postgres qdrant redis
 
-echo "==> Migration"
-"${COMPOSE[@]}" run --rm api alembic upgrade head
+# Migration: api tự chạy `alembic upgrade head` khi khởi động (CMD trong backend/Dockerfile), không cần bước riêng.
 
 SCALE=()
 if ! grep -qE '^DISCORD_TOKEN=.+' .env; then
