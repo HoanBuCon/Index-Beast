@@ -228,9 +228,9 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 
 | ID | Hạng mục | Yêu cầu (giá trị mục tiêu ban đầu) | Ưu tiên | Sprint | Trạng thái (08/11) |
 |---|---|---|---|---|---|
-| NFR-PERF-01 | Hiệu năng | Token đầu tiên p95 ≤ 3.5 s; câu trả lời hoàn chỉnh p95 ≤ 10 s với ≤ 20 người dùng đồng thời | M | S5 | Chưa đạt: p95 25 câu tuần tự = 12,4 s (> 10 s); token đầu chưa đo |
+| NFR-PERF-01 | Hiệu năng | Token đầu tiên p95 ≤ 3.5 s; câu trả lời hoàn chỉnh p95 ≤ 10 s với ≤ 20 người dùng đồng thời | M | S5 | Chưa đạt: p95 25 câu tuần tự = 12,4 s (> 10 s); token đầu chưa đo. Đã có kịch bản Locust và báo cáo p95 từng bước (`backend/loadtest`, `scripts.trace_latency`), chưa chạy |
 | NFR-PERF-02 | Hiệu năng | Retrieval + rerank p95 ≤ 1 s | S | S3 | Có số đo S2 (`docs/testing/2026-10-31_retrieval-latency.md`); chưa đo lại sau khi thêm agent |
-| NFR-CAP-01 | Tải | Chịu 50 người dùng đồng thời không lỗi (có thể xếp hàng) | M | S5 | Chưa đo (locust ở S5) |
+| NFR-CAP-01 | Tải | Chịu 50 người dùng đồng thời không lỗi (có thể xếp hàng) | M | S5 | Chưa đo: kịch bản Locust 20/50 người dùng đã có (`backend/loadtest`, kế hoạch `docs/testing/s5-load-test-plan.md`), chờ TV1 duyệt chạy |
 | NFR-QUAL-01 | Chất lượng | Recall@5 ≥ 0.80 trên golden set | M | S4 | Chưa đo (chưa có golden set được duyệt) |
 | NFR-QUAL-02 | Chất lượng | Correctness ≥ 70%, faithfulness ≥ 85% trên golden set | M | S4–S5 | Chưa đo |
 | NFR-AVL-01 | Sẵn sàng | Uptime ≥ 99% trong giai đoạn demo; tự khởi động lại container khi lỗi | S | S5 | In Progress: `restart: unless-stopped`; chưa có VPS |
@@ -238,7 +238,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | NFR-SEC-02 | Bảo mật | Chống prompt injection cơ bản: tách system prompt / ngữ cảnh / câu hỏi, không cho câu hỏi ghi đè chỉ dẫn | S | S4 | In Progress: tách chỉ dẫn/ngữ cảnh/câu hỏi, chặn injection cơ bản; chưa đánh giá đối kháng |
 | NFR-SEC-03 | Bảo mật | Endpoint admin yêu cầu xác thực; CORS chỉ cho domain web | M | S4 | In Progress: `X-Admin-Token` (PR #79), CORS theo `CORS_ORIGINS` |
 | NFR-PRIV-01 | Riêng tư | Chỉ lưu Discord user id dạng hash; có chính sách xoá log sau 90 ngày | S | S5 | In Progress: chủ sở hữu hội thoại lưu dạng băm; chưa có chính sách xóa 90 ngày |
-| NFR-COST-01 | Chi phí | Chi phí LLM ≤ $30/tháng ở 1.000 câu/ngày; giới hạn token mỗi request | S | S4 | Chưa đo: có giới hạn token và rate-limit; chi phí Tavily chưa tính |
+| NFR-COST-01 | Chi phí | Chi phí LLM ≤ $30/tháng ở 1.000 câu/ngày; giới hạn token mỗi request | S | S4 | Chưa đo: có giới hạn token và rate-limit; đã có `scripts.llm_cost` (token và lượt Tavily theo ngày, dự phóng 1.000 câu/ngày), giá cần đối chiếu và chưa chạy trên dữ liệu thật |
 | NFR-LEG-01 | Pháp lý | Ghi nguồn CC BY-SA ở mọi câu trả lời và trang About; disclaimer không liên kết FromSoftware/Bandai Namco | M | S3, S5 | In Progress: trang About có CC BY-SA và disclaimer; chưa kiểm nhãn trên từng câu trả lời |
 | NFR-MNT-01 | Bảo trì | Lint + test tự động trên CI; coverage module RAG lõi ≥ 60% | S | S2–S5 | Done: CI chạy lint, test, kiểm `openapi.json`; chưa đo coverage |
 | NFR-MNT-02 | Bảo trì | Cấu hình (top-k, ngưỡng, model, prompt) tách khỏi code | M | S3 | Done: cấu hình qua `Settings`/`.env`, prompt ở `app/rag/prompts/*.md` |
