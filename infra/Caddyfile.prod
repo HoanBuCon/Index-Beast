@@ -1,0 +1,64 @@
+# Production: cùng cấu trúc với infra/Caddyfile, thêm header bảo mật và cache cho file tĩnh. KHÔNG có basic auth.
+# DOMAIN là tên miền thật (DNS A đã trỏ về VPS, cổng 80/443 mở): Caddy tự xin và gia hạn chứng chỉ Let's Encrypt,
+# tự chuyển HTTP -> HTTPS. Chứng chỉ nằm trong volume caddy_data: đừng xóa volume này giữa các lần deploy
+# (xin lại quá nhiều lần sẽ chạm giới hạn của Let's Encrypt).
+# Caddy không ghi access log mặc định, nên IP người dùng không bị lưu lại (NFR-PRIV-01).
+# Phần proxy /api và web tĩnh dùng chung ở infra/caddy/snippets.caddy (COPY vào image, xem infra/caddy.Dockerfile).
+import /etc/caddy/snippets.caddy
+
+{$DOMAIN:tarnished.liemdai.io.vn} {
+	encode zstd gzip
+
+	header {
+		-Server
+		# 1 năm. Không bật `preload`: gửi tên miền vào danh sách preload của trình duyệt rất khó gỡ
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options DENY
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		# CSP viết theo bản build Vite của web/ (đã kiểm tra mã nguồn):
+		#  - script: chỉ file /assets/*.js cùng gốc, index.html không có script nội tuyến
+		#  - style 'unsafe-inline': React dùng thuộc tính style={...}; không có script nội tuyến nên rủi ro thấp
+		#  - font, ảnh nền, video đăng nhập: đều là file trong bundle (cùng gốc); font và ảnh nhỏ có thể bị Vite nhúng data:
+		#  - img-src https: vì ảnh minh họa trong câu trả lời và trích dẫn có thể trỏ tới ảnh wiki bên ngoài
+		#  - connect-src 'self': web chỉ gọi /api (kể cả SSE); không có Google Fonts, analytics hay CDN
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+
+	# Phòng thủ nhiều lớp: production không bao giờ lộ endpoint dev và tài liệu API, dù backend lỡ chạy ENVIRONMENT=dev
+	# (POST /api/v1/dev/llm/test không cần đăng nhập ở chế độ dev). Phải đặt TRƯỚC các `handle` khác: handle khớp trước thắng.
+	@devonly path /api/v1/dev /api/v1/dev/* /api/docs /api/docs/* /api/redoc /api/redoc/* /api/openapi.json
+	handle @devonly {
+		respond 404
+	}
+
+	# Bài chia sẻ có câu trả lời tới 100.000 ký tự và 100 nguồn (schema answer_share.py): ~400 KB trong trường hợp xấu nhất
+	handle /api/v1/answer-shares* {
+		request_body {
+			max_size 512KB
+		}
+		import api_proxy
+	}
+
+	handle /api/* {
+		# Yêu cầu lớn nhất còn lại là /chat: message tối đa 2.000 ký tự (~6 KB UTF-8) + vài trường; feedback reason ≤ 500 ký tự.
+		# 64 KB còn dư nhiều; vượt thì Caddy trả 413 trước khi chạm tới api.
+		request_body {
+			max_size 64KB
+		}
+		import api_proxy    # kèm SSE không đệm
+	}
+
+	# Tên file trong /assets có băm nội dung: cache vô hạn được
+	handle /assets/* {
+		root * /srv/web
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	handle {
+		header Cache-Control "no-cache"
+		import spa
+	}
+}
