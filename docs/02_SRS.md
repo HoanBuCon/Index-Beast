@@ -10,7 +10,7 @@
 
 | Thuộc tính | Giá trị |
 |---|---|
-| Phiên bản | 0.8.1 (Draft) |
+| Phiên bản | 0.8.2 (Draft) |
 | Ngày | 2026-10-17 · cập nhật 2026-11-08 |
 | Chủ sở hữu tài liệu | TV1 (Tech Lead) — mọi thành viên đều được đề xuất thay đổi |
 | Trạng thái | Living document — cập nhật cuối mỗi Sprint Review |
@@ -199,6 +199,8 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-BOT-06 | `/help`, `/about` (nguồn & giấy phép). | M | Stable | S3 | Done |
 | FR-BOT-07 | Cấu hình theo guild: kênh được phép, chế độ spoiler (`/config`, chỉ admin server). | C | Volatile | S5 | Proposed |
 | FR-BOT-08 | Trả lời khi được mention `@Index Beast`. | C | Volatile | S5 | Proposed |
+| FR-BOT-09 | `/setup #kênh` bật kênh để bot trả lời mọi tin nhắn không cần `/ask`; `/setup disable #kênh` và `/setup disable all` tắt. Cấu hình lưu bền theo server (bot không giữ trạng thái). | S | Volatile | S5 | In Progress — backend xong (`/discord/guilds/{guild_id}/channels`, tối đa 50 kênh), lệnh bot (TV4) chưa làm |
+| FR-BOT-10 | `/clear @user` và `/clear all` xóa ký ức hội thoại của một người hoặc cả server (bot tự kiểm tra quyền admin Discord trước khi gọi). | S | Volatile | S5 | In Progress — backend xong (`POST /discord/guilds/{guild_id}/memory/clear`), lệnh bot (TV4) chưa làm; chỉ xóa được hội thoại có `guild_id` (bot phải gửi `guild_id` trong `/chat`) |
 
 ### 3.7 FR-EVAL — Đánh giá & quản trị
 
@@ -266,6 +268,10 @@ Hợp đồng nguồn: `docs/api/openapi.json` (sinh từ code, CI kiểm). Ch�
 | GET | `/auth/me` | Trạng thái đăng nhập (luôn 200) | Web | Nhánh Sprint 4 |
 | GET | `/me/conversations` | Hội thoại của tôi | Web | Nhánh Sprint 4 |
 | POST | `/me/conversations/claim` | Nhận hội thoại khách về tài khoản bằng `conversation_token` | Web | Nhánh Sprint 4 |
+| GET | `/discord/guilds/{guild_id}/channels` | Danh sách kênh bot tự trả lời của một server | Bot (service token) | Nhánh Sprint 5 |
+| PUT / DELETE | `/discord/guilds/{guild_id}/channels/{channel_id}` | Bật / tắt một kênh (idempotent) | Bot (service token) | Nhánh Sprint 5 |
+| DELETE | `/discord/guilds/{guild_id}/channels` | Tắt mọi kênh của server | Bot (service token) | Nhánh Sprint 5 |
+| POST | `/discord/guilds/{guild_id}/memory/clear` | Xóa ký ức của một người (`user_hash`) hoặc cả server, trả số bản ghi đã xóa | Bot (service token) | Nhánh Sprint 5 |
 | GET | `/images/{id}` | Ảnh minh họa cục bộ đã kiểm (theo hash) | Web | Có |
 | GET | `/health` | Trạng thái api, db, qdrant, redis | Hạ tầng | Có |
 | GET | `/admin/trace/{message_id}` | Trace RAG của một câu trả lời, cần `X-Admin-Token` | Admin | PR #79 |
@@ -315,6 +321,7 @@ Response:
 | `chunks` | id, document_id, section, text, token_count, source_type, spoiler_level, qdrant_point_id |
 | `entities` | id, canonical_name, aliases[], type (npc/boss/location/item), source |
 | `conversations` | id, channel, external_ref, client_user_ref (băm), guild_id, user_id (FK `users`, null cho khách), created_at |
+| `discord_guild_channels` | guild_id, channel_id (khóa chính kép), created_at (migration `0005`; cũng thêm chỉ mục `conversations.guild_id`, cột `guild_id` có từ `0001` nhưng chỉ được ghi từ Sprint 5) |
 | `users` | id, provider (`discord`), provider_user_hash (HMAC, duy nhất cùng provider), display_name, created_at, last_login_at (migration `0004`) |
 | `auth_sessions` | id, user_id, token_hash (SHA-256, duy nhất), created_at, expires_at (migration `0004`) |
 | `messages` | id, conversation_id, role, content, rewritten_query, sources (jsonb), grounded, latency_ms, tokens_in, tokens_out, trace (jsonb), created_at. Trace và số đo chỉ ghi cho tin nhắn assistant (PR #79) |
@@ -374,6 +381,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | 0.7.1 | 2026-11-08 | TV1 | Thêm `/admin/stats`; web hiển thị `message_id` và liên kết xem trace khi `/chat/capabilities` báo `trace_available`; cập nhật §5 và FR-WEB-08 |
 | 0.8.0 | 2026-11-13 | TV1 | Sprint 4: thêm nhóm FR-AUTH-01..09 (ADR-005, đề xuất); FR-WEB-09 chuyển sang FR-AUTH; TBD-04 đổi; §5 thêm các endpoint `/auth/*` và `/me/*`, `/feedback` lưu dữ liệu; §6 thêm `users`, `auth_sessions`, `conversations.user_id` |
 | 0.8.1 | 2026-11-13 | TV1 | FR-CHAT-04: thêm trần tần suất theo server Discord (`guild_id` tùy chọn trong `/chat`, chỉ tính với service token) |
+| 0.8.2 | 2026-11-16 | TV1 | Sprint 5: thêm FR-BOT-09 (`/setup`), FR-BOT-10 (`/clear`); §5.1 thêm 4 nhóm endpoint `/discord/guilds/*`; §6 thêm `discord_guild_channels`; `/chat` ghi `guild_id` vào hội thoại khi có service token |
 
 ## Phụ lục A — Kịch bản demo / kiểm thử chấp nhận
 

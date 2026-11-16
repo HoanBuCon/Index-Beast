@@ -1,6 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
 - [TV2 · Sprint 5: cập nhật dữ liệu tăng dần và tài liệu pipeline (16/11/2026)](2026-11-16_s5-tv2_cap-nhat-tang-dan.md)
+- [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
 
 - [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
 
