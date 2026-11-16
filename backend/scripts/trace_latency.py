@@ -25,7 +25,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
-from scripts.llm_cost import add_window_args, parse_window
+from scripts.llm_cost import add_window_args, exclude_loadtest, parse_window
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -102,15 +102,13 @@ def render(table: dict[str, dict[str, float]], total_rows: int, truncated: int) 
     return "\n".join(lines)
 
 
-async def fetch_rows(sessionmaker, since: datetime, until: datetime, limit: int):
+async def fetch_rows(sessionmaker, since: datetime, until: datetime, limit: int, include_loadtest: bool = False):
     from sqlalchemy import select
-    from sqlalchemy.orm import undefer
 
     from core.db.models import Message
 
     stmt = (
-        select(Message)
-        .options(undefer(Message.rag_trace))
+        select(Message.latency_ms, Message.rag_trace)
         .where(
             Message.role == "assistant",
             Message.latency_ms.is_not(None),
@@ -120,9 +118,10 @@ async def fetch_rows(sessionmaker, since: datetime, until: datetime, limit: int)
         .order_by(Message.created_at.desc())
         .limit(limit)
     )
+    stmt = exclude_loadtest(stmt, include_loadtest)
     async with sessionmaker() as session:
-        messages = (await session.scalars(stmt)).all()
-    return [(m.latency_ms, m.rag_trace) for m in messages]
+        result = (await session.execute(stmt)).all()
+    return [(r.latency_ms, r.rag_trace) for r in result]
 
 
 async def run(args) -> int:
@@ -132,7 +131,7 @@ async def run(args) -> int:
     since, until = parse_window(args)
     engine = create_engine(Settings())
     try:
-        rows = await fetch_rows(create_sessionmaker(engine), since, until, args.limit)
+        rows = await fetch_rows(create_sessionmaker(engine), since, until, args.limit, args.include_loadtest)
     finally:
         await engine.dispose()
     table = summarize(rows)

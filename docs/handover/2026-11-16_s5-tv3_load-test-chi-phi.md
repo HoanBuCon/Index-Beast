@@ -32,6 +32,17 @@ Thẻ 5.7 (load test), 5.8 (chi phí LLM), 5.9 (eval trên cấu hình productio
 - `python -m pytest tests/unit -q` (backend/.venv) -> **1157 passed, 20 skipped**; riêng file mới: 16 passed.
 - **Dry run mock (Locust 2.46.7 trong venv tạm, API mock `CHAT_MODE=mock` bằng uvicorn trên 127.0.0.1:18555, không Docker, không gọi mạng ngoài)**: 20 người dùng, 25 s, think 0,2-0,6 s: 1.249 request, 0 lỗi; `/chat` 237, `[total]` 468, `[TTFT]` 468 (p95 7-8 ms), `/health` 76 (mock không có Postgres/Redis nên trả 503 sau ~2 s, được chấp nhận bằng `LOADTEST_HEALTH_OK=200,503`). Xác nhận kịch bản chạy đúng và hội thoại được dùng lại; **số liệu này không có giá trị hiệu năng**. Server đã tắt sau khi chạy; thư mục CSV nằm ngoài repo.
 
+## Sửa sau review
+
+Review của TV1 lead, sửa trên cùng nhánh (commit riêng, chưa push):
+
+1. **Đánh dấu lưu lượng load test**: `llm_cost` và `trace_latency` thêm `--include-loadtest`; mặc định join `conversations` và loại hội thoại có `external_ref` bắt đầu bằng `loadtest:` (hội thoại không có `external_ref` được giữ). README và kế hoạch ghi: production và đo sức chịu tải bắt buộc dùng chế độ service token; chế độ web không đánh dấu được nên chỉ dùng trên staging vắng người dùng thật.
+2. **429 là lỗi riêng `rate_limited`** trong Locust cho `/chat` và `/chat/stream` (`helpers.failure_label`); README giải thích giới hạn theo IP.
+3. **`parse_window`**: `--until` không kèm `--since` bị từ chối bằng thông báo rõ; giá trị có múi giờ đổi bằng `astimezone(UTC)`, giá trị không có múi giờ coi là UTC.
+4. **`trace_latency.fetch_rows`** chỉ chọn hai cột `latency_ms` và `rag_trace` (không nạp cả `Message`).
+- Test mới: 6 (tổng 22 trong `test_s5_cost_and_latency.py`); SQL của hai báo cáo được kiểm bằng biên dịch câu lệnh (cột chọn, JOIN, điều kiện `NOT LIKE 'loadtest:%'`), vẫn chưa chạy trên PostgreSQL thật.
+- Quyết định từ TV1: không chạy gì thật; giữ `backend/loadtest/` là thư mục riêng.
+
 ## Chưa kiểm chứng
 
 - Chưa chạy với `CHAT_MODE=rag`/`llm_only`, staging hay production (cần TV1 duyệt: tốn DeepSeek/Tavily, và staging nằm sau Caddy basic auth + danh sách IP). Chưa biết TTFT thực tế của stack.

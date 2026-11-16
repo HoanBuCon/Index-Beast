@@ -169,12 +169,67 @@ def test_summarize_orders_by_p95_and_counts_per_step():
     assert "không có trace" in trace_latency.render({}, 0, 0)
 
 
-def test_latency_fetch_rows_returns_latency_and_trace():
-    message = SimpleNamespace(latency_ms=12.5, rag_trace={"prepare_ms": 1.0})
-    session = FakeSession([message])
+def test_latency_fetch_rows_selects_only_latency_and_trace_columns():
+    row = SimpleNamespace(latency_ms=12.5, rag_trace={"prepare_ms": 1.0})
+    session = FakeSession([row])
     rows = asyncio.run(trace_latency.fetch_rows(lambda: session, at(1), at(2), 10))
     assert rows == [(12.5, {"prepare_ms": 1.0})]
+    columns = [c.name for c in session.statement.selected_columns]
+    assert columns == ["latency_ms", "rag_trace"]
     assert "messages.latency_ms IS NOT NULL" in str(session.statement)
+
+
+def sql_of(session):
+    return str(session.statement.compile(compile_kwargs={"literal_binds": True}))
+
+
+def test_loadtest_conversations_are_excluded_by_default_in_both_reports():
+    cost = FakeSession([])
+    asyncio.run(llm_cost.fetch_rows(lambda: cost, at(1), at(2)))
+    latency = FakeSession([])
+    asyncio.run(trace_latency.fetch_rows(lambda: latency, at(1), at(2), 10))
+    for session in (cost, latency):
+        sql = sql_of(session)
+        assert "JOIN conversations" in sql
+        assert "conversations.external_ref IS NULL" in sql and "conversations.external_ref NOT LIKE" in sql
+        assert "loadtest:" in sql
+
+
+def test_include_loadtest_removes_the_filter_and_the_join():
+    cost = FakeSession([])
+    asyncio.run(llm_cost.fetch_rows(lambda: cost, at(1), at(2), include_loadtest=True))
+    latency = FakeSession([])
+    asyncio.run(trace_latency.fetch_rows(lambda: latency, at(1), at(2), 10, include_loadtest=True))
+    for session in (cost, latency):
+        assert "conversations" not in sql_of(session)
+
+
+def test_include_loadtest_flag_is_shared_by_both_clis():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    llm_cost.add_window_args(parser)
+    assert parser.parse_args([]).include_loadtest is False
+    assert parser.parse_args(["--include-loadtest"]).include_loadtest is True
+
+
+def test_parse_window_rejects_until_without_since():
+    with pytest.raises(SystemExit, match="--since"):
+        llm_cost.parse_window(Namespace(days=7, since=None, until="2026-11-12"))
+
+
+def test_parse_window_converts_aware_values_to_utc_and_treats_naive_as_utc():
+    since, until = llm_cost.parse_window(
+        Namespace(days=7, since="2026-11-10T02:00:00+07:00", until="2026-11-11T00:00:00"),
+        datetime(2026, 11, 16, tzinfo=UTC),
+    )
+    assert since == datetime(2026, 11, 9, 19, tzinfo=UTC) and since.utcoffset() == timedelta(0)
+    assert until == datetime(2026, 11, 11, tzinfo=UTC)
+
+
+def test_failure_label_separates_rate_limiting():
+    assert helpers.failure_label(429) == "rate_limited"
+    assert helpers.failure_label(502) == "HTTP 502"
 
 
 def test_load_questions_reads_jsonl_and_skips_bad_rows(tmp_path):

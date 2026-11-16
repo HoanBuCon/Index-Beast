@@ -20,7 +20,7 @@ p95 lấy từ cột 95% của `_stats.csv`, mỗi dòng riêng; không dùng d�
 - Tỉ trọng: 60% SSE, 30% JSON, 10% `/health`.
 - Mỗi cấu hình chạy 10 phút sau khi tăng tải (`-r 2`), bỏ 2 phút đầu khi đọc số đo (cache lạnh, model nạp lần đầu). Lặp lại tối thiểu 2 lần ở các thời điểm khác nhau; ghi cả hai, báo cáo lần xấu hơn.
 - Cố định các biến khi so trước/sau tối ưu: cùng commit ngoài thay đổi đang đo, cùng collection Qdrant, cùng `CHAT_MODE=rag`, cùng `LOADTEST_WEB_SEARCH`, cùng host. Mỗi lần chỉ đổi một thứ (số thread ONNX, semaphore rerank, top-N, cache Redis...) và giữ lại thay đổi chỉ khi p95 cải thiện vượt độ nhiễu giữa hai lần chạy cùng cấu hình.
-- Giới hạn tần suất: web giới hạn theo IP (mặc định 10/phút) nên một máy chạy Locust sẽ nhận 429. Dùng `LOADTEST_SERVICE_TOKEN` (giới hạn theo hội thoại) hoặc nâng `RATE_LIMIT_PER_MINUTE` tạm thời, và ghi lựa chọn vào cột Ghi chú.
+- Giới hạn tần suất và đánh dấu lưu lượng: **production và mọi lần đo sức chịu tải bắt buộc dùng chế độ service token** (`LOADTEST_SERVICE_TOKEN`): giới hạn theo hội thoại và `external_ref` bắt đầu bằng `loadtest:`, nên `llm_cost`/`trace_latency` loại được lưu lượng này (mặc định; `--include-loadtest` để tính cả). Chế độ web (một IP, mặc định 10 request/phút nên có `rate_limited` ngay) chỉ dùng trên staging vắng người dùng thật, kèm nâng `RATE_LIMIT_PER_MINUTE` tạm thời. Ghi chế độ vào cột Ghi chú. 429 hiện thành lỗi `rate_limited` riêng trong `_failures.csv`.
 - Máy chạy Locust phải có CPU rảnh (xem `Locust` cảnh báo CPU > 90%) và đặt cùng vùng mạng với server khi có thể; ghi băng thông/độ trễ mạng nếu chạy từ xa.
 
 ## 3. Kịch bản
@@ -45,7 +45,7 @@ cd backend
 .venv/Scripts/python.exe -X utf8 -m scripts.trace_latency --days 1 --json > ../docs/testing/NEW_steps-20u.json
 ```
 
-Bước báo cáo: `total`, `prepare`, `rewrite`, `agent_decision`, `retrieval`, `tool:<action>` (nhất là `tool:web_search`), `generate_rest` (= total - prepare). Các bước chồng nhau nên không cộng lại. Cửa sổ phải hẹp (không lẫn lưu lượng người thật); nếu cần, dùng `--since/--until` theo ngày và ghi giờ chạy. Số bước là p95 theo từng bước độc lập, không phải phân rã của đúng một request. Bước nào chiếm p95 lớn nhất là ứng viên tối ưu đầu tiên (thread ONNX, semaphore rerank, top-N, cache Redis cho câu lặp FR-CHAT-05).
+Bước báo cáo: `total`, `prepare`, `rewrite`, `agent_decision`, `retrieval`, `tool:<action>` (nhất là `tool:web_search`), `generate_rest` (= total - prepare). Các bước chồng nhau nên không cộng lại. Mặc định loại hội thoại `loadtest:`; để đo đúng lần load test hãy thêm `--include-loadtest` và dùng cửa sổ hẹp (không lẫn lưu lượng người thật); nếu cần, dùng `--since/--until` theo ngày và ghi giờ chạy. Số bước là p95 theo từng bước độc lập, không phải phân rã của đúng một request. Bước nào chiếm p95 lớn nhất là ứng viên tối ưu đầu tiên (thread ONNX, semaphore rerank, top-N, cache Redis cho câu lặp FR-CHAT-05).
 
 ## 5. Chi phí LLM (thẻ 5.8, NFR-COST-01)
 
@@ -58,7 +58,7 @@ In số câu, token vào/ra, số lần tìm web và USD theo ngày (UTC), rồi
 
 - Token lấy từ cột `messages.tokens_in/out` (tổng mọi lượt gọi LLM của câu trả lời). Câu trả lời lấy từ bộ nhớ đệm hoặc có sẵn có token NULL và tính 0 token.
 - Chưa tách token trúng cache của nhà cung cấp (giá rẻ hơn), nên số đo là cận trên khi có prompt caching.
-- Lưu lượng load test và lưu lượng thật nằm chung bảng. Chạy `llm_cost` với cửa sổ chỉ gồm lần load test để biết chi phí lần đó; chi phí/câu của golden set không đại diện cho câu hỏi thật.
+- Lưu lượng load test và lưu lượng thật nằm chung bảng; mặc định báo cáo loại hội thoại `loadtest:`. Để biết chi phí của riêng lần load test, chạy `llm_cost --include-loadtest` với cửa sổ chỉ gồm lần đó (chỉ tách được khi chạy chế độ service token); chi phí/câu của golden set không đại diện cho câu hỏi thật.
 - Dự phóng giả định mọi câu đắt như trung bình của cửa sổ; không tính Qdrant/VPS/embedding (chạy local).
 
 ## 6. Eval trên cấu hình production (thẻ 5.9)

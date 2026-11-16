@@ -19,6 +19,7 @@ from locust import HttpUser, between, events, task
 from loadtest.helpers import (
     env_float,
     env_int,
+    failure_label,
     golden_paths_from_env,
     load_questions,
     ok_codes,
@@ -84,7 +85,7 @@ class ChatUser(HttpUser):
             timeout=REQUEST_TIMEOUT,
         ) as resp:
             if resp.status_code != 200:
-                resp.failure(f"HTTP {resp.status_code}")
+                resp.failure(failure_label(resp.status_code))
                 return
             try:
                 self._remember(resp.json())
@@ -105,7 +106,7 @@ class ChatUser(HttpUser):
             timeout=REQUEST_TIMEOUT,
         ) as resp:
             if resp.status_code != 200:
-                resp.failure(f"HTTP {resp.status_code}")
+                resp.failure(failure_label(resp.status_code))
                 return
             try:
                 for event, data in parse_sse(resp.iter_lines(decode_unicode=True)):

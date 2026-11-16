@@ -81,6 +81,11 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
+def failure_label(status_code: int) -> str:
+    """429 (rate limit) tách thành lỗi riêng để không lẫn với lỗi server trong failures.csv."""
+    return "rate_limited" if status_code == 429 else f"HTTP {status_code}"
+
+
 def ok_codes(value: str | None, default: tuple[int, ...] = (200,)) -> set[int]:
     codes = {int(p) for p in (value or "").replace(" ", "").split(",") if p.isdigit()}
     return codes or set(default)

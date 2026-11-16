@@ -101,13 +101,40 @@ def project(report: list[dict[str, Any]], questions_per_day: int = TARGET_QUESTI
     }
 
 
+LOADTEST_REF_PREFIX = "loadtest:"  # external_ref của lưu lượng load test (locustfile, chế độ service token)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Có múi giờ thì đổi sang UTC; không có (chỉ ngày) thì coi là UTC."""
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
+def exclude_loadtest(stmt, include_loadtest: bool):
+    """Mặc định loại hội thoại có external_ref bắt đầu bằng `loadtest:` (cần join conversations). Hội thoại không có
+    external_ref (web thường) được giữ."""
+    if include_loadtest:
+        return stmt
+    from sqlalchemy import or_
+
+    from core.db.models import Conversation, Message
+
+    return stmt.join(Conversation, Conversation.id == Message.conversation_id).where(
+        or_(
+            Conversation.external_ref.is_(None),
+            ~Conversation.external_ref.startswith(LOADTEST_REF_PREFIX, autoescape=True),
+        )
+    )
+
+
 def parse_window(args, now: datetime | None = None) -> tuple[datetime, datetime]:
     """[since, until) theo UTC: --since/--until (YYYY-MM-DD) hoặc --days (mặc định) tính tới hết hôm nay."""
     now = now or datetime.now(UTC)
+    if args.until and not args.since:
+        raise SystemExit("--until cần đi kèm --since (hoặc bỏ --until và dùng --days).")
     try:
         if args.since:
-            since = datetime.fromisoformat(args.since).replace(tzinfo=UTC)
-            until = datetime.fromisoformat(args.until).replace(tzinfo=UTC) if args.until else now
+            since = _as_utc(datetime.fromisoformat(args.since))
+            until = _as_utc(datetime.fromisoformat(args.until)) if args.until else now
         else:
             until = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             since = until - timedelta(days=args.days)
@@ -143,7 +170,7 @@ def render(report: list[dict[str, Any]], summary: dict[str, Any], prices: Prices
 
 
 async def fetch_rows(
-    sessionmaker, since: datetime, until: datetime
+    sessionmaker, since: datetime, until: datetime, include_loadtest: bool = False
 ) -> list[tuple[datetime, int | None, int | None, int]]:
     from sqlalchemy import select
 
@@ -160,6 +187,7 @@ async def fetch_rows(
         .where(Message.role == "assistant", Message.created_at >= since, Message.created_at < until)
         .order_by(Message.created_at)
     )
+    stmt = exclude_loadtest(stmt, include_loadtest)
     async with sessionmaker() as session:
         result = (await session.execute(stmt)).all()
     return [
@@ -181,7 +209,7 @@ async def run(args) -> int:
     since, until = parse_window(args)
     engine = create_engine(Settings())
     try:
-        rows = await fetch_rows(create_sessionmaker(engine), since, until)
+        rows = await fetch_rows(create_sessionmaker(engine), since, until, args.include_loadtest)
     finally:
         await engine.dispose()
     report = aggregate(rows, prices)
@@ -196,7 +224,12 @@ async def run(args) -> int:
 def add_window_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--days", type=int, default=7, help="số ngày gần nhất (mặc định 7)")
     parser.add_argument("--since", help="YYYY-MM-DD (UTC), thay cho --days")
-    parser.add_argument("--until", help="YYYY-MM-DD (UTC), không gồm ngày này; mặc định là bây giờ")
+    parser.add_argument("--until", help="YYYY-MM-DD (UTC), không gồm ngày này; mặc định là bây giờ; cần --since")
+    parser.add_argument(
+        "--include-loadtest",
+        action="store_true",
+        help="tính cả lưu lượng load test (hội thoại có external_ref bắt đầu bằng 'loadtest:'); mặc định loại ra",
+    )
 
 
 def main(argv=None) -> int:

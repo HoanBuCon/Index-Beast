@@ -70,11 +70,20 @@ cd backend
   --headless -u 50 -r 2 -t 10m --csv ../docs/testing/NEW_staging-50u
 ```
 
-Giới hạn tốc độ `/chat` theo IP (`RATE_LIMIT_PER_MINUTE`, mặc định 10, tối đa 1000) sẽ trả 429 khi mọi người dùng ảo cùng
-một IP (20 người dùng ảo tạo khoảng 90 request/phút). Hoặc nâng `RATE_LIMIT_PER_MINUTE` trên staging cho lần đo rồi hoàn
-lại, hoặc dùng `LOADTEST_SERVICE_TOKEN` (giới hạn theo `external_ref`, mỗi hội thoại một khóa, không cần đổi cấu hình).
-Ghi rõ lựa chọn trong báo cáo: số đo có 429 không phải số đo độ trễ. Locust coi mọi mã khác 200 là lỗi nên 429 hiện ngay
-ở cột `# fails`.
+### Hai chế độ lưu lượng (quan trọng)
+
+- **Chế độ service token (`LOADTEST_SERVICE_TOKEN` đặt)**: kênh `discord`, giới hạn tần suất theo `external_ref`, và mỗi hội
+  thoại có `external_ref` bắt đầu bằng `loadtest:`. Tiền tố này là dấu để `scripts.llm_cost` và `scripts.trace_latency` loại
+  lưu lượng load test khỏi số liệu thật (mặc định loại; thêm `--include-loadtest` để tính cả). **Mọi lần chạy production và
+  mọi lần đo sức chịu tải (NFR-PERF-01, NFR-CAP-01) PHẢI dùng chế độ này.**
+- **Chế độ web (không token)**: kênh `web`, không có `external_ref` nên **không đánh dấu được**: hội thoại lẫn vào số liệu chi
+  phí/độ trễ thật. Chỉ dùng trên staging, và chỉ khi cửa sổ thời gian không có người dùng thật.
+- Giới hạn `/chat` theo IP (`RATE_LIMIT_PER_MINUTE`, mặc định 10, tối đa 1000) áp dụng cho chế độ web: mọi người dùng ảo cùng
+  một IP (20 người dùng ảo tạo khoảng 90 request/phút) sẽ nhận 429. Trên staging, nâng `RATE_LIMIT_PER_MINUTE` tạm thời rồi
+  hoàn lại, hoặc chuyển sang chế độ service token (giới hạn theo `external_ref`, mỗi hội thoại một khóa, không cần đổi cấu hình).
+- Locust coi mọi mã khác 200 là lỗi. **429 được báo thành lỗi riêng tên `rate_limited`** (cột `Name`/`Error` của
+  `_failures.csv`), tách khỏi `HTTP 5xx`/`SSE error`, cho `/chat` và `/chat/stream`. Số đo có `rate_limited` không phải số đo
+  độ trễ: sửa cách chạy rồi chạy lại.
 
 ## 3. Production (chỉ khi TV1 duyệt, ngoài giờ cao điểm)
 
