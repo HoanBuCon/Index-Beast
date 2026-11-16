@@ -18,7 +18,7 @@ from app.api.errors import ErrorBody
 from app.api.guard import enforce_login_limit
 from app.api.schemas.auth import AuthMe, AuthUserOut, ClaimRequest, MyConversation
 from app.context import AppContext
-from app.services import auth
+from app.services import auth, privacy
 from app.services.auth import OAUTH_COOKIE, OAUTH_STATE_TTL_SECONDS, SESSION_COOKIE, AuthUser
 from app.services.memory_repository import owner_hash
 from core.errors import BadRequestError, NotFoundError, UnavailableError
@@ -193,3 +193,19 @@ async def claim_conversation(
 ) -> Response:
     await auth.claim_conversation(ctx.sessionmaker, user.id, body.conversation_id, owner_hash(body.conversation_token))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_same_origin)],
+    responses={**_ERRORS, 403: {"model": ErrorBody}},
+    summary="Xóa tài khoản và toàn bộ hội thoại của tôi (không hoàn tác)",
+)
+async def delete_me(user: AuthUser = Depends(require_user), ctx: AppContext = Depends(get_ctx)) -> Response:
+    """FR-AUTH-08. Xóa người dùng, mọi phiên, hội thoại + tin nhắn + feedback + ký ức (PostgreSQL) và điểm Qdrant.
+    Gọi lại sau khi xóa thì cookie không còn hiệu lực nên nhận 401; dịch vụ xóa tự nó idempotent."""
+    await privacy.delete_account(ctx.sessionmaker, ctx.qdrant, ctx.settings.chat_memory_collection, user.id)
+    response = _private(Response(status_code=status.HTTP_204_NO_CONTENT))
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response

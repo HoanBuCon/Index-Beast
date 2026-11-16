@@ -2358,6 +2358,61 @@
         ]
       }
     },
+    "/api/v1/me": {
+      "delete": {
+        "description": "FR-AUTH-08. Xóa người dùng, mọi phiên, hội thoại + tin nhắn + feedback + ký ức (PostgreSQL) và điểm Qdrant.\nGọi lại sau khi xóa thì cookie không còn hiệu lực nên nhận 401; dịch vụ xóa tự nó idempotent.",
+        "operationId": "delete_me_api_v1_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa tài khoản và toàn bộ hội thoại của tôi (không hoàn tác)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/me/conversations": {
       "get": {
         "operationId": "my_conversations_api_v1_me_conversations_get",

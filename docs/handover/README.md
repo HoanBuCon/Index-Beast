@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Quyền riêng tư và xóa tài khoản (16/11/2026)](2026-11-16_s5-tv1_quyen-rieng-tu-xoa-tai-khoan.md)
 - [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
 
 - [TV2 · Rà soát 200 câu S4 bằng artifact local (16/11/2026)](2026-11-16_s4-tv2_ra-soat-golden-local.md)
