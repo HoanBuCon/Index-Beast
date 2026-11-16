@@ -34,6 +34,8 @@ export interface ChatRequest {
   message: string;
   channel: "web" | "discord";
   external_ref?: string | null;
+  // Snowflake của server Discord; bỏ qua với DM. Backend chỉ ghi khi có service token (cần cho /clear và trần tần suất).
+  guild_id?: string | null;
   options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean; web_search?: "off" | "auto" | "always" };
 }
 export interface ChatResponse {
@@ -73,3 +75,26 @@ export type StreamEvent =
   | { type: "sources"; sources: Source[] }
   | { type: "done"; data: Omit<ChatResponse, "answer" | "sources"> }
   | { type: "error"; message: string };
+
+// Hợp đồng /discord/guilds/{guild_id} (docs/api/discord-guild-tv4.md).
+export interface GuildChannel {
+  channel_id: string;
+  enabled_at: string;
+}
+export interface MemoryClearResult {
+  guild_id: string;
+  scope: "user" | "all";
+  conversations: number;
+  threads_kept: number;
+  vector_conversations: number;
+}
+export interface HealthResult {
+  // 200 → ok; 503 → degraded (vẫn có thân JSON).
+  status: "ok" | "degraded";
+  checks: Record<string, boolean>;
+  http_status: number;
+  rtt_ms: number;
+}
+export function isSnowflake(value: unknown): value is string {
+  return typeof value === "string" && /^\d{1,32}$/.test(value);
+}

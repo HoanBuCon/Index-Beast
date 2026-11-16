@@ -1,12 +1,13 @@
 // /ask <question>: deferReply ngay, gọi API, editReply bằng embed có nguồn + nút feedback/hỏi tiếp.
 // Phụ trách: TV4 · [S2] Bot /ask · [S3] Bot: câu trả lời thật
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from "discord.js";
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
 import { MAX_MESSAGE_CHARS } from "../api/types.ts";
 import { answerEmbeds } from "../utils/format.ts";
+import { externalRef } from "../utils/identity.ts";
 import { errorName, log } from "../utils/logger.ts";
 import type { Command } from "./index.ts";
 import { loadWebUrl } from "../config.ts";
@@ -44,14 +45,15 @@ export function createAskCommand(
           });
           return;
         }
-        const userHash = createHash("sha256").update(interaction.user.id).digest("hex");
-        const externalRef = interaction.channel?.isThread()
-          ? `discord:thread:${interaction.channelId}`
-          : `discord:channel:${interaction.channelId}:${userHash}`;
         const response = await (chat ?? createApiClient(undefined, { requestId }).chat)({
           message: question,
           channel: "discord",
-          external_ref: externalRef,
+          external_ref: externalRef(
+            interaction.channelId,
+            interaction.channel?.isThread() ?? false,
+            interaction.user.id,
+          ),
+          ...(interaction.guildId ? { guild_id: interaction.guildId } : {}),
           options: { lang: "auto", spoilers: true, web_search: "auto" },
         });
         const [first, ...remaining] = answerEmbeds(question, response);

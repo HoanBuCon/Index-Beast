@@ -132,3 +132,10 @@ Sau đổi `.env`, dừng rồi chạy lại `make bot` để nhận cấu hình
 Link chỉ có trong câu trả lời mới sau cập nhật, không tự sửa các tin Discord cũ. Xem `docs/api/answer-shares-tv4.md`.
 
 Ghi nguồn CC BY-SA dựa theo khảo sát `docs/data-sources.md`; không áp giấy phép văn bản cho toàn bộ ảnh/font hoặc nội dung bên ngoài.
+
+## Bot TV4 · Sprint 5: lệnh cơ bản (làm hộ bởi agent của TV1, 16/11/2026)
+
+`/help`, `/about` (thêm nhóm 4 Hollows), `/ping` (độ trễ websocket + `/api/v1/health`), `/setup enable|disable|disable-all` (cần Manage Server),
+`/clear user [member]` / `/clear all`, `/ask` gửi thêm `guild_id`; trả lời tin nhắn khi được mention và ở kênh `/setup`
+(cache danh sách kênh 30 giây, giới hạn 5 tin/phút/người). Cần **Message Content Intent**. Chi tiết:
+`docs/handover/2026-11-16_s5-tv4_bot-lenh-co-ban.md`; hợp đồng: `docs/api/discord-guild-tv4.md`. `config.ts` (stub `/config`) đã bỏ, thay bằng `/setup`.

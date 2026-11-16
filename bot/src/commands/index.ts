@@ -6,6 +6,8 @@ import { ping } from "./ping.ts";
 import { ask } from "./ask.ts";
 import { help } from "./help.ts";
 import { about } from "./about.ts";
+import { setup } from "./setup.ts";
+import { clear } from "./clear.ts";
 
 export interface Command {
   data: Pick<SlashCommandBuilder, "name" | "toJSON">;
@@ -17,4 +19,6 @@ export const commands: ReadonlyMap<string, Command> = new Map([
   [ask.data.name, ask],
   [help.data.name, help],
   [about.data.name, about],
+  [setup.data.name, setup],
+  [clear.data.name, clear],
 ]);

@@ -116,6 +116,8 @@ export interface Message {
 }
 export interface Conversation {
   serverToken?: string;
+  // Id người dùng đăng nhập sở hữu bản lưu này; có thì xóa khỏi trình duyệt khi đăng xuất/xóa tài khoản.
+  ownerUserId?: string;
   id: string;
   title: string;
   mode: "demo" | "api" | "api-stream";

@@ -1,4 +1,4 @@
-// TV4: bản UI không tạo phiên giả hoặc trỏ tới endpoint OAuth chưa được nối.
+// TV4: Google bị khóa (chưa có backend), Discord chỉ hiện khi capabilities báo auth_available; không có phiên giả.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
@@ -12,14 +12,16 @@ test("login preview offers clickable providers without pretending to authenticat
     const { default: LoginPage } = await server.ssrLoadModule("/src/pages/LoginPage.tsx");
     const { default: App } = await server.ssrLoadModule("/src/App.tsx");
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(LoginPage)));
-    assert.equal((html.match(/<button\b/g) ?? []).length, 2);
-    assert.doesNotMatch(html, /<button\b[^>]*disabled/);
+    // SSR chưa chạy effect nên chưa biết auth_available: chỉ còn nút Google bị khóa, không có Discord giả.
+    assert.equal((html.match(/<button\b/g) ?? []).length, 1);
+    assert.match(html, /<button\b[^>]*disabled/);
     assert.match(html, /Đăng nhập bằng Google/);
-    assert.match(html, /Đăng nhập bằng Discord/);
+    assert.match(html, /sắp có/);
+    assert.doesNotMatch(html, /Đăng nhập bằng Discord/);
     assert.match(html, /Đăng nhập hiện chưa khả dụng/);
     assert.match(html, /href="\/chat"[^>]*>[\s\S]*?<span>Dùng thử/);
     assert.doesNotMatch(html, /login-footer|login-guest-note|class="login-availability"/);
-    assert.doesNotMatch(html, /<form|<input|login-divider|Tiếp tục bằng email|\/auth\/|access_token|service_token/);
+    assert.doesNotMatch(html, /<form|<input|login-divider|Tiếp tục bằng email|access_token|service_token/);
     for (const path of ["/", "/login"]) {
       const entry = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] }, createElement(App)));
       assert.match(entry, /aria-label="Đăng nhập INDEX BEAST"/);

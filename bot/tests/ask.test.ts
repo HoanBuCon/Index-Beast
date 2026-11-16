@@ -22,6 +22,7 @@ function interaction(question: string, thread = false) {
     id: "333333333333333333",
     user: { id: "111111111111111111" },
     channelId: "222222222222222222",
+    guildId: "444444444444444444",
     channel: { isThread: () => thread },
     options: { getString: () => question },
     deferReply: async () => {
@@ -51,6 +52,7 @@ test("ask defers before API, hashes user reference and edits an embed with sourc
     assert.equal(body.message, "Marika là ai?");
     assert.equal(body.channel, "discord");
     assert.equal(body.options?.web_search, "auto");
+    assert.equal(body.guild_id, "444444444444444444");
     assert.match(body.external_ref!, /^discord:channel:222222222222222222:[a-f0-9]{64}$/);
     assert.ok(!body.external_ref!.includes("111111111111111111"));
     return response;

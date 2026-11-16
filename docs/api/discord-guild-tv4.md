@@ -1,8 +1,8 @@
 # API server Discord cho bot (`/setup`, `/clear`) · TV1 → TV4
 
 Bổ sung Sprint 5, ngày 16/11/2026. Hợp đồng đầy đủ nằm trong [`openapi.json`](openapi.json) (thẻ `discord-guild`);
-file này giải thích cách bot dùng. Bot **chưa** gọi các endpoint này: TV4 viết lệnh `/setup`, `/clear` và phần trả lời
-trong kênh đã bật.
+file này giải thích cách bot dùng. Bot đã gọi các endpoint này từ Sprint 5 (lệnh `/setup enable|disable|disable-all`, `/clear user|all` và phần trả lời
+trong kênh đã bật; xem handover `2026-11-16_s5-tv4_bot-lenh-co-ban.md`).
 
 ## Quy tắc chung
 
