@@ -94,6 +94,8 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
     if body.channel == "discord" and not trusted:
         # Không cho giả làm bot để né giới hạn theo IP
         raise UnauthorizedError("Kênh discord cần X-Service-Token hợp lệ.")
+    if not trusted:
+        body.guild_id = None  # không có service token thì không tin guild_id: không dùng để giới hạn hay lưu
     who = f"ref:{body.external_ref or '-'}" if trusted else f"ip:{_client_ip(request)}"
     window = int(time.time()) // WINDOW_SECONDS
     if await _count(ctx, f"ratelimit:chat:{who}:{window}") > settings.rate_limit_per_minute:

@@ -26,6 +26,7 @@ class Snapshot:
     revision: int
     working: dict
     user_id: UUID | None = None  # chủ sở hữu đã đăng nhập, gắn vào hội thoại mới
+    guild_id: str | None = None  # server Discord do bot (service token) gửi; để xóa ký ức theo server
 
 
 class MemoryRepository:
@@ -141,6 +142,7 @@ class MemoryRepository:
                             external_ref=snapshot.external_ref,
                             client_user_ref=snapshot.owner,
                             user_id=snapshot.user_id,
+                            guild_id=snapshot.guild_id,
                             created_at=conv.created_at,
                         )
                     )
@@ -157,6 +159,12 @@ class MemoryRepository:
                     )
                     if changed.rowcount != 1:
                         raise UnavailableError("Hội thoại vừa được cập nhật ở lượt khác. Vui lòng thử lại.")
+                    if snapshot.guild_id:  # hội thoại tạo trước khi bot gửi guild_id: gắn bổ sung, không ghi đè
+                        await session.execute(
+                            update(Conversation)
+                            .where(Conversation.id == conv.id, Conversation.guild_id.is_(None))
+                            .values(guild_id=snapshot.guild_id)
+                        )
                 for m in pair:
                     extra = record if m.role == "assistant" else {}
                     session.add(

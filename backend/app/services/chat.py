@@ -98,6 +98,13 @@ class LiveChatService:
             return {"message_id": message_id, "trace": public_trace(live), "source": "memory"}
         raise NotFoundError("Không tìm thấy trace của câu trả lời này.")
 
+    def forget(self, conversation_ids) -> None:
+        """Bỏ hội thoại khỏi bộ nhớ RAM sau khi đã xóa bền: không thì lượt hỏi kế tiếp dùng lại bản cũ và báo lỗi."""
+        for conversation_id in set(conversation_ids):
+            state = self._conversations.pop(conversation_id, None)
+            if state is not None and state.external_ref:
+                self._by_ref.pop((state.conversation.channel, state.external_ref), None)
+
     def history(self, conversation_id: UUID) -> ConversationOut:
         if conversation_id not in self._conversations:
             raise NotFoundError("Không tìm thấy hội thoại.")
@@ -319,7 +326,13 @@ class LiveChatService:
         if self.repository is not None:
             working = working or {}
             snapshot = Snapshot(
-                state.conversation, state.external_ref, state.owner, state.revision, working, user_id=req.user_id
+                state.conversation,
+                state.external_ref,
+                state.owner,
+                state.revision,
+                working,
+                user_id=req.user_id,
+                guild_id=req.guild_id,
             )
             tokens_in, tokens_out = token_usage(prepared.trace)
             record = {

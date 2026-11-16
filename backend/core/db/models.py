@@ -1,5 +1,5 @@
 """Bảng ORM theo SRS §6: documents, chunks, entities, conversations, messages, feedback, ingestion_jobs, eval_runs,
-users, auth_sessions (đăng nhập, ADR-005).
+users, auth_sessions (đăng nhập, ADR-005), discord_guild_channels (`/setup` của bot).
 Đổi schema → sửa file này rồi `alembic revision --autogenerate -m "..."`, đọc lại file sinh ra trước khi commit.
 
 Quy ước: khóa chính UUID (documents/chunks dùng id ổn định do ingest sinh để upsert idempotent); thời gian là
@@ -130,13 +130,14 @@ class Conversation(Base):
     __table_args__ = (
         CheckConstraint(_in("channel", CHANNELS), name="channel"),
         Index("ix_conversations_channel_external_ref", "channel", "external_ref"),
+        Index("ix_conversations_guild_id", "guild_id"),  # /discord/guilds/{id}/memory/clear tìm theo server
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     channel: Mapped[str] = mapped_column(Text)
     external_ref: Mapped[str | None] = mapped_column(Text)  # vd. discord:thread:<id>
     client_user_ref: Mapped[str | None] = mapped_column(Text)  # chỉ lưu bản băm (NFR-PRIV-01)
-    guild_id: Mapped[str | None] = mapped_column(Text)
+    guild_id: Mapped[str | None] = mapped_column(Text)  # server Discord; chỉ ghi khi bot gửi guild_id kèm service token
     # Chủ sở hữu đã đăng nhập (ADR-005); null với hội thoại khách và Discord
     user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
@@ -144,6 +145,19 @@ class Conversation(Base):
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at"
     )
+
+
+class DiscordGuildChannel(Base):
+    """Kênh được `/setup` bật trong một server Discord: bot trả lời mọi tin nhắn ở đây mà không cần `/ask`.
+
+    ID Discord (snowflake) là định danh công khai của server/kênh, không phải dữ liệu người dùng (NFR-PRIV-01).
+    """
+
+    __tablename__ = "discord_guild_channels"
+
+    guild_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    channel_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
 
 
 class Message(Base):

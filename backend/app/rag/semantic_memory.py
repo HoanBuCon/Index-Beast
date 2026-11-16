@@ -85,6 +85,17 @@ class MemoryVectors:
             wait=True,
         )
 
+    async def delete_conversations(self, conversation_ids) -> int:
+        """Xóa mọi điểm ký ức của các hội thoại này (theo payload, kể cả điểm mồ côi); trả số điểm đã xóa."""
+        ids = [str(i) for i in conversation_ids]
+        if not ids or not await self.client.collection_exists(self.collection):
+            return 0
+        scope = qm.Filter(must=[qm.FieldCondition(key="conversation_id", match=qm.MatchAny(any=ids))])
+        found = (await self.client.count(self.collection, count_filter=scope, exact=True)).count
+        if found:
+            await self.client.delete(self.collection, points_selector=qm.FilterSelector(filter=scope), wait=True)
+        return found
+
     async def delete(self, memory_id):
         await self.client.delete(self.collection, points_selector=qm.PointIdsList(points=[str(memory_id)]), wait=True)
 
