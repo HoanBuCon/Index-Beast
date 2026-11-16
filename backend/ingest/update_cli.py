@@ -8,9 +8,10 @@ Phụ trách: TV2 · [S5] Cập nhật dữ liệu tăng dần
 import asyncio
 import json
 import sys
+from contextlib import nullcontext
 
-from ingest.artifacts import save
 from ingest.chunk.full import WIKI_QUALITY_VERSION
+from ingest.crawl.http import CrawlError
 from ingest.transform.full import VERSION as CLEAN_VERSION
 from ingest.update import (
     StateMissing,
@@ -29,6 +30,15 @@ def fail(message):
     return 2
 
 
+def validate_target(state, target, *, dry_run):
+    recorded = state.get("target")
+    if recorded is None:
+        if not dry_run:
+            raise ValueError("State cũ chưa xác định đích; xác minh dữ liệu đang phục vụ rồi bootstrap lại")
+    elif recorded != target:
+        raise ValueError("Đích cập nhật khác state; kiểm tra PostgreSQL, Qdrant, collection và chính sách corpus")
+
+
 async def run(args, config):
     from qdrant_client import AsyncQdrantClient
 
@@ -45,13 +55,26 @@ async def run(args, config):
 
     settings = get_settings()
     path = state_path(config, args.source)
+    policy = CorpusPolicy(
+        args.policy or settings.rag_corpus_policy,
+        parse_languages(args.languages) if args.languages else tuple(settings.rag_languages),
+    )
+    collection = args.collection or settings.rag_collection
+    target = {
+        "postgres": [settings.postgres_host, settings.postgres_port, settings.postgres_db],
+        "qdrant": settings.qdrant_url,
+        "collection": collection,
+        "policy": policy.stamp,
+        "languages": sorted(policy.languages),
+    }
     engine = create_engine(settings)
     sessions = create_sessionmaker(engine)
     docs = PgDocuments(sessions, args.source)
     client = HttpClient(config)
     qdrant = None
     try:
-        if load_state(path) is None:
+        state = load_state(path)
+        if state is None:
             if args.bootstrap_from:
                 state = bootstrap_from_chunk_dir(args.bootstrap_from)
             elif args.bootstrap_from_db:
@@ -60,26 +83,24 @@ async def run(args, config):
                 raise StateMissing(
                     f"Chưa có state {path}: dùng --bootstrap-from <thư mục chunk> hoặc --bootstrap-from-db"
                 )
-            save(path, state)
+            state["target"] = target
             print(json.dumps({"bootstrapped_pages": len(state["pages"]), "watermark": state["watermark"]}))
         elif args.bootstrap_from or args.bootstrap_from_db:
-            raise ValueError("State đã tồn tại; xoá file state nếu thật sự muốn bootstrap lại")
+            raise ValueError("State đã tồn tại; xác minh đích và sao lưu state trước khi bootstrap lại")
+        else:
+            validate_target(state, target, dry_run=args.dry_run)
         source = WikiGG(client, config)
         builder = index = None
         if not args.dry_run:
-            policy = CorpusPolicy(
-                args.policy or settings.rag_corpus_policy,
-                parse_languages(args.languages) if args.languages else tuple(settings.rag_languages),
-            )
             qdrant = AsyncQdrantClient(
                 url=settings.qdrant_url,
                 timeout=max(1, round(settings.client_timeout_seconds)),
                 check_compatibility=False,
             )
+            if not await qdrant.collection_exists(collection):
+                raise ValueError("Collection Qdrant chưa tồn tại; nạp bản đầy đủ và xác minh trước khi update")
             encoder = FastEmbedEncoder(BACKEND_ROOT / settings.rag_models_dir, threads=settings.rag_encoder_threads)
-            index = QdrantIndex(
-                qdrant, args.collection or settings.rag_collection, encoder, policy, settings.rag_batch_size
-            )
+            index = QdrantIndex(qdrant, collection, encoder, policy, settings.rag_batch_size)
             tokenizer = args.tokenizer or tokenizer_path(BACKEND_ROOT / settings.rag_models_dir)
             builder = PipelineBuilder(source, config, tokenizer, media=not args.no_media)
         return await run_update(
@@ -95,6 +116,7 @@ async def run(args, config):
             max_pages=args.max_pages,
             batch_pages=args.batch_pages,
             pipeline_version=PIPELINE_VERSION,
+            state=state,
         )
     finally:
         client.close()
@@ -107,11 +129,12 @@ def run_cli(args, config):
     from ingest.crawl.full import run_lock
 
     try:
-        with run_lock(config["data_dir"] / "state"):
+        lock = nullcontext() if args.dry_run else run_lock(config["data_dir"] / "state")
+        with lock:
             report = asyncio.run(run(args, config))
     except BlockingIOError:
         return fail("Một lượt cập nhật khác đang giữ lock")
-    except (StateMissing, ValueError, OSError) as exc:
+    except (CrawlError, StateMissing, ValueError, OSError) as exc:
         return fail(str(exc))
     print(json.dumps({k: v for k, v in report.items() if k != "errors"}, ensure_ascii=False, indent=2))
     for error in report.get("errors", [])[:20]:

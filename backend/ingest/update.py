@@ -16,6 +16,7 @@ Phụ trách: TV2 · [S5] Cập nhật dữ liệu tăng dần
 """
 
 import asyncio
+import re
 import time
 import uuid
 from collections import Counter
@@ -24,10 +25,10 @@ from datetime import UTC, datetime, timedelta
 from core.ids import document_id
 from ingest.artifacts import now, read, save
 from ingest.crawl.http import CrawlError
-from ingest.crawl.runner import OUT_OF_SCOPE
 
 STATE_VERSION = 1
 DEFAULTS = {"recentchanges_max_age_days": 30, "overlap_minutes": 30, "batch_pages": 50}
+UPDATE_OUT_OF_SCOPE = re.compile(r"Nightreign|Tarnished[ .]Edition|Tarnished[ .]Pack", re.I)
 
 
 class StateMissing(RuntimeError):
@@ -93,15 +94,15 @@ def refresh_scope(source, config, state):
     pending, visited, pages = list(config["sources"]["wikigg"]["categories"]), set(), {}
     while pending:
         category = pending.pop(0)
-        if category in visited or OUT_OF_SCOPE.search(category):
+        if category in visited or UPDATE_OUT_OF_SCOPE.search(category):
             continue
         visited.add(category)
         try:
             items = source.list_category(category)
-        except CrawlError:
-            continue  # category lỗi không làm hỏng cả lượt; trang của nó được phát hiện qua lượt sau
+        except CrawlError as exc:
+            raise CrawlError(f"Scope discovery failed for category {category}: {exc}") from exc
         for item in items:
-            if item.get("ns") == 0 and not OUT_OF_SCOPE.search(item["title"]):
+            if item.get("ns") == 0 and not UPDATE_OUT_OF_SCOPE.search(item["title"]):
                 pages[str(item["pageid"])] = item
             elif item.get("ns") == 14:
                 pending.append(item["title"].removeprefix("Category:"))
@@ -153,7 +154,10 @@ def classify(source, config, state, ids, scoped):
             fresh = True
         return scope()
 
-    for page in source.describe([int(i) for i in ids]):
+    described = source.describe([int(i) for i in ids])
+    if {str(page.get("pageid")) for page in described} != set(ids):
+        raise CrawlError("Thiếu hoặc sai metadata trang khi đối chiếu pageid")
+    for page in described:
         key = str(page["pageid"])
         known = state["pages"].get(key)
         title, cats = page.get("title", ""), category_names(page)
@@ -161,8 +165,10 @@ def classify(source, config, state, ids, scoped):
             "missing" in page
             or "redirect" in page
             or page.get("ns", 0) != 0
-            or OUT_OF_SCOPE.search(title + " " + " ".join(cats))
+            or UPDATE_OUT_OF_SCOPE.search(title + " " + " ".join(cats))
         )
+        if not gone and not page.get("lastrevid"):
+            raise CrawlError(f"Thiếu revision trong metadata trang {key}")
         # Chỉ coi là rời phạm vi khi describe có trả category (không xoá trang chỉ vì không hỏi category).
         if not gone and known and cats and not cats & scope():
             gone = not cats & refreshed_scope()
@@ -196,10 +202,12 @@ async def run_update(
     max_pages=None,
     batch_pages=None,
     pipeline_version=None,
+    state=None,
 ):
     cfg = settings_of(config)
     path = state_path(config, source.name)
-    state = load_state(path)
+    if state is None:
+        state = load_state(path)
     if state is None:
         raise StateMissing(f"Chưa có state {path}: dùng --bootstrap-from hoặc --bootstrap-from-db")
     started = datetime.now(UTC)

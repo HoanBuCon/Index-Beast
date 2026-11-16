@@ -15,18 +15,18 @@ from core.text.chunking import chunk_section, prepare_units
 from core.text.quest_stages import QUEST_SECTION, stage_locations
 from core.text.structured_tables import row_metadata
 from ingest.artifacts import local_snapshot, now, read, save, sha256
-from ingest.transform.wiki_quality import spoiler, wiki_context
+from ingest.transform.wiki_quality import OUT_OF_SCOPE_REASONS, spoiler, wiki_context
 
 VERSION = "s3-full-chunk-2.0"
-WIKI_QUALITY_VERSION = "s4-full-chunk-1.0"
+WIKI_QUALITY_VERSION = "s4-full-chunk-1.1"
 
 
 def build_chunks(doc, tokenizer, cap=450, overlap=50, *, stages=frozenset()):
     identity = document_id(doc["source"], doc["source_id"])
     if str(identity) != doc["doc_id"]:
         raise ValueError("Document identity mismatch")
-    if doc["game_scope"] == "out_of_scope" and doc.get("game_scope_reason") == "external_title":
-        return [], [{"reason": "external_title", "source_snapshot": doc["source_snapshot"]}], []
+    if doc["game_scope"] == "out_of_scope" and doc.get("game_scope_reason") in OUT_OF_SCOPE_REASONS:
+        return [], [{"reason": doc["game_scope_reason"], "source_snapshot": doc["source_snapshot"]}], []
     if doc["game_scope"] != "elden_ring":
         raise ValueError("Document identity/scope mismatch")
     chunks, reviews, coverage = [], [], []

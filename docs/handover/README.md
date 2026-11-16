@@ -2,6 +2,7 @@
 
 - [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)
 - [TV2 · Sprint 5: cập nhật dữ liệu tăng dần và tài liệu pipeline (16/11/2026)](2026-11-16_s5-tv2_cap-nhat-tang-dan.md)
+- [TV2 · Sprint 5: phạm vi Tarnished Pack và an toàn cập nhật dữ liệu (16/11/2026)](2026-11-16_s5-tv2_pham-vi-tarnished-pack.md)
 - [TV4 (TV1 làm hộ) · Bot: lệnh cơ bản, /setup, /clear, trả lời mention (16/11/2026)](2026-11-16_s5-tv4_bot-lenh-co-ban.md)
 - [TV1 · Quyền riêng tư và xóa tài khoản (16/11/2026)](2026-11-16_s5-tv1_quyen-rieng-tu-xoa-tai-khoan.md)
 - [TV1 · Sprint 5: deploy production, script deploy, backup (16/11/2026)](2026-11-16_s5-tv1_production-deploy.md)
