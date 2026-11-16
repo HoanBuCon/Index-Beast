@@ -85,16 +85,16 @@ class MemoryVectors:
             wait=True,
         )
 
-    async def delete_conversations(self, conversation_ids) -> int:
-        """Xóa mọi điểm ký ức của các hội thoại này (theo payload, kể cả điểm mồ côi); trả số điểm đã xóa."""
+    async def available(self) -> bool:
+        """Collection ký ức đã tồn tại chưa; hỏi một lần cho cả lượt xóa rồi gọi `delete_conversations` nhiều lần."""
+        return await self.client.collection_exists(self.collection)
+
+    async def delete_conversations(self, conversation_ids) -> None:
+        """Xóa mọi điểm ký ức của các hội thoại này theo payload (cả điểm mồ côi). Idempotent; cần collection có sẵn."""
         ids = [str(i) for i in conversation_ids]
-        if not ids or not await self.client.collection_exists(self.collection):
-            return 0
-        scope = qm.Filter(must=[qm.FieldCondition(key="conversation_id", match=qm.MatchAny(any=ids))])
-        found = (await self.client.count(self.collection, count_filter=scope, exact=True)).count
-        if found:
+        if ids:
+            scope = qm.Filter(must=[qm.FieldCondition(key="conversation_id", match=qm.MatchAny(any=ids))])
             await self.client.delete(self.collection, points_selector=qm.FilterSelector(filter=scope), wait=True)
-        return found
 
     async def delete(self, memory_id):
         await self.client.delete(self.collection, points_selector=qm.PointIdsList(points=[str(memory_id)]), wait=True)
@@ -170,6 +170,9 @@ class SemanticMemory:
                     await self.repository.mark_indexed(row.id, row.revision, error="invalid_embedding_input")
                 except Exception:
                     counts["failed"] += 1
+            if counts["indexed"] and not await self.repository.conversation_exists(scope.conversation_id):
+                # Hội thoại bị xóa (/clear) trong lúc đang lập chỉ mục: dọn điểm vừa ghi để không còn điểm mồ côi
+                await self.vectors.delete_conversations([scope.conversation_id])
         except Exception:
             counts["failed"] += 1
         return counts

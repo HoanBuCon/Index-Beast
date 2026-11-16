@@ -20,6 +20,7 @@ from app.api.schemas.discord_guild import (
     GuildChannelOut,
     GuildChannelsOut,
 )
+from app.rag.semantic_memory import MemoryVectors
 from app.services.chat import ChatService
 from app.services.discord_guild import GuildChannelStore, GuildMemoryCleaner
 from core.errors import UnauthorizedError, UnavailableError
@@ -41,11 +42,16 @@ def get_channel_store(request: Request) -> GuildChannelStore:
 
 
 def get_memory_cleaner(request: Request, service: ChatService = Depends(get_chat_service)) -> GuildMemoryCleaner:
-    sessionmaker = request.app.state.ctx.sessionmaker
-    if sessionmaker is None:
+    ctx = request.app.state.ctx
+    if ctx.sessionmaker is None:
         raise UnavailableError()
-    memory = getattr(getattr(service, "pipeline", None), "memory", None)
-    return GuildMemoryCleaner(sessionmaker, getattr(memory, "vectors", None), getattr(service, "forget", None))
+    # Dựng thẳng từ ctx (như factory.py) để vẫn xóa được điểm vector khi chat không bật ký ức ngữ nghĩa
+    vectors = (
+        MemoryVectors(ctx.qdrant, ctx.settings.chat_memory_collection, ctx.settings.rag_collection)
+        if ctx.qdrant is not None
+        else None
+    )
+    return GuildMemoryCleaner(ctx.sessionmaker, vectors, getattr(service, "forget", None))
 
 
 _ERRORS = {code: {"model": ErrorBody} for code in (401, 422, 503)}

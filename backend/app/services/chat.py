@@ -206,9 +206,15 @@ class LiveChatService:
                 user_id=req.user_id,
             )
         except NotFoundError:
-            # Hội thoại đã bị xóa bền (vd. /clear chạy ở worker khác): bỏ bản RAM, lượt gửi lại sẽ tạo hội thoại mới
-            self.forget([state.conversation.id])
-            raise UnavailableError("Ký ức hội thoại vừa được xóa. Vui lòng gửi lại câu hỏi.") from None
+            if req.channel != "discord":
+                raise
+            # Hội thoại Discord đã bị xóa bền (vd. /clear chạy ở worker khác): coi như cache miss, bắt đầu lại hội thoại
+            # rỗng cùng khóa (id cố định theo owner) ngay trong state này; lượt lưu tới sẽ tạo lại dòng với revision 0
+            state.conversation = ConversationOut(
+                id=state.conversation.id, channel=state.conversation.channel, created_at=datetime.now(UTC), messages=[]
+            )
+            state.player, state.revision = None, 0
+            return
         state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
 
     async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):

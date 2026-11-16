@@ -6,16 +6,24 @@ lỗi giữa chừng thì gọi lại được (idempotent), không để lại 
 Phụ trách: TV1 · [S5] API server Discord cho bot
 """
 
+import logging
 from collections.abc import Callable, Iterable, Sequence
 from typing import Any
 from uuid import UUID
 
+import httpx
+from qdrant_client.http.exceptions import ApiException, ResponseHandlingException
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.api.schemas.discord_guild import MAX_CHANNELS_PER_GUILD
-from core.db.models import Conversation, ConversationMemory, DiscordGuildChannel, Feedback, Message
+from core.db.models import Conversation, DiscordGuildChannel
 from core.errors import ConflictError, UnavailableError
+
+log = logging.getLogger(__name__)
+
+# Lỗi client Qdrant (HTTP 4xx/5xx, truyền tải) và mạng; lỗi lập trình thì không bị nuốt thành 503
+VECTOR_ERRORS = (ApiException, ResponseHandlingException, httpx.HTTPError, OSError)
 
 BATCH = 500  # số hội thoại mỗi lượt xóa: giữ tham số truy vấn và bộ lọc Qdrant nhỏ
 
@@ -85,43 +93,48 @@ class GuildMemoryCleaner:
 
     async def clear(self, guild_id: str, *, user_hash: str | None = None) -> dict[str, int]:
         """`user_hash` None = cả server. Hội thoại của người dùng có external_ref `discord:channel:<kênh>:<user_hash>`;
-        hội thoại thread (`discord:thread:<id>`) dùng chung nhiều người nên chỉ bị xóa khi xóa cả server."""
+        hội thoại thread (`discord:thread:<id>`) dùng chung nhiều người nên chỉ bị xóa khi xóa cả server.
+
+        Mỗi lô: xóa điểm vector, xóa dòng PostgreSQL (messages, feedback, runtime, memories theo ON DELETE CASCADE),
+        rồi xóa điểm vector lần nữa: indexer có thể đã đọc dòng `pending` trước khi xóa và upsert sau lần xóa đầu."""
         where = [Conversation.channel == "discord", Conversation.guild_id == guild_id]
+        threads = Conversation.external_ref.startswith("discord:thread:", autoescape=True)
         if user_hash is not None:
             where.append(Conversation.external_ref.startswith("discord:channel:", autoescape=True))
             where.append(Conversation.external_ref.endswith(f":{user_hash}", autoescape=True))
-        totals = {"conversations": 0, "messages": 0, "feedback": 0, "memories": 0, "vector_points": 0}
+        deleted = threads_kept = 0
         try:
             async with self.sessions() as session:
                 ids = list((await session.scalars(select(Conversation.id).where(*where))).all())
+                if user_hash is not None:
+                    threads_kept = await session.scalar(
+                        select(func.count())
+                        .select_from(Conversation)
+                        .where(Conversation.channel == "discord", Conversation.guild_id == guild_id, threads)
+                    )
+            vectors = self.vectors if ids and self.vectors is not None and await self.vectors.available() else None
             for batch in _batches(ids):
-                if self.vectors is not None:
-                    totals["vector_points"] += await self.vectors.delete_conversations(batch)
+                if vectors is not None:
+                    await vectors.delete_conversations(batch)
                 async with self.sessions() as session, session.begin():
-                    totals["messages"] += await session.scalar(
-                        select(func.count()).select_from(Message).where(Message.conversation_id.in_(batch))
-                    )
-                    totals["feedback"] += await session.scalar(
-                        select(func.count())
-                        .select_from(Feedback)
-                        .join(Message, Message.id == Feedback.message_id)
-                        .where(Message.conversation_id.in_(batch))
-                    )
-                    totals["memories"] += await session.scalar(
-                        select(func.count())
-                        .select_from(ConversationMemory)
-                        .where(ConversationMemory.conversation_id.in_(batch))
-                    )
-                    # messages, feedback, conversation_runtime, conversation_memories xóa theo ON DELETE CASCADE
                     result = await session.execute(delete(Conversation).where(Conversation.id.in_(batch)))
-                    totals["conversations"] += result.rowcount or 0
+                    deleted += result.rowcount or 0
+                if vectors is not None:
+                    await vectors.delete_conversations(batch)
                 if self.forget is not None:
                     self.forget(batch)
         except SQLAlchemyError:
             raise UnavailableError("Không xóa được ký ức của server. Có thể gọi lại để hoàn tất.") from None
-        except UnavailableError:
-            raise
-        except Exception:
-            # Qdrant lỗi: dòng PostgreSQL của lượt này chưa bị xóa nên gọi lại là an toàn
+        except VECTOR_ERRORS:
+            # Lỗi Qdrant/mạng. Lần xóa đầu lỗi: dòng PostgreSQL của lô chưa bị xóa, gọi lại là xong. Lần hai lỗi:
+            # dòng PostgreSQL đã mất nên chỉ còn điểm mồ côi (payload chỉ có ID, không có nội dung chat; recall bỏ qua
+            # điểm không có dòng PostgreSQL tương ứng); log này để vận hành biết.
+            log.warning(
+                "guild memory clear: vector store failed", extra={"data": {"guild_id": guild_id}}, exc_info=True
+            )
             raise UnavailableError("Không xóa được ký ức ngữ nghĩa. Có thể gọi lại để hoàn tất.") from None
-        return totals
+        return {
+            "conversations": deleted,
+            "threads_kept": threads_kept or 0,
+            "vector_conversations": len(ids) if vectors is not None else 0,
+        }

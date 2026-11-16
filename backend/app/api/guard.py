@@ -9,6 +9,7 @@ Phụ trách: TV1 · [S4] Xác thực client, rate-limit (làm sớm ở S2 vì 
 """
 
 import hmac
+import ipaddress
 import logging
 import time
 
@@ -32,7 +33,18 @@ def is_trusted_service(request: Request) -> bool:
 
 
 def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else "-"
+    """Khóa IP cho rate limit. IPv6: một mạng /64 thường thuộc một thuê bao nên gộp về /64, không thì kẻ gọi đổi
+    địa chỉ trong /64 để né giới hạn; IPv4-mapped (::ffff:a.b.c.d) quy về IPv4. Host không phải IP giữ nguyên."""
+    host = request.client.host if request.client else "-"
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return host
+    if isinstance(address, ipaddress.IPv6Address):
+        if address.ipv4_mapped:
+            return str(address.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{address}/64", strict=False))
+    return host
 
 
 def _retry_after() -> int:

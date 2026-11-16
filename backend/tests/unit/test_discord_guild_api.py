@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.routes.discord_guilds import get_channel_store, get_memory_cleaner
-from app.api.schemas.conversation import ConversationOut
+from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.api.schemas.discord_guild import MAX_CHANNELS_PER_GUILD
 from app.main import create_app
 from app.rag.semantic_memory import MemoryVectors
@@ -62,7 +62,7 @@ class FakeCleaner:
 
     async def clear(self, guild_id, *, user_hash=None):
         self.calls.append((guild_id, user_hash))
-        return {"conversations": 2, "messages": 6, "feedback": 1, "memories": 3, "vector_points": 3}
+        return {"conversations": 2, "threads_kept": 1, "vector_conversations": 2}
 
 
 @pytest.fixture
@@ -168,10 +168,8 @@ def test_clear_user_passes_only_the_hash_and_reports_counts(api):
         "guild_id": GUILD,
         "scope": "user",
         "conversations": 2,
-        "messages": 6,
-        "feedback": 1,
-        "memories": 3,
-        "vector_points": 3,
+        "threads_kept": 1,
+        "vector_conversations": 2,
     }
     assert cleaner.calls == [(GUILD, USER_HASH)]
 
@@ -205,43 +203,79 @@ def test_clear_rejects_missing_scope_and_raw_discord_ids(api, body):
     assert "123456789012345678" not in response.text  # không echo giá trị gửi lên
 
 
-# --- Qdrant: xóa theo payload conversation_id ---
+# --- Qdrant: xóa theo payload conversation_id (client local in-memory, lọc thật) ---
 
 
-class FakeQdrant:
-    def __init__(self, found=3, exists=True):
-        self.found, self.exists, self.deleted = found, exists, []
+async def _memory_vectors(*conversations):
+    from qdrant_client import AsyncQdrantClient
+    from qdrant_client import models as qm
 
-    async def collection_exists(self, name):
-        return self.exists
-
-    async def count(self, name, *, count_filter, exact):
-        self.counted = count_filter
-        return SimpleNamespace(count=self.found)
-
-    async def delete(self, name, *, points_selector, wait):
-        self.deleted.append(points_selector)
-
-
-def test_vector_delete_filters_on_conversation_id_and_returns_the_count():
-    qdrant = FakeQdrant(found=3)
-    vectors = MemoryVectors(qdrant, "mem", "corpus")
-    ids = [uuid4(), uuid4()]
-
-    removed = asyncio.run(vectors.delete_conversations(ids))
-
-    condition = qdrant.deleted[0].filter.must[0]
-    assert removed == 3 and condition.key == "conversation_id"
-    assert sorted(condition.match.any) == sorted(str(i) for i in ids)
+    client = AsyncQdrantClient(":memory:")
+    vectors = MemoryVectors(client, "mem", "corpus")
+    await vectors.setup()
+    points = [
+        qm.PointStruct(id=str(uuid4()), vector={"dense": [1.0] + [0.0] * 383}, payload={"conversation_id": str(c)})
+        for c in conversations
+    ]
+    if points:
+        await client.upsert("mem", points=points, wait=True)
+    return client, vectors
 
 
-def test_vector_delete_is_a_noop_without_ids_collection_or_matches():
-    vectors = MemoryVectors(FakeQdrant(exists=False), "mem", "corpus")
-    assert asyncio.run(vectors.delete_conversations([uuid4()])) == 0
-    assert asyncio.run(MemoryVectors(FakeQdrant(), "mem", "corpus").delete_conversations([])) == 0
-    empty = FakeQdrant(found=0)
-    assert asyncio.run(MemoryVectors(empty, "mem", "corpus").delete_conversations([uuid4()])) == 0
-    assert empty.deleted == []
+async def _remaining(client) -> set[str]:
+    points, _ = await client.scroll("mem", limit=100, with_payload=True)
+    return {p.payload["conversation_id"] for p in points}
+
+
+def test_vector_delete_removes_only_the_given_conversations():
+    kept, gone_a, gone_b = uuid4(), uuid4(), uuid4()
+
+    async def scenario():
+        client, vectors = await _memory_vectors(kept, gone_a, gone_a, gone_b)
+        result = await vectors.delete_conversations([gone_a, gone_b])
+        return result, await _remaining(client)
+
+    result, remaining = asyncio.run(scenario())
+
+    assert result is None and remaining == {str(kept)}
+
+
+def test_vector_delete_is_idempotent_and_ignores_an_empty_batch():
+    gone = uuid4()
+
+    async def scenario():
+        client, vectors = await _memory_vectors(gone)
+        await vectors.delete_conversations([gone])
+        await vectors.delete_conversations([gone])
+        await vectors.delete_conversations([])
+        return await _remaining(client)
+
+    assert asyncio.run(scenario()) == set()
+
+
+def test_delete_does_not_probe_the_collection_each_time():
+    async def scenario():
+        client, vectors = await _memory_vectors()
+        calls = []
+        original = client.collection_exists
+
+        async def spy(name):
+            calls.append(name)
+            return await original(name)
+
+        client.collection_exists = spy
+        await vectors.delete_conversations([uuid4()])
+        await vectors.delete_conversations([uuid4()])
+        return calls, await vectors.available()
+
+    calls, available = asyncio.run(scenario())
+    assert calls == ["mem"] and available is True  # chỉ lần gọi `available()` hỏi
+
+
+def test_absent_collection_is_not_available():
+    from qdrant_client import AsyncQdrantClient
+
+    assert asyncio.run(MemoryVectors(AsyncQdrantClient(":memory:"), "absent", "corpus").available()) is False
 
 
 # --- Bộ nhớ RAM của LiveChatService ---
@@ -260,7 +294,7 @@ def test_forget_drops_cached_conversation_and_its_external_ref_index():
     assert conv.id not in live._conversations and ("discord", "discord:thread:1") not in live._by_ref
 
 
-def test_stale_ram_copy_of_a_cleared_conversation_is_dropped_with_a_retryable_error():
+def test_stale_ram_copy_of_a_cleared_discord_conversation_restarts_as_a_new_one_transparently():
     from app.api.schemas.chat import ChatRequest
     from core.errors import NotFoundError
     from tests.unit.test_live_chat import service
@@ -271,16 +305,36 @@ def test_stale_ram_copy_of_a_cleared_conversation_is_dropped_with_a_retryable_er
 
     live = service()
     live.repository = GoneRepository()
-    conv = ConversationOut(id=uuid4(), channel="discord", created_at=datetime.now(UTC), messages=[])
-    state = ConversationState(conv, "discord:thread:1", revision=3)
+    old = MessageOut(id=uuid4(), role="user", content="cũ", created_at=datetime.now(UTC))
+    conv = ConversationOut(id=uuid4(), channel="discord", created_at=datetime.now(UTC), messages=[old])
+    state = ConversationState(conv, "discord:thread:1", revision=3, player={"old": 1}, owner="owner-hash")
     live._conversations[conv.id] = state
-    live._by_ref[("discord", "discord:thread:1")] = conv.id
     req = ChatRequest(message="Ranni?", channel="discord", external_ref="discord:thread:1")
 
-    with pytest.raises(UnavailableError):
-        asyncio.run(live._refresh(state, req))
+    asyncio.run(live._refresh(state, req))  # không ném lỗi
 
-    assert conv.id not in live._conversations and not live._by_ref
+    assert state.revision == 0 and state.conversation.messages == [] and state.player is None
+    assert state.conversation.id == conv.id and state.owner == "owner-hash"  # cùng khóa, như cache miss
+    assert live._conversations[conv.id] is state
+
+
+def test_stale_web_conversation_still_reports_not_found():
+    from app.api.schemas.chat import ChatRequest
+    from core.errors import NotFoundError
+    from tests.unit.test_live_chat import service
+
+    class GoneRepository:
+        async def load(self, *args, **kwargs):
+            raise NotFoundError()
+
+    live = service()
+    live.repository = GoneRepository()
+    conv = ConversationOut(id=uuid4(), channel="web", created_at=datetime.now(UTC), messages=[])
+    state = ConversationState(conv, None, revision=3)
+    req = ChatRequest(message="Ranni?", channel="web", conversation_id=conv.id)
+
+    with pytest.raises(NotFoundError):
+        asyncio.run(live._refresh(state, req))
 
 
 # --- guild_id chỉ được tin khi có service token ---

@@ -38,12 +38,14 @@ async def sessionmaker(db_url: str):  # noqa: F811
 
 
 class FakeVectors:
-    def __init__(self, per_call: int = 2):
-        self.calls, self.per_call = [], per_call
+    def __init__(self):
+        self.calls = []
+
+    async def available(self):
+        return True
 
     async def delete_conversations(self, ids):
         self.calls.append(set(ids))
-        return self.per_call
 
 
 async def talk(sessionmaker, external_ref, *, guild_id, channel="discord", revision=0, conv_id=None, question="Ranni?"):
@@ -176,20 +178,22 @@ async def test_clear_user_removes_only_that_users_conversations_in_that_guild(se
 
     result = await cleaner.clear(GUILD, user_hash=ALICE)
 
-    assert result == {"conversations": 2, "messages": 4, "feedback": 1, "memories": 2, "vector_points": 2}
+    assert result == {"conversations": 2, "threads_kept": 1, "vector_conversations": 2}
     assert await survivors(sessionmaker, ids) == {"bob", "thread", "alice_other", "alice_no_guild", "web"}
-    assert vectors.calls == [{ids["alice_1"], ids["alice_2"]}] and set(forgotten) == {ids["alice_1"], ids["alice_2"]}
-    assert await count(sessionmaker, Feedback) == 0  # feedback của Alice đã xóa theo tin nhắn
+    alice = {ids["alice_1"], ids["alice_2"]}
+    assert vectors.calls == [alice, alice] and set(forgotten) == alice  # xóa vector trước và sau khi xóa PostgreSQL
+    assert await count(sessionmaker, Feedback) == 0  # feedback của Alice đã xóa theo tin nhắn (cascade)
+    assert await count(sessionmaker, Message) == 10 and await count(sessionmaker, ConversationMemory) == 5
 
 
 async def test_clear_is_idempotent(sessionmaker, clean):
     await seed(sessionmaker)
-    cleaner = GuildMemoryCleaner(sessionmaker, FakeVectors(per_call=0))
+    cleaner = GuildMemoryCleaner(sessionmaker, FakeVectors())
 
     await cleaner.clear(GUILD, user_hash=ALICE)
     again = await cleaner.clear(GUILD, user_hash=ALICE)
 
-    assert again == dict.fromkeys(("conversations", "messages", "feedback", "memories", "vector_points"), 0)
+    assert again == {"conversations": 0, "threads_kept": 1, "vector_conversations": 0}  # thread vẫn còn
 
 
 async def test_clear_all_removes_threads_and_every_member_but_not_other_guilds_or_web(sessionmaker, clean):
@@ -197,7 +201,7 @@ async def test_clear_all_removes_threads_and_every_member_but_not_other_guilds_o
 
     result = await GuildMemoryCleaner(sessionmaker, FakeVectors()).clear(GUILD)
 
-    assert result["conversations"] == 4 and result["messages"] == 8 and result["memories"] == 4
+    assert result == {"conversations": 4, "threads_kept": 0, "vector_conversations": 4}
     assert await survivors(sessionmaker, ids) == {"alice_other", "alice_no_guild", "web"}
     assert await count(sessionmaker, ConversationMemory) == 3  # ký ức của 3 hội thoại còn lại
 
@@ -214,6 +218,9 @@ async def test_vector_failure_leaves_postgres_untouched_so_a_retry_finishes_the_
     ids = await seed(sessionmaker)
 
     class Broken:
+        async def available(self):
+            return True
+
         async def delete_conversations(self, ids):
             raise ConnectionError("qdrant down")
 

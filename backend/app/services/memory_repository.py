@@ -88,6 +88,13 @@ class MemoryRepository:
         except SQLAlchemyError:
             raise UnavailableError("Không đọc được hội thoại đã lưu.") from None
 
+    async def conversation_exists(self, conversation_id: UUID) -> bool:
+        try:
+            async with self.sessions() as session:
+                return await session.get(Conversation, conversation_id) is not None
+        except SQLAlchemyError:
+            raise UnavailableError("Không kiểm tra được hội thoại đã lưu.") from None
+
     async def save_feedback(self, message_id: UUID, rating: int, reason: str | None) -> None:
         """Mỗi câu trả lời giữ một đánh giá: gửi lại thì thay thế đánh giá cũ (người dùng đổi ý 👍 sang 👎)."""
         try:
