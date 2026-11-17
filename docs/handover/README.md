@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV2 · Sprint 5: rà soát mã toàn hệ thống (17/11/2026)](2026-11-17_s5-tv2_ra-soat-ma-toan-he-thong.md)
+
 - [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)
 - [TV2 · Sprint 5: cập nhật dữ liệu tăng dần và tài liệu pipeline (16/11/2026)](2026-11-16_s5-tv2_cap-nhat-tang-dan.md)
 - [TV2 · Sprint 5: phạm vi Tarnished Pack và an toàn cập nhật dữ liệu (16/11/2026)](2026-11-16_s5-tv2_pham-vi-tarnished-pack.md)
