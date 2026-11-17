@@ -37,6 +37,7 @@ class AppContext:
     redis: Redis
     llm: DeepSeekLLM | None = None
     web_search: object | None = None
+    reranker: object | None = None
     health_checks: dict[str, HealthCheck] = field(default_factory=dict)
     _closers: list[tuple[str, Closer]] = field(default_factory=list, repr=False)
 
@@ -114,6 +115,24 @@ def build_context(settings: Settings) -> AppContext:
         ),
     )
     register_infra(ctx)
+    if settings.chat_mode == "rag" and settings.reranker_available:
+        import httpx
+
+        from app.rag.reranker import JinaReranker
+
+        client = httpx.AsyncClient(
+            timeout=settings.rag_reranker_timeout_seconds, follow_redirects=False, trust_env=False
+        )
+        ctx.reranker = JinaReranker(
+            settings.jina_api_key.get_secret_value().strip(),
+            model=settings.rag_reranker_model,
+            timeout_seconds=settings.rag_reranker_timeout_seconds,
+            max_candidates=settings.rag_reranker_max_candidates,
+            client=client,
+        )
+        ctx.register("reranker", close=client.aclose)
+    elif settings.chat_mode == "rag" and settings.rag_reranker_enabled:
+        log.warning("Reranker inactive: JINA_API_KEY is not configured")
     if settings.web_search_available:
         from app.adapters.tavily import TavilySearch
 

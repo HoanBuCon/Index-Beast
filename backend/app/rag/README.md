@@ -1,5 +1,28 @@
 # IndexBeast: LangGraph, LangChain và corpus thử nghiệm
 
+## Jina Reranker tùy chọn — 16/11/2026
+
+RAG có thể xếp hạng lại các kết quả local sau khi E5 và BM25 được hợp nhất bằng RRF. Mặc định tính năng tắt.
+Để bật, đặt `RAG_RERANKER_ENABLED=true` và cung cấp `JINA_API_KEY` trong `.env` cục bộ, rồi khởi động lại API.
+Lấy key tại [Jina AI](https://jina.ai/?sui=apikey); endpoint và mô tả provider ở [Jina Reranker](https://jina.ai/reranker/).
+Không cần reindex. Nếu bật cờ nhưng key trống hoặc `change-me`, ứng dụng chọn `NoReranker` và giữ thứ tự RRF.
+
+`RAG_RERANKER_MODEL` mặc định là `jina-reranker-v2-base-multilingual`;
+`RAG_RERANKER_MAX_CANDIDATES` giới hạn số ứng viên gửi provider (mặc định 30),
+và `RAG_RERANKER_TIMEOUT_SECONDS` đặt timeout riêng (mặc định 3 giây, tối đa 10).
+Provider chỉ xếp hạng lại phần đầu danh sách; phần đuôi giữ nguyên. Nếu request lỗi, timeout hoặc response không hợp lệ,
+retriever dùng lại toàn bộ thứ tự RRF ban đầu. Điểm và payload của `Hit` được giữ nguyên; reranker không tự chọn bằng chứng
+cuối cùng, Agent vẫn chọn tối đa 5 evidence cho context. Retrieval có timeout riêng.
+
+Reranker được gắn một lần vào `HybridRetriever`, dùng chung cho local search của Tool Agent và đường compatibility cũ.
+Đường compatibility hợp nhất truy vấn bằng RRF trước khi gọi reranker một lần. Deadline rerank lấy từ thời gian còn lại của lượt chat;
+timeout giữ thứ tự retrieval và cancellation vẫn được truyền tiếp. HTTP client thuộc lifespan của API và được đóng khi ứng dụng tắt.
+Log outcome ghi provider/model, candidate/ranked count, trạng thái, nhóm nguyên nhân và thời gian đã trôi qua;
+không ghi query, nội dung tài liệu, key, raw response hay thông tin lỗi thô.
+
+Test provider offline dùng HTTP mock. Kết quả review và giới hạn kiểm chứng live (tối đa 5 câu hỏi chính, tính cả follow-up)
+được cập nhật tại [báo cáo ngày 16/11/2026](../../../docs/testing/2026-11-16_reranker-review-live.md).
+
 ## Evidence, ảnh và build có nguồn — 07/11/2026
 
 Luồng tool-agent chọn context bằng ID và metadata, ảnh local/web qua metadata selector,

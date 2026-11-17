@@ -30,18 +30,10 @@ def step(action, query="", **kw):
 
 
 def pipeline(llm, **kw):
-    return ChatPipeline(settings(chat_tool_agent_enabled=True, **kw), llm, FakeRetriever())
+    return ChatPipeline(settings(**kw), llm, FakeRetriever())
 
 
-async def test_model_can_change_query_after_observations_without_legacy_routing(monkeypatch):
-    import app.rag.gameplay_knowledge as snapshots
-    import app.services.gameplay as legacy
-
-    def forbidden(*args, **kwargs):
-        raise AssertionError("legacy rule path used")
-
-    monkeypatch.setattr(legacy, "advance", forbidden)
-    monkeypatch.setattr(snapshots, "supplements", forbidden)
+async def test_model_can_change_query_after_observations_without_legacy_routing():
     llm = ToolsLLM([step("local_search", "Ranni identity"), step("local_search", "Ranni parents"), step("finish")])
     pipe = pipeline(llm)
     p = await pipe.prepare(req(), [])
@@ -333,13 +325,7 @@ async def test_failed_web_is_observed_and_cancelled_tool_propagates():
         await task
 
 
-async def test_final_evidence_is_model_selected_without_keyword_order(monkeypatch):
-    import app.rag.pipeline as module
-
-    def forbidden(*args, **kw):
-        raise AssertionError("Keyword coverage routing was used")
-
-    monkeypatch.setattr(module, "coverage_order", forbidden)
+async def test_final_evidence_is_model_selected_without_keyword_order():
     llm = ToolsLLM([step("local_search", "Ranni"), step("finish", evidence_ids=["3", "1"])])
     from tests.unit.test_live_chat import hit
 
@@ -353,10 +339,7 @@ async def test_final_evidence_is_model_selected_without_keyword_order(monkeypatc
     assert len(llm.observations[1]["candidates"]) >= 3
 
 
-async def test_evidence_rank_fallback_is_explicit_not_keyword(monkeypatch):
-    import app.rag.pipeline as module
-
-    monkeypatch.setattr(module, "coverage_order", lambda *a, **kw: pytest.fail("keyword fallback"))
+async def test_evidence_rank_fallback_is_explicit_not_keyword():
     p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish")])).prepare(req(), [])
     assert p.trace["evidence_selection"] == {"method": "rank_fallback", "ids": []}
     assert p.hits

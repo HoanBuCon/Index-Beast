@@ -21,7 +21,6 @@ from app.rag.output import decode_output
 from app.rag.prompts import prompt, rewrite_prompt
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.task_plan import MAX_GOAL_SOURCES, MAX_GOALS, restore_evidence, save_evidence, update_plan
-from app.rag.web_query import web_query
 from app.rag.web_search import assess
 from core.errors import UnavailableError, UpstreamError
 from core.types import Hit
@@ -62,10 +61,11 @@ def key(action, arguments):
 
 
 async def run_tools(pipe, state):
-    from app.rag.gameplay_knowledge import load_pack, trusted_rule_kind
+    from app.rag.gameplay_knowledge import load_pack
     from app.rag.pipeline import context_item, select_context
 
     p, req = state["prepared"], state["req"]
+    turn_started = state.get("started", time.perf_counter())
     inactive = (p.player_state or {}).get("inactive_conditions", [])
     comparison = req.message if p.agent_decision.get("intent") in {"comparison", "gameplay_comparison"} else ""
     if p.trace["web_search"]["requested"] == "always" and not pipe.settings.web_search_available:
@@ -126,14 +126,6 @@ async def run_tools(pipe, state):
         if model_limit is not None and len(p.trace.get("model_calls", [])) >= model_limit - 1:
             stop_reason = "model_budget"
             break
-        selected = select_context(
-            list(hits.values()),
-            5,
-            pipe.settings.rag_context_chars,
-            policy=pipe.policy,
-            spoilers=req.options.spoilers,
-            preserve_order=True,
-        )
         available = ["finish", "stop"]
         if clarification_limit is None or rounds < clarification_limit:
             available.append("clarify")
@@ -153,18 +145,14 @@ async def run_tools(pipe, state):
             available.append("web_search")
         if catalog and not unresolved_name:
             available.append("source_snapshot")
-        if not unresolved_name and {"level_rule", "class_rule", "weapon_rule", "respec_rule"}.issubset(
-            {trusted_rule_kind(h) for h in selected}
-        ):
-            available.append("calculator")
         profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
         if name_status == "verified":
             profile = {k: correct_name(v, raw_name, name_options[0]) for k, v in profile.items()}
         if (
             hits
             and not unresolved_name
-            and all(profile.get(k) for k in ("level", "starting_class", "weapon"))
-            and "calculator" not in available
+            # Level is the only player input the math needs: a missing class/weapon becomes a stated assumption.
+            and profile.get("level")
         ):
             available.append("calculator")
         carried_ids = dict.fromkeys(key for item in task_plan for key in item["evidence_ids"] if key in hits)
@@ -347,7 +335,6 @@ async def run_tools(pipe, state):
                     pipe.settings.rag_context_chars,
                     policy=pipe.policy,
                     spoilers=req.options.spoilers,
-                    preserve_order=True,
                 )
                 context = [context_item(hit, i) for i, hit in enumerate(evaluated, 1)]
                 if context:
@@ -387,11 +374,10 @@ async def run_tools(pipe, state):
                     if not raw_query and not web_calls:
                         raw_query = state["query"]
                     if raw_query and no_new_web_evidence < 2:
-                        proposed, _ = web_query(raw_query)
-                        if (
-                            key("web_search", proposed) not in seen
-                            and key("web_search", raw_query) not in seen
-                            and not contains_superseded(proposed, inactive, comparison)
+                        # The assessor (LLM) writes the follow-up search; no server-side query rewriting.
+                        proposed = raw_query
+                        if key("web_search", proposed) not in seen and not contains_superseded(
+                            proposed, inactive, comparison
                         ):
                             followup = proposed
                     if followup:
@@ -435,11 +421,30 @@ async def run_tools(pipe, state):
             if action in {"check_name", "local_search"}:
                 local_calls += 1
                 retriever = pipe.retriever.model_copy(
-                    update={"spoilers": req.options.spoilers, "limit": pipe.settings.rag_prefetch}
+                    update={
+                        "spoilers": req.options.spoilers,
+                        "limit": pipe.settings.rag_prefetch,
+                        "search_timeout_seconds": min(5, pipe.settings.rag_retrieval_timeout_seconds),
+                        "rerank_deadline": turn_started + pipe.settings.chat_timeout_seconds - reserve,
+                    }
                 )
-                async with asyncio.timeout(min(5, pipe.settings.rag_retrieval_timeout_seconds)):
+                retrieval_timeout = min(5, pipe.settings.rag_retrieval_timeout_seconds)
+                rerank_timeout = getattr(retriever, "reranker_timeout_seconds", 0)
+                retrieval_timeout += rerank_timeout + (0.1 if rerank_timeout else 0)
+                async with asyncio.timeout(retrieval_timeout):
                     docs = await retriever.ainvoke(raw_name if action == "check_name" else step.query)
                     found = [document_to_hit(d) for d in docs[: pipe.settings.rag_prefetch]]
+                # Retrieval ids/scores per local search, for the debugging trace (not a relevance claim).
+                p.trace.setdefault("retrieved", []).extend(
+                    {
+                        "id": h.id,
+                        "score": h.score,
+                        "chunk_id": h.payload.get("artifact_chunk_id", h.id),
+                        "title": h.payload.get("title"),
+                        "url": h.payload.get("url"),
+                    }
+                    for h in found
+                )
             elif action == "web_search":
                 web_calls += 1
                 web_queries.append(step.query)
@@ -467,16 +472,14 @@ async def run_tools(pipe, state):
                 inspected_ids = step.evidence_ids
                 row["opened"] = len(inspected_ids)
             elif action == "calculator":
-                from app.rag.build_math import check_allocation
+                # Only sourced build data is calculated; there is no hardcoded class/weapon table.
+                if not step.build_data:
+                    raise ValueError("build_data_required")
+                from app.rag.build_data import check
 
-                if step.build_data:
-                    from app.rag.build_data import check
-
-                    p.checked_build = check(step.build_data, step.allocation, profile, list(hits.values()))
-                    pipe.build_cache.put(p.checked_build["data"], [hits[i] for i in p.checked_build["sources"]])
-                    row["calculation"] = {k: v for k, v in p.checked_build.items() if k != "data"}
-                else:
-                    row["calculation"] = check_allocation(step.allocation, profile)
+                p.checked_build = check(step.build_data, step.allocation, profile, list(hits.values()))
+                pipe.build_cache.put(p.checked_build["data"], [hits[i] for i in p.checked_build["sources"]])
+                row["calculation"] = {k: v for k, v in p.checked_build.items() if k != "data"}
             if action == "check_name" or (name_status == "not_found" and action in {"local_search", "web_search"}):
                 candidates = [
                     h

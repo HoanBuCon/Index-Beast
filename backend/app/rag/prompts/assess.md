@@ -17,7 +17,8 @@ both its expected size and every member under the requested game version. A hand
 If task is present, use its original request, active player profile, goals and checked calculation to verify coverage.
 Judge whether the excerpts alone support each requested fact and condition. For a partial or insufficient
 result with task present, also return followup_query, a short English search for the most important
-missing evidence. Preserve the named subject and applicable game/release/patch. Avoid guessed answers
+missing evidence. It is sent to the web as written: name Elden Ring (or Shadow of the Erdtree) in it.
+Preserve the named subject and applicable game/release/patch. Avoid guessed answers
 and queries already searched. For a sufficient or ambiguous result omit followup_query.
 Count direct logical consequences of an explicit condition as covered. If a bonus applies only
 while HP is full, and the player drops below full HP, the bonus no longer applies. Cite the

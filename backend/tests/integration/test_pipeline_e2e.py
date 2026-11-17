@@ -84,8 +84,6 @@ async def stack(db_url: str):  # noqa: F811
         _env_file=None,
         environment="test",
         chat_mode="rag",
-        chat_agent_enabled=True,
-        chat_tool_agent_enabled=False,
         chat_persistence="postgres",
         gameplay_knowledge_enabled=False,
         rag_collection=f"ib_e2e_{uuid4().hex[:8]}",
@@ -104,7 +102,7 @@ async def stack(db_url: str):  # noqa: F811
 
         def build(llm):
             pipeline = ChatPipeline(settings, llm, retriever)
-            return LiveChatService(pipeline, repository=repository, gameplay_enabled=True)
+            return LiveChatService(pipeline, repository=repository)
 
         yield build, repository
     finally:

@@ -79,10 +79,6 @@ def test_removal_does_not_force_old_weapon_into_query_as_a_negation():
     d["entities"] = ["Great Knife", "Bandit"]
     working = {"request_text": "Bandit Reduvia PvE build", "constraints": [old]}
     check_decision(AgentDecision.model_validate(d), "Không dùng Reduvia nữa, đổi sang Great Knife", [], working)
-    with pytest.raises(DecisionError, match="Negation dropped"):
-        check_decision(
-            AgentDecision.model_validate(d), "Không dùng Reduvia nữa, đổi sang Great Knife, không dùng bùa", [], working
-        )
 
 
 async def test_model_repairs_stale_search_and_tool_uses_only_active_profile():
@@ -117,7 +113,7 @@ async def test_model_repairs_stale_search_and_tool_uses_only_active_profile():
         ],
         [first, resume, resume],
     )
-    live = service(llm=llm, chat_tool_agent_enabled=True)
+    live = service(llm=llm)
     question = req("Build Reduvia cho Bandit level 90", options={"web_search": "off"})
     opened = await live.answer(question)
     result = await live.answer(

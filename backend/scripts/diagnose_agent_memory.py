@@ -317,7 +317,6 @@ async def execute(args, manifest, cases):
                 "postgres_db": database,
                 "chat_mode": "rag",
                 "chat_persistence": "postgres",
-                "chat_agent_enabled": True,
                 "chat_agent_max_calls": None,
                 "chat_tool_steps": None,
                 "chat_tool_queries": None,

@@ -3,7 +3,7 @@
 # (scripts/deploy.sh gói sẵn lệnh này). Hướng dẫn đầy đủ: docs/production.md. Mẫu biến môi trường: .env.prod.example.
 #
 # Khác với compose gốc:
-#   - ENVIRONMENT=prod, CHAT_MODE=rag, CHAT_PERSISTENCE=postgres, CHAT_AGENT_ENABLED=true được đặt cứng:
+#   - ENVIRONMENT=prod, CHAT_MODE=rag, CHAT_PERSISTENCE=postgres được đặt cứng(rag luôn dùng Agent):
 #     một dòng CHAT_MODE=mock sót trong .env không làm production trả lời giả
 #   - WEB_URL, CORS_ORIGINS, AUTH_REDIRECT_URI suy ra từ DOMAIN (cùng một nguồn): web và api cùng gốc nên không cần CORS rộng
 #   - cookie phiên luôn Secure (HTTPS)
@@ -45,7 +45,6 @@ services:
       ENVIRONMENT: prod
       CHAT_MODE: rag
       CHAT_PERSISTENCE: postgres
-      CHAT_AGENT_ENABLED: "true"
       WEB_URL: https://${DOMAIN:-tarnished.liemdai.io.vn}
       CORS_ORIGINS: https://${DOMAIN:-tarnished.liemdai.io.vn}
       AUTH_REDIRECT_URI: https://${DOMAIN:-tarnished.liemdai.io.vn}/api/v1/auth/discord/callback

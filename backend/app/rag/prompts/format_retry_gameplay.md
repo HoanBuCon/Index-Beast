@@ -1,0 +1,1 @@
+Gameplay advice may instead use {"answer":"General advice under a clear assumption.","evidence":[],"insufficient":false,"advisory":true}. With cited gameplay facts, put an optional inference in recommendation without citations. Apply the gameplay advice policy, including its limits on game stats and build allocations.

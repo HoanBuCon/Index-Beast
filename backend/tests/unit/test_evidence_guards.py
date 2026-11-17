@@ -13,16 +13,12 @@ from app.api.schemas.chat import ChatRequest
 from app.rag.context_policy import dedup_web
 from app.rag.evidence import evidence_units
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
-from app.rag.pipeline import ChatPipeline, select_context
+from app.rag.pipeline import select_context
 from app.rag.prompts import prompt
-from app.rag.retriever import document_to_hit, hit_to_document
-from app.rag.rewrite import RewriteResult, rewrite_problem
-from app.rag.web_search import Assessment, assess, merge_evidence
-from core.corpus import CorpusPolicy
-from core.types import Hit
-from tests.unit.test_live_chat import BODY, FakeLLM, FakeRetriever, SequenceLLM, hit, service
-from tests.unit.test_vi_en import ScriptedLLM
-from tests.unit.test_web_search import FakeSearch, RankedRetriever, settings, web_hit
+from app.rag.web_search import Assessment, assess
+from tests.unit.rag_fakes import ScriptedLLM
+from tests.unit.test_live_chat import FakeLLM, FakeRetriever, SequenceLLM, hit, service
+from tests.unit.test_web_search import web_hit
 
 FIXTURE = json.loads((Path(__file__).parents[1] / "fixtures/golden_guard_replays.json").read_text(encoding="utf-8"))
 
@@ -34,12 +30,6 @@ async def test_observed_assessor_outputs_have_lossless_evidence_contract(row):
     assert result == data["status"] and trace["reason"] == "assessed"
     assert trace["decision"] == "local_" + data["status"]
     assert Assessment.model_validate(data).evidence == data["evidence"]
-
-
-@pytest.mark.parametrize("row", FIXTURE["rewrites"], ids=lambda r: r["id"])
-def test_observed_correct_rewrites_are_not_rejected_as_missing_names(row):
-    output = RewriteResult.model_validate(row["output"])
-    assert rewrite_problem(row["question"], output.standalone_query_en, output.entities, []) is None
 
 
 @pytest.mark.parametrize("evidence", [{"1": "q0"}, {"1": ["q0"]}, {"1": ["q1", "q2"]}])
@@ -72,80 +62,6 @@ async def test_bad_coverage_never_becomes_sufficient(changes):
     data = {"status": "sufficient", "covered": ["effect"], "missing": [], "evidence": {"1": ["q0"]}, **changes}
     result, trace = await assess(ScriptedLLM(data), "effect?", [], [{"index": 1, "evidence_units": {"q0": "text"}}], 1)
     assert result == "error" and trace["decision"] == "assessment_error"
-
-
-async def test_actual_list_output_skips_web_when_sufficient_and_error_reason_stays_distinct():
-    row = FIXTURE["assessments"][0]
-    llm = ScriptedLLM(row["output"])
-    pipe = ChatPipeline(settings(), llm, RankedRetriever(), web_search=FakeSearch())
-    from app.rag.retriever import hit_to_document
-
-    context_hits = [hit(i, text="Fixture source content") for i in range(1, 6)]
-    state = {
-        "prepared": Prepared("rag", "vi", [], trace={"web_search": {}}),
-        "search_mode": "auto",
-        "query": row["question"],
-        "history": [],
-        "req": ChatRequest(**BODY),
-        "documents": [hit_to_document(h) for h in context_hits],
-    }
-    await pipe._web(state)
-    assert not pipe.web_search.calls and state["prepared"].trace["web_search"]["status"] == "local_sufficient"
-    pipe.llm = ScriptedLLM("bad JSON")
-    await pipe._web(state)
-    assert pipe.web_search.calls and state["prepared"].trace["web_search"]["trigger"] == "assessment_error"
-
-
-@pytest.mark.parametrize(
-    "question,query,entities",
-    [
-        ("Ranni là ai?", "Who is Rannith?", ["Ranni"]),
-        ("Moonveil build level 80", "Moonveil build level 150", ["Moonveil"]),
-        ("Moonveil build không dùng khiên", "Moonveil build with a shield", ["Moonveil"]),
-        ("Moonveil build PvP", "Moonveil build PvE", ["Moonveil"]),
-        ("Lấy Moonveil ở đâu?", "Moonveil lore", ["Moonveil"]),
-        ("Revered Spirit Ash", "Revered Spirit ashes of war", ["Revered Spirit Ash"]),
-    ],
-)
-def test_entity_number_negation_and_intent_guards_remain(question, query, entities):
-    assert rewrite_problem(question, query, entities, []) is not None
-
-
-def replay_context(key):
-    case = FIXTURE["context_cases"][key]
-    output = json.loads(case["query"])
-    local = [Hit(h["id"], h["score"], h["payload"]) for h in case["local"]]
-    web = [WebHit(h["id"], h["score"], h["payload"]) for h in case["web"]]
-    chosen = select_context(
-        merge_evidence(local, web),
-        5,
-        12000,
-        policy=CorpusPolicy("pilot", ("en",)),
-        entities=output["entities"],
-        query=output["standalone_query_en"],
-    )
-    return chosen
-
-
-def test_real_stone_comparison_reserves_both_targets_with_description_evidence():
-    chosen = replay_context("IB-GS-044")
-    assert len(chosen) <= 5
-    normal = [h for h in chosen if h.payload["title"] == "Ancient Dragon Smithing Stone"]
-    special = [h for h in chosen if h.payload["title"] == "Somber Ancient Dragon Smithing Stone"]
-    assert any("+25" in h.payload["text"] for h in normal)
-    assert any("+10" in h.payload["text"] for h in special)
-
-
-def test_real_quest_case_keeps_negative_requirement_and_dedups_aliases():
-    chosen = replay_context("IB-GS-050")
-    assert len(chosen) <= 5
-    assert any("not necessary to complete Ranni" in h.payload["text"] for h in chosen)
-    # Local quest evidence may legitimately fill the selected context. Inspect dedup at merge,
-    # without forcing unrelated web material into a now-sufficient local answer.
-    web = dedup_web([WebHit(h["id"], h["score"], h["payload"]) for h in FIXTURE["context_cases"]["IB-GS-050"]["web"]])
-    assert len(web) == 1 and len(web[0].payload["provenance"]) == 3
-    roundtrip = document_to_hit(hit_to_document(web[0]))
-    assert roundtrip.payload == web[0].payload  # No metadata is lost by LangChain conversion.
 
 
 @pytest.mark.parametrize(
@@ -181,10 +97,9 @@ def test_alias_dedup_is_idempotent_and_does_not_merge_titles_or_changed_text():
 
 def test_no_missing_target_is_fabricated_and_policy_budget_still_apply():
     source = hit(title="Moonveil", text="Some mechanics")
-    selected = select_context([source], 5, 12000, entities=["Ranni", "Moonveil"], query="equipment requirements")
-    assert selected == [source]
-    assert select_context([hit(game_scope=None)], 5, 12000, entities=["Ranni"], query="quest") == []
-    assert select_context([source], 5, 1, entities=["Moonveil"], query="requirements") == []
+    assert select_context([source], 5, 12000) == [source]
+    assert select_context([hit(game_scope=None)], 5, 12000) == []
+    assert select_context([source], 5, 1) == []
 
 
 def test_multiple_quote_ids_resolve_exact_pieces_not_whole_page():

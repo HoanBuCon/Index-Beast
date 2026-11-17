@@ -83,7 +83,7 @@ async def test_tutorial_clarification_resumes_route_without_entity(stream, tool_
         "insufficient": False,
     }
     llm.tokens = list(json.dumps(llm.data, ensure_ascii=False))
-    live = service(llm=llm, chat_history_messages=0, chat_tool_agent_enabled=tool_agent)
+    live = service(llm=llm, chat_history_messages=0)
     live.pipeline.retriever = FakeRetriever(
         [hit(title="Early route", text="From The First Step, travel to the Church of Elleh.")]
     )
@@ -115,16 +115,6 @@ async def test_tutorial_clarification_resumes_route_without_entity(stream, tool_
     assert [(c["key"], c["value"]) for c in state["constraints"]] == [("progress", REPLY)]
     prompt = llm.seen[-1][-1]["content"]
     assert route_decision()["resolved_question"] in prompt and "Cave of Knowledge" not in prompt
-
-
-@pytest.mark.parametrize("reply", ["nói tiếp về nó", "rồi", "xong rồi"])
-def test_followup_without_agent_confirmed_context_cannot_search(reply):
-    decision = route_decision(constraints=[])
-    with pytest.raises(DecisionError) as error:
-        check_decision(
-            AgentDecision.model_validate(decision), reply, [], {"request_text": ROOT, "pending": {"id": "1"}}
-        )
-    assert error.value.reason == "missing_followup_context"
 
 
 @pytest.mark.parametrize(
@@ -173,25 +163,6 @@ async def test_model_repairs_numeric_meaning_or_searches_verbatim(
     assert trace["agent"]["reason"] == ("ready" if repair_succeeds else "original_query_fallback")
 
 
-async def test_vague_reply_can_repair_to_a_specific_clarification():
-    def repair(payload):
-        assert "lacks a resolved subject or progression milestone" in payload["repair"]["validation_error"]
-        return route_decision(
-            action="clarify",
-            search_hypotheses=[],
-            constraints=[],
-            missing=[{"key": "progress", "label": "Tiến độ"}],
-            reply="Bạn vừa hoàn thành đoạn nào?",
-            reason="missing_player_details",
-        )
-
-    llm = AgentLLM([route_decision(constraints=[]), repair])
-    result = await decide(
-        llm, "nói tiếp về nó", [], {"request_text": ROOT, "pending": {"id": "1"}}, "vi", settings(), {}
-    )
-    assert result is not None and result.action == "clarify"
-
-
 @pytest.mark.parametrize(
     ("changes", "reason"),
     [
@@ -218,14 +189,13 @@ def test_progress_and_search_hypotheses_do_not_authorize_invented_facts(changes,
     assert error.value.reason == reason
 
 
-@pytest.mark.parametrize("reason", ["missing_followup_context", "invalid_decision_schema", "invalid_json"])
+@pytest.mark.parametrize("reason", ["invalid_decision_schema", "invalid_json"])
 async def test_failed_decision_logs_only_classification_and_retry_count(caplog, reason):
     class BrokenJSON(AgentLLM):
         async def invoke_chain(self, *args, **kwargs):
             return LLMResponse("invalid JSON marker", "fake", 10, 5, "stop")
 
     llm = {
-        "missing_followup_context": AgentLLM([route_decision(constraints=[])]),
         "invalid_decision_schema": AgentLLM([{"unexpected": "model output marker"}]),
         "invalid_json": BrokenJSON(),
     }[reason]
@@ -233,5 +203,13 @@ async def test_failed_decision_logs_only_classification_and_retry_count(caplog, 
     result = await decide(llm, REPLY, [], {"request_text": ROOT, "pending": {"id": "1"}}, "vi", settings(), trace)
     assert result is None and trace["agent"]["validation_reason"] == reason
     record = next(r for r in caplog.records if r.message == "Agent decision rejected")
-    assert record.data == {"reason": reason, "repair_attempts": int(reason == "missing_followup_context")}
+    assert record.data == {"reason": reason, "repair_attempts": 0}
     assert REPLY not in caplog.text and "marker" not in caplog.text
+
+
+@pytest.mark.parametrize("reply", ["phá đảo nhanh nhất", "xong rồi"])
+def test_clarification_reply_without_named_subject_is_the_agents_call(reply):
+    # Live 2026-11-18: "cách nhanh nhất để endgame" → clarify → "phá đảo nhanh nhất" was rejected 3 times.
+    decision = route_decision(constraints=[], resolved_question=ROOT + " " + reply, search_query=ROOT + " " + reply)
+    working = {"request_text": ROOT, "pending": {"id": "1"}}
+    check_decision(AgentDecision.model_validate(decision), reply, [], working)

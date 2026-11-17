@@ -53,6 +53,43 @@ def test_timeouts_must_be_positive():
         make(health_timeout_seconds=0)
 
 
+def test_reranker_is_disabled_by_default_and_key_is_secret():
+    settings = make()
+
+    assert settings.rag_reranker_enabled is False
+    assert settings.jina_api_key is None
+    assert settings.reranker_available is False
+    settings = make(rag_reranker_enabled=True, jina_api_key="jina-secret")
+    assert settings.reranker_available is True
+    assert "jina-secret" not in repr(settings)
+    assert settings.jina_api_key.get_secret_value() == "jina-secret"
+
+
+@pytest.mark.parametrize("key", [None, "", "   ", "change-me"])
+def test_reranker_is_unavailable_without_a_real_key(key):
+    assert make(rag_reranker_enabled=True, jina_api_key=key).reranker_available is False
+
+
+def test_reranker_disabled_flag_makes_key_inactive():
+    assert make(rag_reranker_enabled=False, jina_api_key="real-key").reranker_available is False
+
+
+def test_reranker_limits_and_model_default():
+    settings = make()
+    assert settings.rag_reranker_model == "jina-reranker-v2-base-multilingual"
+    assert settings.rag_reranker_timeout_seconds == 3
+    assert settings.rag_reranker_max_candidates == 30
+    for values in (
+        {"rag_reranker_timeout_seconds": 0},
+        {"rag_reranker_timeout_seconds": 10.1},
+        {"rag_reranker_max_candidates": 1},
+        {"rag_reranker_max_candidates": 201},
+        {"rag_reranker_model": ""},
+    ):
+        with pytest.raises(ValidationError):
+            make(**values)
+
+
 @pytest.mark.parametrize("retries", [0, 1])
 def test_rag_format_retries_can_be_disabled_or_bounded_at_one(retries):
     assert make(rag_format_retries=retries).rag_format_retries == retries

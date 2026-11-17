@@ -330,18 +330,18 @@ async def test_catalog_is_lazy_cached_and_has_no_model_or_network_clients(media,
 
 
 @pytest.mark.parametrize("streaming", [False, True])
-async def test_image_resolution_cancellation_is_not_swallowed(media, streaming):
+async def test_image_resolution_cancellation_is_not_swallowed(media, streaming, monkeypatch):
     llm = FakeLLM()
     llm.tokens = list(json.dumps(llm.data))
     live = service("rag", llm, FakeRetriever(media.hits))
     started = asyncio.Event()
 
-    class Slow:
-        async def resolve(self, *args, **kwargs):
-            started.set()
-            await asyncio.Event().wait()
+    async def slow(*args, **kwargs):
+        started.set()
+        await asyncio.Event().wait()
 
-    live.image_catalog = Slow()
+    live.image_catalog = media.catalog
+    monkeypatch.setattr("app.services.answer_media.resolve", slow)
     events = None
     if streaming:
         events = await live.open_stream(ChatRequest(**BODY))

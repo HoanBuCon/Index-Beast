@@ -87,8 +87,9 @@ graph TD
     ASK -->|"Tiếp tục cùng hội thoại"| IN
     PLAN -->|"Câu hỏi đã rõ"| TOOL["Chọn công cụ và chuẩn bị truy vấn nếu cần"]
     TOOL --> LOCAL["Kho nội bộ · E5 và BM25, hợp nhất thứ hạng bằng RRF"]
+    LOCAL --> RERANK["Jina Reranker · tùy chọn, chỉ xếp hạng lại ứng viên đầu"]
     TOOL -->|"Khi chế độ cho phép"| WEB["Web · Tavily Search và Extract"]
-    LOCAL --> PICK["Chọn đoạn liên quan, giữ siêu dữ liệu và mã định danh"]
+    RERANK --> PICK["Chọn đoạn liên quan, giữ siêu dữ liệu và mã định danh"]
     WEB --> PICK
     PICK --> EVAL["Chế độ Auto · đánh giá bằng chứng theo từng ý"]
     EVAL -->|"Còn thiếu chi tiết có thể tìm được"| TOOL
@@ -110,6 +111,7 @@ graph TD
 - **Nguồn web.** Tavily có thể trả về các domain ngoài danh sách ưu tiên. Trong các nguồn cộng đồng phù hợp ngang nhau, Agent ưu tiên Fextralife. Ghi chú chính thức được ưu tiên khi câu hỏi hỏi về thay đổi ở một patch cụ thể. Đoạn từ trang khác vẫn dùng được nếu hỗ trợ trực tiếp dữ kiện.
 - **Đánh giá bằng chứng.** Trong Auto, Tool Agent có bước đánh giá riêng khi Tavily khả dụng và lượt hỏi cho phép nội dung tiết lộ tình tiết. Một nguồn có thể đủ nếu hỗ trợ trực tiếp các ý được hỏi. Khi có mâu thuẫn quan trọng, Agent có thể tìm thêm hoặc nêu rõ dữ kiện còn bỏ ngỏ. Tư vấn định tính có thể kết hợp kiến thức chung theo chính sách của hệ thống. Các thông số, dữ kiện cốt truyện, tuyến đường và bước nhiệm vụ cụ thể cần bằng chứng.
 - **Kiểm tra đầu ra.** LangGraph điều phối các bước Agent lựa chọn. Backend áp dụng giới hạn xử lý và kiểm tra cấu trúc dữ liệu, phép tính phân bổ chỉ số và liên kết trích dẫn. Việc đối chiếu nguyên văn xác nhận câu trích có trong đoạn nguồn. Mức độ đoạn nguồn hỗ trợ kết luận được đánh giá riêng.
+- **Xếp hạng lại local (tùy chọn).** Sau khi hợp nhất E5 và BM25 bằng RRF, API có thể dùng Jina Reranker để sắp xếp lại một số ứng viên đầu. Tính năng mặc định tắt; thiếu key, timeout hoặc phản hồi sai định dạng thì giữ thứ tự RRF. Mức timeout rerank độc lập với timeout truy xuất. Xem [cấu hình và giới hạn](../backend/app/rag/README.md).
 
 ### B3. Chuẩn bị dữ liệu trước khi phục vụ chat
 

@@ -63,16 +63,19 @@ For strategy, prioritize the documented move, cue and practical response. Lore
 does not support combat mechanics. For comparison, use the same conditions and state the reason for
 each practical pick. For an exhaustive list, claim completeness only when the evidence establishes it.
 
-For checked_build, cite every required source and its exact accounting quotes. Explain the proposal in
+For checked_build, cite every required source and its exact accounting quotes. If checked_build.weapon_suggested,
+say in one cited sentence why that equipment fits the requested style; if checked_build.class_assumed, say the
+allocation assumes that class because none was given. The backend labels both in the rendered allocation. Explain the proposal in
 prose without attribute-number pairs or stat tables. The backend renders the allocation. An optional
 build_allocation must equal the checked artifact. This path applies to any class and weapon the backend
 has checked. Never invent precise AR/DPS, soft caps or current patch values, or claim optimality.
-The fallback allocation without checked_build is for the legacy Samurai/Moonveil protocol only: use
-build_allocation with eight integer attributes if the target level and all four level, class, weapon
-and respec rules are present and cited. Respect level accounting, class floors, cap and one-handed
-requirements from those rules. Leave uncertain cases at supported qualitative advice.
+Without checked_build, omit build_allocation and write no attribute-number pairs or stat tables:
+give supported qualitative priorities (which stats matter and why) instead. Only the calculator's
+checked artifact can show exact per-attribute numbers.
 
 Images are selected after the text response. Answer the game question without claims about what the
 image selector can find or send. Keep source attribution in citation markers. Name or describe sources in
 prose only when the user asks for them. When a requested detail remains open, name the detail itself
 rather than describing the search, dataset or number of sources.
+JSON string encoding: inside answer and limitation write every line break as \n (never a raw line break)
+and do not backslash-escape Markdown characters such as *, [, ], #, - or _.

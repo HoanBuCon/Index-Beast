@@ -12,15 +12,14 @@ from pydantic_core import PydanticCustomError
 
 from app.adapters.llm import LLMError
 from app.api.schemas.chat import ClarificationField
+from app.rag.matching import contains_name, contains_text, name_key, preserves_numbers
 from app.rag.output import OutputFormatError, decode_output
 from app.rag.prompts import prompt, rewrite_prompt
-from app.rag.rewrite import _contains, contains_name, name_key, preserves_numbers
 from core.errors import UnavailableError, UpstreamError
 
 GoalText = Annotated[str, Field(min_length=1, max_length=240)]
 SearchName = Annotated[str, Field(min_length=1, max_length=120)]
 logger = logging.getLogger(__name__)
-_NEGATION = r"không (?:dùng|sử dụng|có)|tránh dùng|\bwithout\b|do not use|don't use"
 
 
 class DecisionError(ValueError):
@@ -148,7 +147,7 @@ def normalize_sources(decision: AgentDecision, candidates: list[dict], working: 
             if len(aliases) != 1 or constraint.source_id in canonical:
                 raise DecisionError("ambiguous_source_reference", "Ambiguous memory/source reference")
             row = aliases[0]
-            if not _contains(row["text"], constraint.value):
+            if not contains_text(row["text"], constraint.value):
                 raise DecisionError("unverified_constraint", "Constraint absent from selected memory")
             constraint.source_id = row["source_id"]
             count += 1
@@ -219,24 +218,6 @@ def contains_superseded(text: str, inactive: list[dict], comparison: str = "") -
     return False
 
 
-def has_progress_anchor(decision, request_text, selected, working):
-    if decision.intent not in {"route", "quest"} or not request_text.strip():
-        return False
-    if decision.turn_type == "clarification_reply" and not working.get("pending"):
-        return False
-    prior = {
-        (item["source_id"], item["value"]) for item in working.get("constraints", []) if item["key"] == "progress"
-    } | {
-        (row["source_id"], row["text"])
-        for row in selected
-        if row.get("kind") == "fact" and row.get("key") == "progress"
-    }
-    return any(
-        c.key == "progress" and c.value.strip() and (c.source_id == "current" or (c.source_id, c.value) in prior)
-        for c in decision.constraints
-    )
-
-
 def check_decision(decision: AgentDecision, question: str, candidates: list[dict], working: dict):
     available = {row["id"]: row for row in candidates}
     if any(key not in available for key in decision.selected_memory_ids):
@@ -277,7 +258,7 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
     inactive = inactive_conditions(decision, working, changes)
     inactive_keys = {(item["key"], name_key(item["value"])) for item in inactive}
     for item in decision.constraints:
-        contains_value = contains_name if item.key in {"weapon", "starting_class", "location"} else _contains
+        contains_value = contains_name if item.key in {"weapon", "starting_class", "location"} else contains_text
         if item.source_id not in sources or not contains_value(sources[item.source_id], item.value):
             raise DecisionError("unverified_constraint", "Constraint not present in its user source")
         if (item.key, name_key(item.value)) in inactive_keys:
@@ -323,8 +304,6 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
             if re.fullmatch(_NUMBER, item["value"]) and not contains_name(comparison, item["value"]):
                 old = re.escape(item["value"])
                 numeric_question = re.sub(rf"(?<![\w.,]){old}(?!\w|[.,]\d)", " ", numeric_question)
-        negations = re.findall(rf"(?:{_NEGATION})[^,;.!?\n]*", question, re.I)
-        keep_negation = any(not contains_superseded(clause, inactive, comparison) for clause in negations)
         for field, query in queries.items():
             if contains_superseded(query, inactive, comparison):
                 raise DecisionError(
@@ -344,25 +323,8 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
                         f"{name!r} is missing from {field}. Keep proper names in both fields. "
                         "Keep translatable nouns out of entities and retain their meaning in the rewritten text.",
                     )
-            for goal in ("PvE", "PvP", "NG+"):
-                if (
-                    goal.casefold() in question.casefold()
-                    and goal.casefold() not in query.casefold()
-                    and not contains_superseded(goal, inactive, comparison)
-                ):
-                    raise DecisionError("dropped_goal", "Goal dropped")
-            if keep_negation and not re.search(_NEGATION + r"|\bavoid\b|\bexclude\b|\bnot\b|\bno\b|don't", query, re.I):
-                raise DecisionError("dropped_negation", "Negation dropped")
         if not decision.rewrite and decision.resolved_question != question:
             raise DecisionError("unlabelled_rewrite", "A changed request must be labelled rewritten")
-        if (
-            decision.turn_type != "new"
-            and not decision.entities
-            and not has_progress_anchor(decision, request_text, selected, working)
-        ):
-            raise DecisionError(
-                "missing_followup_context", "Dependent query lacks a resolved subject or progression milestone"
-            )
     return selected
 
 

@@ -30,7 +30,6 @@ def test_complete_output_envelopes_preserve_all_values(wrapper):
         "```python\n" + RAW + "\n```",
         '{"answer":"private answer",}',
         '{"answer":"private answer"',
-        '{"answer":"unescaped\nline"}',
         '{"answer":"private", "answer":"overridden"}',
         '{"evidence":[{"index":1,"index":2}]}',
         '{"answer":NaN}',

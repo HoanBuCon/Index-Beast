@@ -3,16 +3,33 @@
 Phụ trách: TV3 · [S2] Module retrieval hybrid
 """
 
+import asyncio
+import time
 from copy import deepcopy
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from core.errors import UnavailableError
 from core.types import Encoder, Hit
 from core.vector.store import QdrantStore
+
+
+async def rank_with_deadline(reranker, query: str, hits: list[Hit], deadline: float | None) -> list[Hit]:
+    if reranker is None:
+        return hits
+    if deadline is None:
+        return await reranker.rank(query, hits)
+    remaining = deadline - time.perf_counter()
+    if remaining <= 0:
+        return hits
+    try:
+        async with asyncio.timeout(remaining):
+            return await reranker.rank(query, hits)
+    except TimeoutError:
+        return hits
 
 
 def hit_to_document(hit: Hit) -> Document:
@@ -42,6 +59,10 @@ class HybridRetriever(BaseRetriever):
     store: QdrantStore
     limit: int = 30
     spoilers: bool = True
+    reranker: Any = Field(default=None, exclude=True, repr=False)
+    reranker_timeout_seconds: float = 0
+    search_timeout_seconds: float = 20
+    rerank_deadline: float | None = None
 
     def __init__(self, encoder: Encoder, store: QdrantStore, limit: int = 30, **kwargs):
         super().__init__(encoder=encoder, store=store, limit=limit, **kwargs)
@@ -62,9 +83,14 @@ class HybridRetriever(BaseRetriever):
 
     async def _search(self, query: str) -> list[Hit]:
         try:
-            await self.store.ready()  # Check before any model load/download.
-            vectors = await self.encoder.encode([query], query=True)
-            return await self.store.search(vectors[0], limit=self.limit, spoilers=self.spoilers)
+            # Retrieval cannot consume the provider's separate fallback budget.
+            async with asyncio.timeout(self.search_timeout_seconds):
+                await self.store.ready()  # Check before any model load/download.
+                vectors = await self.encoder.encode([query], query=True)
+                hits = await self.store.search(vectors[0], limit=self.limit, spoilers=self.spoilers)
+            # Shared boundary for both the legacy graph and Tool Agent's direct ainvoke calls.
+            # Keep the full candidate pool: the Agent still chooses the final evidence.
+            return await rank_with_deadline(self.reranker, query, hits, self.rerank_deadline)
         except UnavailableError:
             raise
         except Exception:
