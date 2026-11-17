@@ -186,10 +186,6 @@ body:has(.login-page)::-webkit-scrollbar {
   justify-content: center;
   min-width: 0;
   background: transparent;
-  mask-image:
-    linear-gradient(to right, transparent, #000 18%, #000 82%, transparent),
-    linear-gradient(to bottom, transparent, #000 16%, #000 82%, transparent);
-  mask-composite: intersect;
 }
 .login-visual img,
 .login-visual video {
@@ -199,6 +195,12 @@ body:has(.login-page)::-webkit-scrollbar {
   object-fit: contain;
   /* Giảm riêng độ chói của ảnh, không làm tối chữ hoặc nút đăng nhập. */
   filter: brightness(0.78) saturate(0.9);
+  /* TV4: làm mềm đúng bốn mép media, không đặt mask trên figure bị kéo cao theo hàng grid. */
+  /* Thu gọn dải mờ còn 6% mỗi mép để giữ rõ phần lớn khung hình. */
+  mask-image:
+    linear-gradient(to right, transparent, #000 6%, #000 94%, transparent),
+    linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+  mask-composite: intersect;
 }
 
 /* Video chỉ minh họa: không nhận hover/click gọi các công cụ media nổi. */
