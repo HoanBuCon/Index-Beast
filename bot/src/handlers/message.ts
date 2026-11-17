@@ -2,6 +2,8 @@
 // Cần intent GuildMessages + MessageContent (bật "Message Content Intent" trong Discord Developer Portal).
 // Phụ trách: TV4 · [S5] Bot: lệnh cơ bản (làm hộ bởi agent của TV1)
 
+import { ActionRowBuilder, ChannelType } from "discord.js";
+import type { ButtonBuilder } from "discord.js";
 import type { Message } from "discord.js";
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
@@ -13,6 +15,8 @@ import { externalRef } from "../utils/identity.ts";
 import { errorName, log } from "../utils/logger.ts";
 import { createUserRateLimiter } from "../utils/rateLimit.ts";
 import type { UserRateLimiter } from "../utils/rateLimit.ts";
+import { FollowupError, followupThreads } from "../interactions/followup.ts";
+import type { FollowupThreads } from "../interactions/followup.ts";
 
 // Không bao giờ ping ai: tên người dùng/role trong câu trả lời chỉ là chữ.
 const NO_MENTIONS = { parse: [] as never[], repliedUser: false };
@@ -29,10 +33,12 @@ export interface MessageHandlerDeps {
   cache?: Pick<GuildChannelCache, "has">;
   limiter?: Pick<UserRateLimiter, "check">;
   chat?: (body: ChatRequest) => Promise<ChatResponse>;
+  followup?: FollowupThreads;
 }
 
 export function createMessageHandler(deps: MessageHandlerDeps = {}) {
   const limiter = deps.limiter ?? createUserRateLimiter();
+  const followup = deps.followup ?? followupThreads;
   return async function handleMessage(message: Message): Promise<void> {
     // Bỏ bot/webhook/tin hệ thống và DM; chỉ phục vụ trong server.
     if (message.author.bot || message.webhookId || message.system || !message.guildId) return;
@@ -42,7 +48,7 @@ export function createMessageHandler(deps: MessageHandlerDeps = {}) {
     const botMention = new RegExp(`<@!?${botId}>`, "g");
     const mentioned = botMention.test(message.content);
     const isThread = message.channel.isThread();
-    if (!mentioned) {
+    if (!mentioned && !(isThread && followup.has(message.guildId, message.channelId))) {
       // Không có mention: chỉ trả lời ở kênh /setup (hoặc thread con của kênh đó). Tin trống/đính kèm thuần bị bỏ.
       if (!message.content.trim()) return;
       try {
@@ -79,22 +85,45 @@ export function createMessageHandler(deps: MessageHandlerDeps = {}) {
     }
     const requestId = crypto.randomUUID();
     try {
+      if (message.channel.isThread() && (message.channel.archived || message.channel.locked)) {
+        throw new FollowupError("Thread đã lưu trữ hoặc bị khóa. Hãy gửi /ask ở kênh chính.");
+      }
       if ("sendTyping" in message.channel) await message.channel.sendTyping().catch(() => {});
-      const response = await (deps.chat ?? createApiClient(undefined, { requestId }).chat)({
-        message: question,
-        channel: "discord",
-        external_ref: externalRef(message.channelId, isThread, message.author.id),
-        guild_id: message.guildId,
-        options: { lang: "auto", spoilers: true, web_search: "auto" },
-      });
+      const response = await followup.chat(
+        {
+          message: question,
+          channel: "discord",
+          external_ref: externalRef(message.channelId, isThread, message.author.id),
+          guild_id: message.guildId,
+          options: { lang: "auto", spoilers: true, web_search: "auto" },
+        },
+        deps.chat ?? createApiClient(undefined, { requestId }).chat,
+      );
       const [first, ...remaining] = answerEmbeds(question, response);
-      await message.reply({ embeds: [first], allowedMentions: NO_MENTIONS });
+      const components =
+        message.channel.type === ChannelType.GuildText
+          ? [
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                followup.button({
+                  guildId: message.guildId,
+                  channelId: message.channelId,
+                  question,
+                  answer: response.answer,
+                }),
+              ),
+            ]
+          : [];
+      await message.reply({ embeds: [first], components, allowedMentions: NO_MENTIONS });
       for (const embed of remaining) {
         if ("send" in message.channel) await message.channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
       }
     } catch (error) {
       log("error", "Không trả lời được tin nhắn.", { request_id: requestId, error: errorName(error) });
-      await reply(error instanceof ApiError ? error.message : "Chưa xử lý được câu hỏi. Vui lòng thử lại sau.");
+      await reply(
+        error instanceof ApiError || error instanceof FollowupError
+          ? error.message
+          : "Chưa xử lý được câu hỏi. Vui lòng thử lại sau.",
+      );
     }
   };
 }

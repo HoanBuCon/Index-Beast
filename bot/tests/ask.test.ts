@@ -1,7 +1,9 @@
 // TV4 · S2: mock Discord interaction và API; không đăng ký lệnh hoặc kết nối Gateway thật.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ChannelType } from "discord.js";
 import type { ChatInputCommandInteraction, InteractionEditReplyOptions } from "discord.js";
+import { createFollowupThreads } from "../src/interactions/followup.ts";
 import { createAskCommand } from "../src/commands/ask.ts";
 import { commands } from "../src/commands/index.ts";
 import { ApiError } from "../src/api/client.ts";
@@ -23,7 +25,7 @@ function interaction(question: string, thread = false) {
     user: { id: "111111111111111111" },
     channelId: "222222222222222222",
     guildId: "444444444444444444",
-    channel: { isThread: () => thread },
+    channel: { type: thread ? ChannelType.PublicThread : ChannelType.GuildText, isThread: () => thread },
     options: { getString: () => question },
     deferReply: async () => {
       calls.push("defer");
@@ -42,6 +44,24 @@ test("registry keeps ping and exposes ask with a required bounded question", () 
   assert.equal(data.name, "ask");
   assert.equal(data.options?.[0].name, "question");
   assert.equal(data.options?.[0].required, true);
+});
+
+test("ask attaches Hỏi tiếp in a guild text channel, keeping the web share button", async () => {
+  const mock = interaction("Marika?");
+  await createAskCommand(
+    async () => response,
+    {
+      webUrl: "https://example.test",
+      createShare: async () => ({ token: "a".repeat(43), expires_at: "2026-11-18T00:00:00Z" }),
+    },
+    createFollowupThreads(),
+  ).execute(mock.value);
+  const components = JSON.stringify(mock.replies[0].components);
+  assert.match(components, /Hỏi tiếp/);
+  assert.match(components, /Xem đầy đủ/);
+  const thread = interaction("Marika?", true);
+  await createAskCommand(async () => response).execute(thread.value);
+  assert.ok(!JSON.stringify(thread.replies[0].components).includes("Hỏi tiếp"));
 });
 
 test("ask defers before API, hashes user reference and edits an embed with sources", async () => {

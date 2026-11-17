@@ -9,6 +9,9 @@ export const HELP_TEXT =
   "`/ask question:<câu hỏi>` — hỏi về Elden Ring ở bất kỳ kênh nào. Ví dụ: `/ask question:Marika là ai?`\n" +
   "`@INDEX BEAST <câu hỏi>` — nhắc tên bot để hỏi, không cần lệnh.\n" +
   "Ở kênh đã được admin bật bằng `/setup`, bot trả lời mọi tin nhắn mà không cần `/ask`.\n\n" +
+  "Nút **Hỏi tiếp** dưới câu trả lời mở thread dùng chung; bạn có thể gõ câu hỏi ngay trong thread. " +
+  "Thread mới chỉ mang theo trích đoạn câu hỏi/câu trả lời gốc, không sao chép lịch sử riêng. " +
+  "Nút hết hạn sau 24 giờ; thread tự lưu trữ sau 1 giờ không hoạt động. Nếu bot vừa khởi động lại, hãy dùng `/ask` hoặc nhắc tên bot.\n\n" +
   "**Ký ức & riêng tư**\n" +
   "`/clear user` — xóa ký ức hội thoại riêng của bạn trong server (admin có thể chọn `member`).\n" +
   "`/clear all` — admin xóa ký ức cả server, kể cả thread. `/clear user` không xóa thread dùng chung.\n\n" +

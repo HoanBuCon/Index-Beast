@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Hỏi tiếp trong thread và kiểm thử bot (17/11/2026)](2026-11-17_s5-tv4_hoi-tiep-thread-va-kiem-thu-bot.md)
 - [TV2 · Sprint 5: rà soát mã toàn hệ thống (17/11/2026)](2026-11-17_s5-tv2_ra-soat-ma-toan-he-thong.md)
 
 - [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)

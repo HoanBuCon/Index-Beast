@@ -1,6 +1,6 @@
 // Giả lập interaction/message Discord cho test lệnh S5; không kết nối Gateway thật.
 import type { ChatInputCommandInteraction, InteractionEditReplyOptions, Message } from "discord.js";
-import { PermissionFlagsBits } from "discord.js";
+import { ChannelType, PermissionFlagsBits } from "discord.js";
 
 export const GUILD = "1000000000000000001";
 export const CHANNEL = "2000000000000000005";
@@ -69,6 +69,7 @@ export function fakeMessage(opts: FakeMessageOptions) {
     client: { user: { id: BOT_ID } },
     mentions: { has: (id: string) => Boolean(opts.mentioned) && id === BOT_ID },
     channel: {
+      type: opts.thread ? ChannelType.PublicThread : ChannelType.GuildText,
       isThread: () => Boolean(opts.thread),
       parentId: opts.thread?.parentId ?? null,
       sendTyping: async () => {},

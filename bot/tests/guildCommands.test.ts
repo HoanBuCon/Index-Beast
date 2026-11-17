@@ -8,6 +8,7 @@ import { createSetupCommand } from "../src/commands/setup.ts";
 import { help } from "../src/commands/help.ts";
 import { userHash } from "../src/utils/identity.ts";
 import { CHANNEL, GUILD, fakeInteraction } from "./helpers.ts";
+import { followupThreads } from "../src/interactions/followup.ts";
 
 function setupDeps() {
   const log: string[] = [];
@@ -139,6 +140,36 @@ test("clear refuses DMs and bot targets without calling the API", async () => {
   const bot = fakeInteraction({ sub: "user", member: { id: "5", bot: true }, admin: true });
   await command.execute(bot.value);
   assert.deepEqual(calls, []);
+});
+
+test("clear all invalidates pending followup buttons only after successful authorized deletion", async () => {
+  const id = followupThreads.button({ guildId: GUILD, channelId: CHANNEL, question: "Marika?", answer: "Marika." }).data
+    .custom_id!;
+  let reply = "";
+  const mockButton = {
+    customId: id,
+    guildId: GUILD,
+    channelId: CHANNEL,
+    deferReply: async () => {},
+    editReply: async (p: { content: string }) => {
+      reply = p.content;
+    },
+  };
+  const allowed = clearApi({ scope: "all" });
+  await allowed.command.execute(fakeInteraction({ sub: "all", admin: false }).value);
+  await followupThreads.handle(mockButton as never);
+  assert.ok(!reply.includes("hết hạn"), "unauthorized clear must keep the button");
+  const failed = createClearCommand(() => ({
+    clearMemory: async () => {
+      throw new Error("offline");
+    },
+  }));
+  await failed.execute(fakeInteraction({ sub: "all", admin: true }).value);
+  await followupThreads.handle(mockButton as never);
+  assert.ok(!reply.includes("hết hạn"), "failed clear must keep the button");
+  await allowed.command.execute(fakeInteraction({ sub: "all", admin: true }).value);
+  await followupThreads.handle(mockButton as never);
+  assert.match(reply, /hết hạn/);
 });
 
 test("clearSummary covers empty, thread-only and all scopes", () => {
