@@ -83,8 +83,6 @@ class Settings(BaseSettings):
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
-    chat_agent_enabled: bool = True
-    chat_tool_agent_enabled: bool = True
     chat_tool_steps: int | None = Field(default=3, ge=1, le=4)
     chat_tool_queries: int | None = Field(default=2, ge=1, le=3)
     chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
@@ -96,7 +94,6 @@ class Settings(BaseSettings):
     chat_memory_timeout_seconds: float = Field(default=5, gt=0, le=15)
     chat_history_messages: int = Field(default=8, ge=0, le=32)
     chat_history_chars: int = Field(default=8000, ge=0, le=32000)
-    gameplay_clarification_enabled: bool = True
     gameplay_knowledge_enabled: bool = True
     rag_collection: str = "lore_chunks"
     rag_corpus_policy: Literal["reviewed", "pilot"] = "pilot"
@@ -104,11 +101,6 @@ class Settings(BaseSettings):
     rag_prefetch: int = Field(default=30, ge=5, le=200)
     rag_top_k: int = Field(default=5, ge=1, le=5)
     rag_context_chars: int = Field(default=12000, ge=256, le=64000)
-    rag_rewrite_enabled: bool = False
-    rag_overview_enabled: bool = True
-    rag_query_mode: Literal["rewrite", "dual"] = "rewrite"
-    rag_rewrite_timeout_seconds: float = Field(default=8, gt=0, le=60)
-    rag_rewrite_max_tokens: int = Field(default=512, ge=128, le=2048)
     rag_retrieval_timeout_seconds: float = Field(default=20, gt=0, le=120)
     # Jina reranker chỉ khả dụng khi bật cờ và có API key thật; thiếu key thì runtime dùng NoReranker.
     rag_reranker_enabled: bool = False

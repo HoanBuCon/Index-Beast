@@ -5,8 +5,7 @@ import json
 
 import pytest
 
-from app.rag.build_data import BuildCache, bound_value, check
-from app.rag.build_math import ATTRIBUTES
+from app.rag.build_data import ATTRIBUTES, BuildCache, bound_value, check
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from tests.unit.test_live_chat import hit
 
@@ -144,7 +143,7 @@ async def test_tool_calculator_artifact_survives_context_and_generation(build):
             step("finish", evidence_ids=["1"]),
         ]
     )
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True), llm, FakeRetriever(hits))
+    pipe = ChatPipeline(settings(), llm, FakeRetriever(hits))
     req = ChatRequest(message="Chia chỉ số cho tôi.", channel="web", options={"web_search": "off"})
     player = {"constraints": [{"key": k, "value": v} for k, v in profile.items()]}
     p = Prepared("rag", "vi", [], player_state=player, max_calls=6, trace={"web_search": {"requested": "off"}})
@@ -190,7 +189,7 @@ async def test_calculator_validation_feedback_reports_unknown_source_without_acc
     llm = ToolsLLM(
         [step("local_search", "sources"), step("calculator", build_data=data, allocation=allocation), step("finish")]
     )
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True), llm, FakeRetriever(hits))
+    pipe = ChatPipeline(settings(), llm, FakeRetriever(hits))
     p = Prepared(
         "rag",
         "vi",
@@ -231,4 +230,64 @@ def test_numerical_sources_cannot_mix_explicit_variants(build, field):
     hits[1].payload[field] = {"value": "second"}
     data["attribute_cap"]["source_id"] = "2"
     with pytest.raises(ValueError, match="Conflicting"):
+        check(data, allocation, profile, hits)
+
+
+def test_unchecked_allocation_is_dropped_with_notice_and_prose_numbers_still_fail(build):
+    data, allocation, profile, hits = build
+    p = Prepared("rag", "vi", [], hits=hits, values={"player_profile": profile})
+    raw = {"answer": "Ưu tiên Intelligence [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    out = validate_answer(p, {**raw, "build_allocation": allocation})
+    assert out.answer.startswith(raw["answer"]) and "chưa được công cụ tính kiểm tra" in out.answer
+    assert not any(f"{k.title()} {v}" in out.answer for k, v in allocation.items())
+    assert p.trace["dropped_unchecked_allocation"] is True
+    with pytest.raises(RAGValidationError):
+        validate_answer(p, {**raw, "answer": "Vigor 40, Intelligence 60 [1].", "build_allocation": allocation})
+
+
+def classless_build():
+    text = (
+        "A character's level equals the sum of the eight primary attributes minus 79.\n"
+        "Required Faith: 25. Required Strength: 12. Attribute cap: 99."
+    )
+    h = hit(1, title="Blasphemous Blade", text=text, release_scope="unknown")
+
+    def n(value, label):
+        return {"value": value, "label": label, "source_id": "1", "quote_id": "q0"}
+
+    data = dict(
+        weapon="Blasphemous Blade",
+        usage="one_handed_no_bonuses",
+        requirements={"faith": n(25, "Required Faith"), "strength": n(12, "Required Strength")},
+        attribute_cap=n(99, "Attribute cap"),
+        attribute_offset=n(79, "minus"),
+    )
+    allocation = dict(zip(ATTRIBUTES, (50, 20, 25, 12, 10, 9, 60, 9), strict=True))
+    return data, allocation, {"weapon": "Blasphemous Blade", "level": "116"}, [h]
+
+
+def test_class_is_optional_because_level_accounting_is_shared():
+    data, allocation, profile, hits = classless_build()
+    result = check(data, allocation, profile, hits)
+    assert result["attribute_total"] == 116 + 79 and result["class_floor_verified"] is False
+    p = Prepared("rag", "vi", [], hits=hits, checked_build=result, values={"player_profile": profile})
+    raw = {"answer": "Ưu tiên Faith [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    out = validate_answer(p, raw)
+    assert "Faith 60" in out.answer and "chưa kiểm tra" in out.answer
+
+
+@pytest.mark.parametrize("error", ["total", "requirement", "partial_class", "offset_missing", "weapon"])
+def test_classless_build_still_checks_total_requirements_and_provenance(error):
+    data, allocation, profile, hits = classless_build()
+    if error == "total":
+        allocation["vigor"] += 1
+    elif error == "requirement":
+        allocation["faith"], allocation["vigor"] = 24, allocation["vigor"] + 1
+    elif error == "partial_class":
+        data["starting_class"] = "Prophet"
+    elif error == "offset_missing":
+        data.pop("attribute_offset")
+    else:
+        profile["weapon"] = "Other weapon"
+    with pytest.raises(ValueError):
         check(data, allocation, profile, hits)

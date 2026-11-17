@@ -27,6 +27,22 @@ def _reject_constant(_value):
     raise OutputFormatError({"json_error": "nonfinite_number"})
 
 
+def char_class(text: str, position: int) -> str:
+    """Category of the character at a decode failure. Never the character or surrounding text."""
+    if position >= len(text):
+        return "end_of_text"
+    char = text[position]
+    if ord(char) < 0x20:
+        return "control_char"
+    if char == "\\":
+        return "invalid_escape"
+    if char == '"':
+        return "quote"
+    if char in "{}[],:":
+        return "structural"
+    return "other"
+
+
 def decode_output(raw: str) -> tuple[object, str]:
     """Accept JSON or ONE complete BOM/fenced envelope; reject everything outside it."""
     shape = {"output_chars": len(raw)}
@@ -42,11 +58,22 @@ def decode_output(raw: str) -> tuple[object, str]:
     wrapper = "bom_fence" if bom and match else "bom" if bom else "fence" if match else "none"
     shape["output_wrapper"] = wrapper
     try:
-        return json.loads(body, object_pairs_hook=_unique_object, parse_constant=_reject_constant), wrapper
+        # strict=False accepts raw line breaks/tabs inside strings, a benign model formatting slip.
+        # Schema, citation and quote validation are unchanged.
+        return json.loads(
+            body, object_pairs_hook=_unique_object, parse_constant=_reject_constant, strict=False
+        ), wrapper
     except json.JSONDecodeError as exc:
         # Coordinates and fixed labels only. str(exc) or exc.doc could leak the answer.
         raise OutputFormatError(
-            {**shape, "json_error": "syntax", "json_offset": exc.pos, "json_line": exc.lineno, "json_column": exc.colno}
+            {
+                **shape,
+                "json_error": "syntax",
+                "json_offset": exc.pos,
+                "json_line": exc.lineno,
+                "json_column": exc.colno,
+                "json_char": char_class(body, exc.pos),
+            }
         ) from None
     except RecursionError:
         raise OutputFormatError({**shape, "json_error": "nesting_too_deep"}) from None

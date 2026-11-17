@@ -24,7 +24,7 @@ from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Clarification, Source
 from app.rag.agent import spend
 from app.rag.evidence import evidence_units
-from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output, stream_body_prefix
+from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, char_class, decode_output, stream_body_prefix
 from app.rag.prompts import generation_prompt
 from core.errors import UpstreamError
 from core.types import Hit
@@ -137,6 +137,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         if not isinstance(data, str) or not data.strip() or CITATION.search(data) or URL.search(data):
             raise UpstreamError("Câu trả lời chưa đúng chính sách không trích dẫn nguồn ở chế độ LLM.")
         return Generated(data)
+    unchecked_notice = ""
     failure = "schema_invalid"
     try:
         parsed = GroundedAnswer.model_validate(data)
@@ -216,8 +217,7 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
         if prepared.checked_build is not None:
-            from app.rag.build_data import check
-            from app.rag.build_math import ATTRIBUTES
+            from app.rag.build_data import ATTRIBUTES, check
 
             failure = "invalid_build_allocation"
             artifact = prepared.checked_build
@@ -235,9 +235,10 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             required_indices = {i for i, h in enumerate(prepared.hits, 1) if h.id in artifact["sources"]}
             for i in required_indices:
                 hit = prepared.hits[i - 1]
-                facts = [artifact["data"][k] for k in ("starting_level", "points_per_level", "attribute_cap")]
-                facts.append(artifact["data"]["class_floor_rule"])
-                facts += list(artifact["data"]["base"].values()) + list(artifact["data"]["requirements"].values())
+                data = artifact["data"]
+                keys = ("starting_level", "points_per_level", "attribute_cap", "attribute_offset", "class_floor_rule")
+                facts = [data[k] for k in keys if data.get(k) is not None]
+                facts += list((data.get("base") or {}).values()) + list(data["requirements"].values())
                 units = evidence_units(hit.payload["text"])
                 if any(units[f["quote_id"]] not in evidence.get(i, []) for f in facts if f["source_id"] == hit.id):
                     raise ValueError("Missing exact accounting quotes")
@@ -249,33 +250,35 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                 else "Suggested allocation (one-handed, no bonuses): "
             )
             answer += " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
+            if not artifact.get("class_floor_verified", True):
+                answer += (
+                    " (tổng điểm và yêu cầu vũ khí đã kiểm tra; chỉ số khởi đầu của class chưa kiểm tra)"
+                    if prepared.lang == "vi"
+                    else " (total and weapon requirements checked; starting-class minimums not checked)"
+                )
             answer += " " + "".join(f"[{i}]" for i in sorted(required_indices))
         elif parsed.build_allocation is not None:
-            from app.rag.build_math import ATTRIBUTES, check_allocation
-            from app.rag.gameplay_knowledge import trusted_rule_kind
-            from app.services.gameplay import extract
+            # Allocations are rendered only from the sourced calculator artifact (checked_build).
+            # Unchecked numbers are never shown: per-stat numbers in prose fail (and are regenerated
+            # before any visible text); a separate unchecked allocation is dropped with a short notice.
+            from app.rag.build_data import ATTRIBUTES
 
             failure = "invalid_build_allocation"
-            profile = prepared.values.get("player_profile") or extract(
-                json.loads(prepared.values["payload"])["question"]
-            )
-            required = {"level_rule", "class_rule", "weapon_rule", "respec_rule"}
-            cited_rules = {trusted_rule_kind(prepared.hits[i - 1]) for i in used}
-            if not required.issubset(cited_rules):
-                raise ValueError("Accounting sources must be present and cited")
-            prepared.trace["build_check"] = check_allocation(parsed.build_allocation, profile)
-            label = "Gợi ý phân bổ chỉ số:" if prepared.lang == "vi" else "Suggested stat allocation:"
-            table = " | ".join(f"{key.title()} {parsed.build_allocation[key]}" for key in ATTRIBUTES)
-            # Server renders the checked values, never repairs arithmetic in model prose.
-            answer += (
-                "\n\n"
-                + label
-                + "\n"
-                + table
-                + " "
-                + "".join(f"[{i}]" for i in sorted(used) if prepared.hits[i - 1].payload.get("rule_kind") in required)
+            attribute_pattern = "|".join(ATTRIBUTES)
+            if re.search(rf"\b(?:{attribute_pattern})\b\s*[:=|—–-]?\s*\d", answer, re.I) or any(
+                "|" in line and sum(bool(re.search(rf"\b{k}\b", line, re.I)) for k in ATTRIBUTES) >= 2
+                for line in answer.splitlines()
+            ):
+                raise ValueError("Unchecked stat numbers in prose")
+            prepared.trace["dropped_unchecked_allocation"] = True
+            unchecked_notice = (
+                "Phân bổ chỉ số cụ thể chưa được công cụ tính kiểm tra nên không hiển thị."
+                if prepared.lang == "vi"
+                else "A specific stat allocation was not verified by the calculator, so it is not shown."
             )
         answer, dropped = cited_blocks(answer)
+        if unchecked_notice:
+            answer += "\n\n" + unchecked_notice
         if dropped:
             prepared.trace["dropped_uncited_paragraphs"] = dropped
             logging.getLogger(__name__).warning("Dropped uncited paragraphs", extra={"data": {"count": dropped}})
@@ -309,13 +312,21 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
         raise RAGValidationError(failure) from None
 
 
+class StreamPrefixError(UpstreamError):
+    """Stream prefix cannot be decoded; carries only a character category for diagnostics."""
+
+    def __init__(self, char_class: str):
+        super().__init__("Định dạng stream RAG không hợp lệ.")
+        self.char_class = char_class
+
+
 def answer_prefix(raw: str) -> str:
     """Decode complete JSON string units while answer is still streaming; never expose JSON metadata."""
     raw = stream_body_prefix(raw)
     match = re.match(r'^\s*\{\s*"answer"\s*:\s*"', raw)
     if not match:
         if len(raw) > 64:
-            raise UpstreamError("Định dạng stream RAG không hợp lệ.")
+            raise StreamPrefixError("answer_not_first")
         return ""
     start = end = match.end()
     while end < len(raw):
@@ -332,9 +343,10 @@ def answer_prefix(raw: str) -> str:
         else:
             end += 1
     try:
-        return json.loads('"' + raw[start:end] + '"')
-    except ValueError:
-        raise UpstreamError("Định dạng stream RAG không hợp lệ.") from None
+        # Same tolerance as decode_output: raw line breaks/tabs inside the string are accepted.
+        return json.loads('"' + raw[start:end] + '"', strict=False)
+    except json.JSONDecodeError as exc:
+        raise StreamPrefixError(char_class(raw[start:end], max(0, exc.pos - 1))) from None
 
 
 # Lỗi giao thức trích dẫn có thể sửa bằng cách sinh lại; lần sau vẫn qua validate_answer nên không nới kiểm chứng.
@@ -635,14 +647,18 @@ class Generator:
                         continue
                     try:
                         text = answer_prefix(raw) if prepared.mode == "rag" else raw
-                    except UpstreamError:
+                    except UpstreamError as exc:
                         if not emitted:
                             # JSON object keys may arrive in any order. Do not expose
                             # metadata; decode and validate the bounded response at EOF.
                             buffer_until_complete = True
                             continue
                         raise OutputFormatError(
-                            {"json_error": "invalid_answer_prefix", "output_chars": len(raw)}
+                            {
+                                "json_error": "invalid_answer_prefix",
+                                "output_chars": len(raw),
+                                "json_char": getattr(exc, "char_class", "unknown"),
+                            }
                         ) from None
                     # Validate complete visible clauses before emission, including citations
                     # split across provider chunks. Keep an unfinished clause in the buffer.

@@ -8,14 +8,14 @@ import pytest
 
 from app.rag.agent import AgentDecision, check_decision
 from app.rag.entity_spelling import close_spelling, correct_name
+from app.rag.matching import contains_name
 from app.rag.pipeline import ChatPipeline
-from app.rag.rewrite import contains_name
 from app.services.chat import LiveChatService
 from core.errors import BadRequestError
+from tests.unit.rag_fakes import RankedRetriever
 from tests.unit.test_agent_durable import AgentLLM, plan, req, settings
 from tests.unit.test_live_chat import FakeRetriever, hit
 from tests.unit.test_tool_agent import ToolsLLM, step
-from tests.unit.test_vi_en import RankedRetriever
 
 
 @pytest.mark.parametrize("query", ["Leyndell Ashen Capital", "Leyndell,  Ashen Capital"])
@@ -57,7 +57,7 @@ def spelling_decision():
 async def test_unique_corpus_name_replaces_typo_but_preserves_original_message():
     llm = ToolsLLM([step("check_name"), step("finish", evidence_ids=["1"])], [spelling_decision()])
     retriever = FakeRetriever([hit(title="Moonveil"), hit(2, title="Ranni")])
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever)
+    pipe = ChatPipeline(settings(), llm, retriever)
     p = await pipe.prepare(req("Mooonveil lấy ở đâu?"), [])
     payload = json.loads(p.values["payload"])
     assert retriever.calls == [("Mooonveil", True)]
@@ -85,7 +85,7 @@ async def test_name_lookup_accepts_a_reordered_full_title_or_omitted_possessive(
     )
     llm = ToolsLLM([step("check_name"), step("finish", evidence_ids=["1"])], [decision])
     retriever = RankedRetriever(rankings={typed: [hit(title=canonical)]})
-    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    prepared = await ChatPipeline(settings(), llm, retriever).prepare(req(question), [])
     assert prepared.trace["verified_name"]["canonical"] == canonical
     assert [h.payload["title"] for h in prepared.hits] == [canonical]
 
@@ -104,7 +104,7 @@ async def test_agent_can_verify_a_full_title_on_contextual_search():
     )
     llm = ToolsLLM([step("check_name"), step("local_search", question), step("finish", evidence_ids=["1"])], [decision])
     retriever = RankedRetriever(rankings={question: [hit(title=title)]})
-    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    prepared = await ChatPipeline(settings(), llm, retriever).prepare(req(question), [])
     assert prepared.trace["verified_name"]["canonical"] == title
     assert json.loads(prepared.values["payload"])["question"] == question
 
@@ -134,7 +134,7 @@ async def test_agent_can_retry_a_name_miss_with_context_and_asks_when_candidates
     )
     llm = ToolsLLM([step("check_name"), step("local_search", query), last], [decision])
     retriever = RankedRetriever(rankings={typed: [hit(title="Diallos's Mask")], query: evidence})
-    prepared = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(question), [])
+    prepared = await ChatPipeline(settings(), llm, retriever).prepare(req(question), [])
     assert retriever.calls == [typed, query]
     assert llm.observations[1]["name_lookup"]["status"] == "not_found"
     if with_competitor:
@@ -159,9 +159,7 @@ async def test_ambiguous_corpus_name_asks_and_does_not_choose_a_candidate():
         [spelling_decision()],
     )
     retriever = FakeRetriever([hit(title="Moonveil"), hit(2, title="Moonveil A", aliases=["Moonveil"])])
-    p = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(
-        req("Mooonveil lấy ở đâu?"), []
-    )
+    p = await ChatPipeline(settings(), llm, retriever).prepare(req("Mooonveil lấy ở đâu?"), [])
     assert llm.observations[1]["name_lookup"]["status"] == "ambiguous"
     assert p.clarification is not None and not p.hits
     assert "verified_name" not in p.trace
@@ -183,7 +181,7 @@ async def test_partial_title_surfaces_two_capitals_for_clarification():
         [decision],
     )
     retriever = FakeRetriever([hit(title="Leyndell, Royal Capital"), hit(2, title="Leyndell, Ashen Capital")])
-    p = await ChatPipeline(settings(chat_tool_agent_enabled=True), llm, retriever).prepare(req(short), [])
+    p = await ChatPipeline(settings(), llm, retriever).prepare(req(short), [])
     assert p.clarification is not None and not p.hits
     assert llm.observations[1]["name_lookup"]["candidates"] == ["Leyndell, Royal Capital", "Leyndell, Ashen Capital"]
 
@@ -235,9 +233,7 @@ async def test_plan_resumes_completed_goal_for_both_legacy_spoiler_values(spoile
         ],
         [first, resume],
     )
-    pipe = ChatPipeline(
-        settings(chat_tool_agent_enabled=True), llm, FakeRetriever([hit(title="Moonveil", spoiler_level=2)])
-    )
+    pipe = ChatPipeline(settings(), llm, FakeRetriever([hit(title="Moonveil", spoiler_level=2)]))
     p = await pipe.prepare(req(question), [])
     saved = json.loads(json.dumps(p.player_state))
     assert saved["plan"][0]["evidence_ids"] == ["1"]
@@ -258,7 +254,7 @@ async def test_plan_rejects_invented_source_and_reopens_a_goal():
         ],
         [plan(subgoals=["Ranni identity", "Ranni role"])],
     )
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True), llm, FakeRetriever())
+    pipe = ChatPipeline(settings(), llm, FakeRetriever())
     p = await pipe.prepare(req(), [], player={"updated": time.time()})
     assert p.trace["tool_actions"][1]["status"] == "denied"
     assert p.trace["task_plan"][0]["evidence_ids"] == []
@@ -267,7 +263,7 @@ async def test_plan_rejects_invented_source_and_reopens_a_goal():
 
 async def test_invalid_tool_output_gets_retried_within_existing_step_budget():
     llm = ToolsLLM([{"invalid": True}, step("local_search", "Ranni"), step("finish", evidence_ids=["1"])])
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True), llm, FakeRetriever())
+    pipe = ChatPipeline(settings(), llm, FakeRetriever())
     p = await pipe.prepare(req(), [])
     assert llm.observations[1]["observations"] == [{"status": "invalid_tool_output"}]
     assert len(llm.observations) == 3 and [h.id for h in p.hits] == ["1"]
@@ -291,7 +287,6 @@ async def test_question_only_benchmark_can_search_again_and_select_later_web_evi
         ]
     )
     config = settings(
-        chat_tool_agent_enabled=True,
         chat_tool_steps=None,
         chat_tool_queries=None,
         chat_agent_max_calls=None,
@@ -342,7 +337,7 @@ async def test_auto_checks_coverage_and_keeps_local_evidence_when_web_fills_a_ga
     )
     search = FakeSearch(rows=[WebHit("web:classes", 0, {**web_hit().payload, "text": "All ten starting classes."})])
     pipe = ChatPipeline(
-        settings(chat_tool_agent_enabled=True, chat_tool_steps=1, chat_agent_max_calls=1, tavily_api_key="test-key"),
+        settings(chat_tool_steps=1, chat_agent_max_calls=1, tavily_api_key="test-key"),
         llm,
         FakeRetriever(),
         web_search=search,
@@ -449,7 +444,7 @@ async def test_auto_web_coverage_guides_generator_without_requiring_more_sources
     }
     search = Search(rows=excerpts)
     pipe = ChatPipeline(
-        settings(chat_tool_agent_enabled=True, tavily_api_key="test-key"),
+        settings(tavily_api_key="test-key"),
         llm,
         FakeRetriever([]),
         web_search=search,

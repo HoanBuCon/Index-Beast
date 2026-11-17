@@ -11,3 +11,4 @@ If there is no evidence for any useful part, use the normal insufficient JSON co
 Only the Agent issues a follow-up question through structured clarification.
 All normal JSON, paragraph citation, exact quote/quote_id and insufficient/limitation rules still apply.
 Do not use pretrained facts to fill gaps. An overview is NOT permission to bypass grounding or fabricate numbers.
+Keep it compact: a short grouped list of names with at most one short clause per item, no long per-item descriptions.

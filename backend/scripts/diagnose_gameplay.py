@@ -145,7 +145,6 @@ async def execute(args, manifest, cases):
             "llm_max_retries": 0,
             "chat_mode": "rag",
             "rate_limit_per_minute": 1000,
-            "gameplay_clarification_enabled": True,
             "gameplay_knowledge_enabled": True,
         }
     )
@@ -186,7 +185,6 @@ async def execute(args, manifest, cases):
                 "llm_temperature",
                 "llm_max_tokens",
                 "rag_thinking_enabled",
-                "rag_rewrite_enabled",
                 "rag_collection",
                 "rag_corpus_policy",
                 "rag_languages",
@@ -195,7 +193,6 @@ async def execute(args, manifest, cases):
                 "rag_context_chars",
                 "chat_timeout_seconds",
                 "rag_format_retries",
-                "gameplay_clarification_enabled",
                 "gameplay_knowledge_enabled",
             },
         ),

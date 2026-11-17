@@ -9,39 +9,10 @@ from app.adapters.tavily import TavilySearch
 from app.api.deps import get_chat_service
 from app.api.schemas.chat import ChatRequest
 from app.rag.generator import RAGValidationError
-from app.rag.pipeline import ChatPipeline
 from app.rag.web_content import clean_markdown, select_excerpts
-from app.rag.web_query import web_query
 from core.errors import UpstreamError
 from tests.unit.test_live_chat import BODY, FakeLLM, FakeRetriever, SequenceLLM, service
-from tests.unit.test_vi_en import RankedRetriever, ScriptedLLM
-from tests.unit.test_web_search import FakeSearch, settings
-
-
-@pytest.mark.parametrize("question", ["Các class khởi đầu của elden ring", "Cac class khoi dau cua Elden Ring"])
-def test_starting_class_query_has_game_and_english_intent_without_losing_original(question):
-    query, kind = web_query(question)
-    assert question in query and kind == "starting_classes"
-    assert "starting classes list character creation" in query
-
-
-def test_query_keeps_entities_constraints_release_and_goals_without_new_facts():
-    original = "Moonveil +10 build level 100 INT 40 PvP without shield patch 1.16 SotE"
-    query, kind = web_query(original)
-    assert query == "Elden Ring\n" + original and kind == "domain_anchor"
-    query, _ = web_query("Elden Ring Nightreign classes")
-    assert query == "Elden Ring Nightreign classes"
-
-
-async def test_bad_rewrite_still_searches_classes_intent_and_records_query_only_on_opt_in():
-    search = FakeSearch()
-    pipeline = ChatPipeline(settings(), ScriptedLLM("invalid JSON"), RankedRetriever(), web_search=search)
-    request = ChatRequest(message="Các class khởi đầu của elden ring", channel="web", options={"web_search": "always"})
-    result = await pipeline.prepare(request, [])
-    assert "starting classes list" in search.calls[0]
-    assert "query" not in result.trace["web_search"]
-    diagnostic = await pipeline.prepare(request, [], diagnostic_queries=True)
-    assert diagnostic.trace["web_search"]["query"] == search.calls[-1]
+from tests.unit.test_web_search import settings
 
 
 @pytest.mark.parametrize("separator", ["\n", " "])

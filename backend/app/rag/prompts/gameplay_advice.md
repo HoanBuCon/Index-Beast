@@ -14,5 +14,5 @@ Use three distinct response patterns as appropriate:
 
 Use the player's stated conditions. Generic advice can help without all profile details.
 Calculate only from explicit inputs and applicable rules. Treat user-supplied values as assumptions.
-Use the checked allocation protocol for eight stats. Keep any missing requested exact detail specific
+Exact eight-stat numbers require checked_build; without it give qualitative stat priorities only. Keep any missing requested exact detail specific
 and brief. Leave essential questions to the Agent's structured clarification.

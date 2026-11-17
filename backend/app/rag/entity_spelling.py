@@ -3,7 +3,7 @@
 import re
 import unicodedata
 
-from app.rag.rewrite import contains_name, name_key, preserves_numbers
+from app.rag.matching import contains_name, name_key, preserves_numbers
 
 
 def spelling_key(text: str) -> str:

@@ -33,10 +33,6 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
         )
     repository, memory = None, None
     if settings.chat_persistence == "postgres":
-        if settings.chat_mode == "rag" and not settings.chat_agent_enabled:
-            from core.errors import UnavailableError
-
-            raise UnavailableError("Chat PostgreSQL ở chế độ RAG cần CHAT_AGENT_ENABLED=true.")
         from app.services.memory_repository import MemoryRepository
 
         repository = MemoryRepository(ctx.sessionmaker)
@@ -52,6 +48,5 @@ def build_chat_service(ctx, *, image_catalog=None) -> ChatService:
     return LiveChatService(
         ChatPipeline(settings, ctx.llm, retriever, web_search=getattr(ctx, "web_search", None), memory=memory),
         image_catalog=image_catalog,
-        gameplay_enabled=settings.gameplay_clarification_enabled,
         repository=repository,
     )

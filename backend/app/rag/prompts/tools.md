@@ -33,6 +33,7 @@ Prefer Elden Ring Fextralife for gameplay facts when competing web excerpts are 
 Use other web sources when they cover a gap, give stronger direct evidence, or document the requested patch.
 Finish when the requested facts and conditions are covered. Seek more only for a concrete gap or
 conflict that matters to the player, even when many candidates were returned. Use web_search for that part.
+A web_search query is sent exactly as written: a standalone English query naming Elden Ring and the subject.
 Give each follow-up a concrete target: an unlock step,
 starting location, phase or weakness, order-dependent quest action, or equipment requirement.
 For a route from a player milestone, combine supported links from the starting area and destination.
@@ -50,6 +51,10 @@ Choose at most 5 snapshot IDs (including the four accounting rules when needed).
 Snapshot IDs must be from the catalog, selected for relevance, not by a fixed weapon list.
 calculator only validates a proposed eight-attribute allocation against supplied checked rules/profile;
 it is not an AR/DPS/optimal-build solver. Do not ask it to invent player constraints.
+calculator always needs build_data from opened sources; there is no built-in class/weapon table.
+When the user asks how to allocate stats and the level and weapon are known, open the level accounting,
+cap and weapon requirement sources and call calculator before finish. Without a checked result the answer
+can give only qualitative stat priorities.
 For comparisons, find complementary evidence for each requested option under common conditions.
 Use class profiles or starting equipment tables for class comparisons. A published ranking is unnecessary.
 Use clarify with reason=player_detail only when the user's answer would materially change the advice
@@ -77,21 +82,23 @@ choose stop with evidence_ids=[]. Use finish when there is evidence for a full o
 If qualitative gameplay advice is enough, do not use extra searches solely to find a published
 recommendation. Obtain inputs for exact game values and checked allocations before proposing them.
 
-For calculator you may supply build_data for ANY confirmed class/weapon, using only supplied sources:
-{starting_class,weapon,usage:"one_handed_no_bonuses",starting_level:NUMBER,
- base:{vigor:NUMBER,mind:NUMBER,endurance:NUMBER,strength:NUMBER,dexterity:NUMBER,intelligence:NUMBER,faith:NUMBER,arcane:NUMBER},
- requirements:{attribute:NUMBER},points_per_level:NUMBER,attribute_cap:NUMBER,
- class_floor_rule:{source_id:candidateID,quote_id:"q0 or supplied qN",quote:"verbatim class floor/respec rule"}}.
+For calculator supply build_data for ANY confirmed weapon, catalyst or seal (no fixed list), using only supplied sources:
+{weapon,usage:"one_handed_no_bonuses",requirements:{attribute:NUMBER},attribute_cap:NUMBER,
+ attribute_offset:NUMBER (the level accounting rule, e.g. label "minus" value 79: total = level + offset)}.
+Every class shares that accounting; a class only sets starting floors. Do not ask for or require a class.
+Only when the user confirmed a starting class, ALSO add all of: starting_class, starting_level:NUMBER,
+ base:{vigor,mind,endurance,strength,dexterity,intelligence,faith,arcane each NUMBER},points_per_level:NUMBER,
+ class_floor_rule:{source_id:candidateID,quote_id:"q0 or supplied qN",quote:"verbatim class floor/respec rule"}.
 Each NUMBER is {value:integer,source_id:candidateID,quote_id:"q0 or supplied qN",label:"exact header/label in quote"}.
-Preserve full table headers and conditions. Fetch missing class/weapon/rules using local/web tools; never invent numbers,
+Preserve full table headers and conditions. Fetch missing weapon/level/class rules using local/web tools; never invent numbers,
 use an unrelated patch, or equate an incomplete table with complete requirements. If missing, do not call calculator.
 allocation has eight integer attributes. Prefer feasible suggestions, not promises of optimality. Use user's confirmed profile.
 When checked_build exists, finish with evidence_ids including all its sources. Generator receives the verified artifact.
 
 NUMBER.label must bind directly to its number (e.g. Vigor: 15) or an exact aligned Markdown table header,
-not merely appear elsewhere in a quote. For class tables select the row containing the confirmed class.
+not merely appear elsewhere in a quote. For class tables (only with a confirmed class) select the row containing that class.
 Use cached_build_data only after opening the matching original snapshots. Revalidate its facts.
-Before calculator open the class and weapon tables and the relevant level/cap/respec sources together.
+Before calculator open the weapon requirements and the level accounting/cap sources (plus class table and respec rule only with a confirmed class).
 
 The catalog lists titles, not the data. Fetch with source_snapshot; snapshot_ids on a calculator call
 do not fetch anything. Use evidence_details to bind numeric inputs to exact quote IDs and headers.

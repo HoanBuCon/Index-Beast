@@ -99,8 +99,6 @@ def settings(**kwargs):
         _env_file=None,
         **{
             "chat_mode": "rag",
-            "chat_agent_enabled": True,
-            "chat_tool_agent_enabled": False,
             "chat_persistence": "postgres",
             "gameplay_knowledge_enabled": False,
             **kwargs,
@@ -190,13 +188,10 @@ def service(repo=None, memory=None, llm=None, **config):
     return LiveChatService(
         ChatPipeline(settings(**config), llm or AgentLLM(), FakeRetriever(), memory=memory),
         repository=repo,
-        gameplay_enabled=True,
     )
 
 
-def test_agent_is_default_and_no_closed_weapon_allowlist(monkeypatch):
-    monkeypatch.delenv("CHAT_AGENT_ENABLED", raising=False)
-    assert Settings(_env_file=None).chat_agent_enabled
+def test_no_closed_weapon_allowlist():
     item = AgentDecision.model_validate(
         plan(
             intent="build",
@@ -228,14 +223,6 @@ async def test_model_can_greet_without_fabricating_a_search_query():
     assert "Chào bạn" in result.answer and not live.pipeline.retriever.calls and llm.calls == 0
 
 
-async def test_agent_dual_mode_keeps_original_language_for_standalone_question():
-    llm = AgentLLM([plan(search_query="Ranni identity")])
-    pipe = ChatPipeline(settings(rag_query_mode="dual"), llm, FakeRetriever())
-    await pipe.prepare(req("Ranni là ai?"), [])
-    # Existing dual retrieval prioritizes English, then includes the original-language query.
-    assert pipe.retriever.calls == [("Ranni identity", True), ("Ranni là ai?", True)]
-
-
 async def test_no_rewrite_uses_original_request_despite_unused_query_punctuation():
     # Captured live decision: its unused English search query drops the city's comma.
     question = "Is Maliketh optional if I want to unlock Leyndell, Ashen Capital?"
@@ -248,7 +235,7 @@ async def test_no_rewrite_uses_original_request_despite_unused_query_punctuation
         entities=["Maliketh", "Leyndell, Ashen Capital"],
     )
     check_decision(AgentDecision.model_validate(decision), question, [], {})
-    pipe = ChatPipeline(settings(rag_query_mode="rewrite"), AgentLLM([decision]), FakeRetriever())
+    pipe = ChatPipeline(settings(), AgentLLM([decision]), FakeRetriever())
     prepared = await pipe.prepare(req(question), [])
     assert prepared.trace["agent"]["status"] == "ok"
     assert pipe.retriever.calls == [(question, True)]
@@ -293,13 +280,7 @@ def test_invalid_plans_do_not_authorize_facts_or_memory(changes):
         check_decision(item, "Ranni là ai?", [], {})
 
 
-async def test_agent_bypasses_legacy_regex_and_selects_no_unnecessary_clarification(monkeypatch):
-    import app.services.gameplay as gameplay
-
-    def forbidden(*args, **kwargs):
-        raise AssertionError("Legacy gameplay is not the agent decision maker")
-
-    monkeypatch.setattr(gameplay, "advance", forbidden)
+async def test_agent_bypasses_legacy_regex_and_selects_no_unnecessary_clarification():
     llm = AgentLLM(
         [
             plan(
@@ -330,9 +311,10 @@ async def test_invalid_model_output_is_provider_failure_not_fake_clarification()
 async def test_budget_is_enforced_before_generation():
     llm = AgentLLM()
     live = service(llm=llm, chat_agent_max_calls=1)
-    with pytest.raises(UnavailableError):
-        await live.answer(req())
-    assert not live.traces and llm.calls == 0 and len(llm.plans) == 1
+    # The tool step reserves the only call for generation, so no evidence is gathered or invented.
+    result = await live.answer(req())
+    assert not result.grounded and result.sources == [] and llm.calls == 0 and len(llm.plans) == 1
+    assert live.traces[result.message_id]["tool_stop"] == "model_budget"
 
 
 async def test_restart_capability_replay_and_scope(repo, memory):
@@ -567,21 +549,8 @@ async def test_provider_failure_is_error_not_successful_clarification():
     assert all(not s.conversation.messages for s in live._conversations.values())
 
 
-def test_negation_numbers_and_resolved_request_guards():
-    with pytest.raises(ValueError):
-        check_decision(
-            AgentDecision.model_validate(
-                plan(
-                    intent="build",
-                    entities=["Moonveil"],
-                    search_query="Moonveil build with shield",
-                    resolved_question="Moonveil build with shield",
-                )
-            ),
-            "Moonveil build không dùng khiên",
-            [],
-            {},
-        )
+def test_numbers_and_resolved_request_guards():
+    # Negation is preserved by the Agent prompt; the server only checks digits and provenance.
     with pytest.raises(ValueError):
         check_decision(AgentDecision.model_validate(plan(resolved_question="Ranni level 150")), "Ranni là ai?", [], {})
 
@@ -676,13 +645,7 @@ async def test_dense_memory_mode_has_one_prefix_and_never_initializes_bm25(monke
         await encoder.encode_dense(["oversize"])
 
 
-async def test_free_text_multiple_rounds_keep_root_without_memory_or_rules(monkeypatch):
-    import app.services.gameplay as legacy
-
-    def forbidden(*args, **kwargs):
-        raise AssertionError("Agent must not call the legacy classifier")
-
-    monkeypatch.setattr(legacy, "advance", forbidden)
+async def test_free_text_multiple_rounds_keep_root_without_memory_or_rules():
     ask = plan(
         intent="build",
         action="clarify",

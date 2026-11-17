@@ -76,10 +76,9 @@ def notice(lang: str) -> str:
 
 
 class LiveChatService:
-    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, gameplay_enabled=False, repository=None):
+    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, repository=None):
         self.pipeline = pipeline
         self.image_catalog = image_catalog
-        self.gameplay_enabled = gameplay_enabled
         self.repository: MemoryRepository | None = repository
         self._registry_lock = asyncio.Lock()
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
@@ -275,22 +274,14 @@ class LiveChatService:
         if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
             return []
         try:
-            if self.pipeline.settings.chat_agent_enabled and self.pipeline.settings.chat_tool_agent_enabled:
-                from app.services.answer_media import resolve
+            from app.services.answer_media import resolve
 
-                remaining = (
-                    self.pipeline.settings.chat_timeout_seconds - (time.perf_counter() - started) if started else 7
-                )
-                if remaining <= 1:
-                    prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
-                    return []
-                async with asyncio.timeout(min(6, remaining - 1)):
-                    return await resolve(self, req, prepared, result)
-            resolved = await self.image_catalog.resolve(
-                prepared.hits, [s.index for s in result.sources if s.origin != "web"], spoilers=req.options.spoilers
-            )
-            prepared.trace["images"] = {"returned": len(resolved.images), "excluded": resolved.reasons}
-            return resolved.images
+            remaining = self.pipeline.settings.chat_timeout_seconds - (time.perf_counter() - started) if started else 7
+            if remaining <= 1:
+                prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
+                return []
+            async with asyncio.timeout(min(6, remaining - 1)):
+                return await resolve(self, req, prepared, result)
         except Exception:
             # Images are optional. Never swallow task cancellation or leak paths/data through errors.
             prepared.trace["images"] = {"returned": 0, "excluded": {"resolver_unavailable": 1}}
@@ -298,11 +289,9 @@ class LiveChatService:
             return []
 
     async def _prepare(self, req, state, started=None):
-        kwargs = {"gameplay": True, "handle_gameplay": True, "player": state.player} if self.gameplay_enabled else {}
-        kwargs["started"] = started
+        kwargs = {"player": state.player, "started": started}
         if self.repository is not None:
             kwargs["memory_scope"] = MemoryScope(state.conversation.id, state.owner)
-            kwargs["player"] = state.player
         prepared = await self.pipeline.prepare(req, self._history_for(state), **kwargs)
         return prepared, prepared.player_state
 

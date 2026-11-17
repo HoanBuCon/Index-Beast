@@ -164,9 +164,7 @@ async def search_case(case, rewritten, encoded, store, settings, mode, query_kin
     started = time.perf_counter()
     hits = await rank(store, encoded, mode, settings.rag_prefetch)
     latency = (time.perf_counter() - started) * 1000
-    context = select_context(
-        hits, settings.rag_top_k, settings.rag_context_chars, policy=store.policy, preserve_order=True
-    )
+    context = select_context(hits, settings.rag_top_k, settings.rag_context_chars, policy=store.policy)
     urls = [h.payload["url"] for h in hits]
     labels = set(case["gold_chunks"])
     chunk_ids = [h.payload.get("artifact_chunk_id", h.payload.get("chunk_id", h.id)) for h in context]
@@ -188,7 +186,6 @@ async def answer_case(case, rewritten, row, settings, store, generator, llm, tav
     from app.rag.generator import Prepared
     from app.rag.pipeline import context_item, select_context
     from app.rag.prompts import generation_prompt, prompt
-    from app.rag.web_query import web_query
     from app.rag.web_search import assess, merge_evidence
     from core.errors import AppError
     from core.types import Hit
@@ -214,7 +211,7 @@ async def answer_case(case, rewritten, row, settings, store, generator, llm, tav
             "local_sufficient" if status == "sufficient" else "ambiguous" if status == "ambiguous" else "searched"
         )
         if web_status == "searched":
-            query, _ = web_query(coverage.get("followup_query") or row["query"])
+            query = coverage.get("followup_query") or row["query"]
             try:
                 found, diagnostics = await tavily.search(query)
                 web_status = "ok" if found else "empty"
@@ -223,7 +220,6 @@ async def answer_case(case, rewritten, row, settings, store, generator, llm, tav
                     settings.rag_top_k,
                     settings.rag_context_chars,
                     policy=store.policy,
-                    preserve_order=True,
                 )
             except WebSearchError as exc:
                 web_status = exc.reason

@@ -3,7 +3,7 @@
 import re
 from urllib.parse import unquote
 
-from app.rag.overview import folded
+from app.rag.matching import folded
 
 IMAGE = re.compile(r"!\[[^\]\n]*\]\([^\n]*?\)")
 LINK = re.compile(r"\[([^\]\n]*)\]\([^\s)]+(?:\s+\"[^\"]*\")?\)")

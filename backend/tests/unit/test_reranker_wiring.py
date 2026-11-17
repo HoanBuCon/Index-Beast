@@ -57,25 +57,11 @@ async def test_reranker_is_used_by_retrieval_and_copied_tool_settings():
 async def test_agent_tool_observes_reranked_candidates():
     reranker = ReverseReranker()
     llm = ToolsLLM([step("local_search", "Ranni identity"), step("finish", evidence_ids=["2"])])
-    pipe = ChatPipeline(
-        settings(chat_tool_agent_enabled=True), llm, HybridRetriever(Encoder(), Store(), reranker=reranker)
-    )
+    pipe = ChatPipeline(settings(), llm, HybridRetriever(Encoder(), Store(), reranker=reranker))
     prepared = await pipe.prepare(req(options={"web_search": "off"}), [])
     assert [c["id"] for c in llm.observations[1]["candidates"]] == ["2", "1"]
     assert [h.id for h in prepared.hits] == ["2"]
     assert reranker.queries == ["Ranni identity"]
-
-
-async def test_legacy_graph_does_not_call_provider_twice():
-    reranker = ReverseReranker()
-    pipe = ChatPipeline(
-        settings(chat_agent_enabled=False, rag_rewrite_enabled=False),
-        FakeLLM(),
-        HybridRetriever(Encoder(), Store(), reranker=reranker),
-    )
-    prepared = await pipe.prepare(req(options={"web_search": "off"}), [])
-    assert len(reranker.queries) == 1
-    assert [h.id for h in prepared.hits] == ["2", "1"]
 
 
 @pytest.mark.parametrize(
@@ -133,28 +119,6 @@ async def test_search_has_its_own_budget_before_reranking():
     assert not reranker.queries
 
 
-async def test_legacy_fuses_all_queries_before_single_rerank(monkeypatch):
-    from app.rag import pipeline as pipeline_module
-
-    monkeypatch.setattr(pipeline_module, "plan_queries", lambda *_: [("first", "q1"), ("second", "q2")])
-
-    class RecordingReranker(ReverseReranker):
-        async def rank(self, query, hits):
-            self.inputs = [(h.id, h.score) for h in hits]
-            return await super().rank(query, hits)
-
-    reranker = RecordingReranker()
-    pipe = ChatPipeline(
-        settings(chat_agent_enabled=False, rag_rewrite_enabled=False),
-        FakeLLM(),
-        HybridRetriever(Encoder(), Store(), reranker=reranker),
-    )
-    prepared = await pipe.prepare(req(options={"web_search": "off"}), [])
-    assert len(reranker.queries) == 1
-    assert reranker.inputs == [("1", 2 / 61), ("2", 2 / 62)]
-    assert [h.id for h in prepared.hits] == ["2", "1"]
-
-
 async def test_retriever_preserves_hits_when_rerank_budget_expires():
     import time
 
@@ -188,9 +152,7 @@ async def test_chat_passes_start_before_loading_state_to_pipeline(stream, monkey
     from app.services.chat import LiveChatService
 
     llm = FakeLLM(tokens=[json.dumps(FakeLLM().data)])
-    pipe = ChatPipeline(
-        settings(chat_agent_enabled=False, rag_rewrite_enabled=False), llm, HybridRetriever(Encoder(), Store())
-    )
+    pipe = ChatPipeline(settings(), llm, HybridRetriever(Encoder(), Store()))
     service = LiveChatService(pipe)
     original_load = service._load_state
     original_prepare = pipe.prepare
@@ -225,7 +187,7 @@ async def test_agent_uses_remaining_turn_budget_and_keeps_retrieved_hits():
 
     llm = ToolsLLM([step("local_search", "Ranni identity"), step("finish", evidence_ids=["1"])])
     retriever = HybridRetriever(Encoder(), Store(), reranker=SlowReranker(), reranker_timeout_seconds=1)
-    pipe = ChatPipeline(settings(chat_tool_agent_enabled=True, chat_timeout_seconds=1), llm, retriever)
+    pipe = ChatPipeline(settings(chat_timeout_seconds=1), llm, retriever)
     started = time.perf_counter() - 0.45
     async with asyncio.timeout(0.3):
         prepared = await pipe.prepare(req(options={"web_search": "off"}), [], started=started)
