@@ -36,3 +36,14 @@ def test_metadata_before_answer_is_still_reported_as_a_category():
 )
 def test_char_class_labels(text, position, expected):
     assert char_class(text, position) == expected
+
+
+def test_retry_and_language_policies_come_from_prompt_files():
+    from app.rag.generator import Generator, Prepared
+
+    prepared = Prepared("rag", "vi", [], values={"policy": "BASE"}, gameplay_advice=True)
+    first = Generator._inputs(prepared, 0)["policy"]
+    retry = Generator._inputs(prepared, 1)["policy"]
+    assert first.startswith("BASE") and "AUTHORITATIVE RESPONSE LANGUAGE" in first and "Vietnamese" in first
+    assert "{target}" not in first and "FORMAT RETRY" not in first
+    assert "FORMAT RETRY" in retry and '"advisory":true' in retry and "Smithing Stone" not in retry

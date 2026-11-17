@@ -2,6 +2,8 @@
 
 Every class shares the same level accounting (attribute total = level + a sourced offset); a starting class
 only sets per-attribute floors. A class is therefore optional: without it the floors are reported unverified.
+When the player names no class or weapon, the planner may use a sourced default class (e.g. Wretch, all tens)
+and suggest equipment; the artifact marks both as assumptions, never as player-confirmed facts.
 """
 
 import copy
@@ -17,6 +19,40 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.rag.evidence import evidence_units
 
 ATTRIBUTES = ("vigor", "mind", "endurance", "strength", "dexterity", "intelligence", "faith", "arcane")
+# Surface names of the eight attributes (English, common abbreviations, Vietnamese). One table, used to keep
+# unchecked per-attribute numbers out of model prose; it never decides what the player asked for.
+ATTRIBUTE_NAMES = {
+    "vigor": ("vigor", "sinh lực"),
+    "mind": ("mind", "tâm trí", "tinh thần"),
+    "endurance": ("endurance", "sức bền", "bền bỉ"),
+    "strength": ("strength", "sức mạnh"),
+    "dexterity": ("dexterity", "khéo léo", "nhanh nhẹn"),
+    "intelligence": ("intelligence", "trí tuệ", "trí lực", "trí thông minh"),
+    "faith": ("faith", "đức tin", "niềm tin"),
+    "arcane": ("arcane", "huyền bí", "bí thuật"),
+}
+# Abbreviations match only as "Str"/"STR": lowercase "end"/"int"/"arc" are ordinary words in prose.
+ATTRIBUTE_ABBREVIATIONS = dict(zip(ATTRIBUTES, ("vig", "mnd", "end", "str", "dex", "int", "fai", "arc"), strict=True))
+_NAME_TO_ATTRIBUTE = {
+    **{n.casefold(): k for k, names in ATTRIBUTE_NAMES.items() for n in names},
+    **{form: k for k, a in ATTRIBUTE_ABBREVIATIONS.items() for form in (a.title(), a.upper())},
+}
+_FULL = "|".join(sorted((re.escape(n) for names in ATTRIBUTE_NAMES.values() for n in names), key=len, reverse=True))
+_SHORT = "|".join(f"{a.title()}|{a.upper()}" for a in ATTRIBUTE_ABBREVIATIONS.values())
+_STAT_WORD = re.compile(rf"(?<!\w)(?:(?i:{_FULL})|{_SHORT})(?!\w)")
+_STAT_NUMBER = re.compile(rf"{_STAT_WORD.pattern}\.?\s*[:=|—–-]?\s*\d")
+
+
+def stat_numbers_in(text: str) -> bool:
+    """True if prose pairs an attribute with a number ("Str 40", "Sức mạnh: 40") or tabulates attributes."""
+    if _STAT_NUMBER.search(text):
+        return True
+    return any(
+        "|" in line
+        and len({_NAME_TO_ATTRIBUTE.get(m, _NAME_TO_ATTRIBUTE.get(m.casefold())) for m in _STAT_WORD.findall(line)})
+        >= 2
+        for line in text.splitlines()
+    )
 
 
 class Number(BaseModel):
@@ -68,6 +104,8 @@ class CheckedBuild(BaseModel):
     profile: dict[str, Any]
     attribute_total: int
     class_floor_verified: bool
+    class_assumed: bool
+    weapon_suggested: bool
     units: dict[str, str]
     provenance: dict[str, dict[str, Any]]
     optimality_verified: bool
@@ -129,19 +167,35 @@ class BuildCache:
 def check(data, allocation, profile, hits):
     rules = BuildData.model_validate(data)
     with_class = rules.with_class()
-    if rules.weapon != profile.get("weapon"):
+    # A player-confirmed value must be used as given; an absent one may be a sourced assumption/suggestion.
+    weapon_suggested = not profile.get("weapon")
+    if not weapon_suggested and rules.weapon != profile.get("weapon"):
         raise ValueError("Build data does not match the confirmed weapon")
-    if with_class and rules.starting_class != profile.get("starting_class"):
+    class_assumed = with_class and not profile.get("starting_class")
+    if with_class and not class_assumed and rules.starting_class != profile.get("starting_class"):
         raise ValueError("Build data does not match the confirmed class")
     if not with_class and rules.attribute_offset is None:
-        raise ValueError("Without class data, a sourced level accounting offset is required")
+        raise ValueError(
+            "Without class data, supply attribute_offset from the level accounting rule "
+            '(e.g. {"value": 79, "label": "minus"} for "level equals the sum ... minus 79")'
+        )
     base = rules.base or {}
     if (with_class and set(base) != set(ATTRIBUTES)) or not set(rules.requirements) <= set(ATTRIBUTES):
         raise ValueError("Invalid attribute keys")
     for key, fact in [*base.items(), *rules.requirements.items()]:
-        abbreviation = dict(zip(ATTRIBUTES, ("vig", "mnd", "end", "str", "dex", "int", "fai", "arc"), strict=True))[key]
-        if fact.label.casefold().removeprefix("required ").removeprefix("starting ") not in {key, abbreviation}:
-            raise ValueError("Numeric header does not identify requested attribute")
+        abbreviation = ATTRIBUTE_ABBREVIATIONS[key]
+        # Headers such as "Required Str.", "Str Req" or "Starting Vigor" name exactly one attribute.
+        named = {
+            name
+            for word in re.findall(r"[a-z]+", fact.label.casefold())
+            for name, short in ATTRIBUTE_ABBREVIATIONS.items()
+            if word in {name, short}
+        }
+        if named != {key}:
+            raise ValueError(
+                f"Numeric header does not identify {key}: label must contain exactly one attribute name, e.g. "
+                f'"{key.title()}" or "Required {abbreviation.title()}"'
+            )
     sources = {h.id: h for h in hits}
     references = set()
     facts = [
@@ -223,6 +277,8 @@ def check(data, allocation, profile, hits):
         "profile": dict(profile),
         "attribute_total": expected,
         "class_floor_verified": with_class,
+        "class_assumed": class_assumed,
+        "weapon_suggested": weapon_suggested,
         "units": {"allocation": "attribute_points", "starting_level": "level", "points_per_level": "points/level"},
         "provenance": {
             i: {

@@ -151,8 +151,8 @@ async def run_tools(pipe, state):
         if (
             hits
             and not unresolved_name
-            # A starting class only sets floors; level and the equipment to wield are what the math needs.
-            and all(profile.get(k) for k in ("level", "weapon"))
+            # Level is the only player input the math needs: a missing class/weapon becomes a stated assumption.
+            and profile.get("level")
         ):
             available.append("calculator")
         carried_ids = dict.fromkeys(key for item in task_plan for key in item["evidence_ids"] if key in hits)

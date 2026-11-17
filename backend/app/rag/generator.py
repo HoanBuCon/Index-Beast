@@ -25,7 +25,7 @@ from app.api.schemas.chat import Clarification, Source
 from app.rag.agent import spend
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, char_class, decode_output, stream_body_prefix
-from app.rag.prompts import generation_prompt
+from app.rag.prompts import generation_prompt, prompt
 from core.errors import UpstreamError
 from core.types import Hit
 
@@ -217,15 +217,11 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
         if prepared.checked_build is not None:
-            from app.rag.build_data import ATTRIBUTES, check
+            from app.rag.build_data import ATTRIBUTES, check, stat_numbers_in
 
             failure = "invalid_build_allocation"
             artifact = prepared.checked_build
-            attribute_pattern = "|".join(ATTRIBUTES)
-            if re.search(rf"\b(?:{attribute_pattern})\b\s*[:=|—–-]?\s*\d", answer, re.I) or any(
-                "|" in line and sum(bool(re.search(rf"\b{k}\b", line, re.I)) for k in ATTRIBUTES) >= 2
-                for line in answer.splitlines()
-            ):
+            if stat_numbers_in(answer):
                 raise ValueError("Stat numbers belong in the checked artifact, not model prose")
             verified = check(artifact["data"], artifact["allocation"], prepared.values["player_profile"], prepared.hits)
             if verified["version"] != artifact["version"] or (
@@ -244,11 +240,16 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
                     raise ValueError("Missing exact accounting quotes")
             if not required_indices <= used:
                 raise ValueError("Missing accounting citations")
-            answer += "\n\n" + (
-                "Gợi ý phân bổ (một tay, không bonus): "
-                if prepared.lang == "vi"
-                else "Suggested allocation (one-handed, no bonuses): "
-            )
+            weapon, cls = artifact["data"]["weapon"], artifact["data"].get("starting_class")
+            if prepared.lang == "vi":
+                label = f"Gợi ý phân bổ cho {weapon} (một tay, không bonus"
+                label += ", vũ khí do IndexBeast đề xuất" if artifact.get("weapon_suggested") else ""
+                label += f", giả định class {cls} vì bạn chưa nêu class" if artifact.get("class_assumed") else ""
+            else:
+                label = f"Suggested allocation for {weapon} (one-handed, no bonuses"
+                label += ", weapon suggested by IndexBeast" if artifact.get("weapon_suggested") else ""
+                label += f", assuming {cls} since no class was given" if artifact.get("class_assumed") else ""
+            answer += "\n\n" + label + "): "
             answer += " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
             if not artifact.get("class_floor_verified", True):
                 answer += (
@@ -261,14 +262,10 @@ def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
             # Allocations are rendered only from the sourced calculator artifact (checked_build).
             # Unchecked numbers are never shown: per-stat numbers in prose fail (and are regenerated
             # before any visible text); a separate unchecked allocation is dropped with a short notice.
-            from app.rag.build_data import ATTRIBUTES
+            from app.rag.build_data import stat_numbers_in
 
             failure = "invalid_build_allocation"
-            attribute_pattern = "|".join(ATTRIBUTES)
-            if re.search(rf"\b(?:{attribute_pattern})\b\s*[:=|—–-]?\s*\d", answer, re.I) or any(
-                "|" in line and sum(bool(re.search(rf"\b{k}\b", line, re.I)) for k in ATTRIBUTES) >= 2
-                for line in answer.splitlines()
-            ):
+            if stat_numbers_in(answer):
                 raise ValueError("Unchecked stat numbers in prose")
             prepared.trace["dropped_unchecked_allocation"] = True
             unchecked_notice = (
@@ -401,48 +398,16 @@ class Generator:
         values = dict(prepared.values)
         values["lang"] = prepared.lang
         target = "Vietnamese (tiếng Việt)" if prepared.lang == "vi" else "English"
-        language_policy = (
-            f"\nAUTHORITATIVE RESPONSE LANGUAGE: Write all explanatory prose in {target}, "
-            "including answer, clarification and limitation. The request may have been rewritten into English "
-            "for search and the evidence may be English; neither changes the response language. "
-            "Keep proper names, exact quotations, citation markers, JSON keys and technical identifiers unchanged. "
-            "Do not copy the language of JSON examples. Check the language before returning the response.\n"
-        )
+        # Policies live in prompts/*.md; str.replace keeps literal JSON braces in those files intact.
+        language_policy = "\n" + prompt("language").strip().replace("{target}", target) + "\n"
         if not attempt:
             values["policy"] = values.get("policy", "") + language_policy
             return values
         # Retry with the SAME evidence/question/history and a fixed protocol reminder.
         # Never feed malformed output or private reasoning back into the prompt.
-        values["policy"] = values.get("policy", "") + (
-            '\nFORMAT RETRY: Return ONLY one valid JSON object, with "answer" first, '
-            '"evidence" array and "insufficient" boolean. No Markdown or prose outside JSON. '
-            'If evidence is insufficient, return {"answer":"Name the unknown game detail '
-            'in the requested language.","evidence":[],"insufficient":true}. '
-            "Use the supplied evidence for cited claims; never invent citations or change source indices."
-            " If insufficient=true, answer must contain ONLY the specific gap: no related facts, "
-            "source counts, source descriptions or bracketed citations. "
-            "Keep appropriate Markdown inside answer. Short section headings are labels; cite each factual "
-            "paragraph, step, list item or comparison row. The set of [n] must equal the set of "
-            "evidence.index, and each quote_id must come from that source's evidence_units. "
-            "Numbers in square brackets are citations only. Write item tiers with parentheses, e.g. "
-            "Smithing Stone (tier 3), including when the excerpt uses brackets. "
-            "Keep the response short and avoid decorative quotes."
-            " Required fields: answer (nonempty string), evidence (array), insufficient (boolean). "
-            "Each evidence item must have integer index and exactly one of quote_ids (1–3 distinct ID strings), "
-            "quote_id (one ID string) or quote (legacy exact text). Do not repeat source indices. "
-            "limitation is optional: omit it when unused; do not return null, empty text, or extra fields. "
-            "Do not include type, response_format, status or any other undeclared field. "
-            "Leave user clarification to the planner. Do not turn a format repair or a missing source into a question. "
-            "Lead with the answer or conditional recommendation. Name sources only if the user asks for them. "
-            "Leave out commentary about retrieval, missing rankings or available data, including from limitation. "
-        )
+        values["policy"] = values.get("policy", "") + "\n" + prompt("format_retry").strip() + " "
         if prepared.gameplay_advice:
-            values["policy"] += (
-                ' Gameplay advice may instead use {"answer":"General advice under a clear assumption.",'
-                '"evidence":[],"insufficient":false,"advisory":true}. '
-                "With cited gameplay facts, put an optional inference in recommendation without citations. "
-                "Apply the gameplay advice policy, including its limits on game stats and build allocations."
-            )
+            values["policy"] += " " + prompt("format_retry_gameplay").strip()
         values["policy"] += language_policy
         return values
 

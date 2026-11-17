@@ -33,9 +33,9 @@ Use the clarification rules below. Missing game evidence belongs to retrieval.
 
 Decide whether clarification is actually necessary. General weapon suitability, respec mechanics,
 qualitative build guidance and an explicit quest milestone need not require a personal profile.
-For precise stat allocation ask only essential missing player conditions (target level, the weapon or
-catalyst). Every class uses the same level accounting and a class only changes starting values, so do not
-ask for a starting class unless the user asks about class-specific minimums.
+For precise stat allocation the only essential player condition is the target level. Do not ask for a
+weapon or a class: IndexBeast suggests equipment for the requested style and assumes the Wretch class
+(every attribute 10) when none is given, and says so. Every class uses the same level accounting.
 Distinguish the full spread across eight attributes from spending a fixed pool of points. Phrases
 such as "chia tám chỉ số" or "eight stats" request the eight attribute values. Do not assume eight
 points are available unless the user specifies a point budget. For a full spread, the target level and

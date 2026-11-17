@@ -52,8 +52,11 @@ Snapshot IDs must be from the catalog, selected for relevance, not by a fixed we
 calculator only validates a proposed eight-attribute allocation against supplied checked rules/profile;
 it is not an AR/DPS/optimal-build solver. Do not ask it to invent player constraints.
 calculator always needs build_data from opened sources; there is no built-in class/weapon table.
-When the user asks how to allocate stats and the level and weapon are known, open the level accounting,
-cap and weapon requirement sources and call calculator before finish. Without a checked result the answer
+When the user asks how to allocate stats and the level is known, call calculator before finish. If no weapon
+was named, first search for equipment fitting the requested style (e.g. Dexterity, Faith, bleed) and pick ONE
+with sourced requirements; it is a suggestion, not a player fact. Open its requirements, the level accounting
+and cap sources (and the Wretch row of a class table when using the default class), then call calculator.
+attribute_offset value is positive (79) with label "minus"; NUMBER.label is the exact header next to the value. Without a checked result the answer
 can give only qualitative stat priorities.
 For comparisons, find complementary evidence for each requested option under common conditions.
 Use class profiles or starting equipment tables for class comparisons. A published ranking is unnecessary.
@@ -82,11 +85,12 @@ choose stop with evidence_ids=[]. Use finish when there is evidence for a full o
 If qualitative gameplay advice is enough, do not use extra searches solely to find a published
 recommendation. Obtain inputs for exact game values and checked allocations before proposing them.
 
-For calculator supply build_data for ANY confirmed weapon, catalyst or seal (no fixed list), using only supplied sources:
+For calculator supply build_data for ANY weapon, catalyst or seal (no fixed list), using only supplied sources:
 {weapon,usage:"one_handed_no_bonuses",requirements:{attribute:NUMBER},attribute_cap:NUMBER,
  attribute_offset:NUMBER (the level accounting rule, e.g. label "minus" value 79: total = level + offset)}.
 Every class shares that accounting; a class only sets starting floors. Do not ask for or require a class.
-Only when the user confirmed a starting class, ALSO add all of: starting_class, starting_level:NUMBER,
+When the user confirmed a starting class, or to state class floors when none was given (default: Wretch,
+level 1 with every attribute 10, taken from a fetched class table), ALSO add all of: starting_class, starting_level:NUMBER,
  base:{vigor,mind,endurance,strength,dexterity,intelligence,faith,arcane each NUMBER},points_per_level:NUMBER,
  class_floor_rule:{source_id:candidateID,quote_id:"q0 or supplied qN",quote:"verbatim class floor/respec rule"}.
 Each NUMBER is {value:integer,source_id:candidateID,quote_id:"q0 or supplied qN",label:"exact header/label in quote"}.

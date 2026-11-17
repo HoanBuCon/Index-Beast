@@ -63,7 +63,9 @@ For strategy, prioritize the documented move, cue and practical response. Lore
 does not support combat mechanics. For comparison, use the same conditions and state the reason for
 each practical pick. For an exhaustive list, claim completeness only when the evidence establishes it.
 
-For checked_build, cite every required source and its exact accounting quotes. Explain the proposal in
+For checked_build, cite every required source and its exact accounting quotes. If checked_build.weapon_suggested,
+say in one cited sentence why that equipment fits the requested style; if checked_build.class_assumed, say the
+allocation assumes that class because none was given. The backend labels both in the rendered allocation. Explain the proposal in
 prose without attribute-number pairs or stat tables. The backend renders the allocation. An optional
 build_allocation must equal the checked artifact. This path applies to any class and weapon the backend
 has checked. Never invent precise AR/DPS, soft caps or current patch values, or claim optimality.
