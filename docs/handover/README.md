@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Làm mềm mép video đăng nhập (17/11/2026)](2026-11-17_s5-tv4_lam-mem-mep-video-dang-nhap.md)
+
 - [TV4 · Hỏi tiếp trong thread và kiểm thử bot (17/11/2026)](2026-11-17_s5-tv4_hoi-tiep-thread-va-kiem-thu-bot.md)
 - [TV2 · Sprint 5: rà soát mã toàn hệ thống (17/11/2026)](2026-11-17_s5-tv2_ra-soat-ma-toan-he-thong.md)
 

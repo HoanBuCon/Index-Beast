@@ -134,7 +134,7 @@ export default function AboutPage() {
         }
       </p>
       <Link className="primary inline" to="/">
-        {"Trở về tra cứu ↗"}
+        {"Xem trailer ↗"}
       </Link>
     </main>
   );
