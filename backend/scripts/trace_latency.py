@@ -6,10 +6,9 @@
 Các bước (đều là mili giây, lấy từ `messages.rag_trace` và cột `latency_ms`):
   total            cột latency_ms: cả câu trả lời
   prepare          trace.prepare_ms: mọi thứ trước khi sinh câu trả lời
-  rewrite          trace.rewrite.elapsed_ms: viết lại truy vấn
   agent_decision   trace.agent.elapsed_ms: quyết định của agent
-  retrieval        tổng trace.retrieval_queries[].elapsed_ms của một câu
-  tool:<action>    tổng trace.tool_actions[].elapsed_ms theo action (web_search, search, calculator…)
+  tool:<action>    tổng trace.tool_actions[].elapsed_ms theo action (local_search, web_search, calculator…)
+  rewrite, retrieval  chỉ có ở trace cũ trước khi bỏ nhánh legacy (trace.rewrite.elapsed_ms, trace.retrieval_queries)
   generate_rest    total - prepare: sinh câu trả lời + hậu xử lý (suy ra, không đo trực tiếp)
 Các bước có thể chồng lên nhau (rewrite nằm trong prepare), nên không cộng được. Trace bị cắt (`truncated`) mất chi
 tiết bước và chỉ góp cho `total`. Mỗi bước chỉ tính trên các câu có bước đó (cột n).
