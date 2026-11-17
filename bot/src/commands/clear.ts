@@ -12,6 +12,7 @@ import { userHash } from "../utils/identity.ts";
 import { errorName, log } from "../utils/logger.ts";
 import { isGuildAdmin } from "../utils/permissions.ts";
 import type { Command } from "./index.ts";
+import { followupThreads } from "../interactions/followup.ts";
 
 // Văn bản kết quả; threads_kept > 0 sau /clear user phải được nói rõ (hợp đồng docs/api/discord-guild-tv4.md).
 export function clearSummary(result: MemoryClearResult, subject: string): string {
@@ -58,7 +59,10 @@ export function createClearCommand(api: () => Pick<ApiClient, "clearMemory"> = d
             await reply("Chỉ thành viên có quyền **Manage Server** mới dùng được `/clear all`.");
             return;
           }
-          await reply(clearSummary(await api().clearMemory(guildId, { scope: "all" }), "server"));
+          const result = await api().clearMemory(guildId, { scope: "all" });
+          // Không để trích đoạn đang chờ của thread nạp lại ngữ cảnh vừa xóa.
+          followupThreads.clearGuild(guildId);
+          await reply(clearSummary(result, "server"));
           return;
         }
         const target = interaction.options.getUser("member") ?? interaction.user;

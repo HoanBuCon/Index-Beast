@@ -1,8 +1,8 @@
-// /ask <question>: deferReply ngay, gọi API, editReply bằng embed có nguồn + nút feedback/hỏi tiếp.
+// /ask <question>: deferReply ngay, gọi API, editReply bằng embed có nguồn + nút hỏi tiếp (feedback đang Deferred).
 // Phụ trách: TV4 · [S2] Bot /ask · [S3] Bot: câu trả lời thật
 
 import { randomUUID } from "node:crypto";
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, SlashCommandBuilder } from "discord.js";
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
 import { MAX_MESSAGE_CHARS } from "../api/types.ts";
@@ -12,6 +12,8 @@ import { errorName, log } from "../utils/logger.ts";
 import type { Command } from "./index.ts";
 import { loadWebUrl } from "../config.ts";
 import type { AnswerShareCreated } from "../api/types.ts";
+import { FollowupError, followupThreads } from "../interactions/followup.ts";
+import type { FollowupThreads } from "../interactions/followup.ts";
 
 export function createAskCommand(
   chat?: (body: ChatRequest) => Promise<ChatResponse>,
@@ -19,6 +21,7 @@ export function createAskCommand(
     webUrl?: string;
     createShare?: (conversationId: string, messageId: string) => Promise<AnswerShareCreated>;
   } = {},
+  followup: FollowupThreads = followupThreads,
 ): Command {
   return {
     data: new SlashCommandBuilder()
@@ -45,19 +48,37 @@ export function createAskCommand(
           });
           return;
         }
-        const response = await (chat ?? createApiClient(undefined, { requestId }).chat)({
-          message: question,
-          channel: "discord",
-          external_ref: externalRef(
-            interaction.channelId,
-            interaction.channel?.isThread() ?? false,
-            interaction.user.id,
-          ),
-          ...(interaction.guildId ? { guild_id: interaction.guildId } : {}),
-          options: { lang: "auto", spoilers: true, web_search: "auto" },
-        });
+        if (interaction.channel?.isThread() && (interaction.channel.archived || interaction.channel.locked)) {
+          throw new FollowupError("Thread đã lưu trữ hoặc bị khóa. Hãy gửi /ask ở kênh chính.");
+        }
+        const response = await followup.chat(
+          {
+            message: question,
+            channel: "discord",
+            external_ref: externalRef(
+              interaction.channelId,
+              interaction.channel?.isThread() ?? false,
+              interaction.user.id,
+            ),
+            ...(interaction.guildId ? { guild_id: interaction.guildId } : {}),
+            options: { lang: "auto", spoilers: true, web_search: "auto" },
+          },
+          chat ?? createApiClient(undefined, { requestId }).chat,
+        );
         const [first, ...remaining] = answerEmbeds(question, response);
         const components: ActionRowBuilder<ButtonBuilder>[] = [];
+        if (interaction.guildId && interaction.channel?.type === ChannelType.GuildText) {
+          components.push(
+            new ActionRowBuilder<ButtonBuilder>().addComponents(
+              followup.button({
+                guildId: interaction.guildId,
+                channelId: interaction.channelId,
+                question,
+                answer: response.answer,
+              }),
+            ),
+          );
+        }
         const webUrl = loadWebUrl({ WEB_URL: sharing.webUrl ?? process.env.WEB_URL });
         const createShare =
           sharing.createShare ?? (!chat ? createApiClient(undefined, { requestId }).createAnswerShare : undefined);
@@ -94,7 +115,7 @@ export function createAskCommand(
         });
         await interaction.editReply({
           content:
-            error instanceof ApiError
+            error instanceof ApiError || error instanceof FollowupError
               ? error.message
               : "Chưa xử lý được câu hỏi. Vui lòng kiểm tra cấu hình bot hoặc thử lại sau.",
           embeds: [],

@@ -6,6 +6,8 @@ import type { ChatRequest } from "../src/api/types.ts";
 import { ApiError } from "../src/api/client.ts";
 import { BOT_ID, CHANNEL, GUILD, fakeMessage } from "./helpers.ts";
 import type { FakeMessageOptions } from "./helpers.ts";
+import { createFollowupThreads } from "../src/interactions/followup.ts";
+import type { ButtonInteraction } from "discord.js";
 
 const answer = {
   conversation_id: "12345678-1234-4234-8234-123456789012",
@@ -15,6 +17,37 @@ const answer = {
   latency_ms: 5,
   sources: [{ index: 1, title: "Marika", url: "https://example.test/Marika" }],
 };
+
+test("bot-created followup thread answers without mention/setup, but does not enable its parent", async () => {
+  const flow = createFollowupThreads();
+  // Dùng cùng luồng nút đã kiểm thử ở followup.test; không chỉ giả has() luôn true.
+  const { ChannelType } = await import("discord.js");
+  const id = flow.button({ guildId: GUILD, channelId: CHANNEL, question: "Marika?", answer: "Radagon." }).data
+    .custom_id!;
+  await flow.handle({
+    customId: id,
+    guildId: GUILD,
+    channelId: CHANNEL,
+    channel: { type: ChannelType.GuildText },
+    deferReply: async () => {},
+    editReply: async () => {},
+    message: { startThread: async () => ({ id: "777", guildId: GUILD, isThread: () => true, send: async () => {} }) },
+  } as unknown as ButtonInteraction);
+  const bodies: ChatRequest[] = [];
+  const handler = createMessageHandler({
+    followup: flow,
+    cache: { has: async () => false },
+    chat: async (body) => {
+      bodies.push(body);
+      return answer;
+    },
+  });
+  await handler(fakeMessage({ content: "Ông ta là ai?", channelId: "777", thread: { parentId: CHANNEL } }).value);
+  assert.equal(bodies.length, 1);
+  assert.match(bodies[0].message, /Radagon/);
+  await handler(fakeMessage({ content: "Không phải hỏi bot", channelId: CHANNEL }).value);
+  assert.equal(bodies.length, 1);
+});
 function setup(enabled: string[] = [CHANNEL], verdicts?: ("allow" | "warn" | "deny")[]) {
   const bodies: ChatRequest[] = [];
   const handler = createMessageHandler({
@@ -43,6 +76,7 @@ test("enabled channel: answers without /ask, sends guild_id and per-user externa
   assert.match(bodies[0].external_ref!, new RegExp(`^discord:channel:${CHANNEL}:[0-9a-f]{64}$`));
   assert.deepEqual(mock.replies[0].allowedMentions, { parse: [], repliedUser: false });
   assert.equal((mock.replies[0].embeds as unknown[]).length, 1);
+  assert.match(JSON.stringify(mock.replies[0].components), /Hỏi tiếp/);
 });
 
 test("channel not enabled and not mentioned: ignored", async () => {

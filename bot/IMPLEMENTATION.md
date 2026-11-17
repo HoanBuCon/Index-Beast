@@ -139,3 +139,27 @@ Ghi nguồn CC BY-SA dựa theo khảo sát `docs/data-sources.md`; không áp g
 `/clear user [member]` / `/clear all`, `/ask` gửi thêm `guild_id`; trả lời tin nhắn khi được mention và ở kênh `/setup`
 (cache danh sách kênh 30 giây, giới hạn 5 tin/phút/người). Cần **Message Content Intent**. Chi tiết:
 `docs/handover/2026-11-16_s5-tv4_bot-lenh-co-ban.md`; hợp đồng: `docs/api/discord-guild-tv4.md`. `config.ts` (stub `/config`) đã bỏ, thay bằng `/setup`.
+
+## Bot TV4 · Hỏi tiếp trong thread và kiểm tra Sprint 5 (17/11/2026)
+
+- Câu trả lời mới của `/ask` hoặc mention/kênh `/setup` trong kênh văn bản có nút **Hỏi tiếp**.
+  Bấm mở thread công khai dưới chính câu trả lời đó; bấm lại dùng cùng thread. Trong thread có thể gõ trực tiếp hoặc dùng `/ask`.
+- Thread dùng `discord:thread:<id>` để backend giữ hội thoại chung, tách khỏi người dùng/kênh gốc và các thread khác.
+  Không sao chép cả lịch sử riêng. Lượt đầu gửi kèm trích đoạn câu hỏi (tối đa 500 ký tự) và câu trả lời (tối đa 900 ký tự)
+  trong trường `message` hiện có; có thể rút ngắn thêm để tổng không vượt 2.000 ký tự. Câu hỏi quá dài được yêu cầu rút gọn.
+  Trích đoạn này cũng xuất hiện trong lịch sử/bản chia sẻ của lượt đầu. Đây không phải API fork hội thoại đầy đủ.
+- Nút có hạn 24 giờ; thread tự lưu trữ sau 60 phút không hoạt động. Bot ngừng hỏi tiếp sau một giờ không nhận câu trả lời
+  thành công hoặc khi nút hết hạn, không tự mở lại thread đã lưu trữ/khóa. `/clear all` làm mất cả ngữ cảnh thread đang chờ;
+  `/clear user` vẫn giữ thread dùng chung theo hợp đồng TV1.
+- Bộ nhớ RAM giữ tối đa 500 nút và 500 thread cho một tiến trình. Khi khởi động lại hoặc bị loại khỏi cache, nút cũ hết hiệu lực;
+  thread cũ cần `/ask`, mention hoặc kênh cha `/setup` để bot nhận tin. Không đảm bảo giữ trích đoạn mở đầu chưa gửi qua lần khởi động lại.
+- Cần **Message Content Intent**, View Channel, Send Messages, Read Message History, Create Public Threads và Send Messages in Threads.
+  Không tự cấp quyền hoặc bật intent trong Developer Portal. Bot đã báo rõ lỗi `Used disallowed intents` để không nhầm thành token hỏng.
+- Đã đăng ký và đọc lại đủ 6 lệnh global: `/ask`, `/ping`, `/help`, `/about`, `/setup`, `/clear` ngày 17/11/2026.
+  Kiểm thử handler/API mock đã chạy; **chưa nghiệm thu Gateway/interaction Discord thật** vì Message Content Intent chưa được bật.
+  Người dùng chọn bật sau. Feedback bot vẫn Deferred, không triển khai trong đợt này.
+
+Chạy `make bot-check` để kiểm tra local. Sau khi bật intent, dùng server test và `make bot-dev` để thử mock
+(cần Docker Desktop và dependency đã cài). Không chạy thêm API/bot trùng terminal. Giữ `.env` ở chế độ RAG hiện tại;
+`make bot-dev` chỉ ép mock cho các tiến trình con. Chi tiết kiểm thử và các giới hạn:
+[bàn giao Hỏi tiếp và kiểm thử bot](../docs/handover/2026-11-17_s5-tv4_hoi-tiep-thread-va-kiem-thu-bot.md).
