@@ -254,6 +254,43 @@ async def test_unknown_calculator_is_not_exposed_without_sources():
     assert p.trace["tool_actions"][0]["status"] == "denied"
 
 
+async def test_web_auto_coverage_still_has_a_step_budget():
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    llm = ToolsLLM([step("local_search", f"Ranni clue {i}") for i in range(5)])
+    pipe = pipeline(llm, tavily_api_key="offline-test-key", chat_coverage_steps=2)
+    pipe.web_search = FakeSearch(rows=[web_hit()])
+    p = await pipe.prepare(req(options={"web_search": "auto"}), [])
+    assert len(p.trace["tool_actions"]) == 2 and p.trace["tool_stop"] == "step_budget"
+    assert llm.observations[-1]["remaining_steps"] == 1
+    assert all("decision_ms" in row for row in p.trace["tool_actions"])
+
+
+async def test_calculator_is_withdrawn_after_repeated_failures():
+    level = {"key": "level", "value": "110", "source_id": "current"}
+    decision = plan(
+        intent="build",
+        entities=[],
+        constraints=[level],
+        resolved_question="Faith build level 110",
+        search_query="Faith build level 110",
+    )
+    llm = ToolsLLM(
+        [
+            step("local_search", "Faith build"),
+            step("calculator", build_data={"broken": 1}),
+            step("calculator", build_data={"broken": 2}),
+            step("finish"),
+        ],
+        [decision],
+    )
+    p = await pipeline(llm, chat_tool_steps=4, chat_agent_max_calls=8).prepare(req("Faith build level 110"), [])
+    statuses = [row["status"] for row in p.trace["tool_actions"] if row["action"] == "calculator"]
+    assert statuses == ["error", "error"]
+    assert "calculator" in llm.observations[2]["available_actions"]
+    assert "calculator" not in llm.observations[3]["available_actions"]
+
+
 def test_benchmark_plan_has_no_client_or_model(monkeypatch, capsys):
     from scripts.benchmark_agent import main
 

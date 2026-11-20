@@ -106,8 +106,19 @@ async def run_tools(pipe, state):
     local_limit = pipe.settings.chat_tool_queries
     model_limit = pipe.settings.chat_agent_max_calls
     verify_coverage = state.get("verify_coverage", False)
+    # Coverage mode (web auto) lets the model search until the evidence is sufficient, but still within
+    # a bounded number of steps and model calls, and within the preparation time budget.
+    coverage_steps = pipe.settings.chat_coverage_steps if verify_coverage else None
     if verify_coverage:
-        step_limit = local_limit = model_limit = None
+        step_limit = local_limit = None
+        model_limit = pipe.settings.chat_coverage_max_calls
+    # Preparation (Agent + tools) must hand over to generation by this time; generation keeps the rest.
+    prepare_deadline = state.get("started", turn_started) + pipe.settings.prepare_budget_seconds
+
+    def prepare_left() -> float:
+        return prepare_deadline - time.perf_counter()
+
+    calculator_failures = 0
     stalled = set()
     followup = None
     web_queries = []
@@ -117,10 +128,11 @@ async def run_tools(pipe, state):
     checked_contexts = set()
     seen_excerpts = {(hit.payload.get("url"), " ".join(hit.payload["text"].split())) for hit in hits.values()}
     while step_limit is None or len(actions) < step_limit:
-        remaining = pipe.settings.chat_timeout_seconds - (time.perf_counter() - state.get("started", 0))
-        reserve = min(19, pipe.settings.chat_timeout_seconds / 2)
-        if verify_coverage and remaining <= reserve:
+        if verify_coverage and prepare_left() <= 0:
             stop_reason = "answer_time_reserved"
+            break
+        if coverage_steps is not None and len(actions) >= coverage_steps:
+            stop_reason = "step_budget"
             break
         # Reserve one generation call; repairs still obey the shared turn budget.
         if model_limit is not None and len(p.trace.get("model_calls", [])) >= model_limit - 1:
@@ -153,6 +165,8 @@ async def run_tools(pipe, state):
             and not unresolved_name
             # Level is the only player input the math needs: a missing class/weapon becomes a stated assumption.
             and profile.get("level")
+            # Two rejected calculations end the attempt; the answer explains priorities without numbers.
+            and calculator_failures < pipe.settings.chat_calculator_max_failures
         ):
             available.append("calculator")
         carried_ids = dict.fromkeys(key for item in task_plan for key in item["evidence_ids"] if key in hits)
@@ -171,7 +185,9 @@ async def run_tools(pipe, state):
             "answer_language": p.lang,
             "web_policy": state["search_mode"],
             "available_actions": available,
-            "remaining_steps": None if step_limit is None else step_limit - len(actions),
+            "remaining_steps": (
+                None if (step_limit or coverage_steps) is None else (step_limit or coverage_steps) - len(actions)
+            ),
             "observations": observations[-3:],
             "task_plan": task_plan,
             **(
@@ -207,6 +223,9 @@ async def run_tools(pipe, state):
             ],
             "snapshots": [{"id": k, "title": v["payload"]["title"]} for k, v in catalog.items()][:40],
         }
+        decision_started = time.perf_counter()
+        # Visible in deadline diagnostics if the turn times out inside this step.
+        p.trace["tool_step_running"] = {"phase": "tool_decision", "step": len(actions) + 1}
         try:
             if followup:
                 step = ToolStep(action="web_search", query=followup, reason="missing_evidence")
@@ -215,7 +234,7 @@ async def run_tools(pipe, state):
                 spend(p.trace, "tool_decision", p.max_calls)
                 decision_timeout = pipe.settings.chat_agent_timeout_seconds
                 if verify_coverage:
-                    decision_timeout = min(decision_timeout, remaining - reserve)
+                    decision_timeout = min(decision_timeout, prepare_left())
                 async with asyncio.timeout(decision_timeout):
                     result = await pipe.llm.invoke_chain(
                         rewrite_prompt()
@@ -244,7 +263,13 @@ async def run_tools(pipe, state):
                 break
             raise UnavailableError("Bước chọn công cụ vượt thời gian xử lý.") from None
         action = step.action
-        row = {"action": action, "reason": step.reason, "status": "running"}
+        row = {
+            "action": action,
+            "reason": step.reason,
+            "status": "running",
+            "decision_ms": round((time.perf_counter() - decision_started) * 1000, 2),
+        }
+        p.trace["tool_step_running"] = {"phase": action, "step": len(actions) + 1}
         if state.get("diagnostic_queries"):
             row["query"] = step.query
         actions.append(row)
@@ -341,7 +366,7 @@ async def run_tools(pipe, state):
                     spend(p.trace, "assessment", p.max_calls)
                 assessment_timeout = min(
                     pipe.settings.chat_agent_timeout_seconds,
-                    max(0, pipe.settings.chat_timeout_seconds - (time.perf_counter() - state["started"]) - reserve),
+                    max(0, prepare_left()),
                 )
                 status, assessment = await assess(
                     pipe.llm,
@@ -425,7 +450,7 @@ async def run_tools(pipe, state):
                         "spoilers": req.options.spoilers,
                         "limit": pipe.settings.rag_prefetch,
                         "search_timeout_seconds": min(5, pipe.settings.rag_retrieval_timeout_seconds),
-                        "rerank_deadline": turn_started + pipe.settings.chat_timeout_seconds - reserve,
+                        "rerank_deadline": prepare_deadline,
                     }
                 )
                 retrieval_timeout = min(5, pipe.settings.rag_retrieval_timeout_seconds)
@@ -449,8 +474,7 @@ async def run_tools(pipe, state):
                 web_calls += 1
                 web_queries.append(step.query)
                 if verify_coverage:
-                    web_time = pipe.settings.chat_timeout_seconds - (time.perf_counter() - state["started"]) - reserve
-                    async with asyncio.timeout(max(0, web_time)):
+                    async with asyncio.timeout(max(0, prepare_left())):
                         found, diagnostic = await pipe.web_search.search(step.query)
                 else:
                     found, diagnostic = await pipe.web_search.search(step.query)
@@ -534,6 +558,7 @@ async def run_tools(pipe, state):
                 if p.trace["web_search"]["status"] != "ok":
                     p.trace["web_search"].update(status="error", reason=getattr(exc, "reason", type(exc).__name__))
             if action == "calculator":
+                calculator_failures += 1
                 row["validation"] = (
                     [
                         {"field": list(e["loc"]), "type": e["type"]}
@@ -545,6 +570,7 @@ async def run_tools(pipe, state):
         row["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
         observations.append({k: v for k, v in row.items() if k != "query"})
     p.trace["tool_stop"] = stop_reason
+    p.trace.pop("tool_step_running", None)
     if task_plan:
         if p.clarification is not None:
             p.player_state["plan"] = task_plan

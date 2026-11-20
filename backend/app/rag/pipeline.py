@@ -38,6 +38,7 @@ from core.types import Hit
 
 class PreparationState(TypedDict, total=False):
     req: ChatRequest
+    trace: dict
     history: list[dict]
     original_question: str
     resolved_question: str
@@ -234,11 +235,18 @@ class ChatPipeline:
     @staticmethod
     def _guarded(name, node):
         async def run(state: PreparationState):
+            started = time.perf_counter()
+            if (trace := state.get("trace")) is not None:
+                # Read by deadline diagnostics when the turn is cancelled inside this node.
+                trace["current_node"] = name
             try:
                 result = node(state)
                 if inspect.isawaitable(result):
                     result = await result
-                state["prepared"].trace.setdefault("graph_nodes", []).append(name)
+                trace = state["prepared"].trace
+                trace.setdefault("graph_nodes", []).append(name)
+                trace.setdefault("node_ms", {})[name] = round((time.perf_counter() - started) * 1000, 2)
+                trace.pop("current_node", None)
                 return result
             except AppError as exc:
                 if state.get("diagnostic_queries") and "prepared" in state:
@@ -256,10 +264,13 @@ class ChatPipeline:
         player=None,
         memory_scope=None,
         started: float | None = None,
+        trace: dict | None = None,
     ) -> Prepared:
+        """`trace` is the caller's dict for the turn trace, so diagnostics survive a cancelled turn."""
         state = {
             "req": req,
             "history": history,
+            "trace": trace if trace is not None else {},
             "started": started if started is not None else time.perf_counter(),
             "diagnostic_queries": diagnostic_queries,
             "player": player,
@@ -277,7 +288,11 @@ class ChatPipeline:
             raise UnavailableError("Chưa cấu hình DeepSeek API key.")
         mode = self.settings.chat_mode
         lang = language(req.message, req.options.lang)
-        prepared = Prepared(mode, lang, [], trace={"mode": mode, "rewrite_fallback": False})
+        trace = state.get("trace")
+        if trace is None:
+            trace = state["trace"] = {}
+        trace.update(mode=mode, rewrite_fallback=False)
+        prepared = Prepared(mode, lang, [], trace=trace)
         state.update(prepared=prepared, query=req.message, documents=[], answer_language=lang)
         requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
         state["search_mode"] = requested if self.settings.web_search_available else "off"

@@ -433,6 +433,55 @@ def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(se
         assert not live.traces
 
 
+class SlowStreamLLM(FakeLLM):
+    """A slow first token, like a thinking model that buffers before the first cited clause."""
+
+    async def stream(self, messages, **kwargs):
+        await asyncio.sleep(0.3)
+        async for token in super().stream(messages, **kwargs):
+            yield token
+
+
+@pytest.mark.parametrize("channel", ["web", "discord"])
+async def test_web_stream_has_its_own_longer_deadline(channel):
+    from core.errors import TimeoutAppError
+
+    llm = SlowStreamLLM(tokens=rag_tokens())
+    live = service(
+        llm=llm,
+        retriever=FakeRetriever(),
+        chat_timeout_seconds=0.2,
+        chat_stream_timeout_seconds=5,
+        api_service_token="offline-token",
+    )
+    request = ChatRequest(
+        **{**BODY, "channel": channel, "external_ref": "discord:thread:9"} if channel == "discord" else BODY
+    )
+    if channel == "discord":
+        # Discord/JSON keep CHAT_TIMEOUT_SECONDS: the bot gives up at 60 s.
+        with pytest.raises(TimeoutAppError):
+            await live.open_stream(request)
+        return
+    async with aclosing(await live.open_stream(request)) as events:
+        frames = [frame async for frame in events]
+    assert frames[-1][0] == "done" and frames[-1][1].grounded is True
+
+
+async def test_timeout_logs_the_stage_and_step_timings_without_content(caplog):
+    from core.errors import TimeoutAppError
+
+    llm = SlowStreamLLM(tokens=rag_tokens())
+    live = service(llm=llm, retriever=FakeRetriever(), chat_timeout_seconds=0.2, chat_stream_timeout_seconds=0.2)
+    with pytest.raises(TimeoutAppError):
+        await live.open_stream(ChatRequest(**BODY))
+    record = next(r for r in caplog.records if r.getMessage() == "Chat deadline exceeded")
+    assert record.data["stage"] == "first_token"
+    assert {"scope", "agent_decision", "tool_agent", "prompt"} <= set(record.data["node_ms"])
+    assert record.data["tool_actions"][0]["action"] == "local_search"
+    assert "generation" in record.data["model_calls"]
+    assert "Ranni" not in json.dumps(record.data)
+
+
 async def test_rag_stream_decodes_fragmented_json_and_never_exposes_evidence_json():
     llm = FakeLLM()
     raw = json.dumps(llm.data, ensure_ascii=True)

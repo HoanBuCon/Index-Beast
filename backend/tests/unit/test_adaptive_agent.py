@@ -296,7 +296,8 @@ async def test_question_only_benchmark_can_search_again_and_select_later_web_evi
     p = await pipe.prepare(req(options={"web_search": "auto"}), [])
     assert len(pipe.retriever.calls) == 3
     assert [h.id for h in p.hits] == ["Ranni quest evidence"]
-    assert llm.observations[-1]["remaining_steps"] is None
+    # Web auto still has a step budget (CHAT_COVERAGE_STEPS); the planner sees how much is left.
+    assert llm.observations[-1]["remaining_steps"] == config.chat_coverage_steps - 5
     assert len(p.trace["model_calls"]) == 8 and p.trace["tool_stop"] == "finish"
 
 
