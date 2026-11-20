@@ -149,7 +149,7 @@ async def test_model_repairs_numeric_meaning_or_searches_verbatim(
     )
 
     def repair(payload):
-        assert payload["repair"]["reason"] == "changed_numeric_constraints"
+        assert payload["repair"]["reason"] == "unsupported_number"
         assert payload["working_state"]["request_text"] == original
         return {**bad, "resolved_question": corrected, "search_query": corrected} if repair_succeeds else bad
 
@@ -174,7 +174,7 @@ async def test_model_repairs_numeric_meaning_or_searches_verbatim(
         ({"resolved_question": "Where should I go from Cave of Knowledge?"}, "invalid_search_hypothesis"),
         (
             {"search_query": "Elden Ring tutorial route Cave of Knowledge at level 100 The First Step"},
-            "changed_numeric_constraints",
+            "unsupported_number",
         ),
     ],
 )

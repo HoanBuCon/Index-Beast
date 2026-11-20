@@ -69,6 +69,10 @@ async def test_numbered_item_shorthand_keeps_grounded_names_in_a_validated_fallb
     assert contains_entity(user, "Smithing Stone [4]")
     assert not contains_entity(user, "Somber Smithing Stone [4]")
     assert not contains_entity(user, "Smithing Stone [40]")
+    # No conjunction list: any short separator in any language joins numbered tiers.
+    for joined in ("Smithing Stone [3] or [4]", "Smithing Stone [3], [4]", "Smithing Stone [3] y [4]"):
+        assert contains_entity(joined, "Smithing Stone [4]")
+    assert not contains_entity("Smithing Stone [3] rồi đi tìm thêm [4]", "Smithing Stone [4]")
     model = plan(
         intent="acquisition",
         entities=["Claymore", "Smithing Stone [3]", "Smithing Stone [4]"],

@@ -270,7 +270,7 @@ async def run_tools(pipe, state):
             observations.append({"action": action, "status": "not_available_or_duplicate"})
             continue
         planned_text = "\n".join([step.query, *step.add_goals])
-        if contains_superseded(planned_text, inactive, comparison):
+        if contains_superseded(planned_text, inactive, comparison, profile.values()):
             row["status"] = "denied"
             if identity in stalled:
                 stop_reason = "repeated_action"
@@ -377,7 +377,7 @@ async def run_tools(pipe, state):
                         # The assessor (LLM) writes the follow-up search; no server-side query rewriting.
                         proposed = raw_query
                         if key("web_search", proposed) not in seen and not contains_superseded(
-                            proposed, inactive, comparison
+                            proposed, inactive, comparison, profile.values()
                         ):
                             followup = proposed
                     if followup:

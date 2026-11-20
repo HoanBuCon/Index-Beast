@@ -1,5 +1,7 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Chuyển rule con số cho Agent (20/11/2026)](2026-11-20_s4-tv3_agent-rule-con-so.md)
+
 - [TV3 · Gỡ chế độ chat `llm_only` (20/11/2026)](2026-11-20_s4-tv3_go-llm-only.md)
 
 - [TV4 · Làm mềm mép video đăng nhập (17/11/2026)](2026-11-17_s5-tv4_lam-mem-mep-video-dang-nhap.md)
