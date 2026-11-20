@@ -18,73 +18,55 @@ Web/Discord không phải đổi schema; nguồn/citation/image vẫn trong cont
 
 ## Sơ đồ triển khai
 
+Cập nhật 21/11/2026: chỉ còn một luồng RAG (đã gỡ rewrite, overview heuristic, `llm_only` và tính năng tránh spoiler).
+
 ```mermaid
 graph TD
     A["Chat JSON hoặc SSE"] --> B["API validation, guard, conversation routing, lock"]
-    B --> S["scope: mode, language, greeting, scope"]
-    S --> G["gameplay: pending reply hoặc task mới"]
-    G --> M["memory: chọn user turn liên quan trong conversation"]
-    M --> MR{"Cần RAG và chưa có câu trả lời tĩnh?"}
-    MR -->|"Không: chào hỏi, mơ hồ, clarification"| P["prompt"]
-    MR -->|"Có"| R["rewrite: resolve chủ thể, English search query"]
-    R --> RR{"Đã rõ chủ thể và trong phạm vi?"}
-    RR -->|"Chưa: hỏi lại hoặc từ chối"| P
-    RR -->|"Có"| L["retrieve: local hybrid RRF"]
-    L --> K["rerank và source supplements hiện có"]
-    K --> C["assess: policy off, auto, always"]
-    C --> WQ{"Cần web?"}
-    WQ -->|"off hoặc auto đủ bằng chứng"| X["context: admission, dedup, top-5, budget"]
-    WQ -->|"auto thiếu hoặc always"| W["web: Tavily Search và Extract có giới hạn"]
-    W --> X
+    B --> S["scope: mode, ngôn ngữ tạm, web policy"]
+    S --> M["memory: ứng viên user turn (RAM) hoặc semantic memory (PostgreSQL + Qdrant)"]
+    M --> D["agent_decision: Agent chọn intent, rewrite, memory, constraint, clarify/respond/refuse"]
+    D -->|"respond, clarify, refuse"| P["prompt"]
+    D -->|"retrieve"| T["tool_agent: Agent lặp chọn tool (local/web search, snapshot, inspect, calculator, clarify, finish)"]
+    T --> X["context: admission, dedup, top-5, budget"]
     X --> P
-    P --> E["generate: static, JSON hoặc stream thực"]
-    E --> V["validate: JSON, citation, quote, build rules"]
-    V --> VQ{"Kết quả và ngân sách?"}
-    VQ -->|"Lỗi protocol được phép sửa, chưa phát token, còn 1 lần"| F["repair: cùng câu hỏi và evidence, non-thinking"]
+    P --> E["generate: static, JSON hoặc stream (câu build được giữ tới khi kiểm xong)"]
+    E --> V["validate: JSON, citation, quote, URL; đếm đoạn không trích dẫn"]
+    V --> VQ{"Kết quả?"}
+    VQ -->|"Lỗi protocol được sửa, chưa phát token, còn 1 lần"| F["repair: cùng câu hỏi và evidence, non-thinking"]
     F --> E
-    VQ -->|"Thành công"| Z["finish generation graph"]
-    VQ -->|"Lỗi hệ thống hoặc hết lượt sửa"| ER["Lỗi có phân loại; không gửi done thành công"]
+    VQ -->|"Bảng chỉ số sai hoặc thiếu"| G["Answer Guard: một lượt LLM sửa bảng, kiểm lại"]
+    G --> Z["finish generation graph"]
+    VQ -->|"Thành công"| Z
+    VQ -->|"Sai lệch nguồn hoặc hết lượt sửa"| ER["Lỗi có phân loại; không gửi done thành công"]
     Z --> IM["Service: ảnh tùy chọn, lưu turn và working state"]
     IM --> OUT["JSON hoặc SSE sources, done"]
     IM -.-> NEXT["Người dùng trả lời clarification trong request mới"]
     NEXT -.-> A
 ```
 
-Các node `scope` đến `prompt` thuộc `ChatPipeline.prepare_graph`.
-`generate`, `validate`, `repair`, `finish` thuộc `Generator.graph`.
-Streaming giữ bộ giải mã và validator incremental trong node generate để kiểm tra trước khi phát phần cuối;
-node validate không gọi model hay chạy một lượt kiểm chứng ngữ nghĩa bổ sung.
+Các node `scope` đến `prompt` thuộc `ChatPipeline.prepare_graph`. `generate`, `validate`, `repair`, `finish`
+thuộc `Generator.graph`; Answer Guard chạy trong bước validate khi phát hiện lỗi trình bày của câu build.
 Auth, lock, optional images và commit ở service boundary, không giả chúng là graph node.
 
-## History được chọn thế nào
+## Ký ức được chọn thế nào
 
-1. Sau routing hiện có, lấy tối đa 64 message của conversation làm ứng viên, chưa cắt còn 8 message.
-2. Chỉ user turn được xét. Assistant turn vẫn xuất hiện trong lịch sử hiển thị, nhưng không làm ký ức để rewrite/generate.
-3. Câu hỏi tự đủ chủ thể hoặc thông báo đổi chủ đề: chọn 0 turn.
-4. Câu nói tiếp có nhãn chủ đề: tìm overlap từ khóa sau chuẩn hóa chữ/dấu. Có thể tìm chủ đề cũ hơn 8 message.
-5. Đại từ không nhãn chủ đề: dùng chủ thể rõ gần nhất; không nhảy về chủ đề cũ chỉ vì trùng một từ chung.
-6. Nhiều chủ thể cạnh tranh, không có anchor hoặc vượt budget: hỏi lại, không gọi model/retriever/web để đoán.
-7. Chọn anchor và các correction gần nhất của cùng task, dedup, tối đa `min(CHAT_HISTORY_MESSAGES, 3)`
-   user turn và tổng `CHAT_HISTORY_CHARS`; không cắt nửa turn.
-
-Trace `memory` có method, reason, số turn được chọn và provenance message/conversation ID, thời gian.
-Không ghi nội dung ký ức vào application logger. Những caller test trực tiếp không có ID thì provenance có thể rỗng.
-
-Đây là lexical recall với surface-name heuristic, **không dùng semantic embedding**.
-Tên viết thường hoàn toàn, nickname, paraphrase khác ngôn ngữ hoặc câu tiếp nối ngoài grammar có thể chưa nhận ra.
-Không có Recall/MRR thật được đo trong tác vụ này. Không dùng synthetic ranking để tuyên bố chất lượng embedding.
+- RAM (`CHAT_PERSISTENCE=memory`): Agent nhận tối đa hai user turn gần nhất làm ứng viên, tự quyết định có dùng không.
+- PostgreSQL: semantic memory trong collection Qdrant riêng đưa ra ứng viên; Agent chọn ID liên quan (`selected_memory_ids`).
+- Chỉ user turn làm ký ức; câu trả lời của assistant không bao giờ là bằng chứng.
+- Server chỉ kiểm provenance: constraint và tên riêng Agent dùng phải có trong lời người dùng.
 
 ## Ký ức khác bằng chứng
 
 | Thành phần | Được nhận gì | Vai trò |
 |---|---|---|
-| Rewrite trong RAG | Câu hiện tại + user turn đã chọn | Resolve intent/chủ thể, giữ tên/số/phủ định/goal |
-| Local retriever và Tavily | Search query đã resolve | Tìm evidence mới theo policy |
-| Evidence assessor | Search query + context local, history rỗng | Kiểm mức đáp ứng của evidence |
+| Agent decision | Câu hiện tại, ứng viên ký ức, working state | Hiểu yêu cầu, quyết định viết lại câu hỏi, hỏi lại |
+| Tool Agent | Câu đã resolve, profile người chơi, observation | Chọn tool, tìm evidence, gọi calculator |
+| Evidence assessor | Câu hỏi + context, history rỗng | Kiểm mức đáp ứng của evidence (web `auto`) |
 | RAG generator | Câu đã resolve + numbered evidence, history rỗng | Trả lời và trích dẫn |
+| Answer Guard | Câu trả lời + lỗi bảng chỉ số | Sửa bảng, không thêm dữ kiện hay nguồn |
 
-Memory không biến thành Hit, Document hoặc source index; assistant từng nói sai không thể tự chứng minh
-đáp án mới. Rewrite lỗi với câu tiếp nối sẽ hỏi lại. Câu độc lập rewrite lỗi vẫn fallback nguyên câu theo policy cũ.
+Memory không biến thành Hit, Document hoặc source index; assistant từng nói sai không thể tự chứng minh đáp án mới.
 Ngôn ngữ trả lời độc lập query retrieval; history không được phép đổi tiếng Việt thành trả lời tiếng Anh.
 
 ## Working state, lưu trữ và quyền truy cập
@@ -120,7 +102,8 @@ không làm chat tự lưu PostgreSQL. Không có migration hoặc collection me
 - Giới hạn recursion prepare/generation là 24/12; không gắn RetryPolicy tự lặp tool.
 - Một queue bounded và acknowledgement nối graph với SSE: consumer nhận tiếp thì provider mới tiếp tục.
   Hủy stream sẽ cancel và await tác vụ graph/provider. Sau token hiển thị không chạy lại generation.
-- `CHAT_TIMEOUT_SECONDS` bao gồm chờ lock, preparation/generation/repair và ảnh; SSE tiếp tục dùng deadline
+- `CHAT_TIMEOUT_SECONDS` (45 giây, JSON/Discord) và `CHAT_STREAM_TIMEOUT_SECONDS` (90 giây, web SSE) bao gồm chờ lock,
+  preparation (tối đa `CHAT_PREPARE_TIMEOUT_SECONDS`), generation/repair/Answer Guard và ảnh; SSE tiếp tục dùng deadline
   của cùng lượt sau token đầu. Timeout/lỗi không lưu turn thành công hoặc gửi `done`.
 - Không tìm thấy evidence bình thường trả câu trả lời thiếu thông tin, không mặc định 502.
   Output vẫn sai sau budget hoặc dịch vụ thật lỗi vẫn có thể trả lỗi HTTP đúng loại.

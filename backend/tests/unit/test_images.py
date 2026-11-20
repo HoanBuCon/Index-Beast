@@ -107,15 +107,15 @@ def media(tmp_path):
 
 
 async def test_exact_provenance_cited_only_dedup_and_limit(media):
-    result = await media.catalog.resolve(media.hits, [2, 4], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [2, 4])
     assert [x.id for x in result.images] == [media.rows[1]["image_id"], media.rows[3]["image_id"]]
     assert result.images[0].source_indices == [2] and result.images[0].attribution == "Artist"
     assert result.images[0].license is None and result.images[0].license_status == "unknown_review_required"
     assert result.images[0].url.startswith("/api/v1/images/") and "Producer" not in result.images[0].model_dump_json()
-    result = await media.catalog.resolve(media.hits, [1, 2, 3, 4, 5], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1, 2, 3, 4, 5])
     assert len(result.images) == 3 and result.reasons["image_limit"] == 2
     duplicated = [media.hits[0], replace(media.hits[0], id="other-hit")]
-    result = await media.catalog.resolve(duplicated, [1, 2], spoilers=True)
+    result = await media.catalog.resolve(duplicated, [1, 2])
     assert len(result.images) == 1 and result.images[0].source_indices == [1, 2]
 
 
@@ -131,7 +131,7 @@ async def test_exact_provenance_cited_only_dedup_and_limit(media):
 async def test_ui_decorations_are_not_served_even_with_exact_section_provenance(media, field, value):
     media.rows[0][field] = value
     media.write()
-    result = await media.catalog.resolve(media.hits, [1, 2], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1, 2])
     assert [image.id for image in result.images] == [media.rows[1]["image_id"]]
     assert media.catalog.counts["ui_image_excluded"] == 1
     assert media.catalog.read_blob(media.rows[0]["image_id"])[1] == "unknown_image"
@@ -141,7 +141,7 @@ async def test_ui_decorations_are_not_served_even_with_exact_section_provenance(
 async def test_content_icons_remain_eligible(media, name):
     media.rows[0]["alt"] = name
     media.write()
-    result = await media.catalog.resolve(media.hits, [1], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1])
     assert [image.id for image in result.images] == [media.rows[0]["image_id"]]
 
 
@@ -162,16 +162,13 @@ async def test_never_borrows_same_hash_from_wrong_provenance(media, change):
         p["image_association"] = "page"
     else:
         p["image_ids"] = [media.rows[1]["image_id"]]
-    assert (await media.catalog.resolve(media.hits, [1], spoilers=True)).images == []
+    assert (await media.catalog.resolve(media.hits, [1])).images == []
 
 
-async def test_spoilers_unknown_never_inferred_safe(media):
-    media.hits[0].payload["spoiler_level"] = 0
-    assert not (await media.catalog.resolve(media.hits, [1], spoilers=False)).images
-    media.rows[0]["spoiler_level"] = "0"
-    media.write()
-    media.catalog = ImageCatalog(media.settings)
-    assert len((await media.catalog.resolve(media.hits, [1], spoilers=False)).images) == 1
+async def test_image_selection_ignores_spoiler_labels(media):
+    # Spoiler filtering was removed: an unknown or non-zero spoiler label no longer hides an image.
+    media.hits[0].payload["spoiler_level"] = 2
+    assert len((await media.catalog.resolve(media.hits, [1])).images) == 1
 
 
 @pytest.mark.parametrize("change", ["excluded_ui", "review", "failed", "gallery", "traversal", "encoded", "svg"])
@@ -191,7 +188,7 @@ async def test_bad_rows_are_not_servable_or_selected(media, change):
     else:
         row["local_path"] = str(media.paths[0].with_suffix(".svg"))
     media.write()
-    assert not (await media.catalog.resolve(media.hits, [1], spoilers=True)).images
+    assert not (await media.catalog.resolve(media.hits, [1])).images
     assert media.catalog.read_blob(row["image_id"])[0] is None
 
 
@@ -322,8 +319,8 @@ async def test_catalog_is_lazy_cached_and_has_no_model_or_network_clients(media,
     monkeypatch.setattr(Path, "open", opened)
     catalog = ImageCatalog(media.settings)
     assert not scans
-    assert len((await catalog.resolve(media.hits, [1], spoilers=True)).images) == 1
-    assert len((await catalog.resolve(media.hits, [1], spoilers=True)).images) == 1
+    assert len((await catalog.resolve(media.hits, [1])).images) == 1
+    assert len((await catalog.resolve(media.hits, [1])).images) == 1
     assert len(scans) == 1
 
 
@@ -364,7 +361,7 @@ async def test_wrong_revision_manifest_does_not_invent_attribution(media):
     doc = json.loads(path.read_text())
     doc["revision_id"] = 999
     path.write_text(json.dumps(doc), encoding="utf-8")
-    result = await media.catalog.resolve(media.hits, [1], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1])
     assert result.images[0].attribution is None and result.images[0].license_status == "unknown_review_required"
 
 
@@ -374,7 +371,7 @@ async def test_same_blob_does_not_merge_release_contexts(media):
     media.docs[1]["release_scope"] = "sote_candidate"
     media.hits[1].payload.update(image_ids=[shared], release_scope="sote_candidate")
     media.write()
-    result = await media.catalog.resolve(media.hits, [1, 2], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1, 2])
     assert len(result.images) == 1 and result.images[0].source_indices == [1]
     assert result.images[0].release_scope == "unknown" and result.reasons["dedup_scope_conflict"] == 1
 
@@ -387,7 +384,7 @@ async def test_images_can_be_disabled_without_opening_any_artifacts(media, monke
         pytest.fail("I/O for disabled image feature")
 
     monkeypatch.setattr(Path, "open", forbidden)
-    assert (await catalog.resolve(media.hits, [1], spoilers=True)).images == []
+    assert (await catalog.resolve(media.hits, [1])).images == []
     assert catalog.read_blob(media.rows[0]["image_id"])[0] is None
 
 

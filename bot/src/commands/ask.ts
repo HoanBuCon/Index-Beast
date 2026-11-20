@@ -61,7 +61,7 @@ export function createAskCommand(
               interaction.user.id,
             ),
             ...(interaction.guildId ? { guild_id: interaction.guildId } : {}),
-            options: { lang: "auto", spoilers: true, web_search: "auto" },
+            options: { lang: "auto", web_search: "auto" },
           },
           chat ?? createApiClient(undefined, { requestId }).chat,
         );

@@ -235,9 +235,9 @@ async def test_pilot_index_retrieve_context_share_policy_ids_and_provenance():
         assert "review_status" not in retrieved.payload
         assert retrieved.payload["custom"] == original["custom"]
         assert document_to_hit(hit_to_document(retrieved)) == retrieved
-        safe = await HybridRetriever(SyntheticEncoder(), store).retrieve("Ranni", spoilers=False)
-        assert [h.id for h in safe] == [str(chunks[1].point_uuid)]
-        assert len(select_context(hits, 5, 12000, policy=PILOT, spoilers=False)) == 1
+        # Spoiler filtering was removed: a labelled spoiler chunk is retrieved like any other.
+        everything = await HybridRetriever(SyntheticEncoder(), store).retrieve("Ranni")
+        assert {h.id for h in everything} == {str(c.point_uuid) for c in chunks}
         with pytest.raises(ValueError):
             await index_chunks([ChunkRecord.model_validate(record(3, lang="ja"))], SyntheticEncoder(), store, 1)
     finally:
@@ -280,8 +280,8 @@ async def test_retrieval_diagnostic_is_read_only_and_closes_client(monkeypatch, 
     monkeypatch.setattr("scripts.check_retrieval.AsyncQdrantClient", lambda **_: client)
     monkeypatch.setattr("scripts.check_retrieval.FastEmbedEncoder", lambda *_, **__: SyntheticEncoder())
 
-    async def retrieve(self, query, *, spoilers):
-        assert self.store.policy == PILOT and query == "Ranni" and spoilers
+    async def retrieve(self, query):
+        assert self.store.policy == PILOT and query == "Ranni"
         if fail:
             raise UnavailableError("unavailable")
         return [Hit("point", 0.1, record())]
@@ -289,9 +289,9 @@ async def test_retrieval_diagnostic_is_read_only_and_closes_client(monkeypatch, 
     monkeypatch.setattr(HybridRetriever, "retrieve", retrieve)
     if fail:
         with pytest.raises(UnavailableError):
-            await check_retrieval(Settings(_env_file=None), "Ranni", limit=5, spoilers=True)
+            await check_retrieval(Settings(_env_file=None), "Ranni", limit=5)
     else:
-        result = await check_retrieval(Settings(_env_file=None), "Ranni", limit=5, spoilers=True)
+        result = await check_retrieval(Settings(_env_file=None), "Ranni", limit=5)
         assert result["hits"][0]["point_id"] == "point"
         assert result["hits"][0]["release_scope"] == "unknown"
         assert result["hits"][0]["review_status"] is None

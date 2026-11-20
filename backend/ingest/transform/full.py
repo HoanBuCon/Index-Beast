@@ -316,7 +316,8 @@ def run(run_dir, output, limit=None, *, gameplay=False, structured_tables=False,
 
     checks = {}
     for name, records in expected.items():
-        headers = list(records[0]) if name == "images.csv" else HEADERS
+        # A run without image occurrences (e.g. an update batch with media off) has no images.csv columns.
+        headers = (list(records[0]) if records else []) if name == "images.csv" else HEADERS
         csv_write(output / name, headers, records)
         with (output / name).open(encoding="utf-8-sig", newline="") as stream:
             actual = list(csv.DictReader(stream))

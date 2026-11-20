@@ -420,11 +420,6 @@
             "title": "Lang",
             "type": "string"
           },
-          "spoilers": {
-            "default": true,
-            "title": "Spoilers",
-            "type": "boolean"
-          },
           "web_search": {
             "anyOf": [
               {
@@ -529,8 +524,7 @@
           "options": {
             "$ref": "#/components/schemas/ChatOptions",
             "default": {
-              "lang": "auto",
-              "spoilers": true
+              "lang": "auto"
             }
           },
           "turn_id": {

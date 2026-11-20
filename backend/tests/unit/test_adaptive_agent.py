@@ -265,7 +265,10 @@ async def test_invalid_tool_output_gets_retried_within_existing_step_budget():
     llm = ToolsLLM([{"invalid": True}, step("local_search", "Ranni"), step("finish", evidence_ids=["1"])])
     pipe = ChatPipeline(settings(), llm, FakeRetriever())
     p = await pipe.prepare(req(), [])
-    assert llm.observations[1]["observations"] == [{"status": "invalid_tool_output"}]
+    (seen,) = llm.observations[1]["observations"]
+    # The planner learns which fields were wrong (names and types only, never its own output).
+    assert seen["status"] == "invalid_tool_output" and seen["error"]["kind"] == "schema"
+    assert {"field": "invalid", "type": "extra_forbidden"} in seen["error"]["fields"]
     assert len(llm.observations) == 3 and [h.id for h in p.hits] == ["1"]
 
 
@@ -296,7 +299,8 @@ async def test_question_only_benchmark_can_search_again_and_select_later_web_evi
     p = await pipe.prepare(req(options={"web_search": "auto"}), [])
     assert len(pipe.retriever.calls) == 3
     assert [h.id for h in p.hits] == ["Ranni quest evidence"]
-    assert llm.observations[-1]["remaining_steps"] is None
+    # Web auto still has a step budget (CHAT_COVERAGE_STEPS); the planner sees how much is left.
+    assert llm.observations[-1]["remaining_steps"] == config.chat_coverage_steps - 5
     assert len(p.trace["model_calls"]) == 8 and p.trace["tool_stop"] == "finish"
 
 

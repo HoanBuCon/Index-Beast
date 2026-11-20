@@ -29,6 +29,26 @@ from core.errors import BadRequestError, NotFoundError, TimeoutAppError, Unautho
 ChatEvents = AsyncIterator[tuple[str, BaseModel]]
 
 
+def log_deadline(stage: str, trace: dict, started: float, limit: float) -> None:
+    """Which step consumed a timed-out turn. Step names and timings only: no prompts, queries or answers."""
+    data = {
+        "stage": stage,
+        "limit_s": limit,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+        "current_node": trace.get("current_node"),
+        "node_ms": trace.get("node_ms"),
+        "tool_step_running": trace.get("tool_step_running"),
+        "tool_actions": [
+            {k: row.get(k) for k in ("action", "status", "decision_ms", "elapsed_ms")}
+            for row in trace.get("tool_actions", [])
+        ],
+        "model_calls": [call.get("phase") for call in trace.get("model_calls", [])],
+        "agent_repairs": (trace.get("agent") or {}).get("repair_attempts"),
+        "generation_retries": trace.get("generation_retries"),
+    }
+    logging.getLogger(__name__).warning("Chat deadline exceeded", extra={"data": data})
+
+
 class ManagedEvents:
     """Can close a primed provider even if the SSE consumer never starts iterating."""
 
@@ -262,13 +282,14 @@ class LiveChatService:
             for msg in state.conversation.messages[-64:]
         ]
 
-    async def _images(self, req, prepared, result, started=None) -> list[ChatImage]:
+    async def _images(self, req, prepared, result, started=None, limit=None) -> list[ChatImage]:
         if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
             return []
         try:
             from app.services.answer_media import resolve
 
-            remaining = self.pipeline.settings.chat_timeout_seconds - (time.perf_counter() - started) if started else 7
+            limit = limit or self.pipeline.settings.chat_timeout_seconds
+            remaining = limit - (time.perf_counter() - started) if started else 7
             if remaining <= 1:
                 prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
                 return []
@@ -280,8 +301,10 @@ class LiveChatService:
             logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
             return []
 
-    async def _prepare(self, req, state, started=None):
+    async def _prepare(self, req, state, started=None, trace=None):
         kwargs = {"player": state.player, "started": started}
+        if trace is not None:
+            kwargs["trace"] = trace
         if self.repository is not None:
             kwargs["memory_scope"] = MemoryScope(state.conversation.id, state.owner)
         prepared = await self.pipeline.prepare(req, self._history_for(state), **kwargs)
@@ -374,25 +397,35 @@ class LiveChatService:
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
         started = time.perf_counter()
+        limit = self.pipeline.settings.chat_timeout_seconds
+        trace, stage = {}, "wait_conversation"
         try:
             # Hạn tổng cho cả chờ khóa, LLM (kể cả retry) và ảnh: bot bỏ cuộc ở 60 s, backend phải dừng trước
-            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
+            async with asyncio.timeout(limit):
                 state = await self._load_state(req)
                 async with state.lock:
                     await self._refresh(state, req)
                     if replay := await self._replay(req, state, started):
                         return replay
-                    prepared, player = await self._prepare(req, state, started)
+                    stage = "prepare"
+                    prepared, player = await self._prepare(req, state, started, trace)
+                    stage = "generate"
                     result = await self.pipeline.generator.generate(prepared)
+                    stage = "images_and_save"
                     images = await self._images(req, prepared, result, started)
                     return await self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
+            log_deadline(stage, trace, started, limit)
             raise TimeoutAppError() from None
 
     async def open_stream(self, req: ChatRequest) -> ChatEvents:
         """Prepare and prime provider BEFORE sending HTTP headers, then stream actual deltas."""
         started = time.perf_counter()
-        deadline = asyncio.get_running_loop().time() + self.pipeline.settings.chat_timeout_seconds
+        settings = self.pipeline.settings
+        # Web has no 60 s client limit like the bot: give it a longer whole-turn deadline (first token included).
+        limit = settings.chat_stream_timeout_seconds if req.channel == "web" else settings.chat_timeout_seconds
+        deadline = asyncio.get_running_loop().time() + limit
+        trace, stage = {}, "wait_conversation"
         owns_lock = False
         tokens = None
         try:
@@ -413,7 +446,9 @@ class LiveChatService:
                     tokens = replay_tokens()
                     first = await anext(tokens)
                 else:
-                    prepared, player = await self._prepare(req, state, started)
+                    stage = "prepare"
+                    prepared, player = await self._prepare(req, state, started, trace)
+                    stage = "first_token"
                     tokens = self.pipeline.generator.stream(prepared)
                     first = await anext(tokens)
         except BaseException as exc:
@@ -424,6 +459,7 @@ class LiveChatService:
                 if owns_lock:
                     state.lock.release()
             if isinstance(exc, TimeoutError):
+                log_deadline(stage, trace, started, limit)
                 raise TimeoutAppError() from None
             raise
 
@@ -446,7 +482,7 @@ class LiveChatService:
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
-                    images = await self._images(req, prepared, result, started)
+                    images = await self._images(req, prepared, result, started, limit)
                     response = replay or await self._save(req, state, prepared, result, started, images, player)
                     yield (
                         "sources",
@@ -456,6 +492,7 @@ class LiveChatService:
                     )
                     yield "done", DoneEvent.model_validate(response, from_attributes=True)
             except TimeoutError:
+                log_deadline("stream", prepared.trace, started, limit)
                 raise TimeoutAppError() from None
             finally:
                 await cleanup()

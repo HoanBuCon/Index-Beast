@@ -100,9 +100,15 @@ Return only constraints relevant to this task. Do not retain superseded values.
 For retrieve, produce resolved_question fully specifying the request, and search_query suitable for retrieval.
 resolved_question must be a standalone English question, preserving the user's request and conditions.
 Prefer a concise standalone ENGLISH search_query for an English corpus, especially for Vietnamese questions.
-Keep proper names, every current number, negation, conditions, requested release/patch and PvE/PvP goal.
-Keep the role and unit of each number. Translate a number written in words into English words, such as
-"tám chỉ số" to "eight attributes" or "ba boss" to "three bosses". Keep explicit digits as supplied.
+Keep proper names, negation, conditions, requested release/patch and PvE/PvP goal.
+You decide which user numbers each query needs. Keep a number that changes the request (target level,
+patch, upgrade, quest milestone); you may omit one that does not help search, such as the count in
+"chia 8 chỉ số". Every digit you write in resolved_question or search_query must be one the user
+supplied: never compute, round or invent a number. Keep the role and unit of each number you keep.
+Translate a number written in words into English words, such as "tám chỉ số" to "eight attributes"
+or "ba boss" to "three bosses". Record each number that is a player condition in constraints.
+If a number equal to a replaced value is also a current condition (level 90 was replaced, but the user
+still asks about attack power 90), list it in constraints so it is not treated as the old value.
 Keep the user's literal wording in constraints. If a quantity is ambiguous, ask about its meaning or
 provide a conditional route. When repairing a decision, re-read both user turns and correct its meaning
 before returning a new decision. Keep the original wording if a rewrite would introduce an unsupported number.

@@ -56,9 +56,46 @@ def test_comparison_and_other_numeric_units_remain_available():
     d = correction("Compare Reduvia level 70 and 90", intent="gameplay_comparison")
     d["entities"] = ["Reduvia"]
     check_decision(AgentDecision.model_validate(d), "So sánh level 70 và 90", [], working)
+    # No unit table tells "attack power 90" from the old "level 90": the Agent marks the current number.
     d = correction("Reduvia level 70 attack power 90", condition("level", "70"))
     d["entities"] = ["Reduvia"]
+    with pytest.raises(DecisionError, match="superseded"):
+        check_decision(AgentDecision.model_validate(d), "level 70, attack power 90", [], working)
+    d["constraints"].append(condition("attack_power", "90"))
     check_decision(AgentDecision.model_validate(d), "level 70, attack power 90", [], working)
+
+
+@pytest.mark.parametrize(
+    ("query", "constraints"),
+    [
+        ("Strength PvE build level 125", [condition("level", "125")]),
+        ("Strength PvE build", []),
+    ],
+)
+def test_agent_may_omit_a_user_number_from_the_query(query, constraints):
+    """Regression for "chia 8 chỉ số": a count the Agent leaves out of the search is not a changed constraint."""
+    question = "Build Strength to cho PvE ở level 125, chia 8 chỉ số giúp mình."
+    d = plan(intent="build", entities=["Strength"], resolved_question=query, search_query=query)
+    d["constraints"] = constraints
+    check_decision(AgentDecision.model_validate(d), question, [], {})
+
+
+@pytest.mark.parametrize("query", ["Strength PvE build level 150", "Strength PvE build level 125 with 80 Vigor"])
+def test_numbers_written_by_the_agent_need_user_provenance(query):
+    question = "Build Strength to cho PvE ở level 125, chia 8 chỉ số giúp mình."
+    d = plan(intent="build", entities=["Strength"], resolved_question=query, search_query=query)
+    with pytest.raises(DecisionError) as error:
+        check_decision(AgentDecision.model_validate(d), question, [], {})
+    assert error.value.reason == "unsupported_number"
+
+
+def test_language_neutral_numeric_alternatives_still_catch_a_replaced_value():
+    working = {"request_text": "Reduvia level 90", "constraints": [condition("level", "90", "request")]}
+    for query in ("Reduvia level 70 hoặc 90", "Reduvia level 70 / lv. 90", "Reduvia cấp 70 o 90"):
+        d = correction(query, condition("level", "70"))
+        d["entities"] = ["Reduvia"]
+        with pytest.raises(DecisionError, match="superseded"):
+            check_decision(AgentDecision.model_validate(d), "đổi sang 70", [], working)
 
 
 def test_correction_can_name_the_mode_it_replaces():

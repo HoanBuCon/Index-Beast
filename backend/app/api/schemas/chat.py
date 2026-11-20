@@ -9,21 +9,16 @@ Phụ trách: TV1 · [S2] API contract v1
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, PrivateAttr, StringConstraints, field_validator
+from pydantic import BaseModel, Field, PrivateAttr, StringConstraints
 
 MAX_MESSAGE_CHARS = 2000
 
 
 class ChatOptions(BaseModel):
-    spoilers: bool = True
+    # The legacy `spoilers` option was removed (20/11/2026): IndexBeast answers like a wiki. Unknown fields are
+    # ignored, so an older client that still sends it keeps working.
     lang: Literal["auto", "vi", "en"] = "auto"
     web_search: Literal["off", "auto", "always"] | None = None
-
-    @field_validator("spoilers")
-    @classmethod
-    def allow_spoilers(cls, _: bool) -> bool:
-        # Keep accepting the legacy option; chat always permits game spoilers.
-        return True
 
 
 class ChatRequest(BaseModel):

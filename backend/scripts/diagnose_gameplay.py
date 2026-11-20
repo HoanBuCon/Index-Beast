@@ -262,7 +262,7 @@ async def execute(args, manifest, cases):
                     body = {
                         "message": case["question"],
                         "channel": case["channel"],
-                        "options": {"lang": case["lang"], "spoilers": True, "web_search": case["mode"]},
+                        "options": {"lang": case["lang"], "web_search": case["mode"]},
                     }
                     prior = groups.get(case["group"])
                     if prior:

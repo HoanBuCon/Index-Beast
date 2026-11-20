@@ -95,7 +95,7 @@ export function createMessageHandler(deps: MessageHandlerDeps = {}) {
           channel: "discord",
           external_ref: externalRef(message.channelId, isThread, message.author.id),
           guild_id: message.guildId,
-          options: { lang: "auto", spoilers: true, web_search: "auto" },
+          options: { lang: "auto", web_search: "auto" },
         },
         deps.chat ?? createApiClient(undefined, { requestId }).chat,
       );

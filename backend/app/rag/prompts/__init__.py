@@ -16,7 +16,7 @@ def generation_prompt() -> ChatPromptTemplate:
     # Values containing JSON/braces are inserted once, never re-parsed as templates.
     return ChatPromptTemplate.from_messages(
         [
-            ("system", "{persona}\nLanguage: {lang}. Spoilers allowed: {spoilers}.\n{policy}"),
+            ("system", "{persona}\nLanguage: {lang}.\n{policy}"),
             MessagesPlaceholder("history"),
             ("human", "{payload}"),
         ]

@@ -31,19 +31,17 @@ Xem [contract, kiểm kê rule và lệnh benchmark](../../../docs/api/evidence-
 Nhánh compatibility cũ vẫn tồn tại; validation số học/citation không phải human review hay chứng minh entailment.
 
 
-## Bounded tool agent — 06/11/2026
+## Tool Agent — cập nhật 21/11/2026
 
-Khi `CHAT_AGENT_ENABLED=true`, default `CHAT_TOOL_AGENT_ENABLED=true` bổ sung vòng model chọn tool theo observation,
-không đi theo thứ tự local→assess→web cứng. Xem [kiểm kê, cấu hình và CLI](../../../docs/api/bounded-tool-agent.md).
-Legacy và workflow agent cũ được giữ cho compatibility, không bị xóa trước khi caller/test đã migrate.
+Chỉ còn một luồng RAG: đã gỡ `CHAT_AGENT_ENABLED`, `CHAT_TOOL_AGENT_ENABLED`, nhánh legacy/workflow và `llm_only`.
+DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification trong một decision call; sau đó Tool Agent
+lặp chọn tool theo observation. Xem [kiểm kê và CLI](../../../docs/api/bounded-tool-agent.md) và
+[handover build, guard, thời gian](../../../docs/handover/2026-11-21_s5-tv3_build-guard-va-thoi-gian.md).
+Server giữ schema/provenance, quyền truy cập, deadline/budget và citation; calculator chỉ phân bổ chỉ số tham khảo.
 [Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
 không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
 
-## Bản tiếp theo 06/11/2026: model decisions và semantic memory PostgreSQL
-
-`CHAT_AGENT_ENABLED=true` mặc định cho RAG: DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification
-trong một decision call. Đường agent không dùng regex gameplay/lexical history làm bộ quyết định chính.
-Server giữ schema/provenance, quyền truy cập, deadline/budget, citation và calculator.
+## Semantic memory PostgreSQL — 06/11/2026
 
 Đã có code lưu conversation/working state trong PostgreSQL và dense semantic memory ở collection Qdrant riêng.
 Default persistence vẫn `memory` để không tự migrate môi trường cũ; muốn lưu bền cần setup migration 0002,
@@ -239,8 +237,8 @@ Supported source types: `in_game_text`, `wiki_prose`, `speculation`. Nhãn unkno
 không được chọn, không sửa nhãn. Ngôn ngữ mặc định `en`; có thể chọn `en,ja` hoặc tập tường minh khác.
 `unknown` chỉ được chọn nếu chủ động chỉ định chính nhãn đó, không bao giờ đổi thành `en`.
 
-Chat web/Discord luôn cho phép spoiler. Trường `options.spoilers` vẫn được nhận để tương thích với client cũ.
-Lọc `spoiler_level=0` vẫn áp dụng cho truy vấn vector trực tiếp nếu bật chế độ kiểm spoiler.
+Không còn tính năng tránh spoiler (bỏ 20/11/2026): chat trả lời như wiki. Trường `options.spoilers` đã bị xóa khỏi API; client cũ gửi kèm vẫn được chấp nhận vì trường lạ bị bỏ qua.
+`spoiler_level` chỉ còn là metadata của chunk (công cụ đánh giá dữ liệu `ingest.debug.s4_wiki_eval` vẫn tự lọc theo nó).
 
 ## Cấu hình
 
@@ -258,9 +256,9 @@ collection hiện có. CLI override không sửa `.env`; index/retrieval/API c�
 Docker Compose đã truyền hai biến mới; đổi env cần recreate service API.
 
 Biến giữ nguyên: `RAG_PREFETCH=30`, `RAG_TOP_K=5`, `RAG_CONTEXT_CHARS=12000`,
-`RAG_REWRITE_ENABLED=false`, `RAG_MODELS_DIR=models/fastembed`, `RAG_BATCH_SIZE=32`,
+`RAG_MODELS_DIR=models/fastembed`, `RAG_BATCH_SIZE=32`,
 `CHAT_HISTORY_MESSAGES=8`, `CHAT_HISTORY_CHARS=8000` và cấu hình `LLM_*`/DeepSeek hiện có.
-Model lấy từ Settings, không thay tên model theo ví dụ. Rewrite bật sẽ thêm lượt gọi model thật.
+Model lấy từ Settings, không thay tên model theo ví dụ. Không còn biến rewrite: Agent tự viết query.
 `RAG_ENCODER_THREADS=2` là mặc định code (giới hạn 1–32); máy thử dùng 4 thread, batch 8 và cache
 `models/notebook-fastembed`. `RAG_THINKING_ENABLED=false` mặc định; máy thử bật `true` sau khi phát hiện
 non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi các lượt Agent/Tool Agent hay dev test.
@@ -327,9 +325,9 @@ có thể tải model nếu cache thiếu. Lượt tích hợp đã kiểm retri
 ```
 
 Diagnostic dùng HybridRetriever, in point/artifact ID, score, nguồn, release/lang/review và excerpt.
-Không gọi DeepSeek hoặc ghi index. Thêm `--no-spoilers` để kiểm hành vi nhãn an toàn; thiếu nhãn sẽ không được lấy.
+Không gọi DeepSeek hoặc ghi index.
 RRF score không phải xác suất đáp án đúng; chưa chốt threshold hoặc benchmark reranker.
-Nếu không có kết quả, kiểm collection, policy stamp, ngôn ngữ, spoiler và corpus trước khi kết luận model lỗi.
+Nếu không có kết quả, kiểm collection, policy stamp, ngôn ngữ và corpus trước khi kết luận model lỗi.
 
 ## Tự bật API RAG — có gọi DeepSeek và dùng credits
 
@@ -348,7 +346,7 @@ Swagger ở `/api/docs`, thử `POST /api/v1/chat` hoặc `/api/v1/chat/stream`:
 {
   "message": "Ranni là ai? Nêu rõ nếu dùng thông tin từ bản mở rộng.",
   "channel": "web",
-  "options": {"lang": "vi", "spoilers": true}
+  "options": {"lang": "vi"}
 }
 ```
 
@@ -399,33 +397,14 @@ History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa
 
 ## Kiểm thử và phần cần đồng bộ riêng
 
-### Câu hỏi tổng quan / danh sách
+### Câu hỏi tổng quan, danh sách và query VI → EN
 
-`RAG_OVERVIEW_ENABLED=true` mặc định nhận diện các yêu cầu VI/EN như “các boss trong elden ring”,
-“các loại vũ khí”, “những kiểu build”, “tổng quan cốt truyện” hoặc “Elden Ring là gì?”.
-Topic rõ ràng không bắt buộc phải có tên một nhân vật/vật phẩm; câu có tên riêng hoặc đại từ chưa rõ giữ luồng cũ.
-Đây là heuristic, không phải NER hoặc bộ phân loại ngữ nghĩa tổng quát.
-
-Nhánh overview bỏ qua paid rewrite, thêm English search cues kèm nguyên query/điều kiện gốc;
-tối đa 2 query trong budget retrieval hiện có, fusion RRF và context tối đa 5. Ưu tiên title trang tổng quan,
-section Introduction/Overview/List/Types/Categories và xen kẽ section/source; không gọi đây là semantic reranker.
-Không tạo kiến thức taxonomy từ query cues. Prompt yêu cầu dùng grouping/ví dụ có evidence, trả phần hữu ích
-khi nguồn chưa đầy đủ, không tuyên bố danh sách exhaustive hoặc số liệu current-patch nếu nguồn không xác lập.
-
-Không cần reindex hoặc sửa .env thật để dùng default. Đặt flag false rồi restart để tắt.
-Benchmark VI–EN có ghi flag overview và tính thêm query này trong upper bound; khi muốn cô lập tác dụng rewrite,
-tự tắt overview trong phiên benchmark. Xem [hướng dẫn và kiểm chứng](../../../docs/testing/2026-10-31_overview-routing.md).
-
-### Query VI → EN và chế độ dual
-
-Rewrite vẫn tắt mặc định, không tự sửa `.env`. Khi bật, `RAG_QUERY_MODE=rewrite` dùng một query English đã validate;
-`dual` tìm thêm query gốc nếu khác, tối đa hai query. Giữ ngôn ngữ answer từ request, không lấy lang từ rewrite.
-Fallback về câu gốc khi rewrite lỗi/mất constraint; tham chiếu mơ hồ không có history thì hỏi lại.
-Dual gộp rank bằng RRF, không cộng score native; exact content dedup giữ provenance/release/conditions/images khác nhau.
-Mỗi query lấy tối đa rag_prefetch, context vẫn top-5; một query lỗi có thể dùng query kia, tất cả lỗi vẫn unavailable.
-Budget mới: rewrite 8 giây/512 token, retrieval 20 giây chia đều theo số query, chỉnh bằng biến server.
-Không thêm model reranker, tăng temperature hoặc bật fallback kiến thức ngoài corpus.
-Xem [cấu hình, giới hạn và lệnh benchmark VI–EN](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md).
+Cập nhật 21/11/2026: đã gỡ heuristic `RAG_OVERVIEW_ENABLED` và các biến `RAG_REWRITE_*`, `RAG_QUERY_MODE`.
+Agent decision tự nhận ra câu tổng quan và tự viết query tìm kiếm (thường bằng English, giữ tên riêng và điều kiện gốc).
+Tool Agent có thể gọi `local_search` nhiều lần với query khác nhau trong giới hạn `CHAT_COVERAGE_STEPS`/`CHAT_COVERAGE_MAX_CALLS`.
+Ngôn ngữ trả lời vẫn lấy từ request, không lấy từ query. Context vẫn top-5 sau dedup; không tạo kiến thức taxonomy từ query.
+Tài liệu [overview routing](../../../docs/testing/2026-10-31_overview-routing.md) và
+[VI–EN retrieval](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md) chỉ còn giá trị lịch sử.
 
 Nếu DeepSeek trả HTTP 200 nhưng chat báo 502, kiểm tra log `Generation failed`,
 `Citation index mismatch` và `RAG validation failed` theo request_id.

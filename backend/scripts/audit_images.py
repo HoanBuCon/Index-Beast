@@ -50,7 +50,7 @@ async def audit(sample_size):
         candidates = [r for r in chunks if r["title"] == title and r["lang"] == "en" and r.get("image_ids")]
         chosen = next((r for r in candidates if r["section"] == "Infobox"), candidates[0])
         hit = Hit(chosen["chunk_id"], 0.0, chosen)
-        result = await catalog.resolve([hit], [1], spoilers=True)
+        result = await catalog.resolve([hit], [1])
         cases.append(
             {
                 "title": title,

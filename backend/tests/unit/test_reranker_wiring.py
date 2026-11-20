@@ -31,7 +31,7 @@ class Store(QdrantStore):
     async def ready(self):
         pass
 
-    async def search(self, vector, *, limit, spoilers):
+    async def search(self, vector, *, limit):
         return [hit(1), hit(2)]
 
 
@@ -47,7 +47,7 @@ class ReverseReranker:
 async def test_reranker_is_used_by_retrieval_and_copied_tool_settings():
     reranker = ReverseReranker()
     retriever = HybridRetriever(Encoder(), Store(), reranker=reranker)
-    documents = await retriever.model_copy(update={"spoilers": False}).ainvoke("Ranni parents")
+    documents = await retriever.ainvoke("Ranni parents")
     result = [document_to_hit(d) for d in documents]
     assert [h.id for h in result] == ["2", "1"]
     assert reranker.queries == ["Ranni parents"]

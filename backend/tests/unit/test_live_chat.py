@@ -433,6 +433,55 @@ def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(se
         assert not live.traces
 
 
+class SlowStreamLLM(FakeLLM):
+    """A slow first token, like a thinking model that buffers before the first cited clause."""
+
+    async def stream(self, messages, **kwargs):
+        await asyncio.sleep(0.3)
+        async for token in super().stream(messages, **kwargs):
+            yield token
+
+
+@pytest.mark.parametrize("channel", ["web", "discord"])
+async def test_web_stream_has_its_own_longer_deadline(channel):
+    from core.errors import TimeoutAppError
+
+    llm = SlowStreamLLM(tokens=rag_tokens())
+    live = service(
+        llm=llm,
+        retriever=FakeRetriever(),
+        chat_timeout_seconds=0.2,
+        chat_stream_timeout_seconds=5,
+        api_service_token="offline-token",
+    )
+    request = ChatRequest(
+        **{**BODY, "channel": channel, "external_ref": "discord:thread:9"} if channel == "discord" else BODY
+    )
+    if channel == "discord":
+        # Discord/JSON keep CHAT_TIMEOUT_SECONDS: the bot gives up at 60 s.
+        with pytest.raises(TimeoutAppError):
+            await live.open_stream(request)
+        return
+    async with aclosing(await live.open_stream(request)) as events:
+        frames = [frame async for frame in events]
+    assert frames[-1][0] == "done" and frames[-1][1].grounded is True
+
+
+async def test_timeout_logs_the_stage_and_step_timings_without_content(caplog):
+    from core.errors import TimeoutAppError
+
+    llm = SlowStreamLLM(tokens=rag_tokens())
+    live = service(llm=llm, retriever=FakeRetriever(), chat_timeout_seconds=0.2, chat_stream_timeout_seconds=0.2)
+    with pytest.raises(TimeoutAppError):
+        await live.open_stream(ChatRequest(**BODY))
+    record = next(r for r in caplog.records if r.getMessage() == "Chat deadline exceeded")
+    assert record.data["stage"] == "first_token"
+    assert {"scope", "agent_decision", "tool_agent", "prompt"} <= set(record.data["node_ms"])
+    assert record.data["tool_actions"][0]["action"] == "local_search"
+    assert "generation" in record.data["model_calls"]
+    assert "Ranni" not in json.dumps(record.data)
+
+
 async def test_rag_stream_decodes_fragmented_json_and_never_exposes_evidence_json():
     llm = FakeLLM()
     raw = json.dumps(llm.data, ensure_ascii=True)
@@ -478,6 +527,16 @@ def test_json_stream_unicode_and_split_escape_boundaries():
     decoded = [answer_prefix(raw[:i]) for i in range(1, len(raw) + 1)]
     assert decoded[-1] == 'Tiếng Việt: "Ranni"\nCô ấy.'
     assert all(decoded[i].startswith(decoded[i - 1]) for i in range(1, len(decoded)))
+
+
+def test_unused_evidence_is_dropped_but_a_citation_still_needs_evidence():
+    # Live 20/11 (quest Millicent): one spare evidence item failed a complete answer after streaming.
+    prepared = Prepared("rag", "vi", [], hits=[hit(), hit(2)])
+    spare = [{"index": 1, "quote": "Ranni is an Empyrean"}, {"index": 2, "quote": "Ranni is an Empyrean"}]
+    result = validate_answer(prepared, {"answer": "Ranni [1].", "evidence": spare, "insufficient": False})
+    assert [s.index for s in result.sources] == [1] and prepared.trace["dropped_unused_evidence"] == [2]
+    with pytest.raises(UpstreamError):
+        validate_answer(prepared, {"answer": "Ranni [1][2].", "evidence": spare[:1], "insufficient": False})
 
 
 def test_sources_without_explicit_evidence_do_not_imply_grounding():
@@ -736,7 +795,7 @@ async def test_citation_protocol_errors_are_regenerated_once(invalid, reason):
     assert trace["generation_retry_reason"] == reason and "validation_failure" not in trace
 
 
-async def test_uncited_paragraphs_are_dropped_without_another_llm_call(caplog):
+async def test_uncited_paragraphs_are_kept_and_only_counted(caplog):
     data = {
         "answer": "Mở đầu không có nguồn.\n\nRanni [1].\n\nprivate kết luận không có nguồn.",
         "evidence": [{"index": 1, "quote_id": "q0"}],
@@ -747,8 +806,9 @@ async def test_uncited_paragraphs_are_dropped_without_another_llm_call(caplog):
     live = service("rag", llm, FakeRetriever())
     result = await live.answer(ChatRequest(**BODY))
     assert result.grounded and llm.attempts == 1
-    assert result.answer == "Ranni [1].\n\n" + data["limitation"]
-    assert live.traces[result.message_id]["dropped_uncited_paragraphs"] == 2
+    # Policy 20/11/2026: no truncated answers; uncited paragraphs stay and are only counted.
+    assert result.answer == data["answer"] + "\n\n" + data["limitation"]
+    assert live.traces[result.message_id]["uncited_paragraphs"] == 2
     assert "private kết luận" not in caplog.text
 
 
@@ -785,7 +845,7 @@ async def test_structured_markdown_preserves_headings_and_citations_in_json_and_
     assert [source.index for source in response.sources] == [1]
 
 
-async def test_stream_holds_uncited_intro_and_preserves_cited_steps():
+async def test_stream_shows_uncited_intro_and_cited_steps():
     steps = "### Các bước\n\n\n1. Gặp Ranni [1].\n2. Hỏi Blaidd [1]."
     data = {
         "answer": "Mở đầu chưa được trích dẫn.\n\n" + steps + "\n\nKết luận chưa được trích dẫn.",
@@ -796,7 +856,7 @@ async def test_stream_holds_uncited_intro_and_preserves_cited_steps():
     live = service("rag", llm, FakeRetriever())
     async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
         frames = [frame async for frame in events]
-    assert "".join(payload.token for name, payload in frames if name == "token") == steps
+    assert "".join(payload.token for name, payload in frames if name == "token") == data["answer"]
     assert frames[-1][0] == "done"
 
 
@@ -1057,10 +1117,12 @@ def test_partial_answers_do_not_relax_existing_evidence_validation(updates):
         validate_answer(Prepared("rag", "en", [], hits=[build_source()]), {**partial_build(), **updates})
 
 
-def test_uncited_gameplay_fact_is_never_shown():
+def test_uncited_paragraph_is_kept_and_counted():
     data = {**partial_build(), "answer": "Supported [1].\n\nAn uncited gameplay fact."}
-    result = validate_answer(Prepared("rag", "en", [], hits=[build_source()]), data)
-    assert result.grounded and "uncited gameplay fact" not in result.answer
+    prepared = Prepared("rag", "en", [], hits=[build_source()])
+    result = validate_answer(prepared, data)
+    assert result.grounded and "uncited gameplay fact" in result.answer
+    assert prepared.trace["uncited_paragraphs"] == 1
 
 
 def test_invalid_limitation_stream_is_error_without_success_done(client):

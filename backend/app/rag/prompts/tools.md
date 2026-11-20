@@ -47,23 +47,29 @@ finish means evidence supports answering; stop means no useful supported next st
 facts require evidence. For general playing tactics or trade-offs, collect mechanics that matter and let
 generation propose the approach. A new search is not proof of correctness.
 off forbids web. always requires web for a game request before finishing; never search social/cancel/refused turns.
-Choose at most 5 snapshot IDs (including the four accounting rules when needed).
-Snapshot IDs must be from the catalog, selected for relevance, not by a fixed weapon list.
-calculator only validates a proposed eight-attribute allocation against supplied checked rules/profile;
-it is not an AR/DPS/optimal-build solver. Do not ask it to invent player constraints.
-calculator always needs build_data from opened sources; there is no built-in class/weapon table.
-When the user asks how to allocate stats and the level is known, call calculator before finish. If no weapon
-was named, first search for equipment fitting the requested style (e.g. Dexterity, Faith, bleed) and pick ONE
-with sourced requirements; it is a suggestion, not a player fact. Open its requirements, the level accounting
-and cap sources (and the Wretch row of a class table when using the default class), then call calculator.
-attribute_offset value is positive (79) with label "minus"; NUMBER.label is the exact header next to the value. Without a checked result the answer
-can give only qualitative stat priorities.
+Choose at most 5 snapshot IDs, selected for relevance, not by a fixed weapon list.
+A build is an eight-attribute point allocation only: never damage, AR, DPS or optimality.
+calculator checks a proposed allocation. build_rules (shown when the level is known) already gives the
+target attribute_total and attribute_cap from a sourced rule: do NOT search for level accounting or caps.
+Class floors come from the origin's page in the local corpus: search its Infobox (the user's starting_class,
+or default_class Wretch when none was named, e.g. query "Wretch Infobox starting attributes") and quote its
+Level and all eight attributes in build_data.starting_class. If the user named a weapon, catalyst or seal,
+quote its minimum requirements in build_data.requirements; if none was named, you may pick ONE fitting the
+requested style and quote its requirements (a suggestion, not a player fact). Both parts are optional: when a
+source is not found within budget, still call calculator without it and the answer labels what was not
+checked. Call calculator before finish, early enough to fix one rejection. Do not add up the eight numbers
+yourself: give targets only for the attributes you care about (e.g. vigor, endurance, the weapon requirements)
+and set fill to the ONE attribute that takes the rest (usually the main stat); unset attributes stay at their
+class floor and the calculator computes fill exactly (fill needs the quoted class Infobox; without it give all
+eight numbers). In build_data.starting_class, name is a plain string such as "Wretch" (or omit it). Keep targets >= the quoted class floor and <= attribute_cap,
+meet every quoted requirement, and spend points only on attributes the requested style uses. A rejection lists
+exactly what to fix. Once calculator is no longer in available_actions, do not request it again; finish.
 For comparisons, find complementary evidence for each requested option under common conditions.
 Use class profiles or starting equipment tables for class comparisons. A published ranking is unnecessary.
 Use clarify with reason=player_detail only when the user's answer would materially change the advice
 or resolve the subject. Ask one natural question and list the essential missing fields. Do not repeat
 known details. Missing game evidence, invalid model output and tool errors are not player details.
-Return JSON only: action, query (string, empty if unused), evidence_ids (array of candidate IDs), snapshot_ids (array), allocation (object), build_data (object, empty if unused),
+Return JSON only: action, query (string, empty if unused), evidence_ids (array of candidate IDs), snapshot_ids (array), allocation (object), fill (attribute name or ""), build_data (object, empty if unused),
 question (string, empty if unused), missing (array of {key,label,input_type:"text",options:[]}),
 add_goals (array of strings), completed_goals (object mapping goal IDs to evidence ID arrays),
 reopen_goals (array of goal IDs),
@@ -85,26 +91,21 @@ choose stop with evidence_ids=[]. Use finish when there is evidence for a full o
 If qualitative gameplay advice is enough, do not use extra searches solely to find a published
 recommendation. Obtain inputs for exact game values and checked allocations before proposing them.
 
-For calculator supply build_data for ANY weapon, catalyst or seal (no fixed list), using only supplied sources:
-{weapon,usage:"one_handed_no_bonuses",requirements:{attribute:NUMBER},attribute_cap:NUMBER,
- attribute_offset:NUMBER (the level accounting rule, e.g. label "minus" value 79: total = level + offset)}.
-Every class shares that accounting; a class only sets starting floors. Do not ask for or require a class.
-When the user confirmed a starting class, or to state class floors when none was given (default: Wretch,
-level 1 with every attribute 10, taken from a fetched class table), ALSO add all of: starting_class, starting_level:NUMBER,
- base:{vigor,mind,endurance,strength,dexterity,intelligence,faith,arcane each NUMBER},points_per_level:NUMBER,
- class_floor_rule:{source_id:candidateID,quote_id:"q0 or supplied qN",quote:"verbatim class floor/respec rule"}.
-Each NUMBER is {value:integer,source_id:candidateID,quote_id:"q0 or supplied qN",label:"exact header/label in quote"}.
-Preserve full table headers and conditions. Fetch missing weapon/level/class rules using local/web tools; never invent numbers,
-use an unrelated patch, or equate an incomplete table with complete requirements. If missing, do not call calculator.
-allocation has eight integer attributes. Prefer feasible suggestions, not promises of optimality. Use user's confirmed profile.
-When checked_build exists, finish with evidence_ids including all its sources. Generator receives the verified artifact.
+calculator input: allocation {some of vigor,mind,endurance,strength,dexterity,intelligence,faith,arcane: integers},
+fill (one attribute name, takes the remainder; empty only when all eight are given) and
+build_data {weapon (optional), requirements (optional) {attribute: NUMBER},
+ starting_class (optional) {name, level: NUMBER, base: {all eight attributes: NUMBER}}} for ANY weapon, catalyst
+or seal and ANY origin. Each NUMBER is {value:integer,source_id:candidateID,quote_id:"q0 or supplied qN",
+label:"exact header/label in quote"}. Never invent a value, use an unrelated patch, or treat an incomplete table
+as complete; omit it instead. Do not ask for or require a class: it only sets floors and defaults to Wretch.
+Use the user's confirmed profile. When checked_build exists, finish with evidence_ids including its sources.
 
 NUMBER.label must bind directly to its number (e.g. Vigor: 15) or an exact aligned Markdown table header,
-not merely appear elsewhere in a quote. For class tables (only with a confirmed class) select the row containing that class.
+not merely appear elsewhere in a quote. For requirements the attribute key itself is checked:
+the quote must pair THAT attribute (full name or abbreviation such as Int, Fth, Str Req) with the number,
+e.g. "Int: 36" or the Intelligence row "Intelligence: | 28 |" under a Required column.
 Use cached_build_data only after opening the matching original snapshots. Revalidate its facts.
-Before calculator open the weapon requirements and the level accounting/cap sources (plus class table and respec rule only with a confirmed class).
 
 The catalog lists titles, not the data. Fetch with source_snapshot; snapshot_ids on a calculator call
-do not fetch anything. Use evidence_details to bind numeric inputs to exact quote IDs and headers.
-When no checked_build exists, do not emit a guessed allocation. Use the remaining web_search when local
-results lack complete numerical inputs; do not repeatedly call calculator with unsupported data.
+do not fetch anything. Use evidence_details to bind requirement numbers to exact quote IDs and headers.
+Only the calculator's checked artifact shows an allocation; after a rejection, fix the listed numbers once.

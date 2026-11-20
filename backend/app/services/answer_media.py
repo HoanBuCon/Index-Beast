@@ -186,7 +186,7 @@ def candidates(catalog, hits, sources):
 async def resolve(service, req, prepared, answer):
     catalog, pipe = service.image_catalog, service.pipeline
     # Without known spoiler metadata, do not attach web/page-wide image candidates.
-    if not req.options.spoilers or not catalog.enabled:
+    if not catalog.enabled:
         return []
     pool = await asyncio.to_thread(candidates, catalog, prepared.hits, answer.sources)
     if not pool or (

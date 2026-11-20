@@ -254,6 +254,52 @@ async def test_unknown_calculator_is_not_exposed_without_sources():
     assert p.trace["tool_actions"][0]["status"] == "denied"
 
 
+async def test_web_auto_coverage_still_has_a_step_budget():
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    llm = ToolsLLM([step("local_search", f"Ranni clue {i}") for i in range(5)])
+    pipe = pipeline(llm, tavily_api_key="offline-test-key", chat_coverage_steps=2)
+    pipe.web_search = FakeSearch(rows=[web_hit()])
+    p = await pipe.prepare(req(options={"web_search": "auto"}), [])
+    assert len(p.trace["tool_actions"]) == 2 and p.trace["tool_stop"] == "step_budget"
+    assert llm.observations[-1]["remaining_steps"] == 1
+    assert all("decision_ms" in row for row in p.trace["tool_actions"])
+
+
+async def test_calculator_is_withdrawn_after_repeated_failures():
+    level = {"key": "level", "value": "110", "source_id": "current"}
+    decision = plan(
+        intent="build",
+        entities=[],
+        constraints=[level],
+        resolved_question="Faith build level 110",
+        search_query="Faith build level 110",
+    )
+    llm = ToolsLLM(
+        [
+            step("local_search", "Faith build"),
+            step("calculator", build_data={"broken": 1}),
+            step("calculator", build_data={"broken": 2}),
+            step("finish"),
+        ],
+        [decision],
+    )
+    p = await pipeline(llm, chat_tool_steps=4, chat_agent_max_calls=8).prepare(req("Faith build level 110"), [])
+    statuses = [row["status"] for row in p.trace["tool_actions"] if row["action"] == "calculator"]
+    assert statuses == ["error", "error"]
+    assert "calculator" in llm.observations[2]["available_actions"]
+    assert "calculator" not in llm.observations[3]["available_actions"]
+    # The writer learns the true reason (unverified sources), not a guessed "missing class".
+    check = {"status": "failed", "failed_attempts": 2, "class_given": False, "weapon_given": False}
+    assert p.trace["build_check"] == check
+    assert json.loads(p.values["payload"])["build_check"] == check
+
+
+async def test_build_check_is_absent_when_no_allocation_was_possible():
+    p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish")])).prepare(req(), [])
+    assert "build_check" not in p.trace and "build_check" not in json.loads(p.values["payload"])
+
+
 def test_benchmark_plan_has_no_client_or_model(monkeypatch, capsys):
     from scripts.benchmark_agent import main
 
@@ -377,3 +423,24 @@ async def test_selected_original_web_id_is_not_lost_by_duplicate_merging():
     p = await pipe.prepare(req(options={"web_search": "always"}), [])
     assert [h.id for h in p.hits] == [second.id]
     assert p.hits[0].payload == second.payload
+
+
+async def test_malformed_tool_steps_are_explained_and_answered_from_evidence():
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    bad = {"action": "local_search", "query": "Ranni", "reason": "not-a-reason"}
+    llm = ToolsLLM([step("local_search", "Ranni identity"), bad, bad])
+    pipe = pipeline(llm, tavily_api_key="offline-test-key")
+    pipe.web_search = FakeSearch(rows=[web_hit()])
+    p = await pipe.prepare(req(options={"web_search": "auto"}), [])
+    # Web auto used to raise a 502 on the second malformed step; with evidence it now answers.
+    assert p.trace["tool_stop"] == "invalid_tool_output" and p.hits
+    issue = llm.observations[2]["observations"][-1]["error"]
+    assert issue["kind"] == "schema" and issue["fields"][0]["field"] == "reason"
+
+
+async def test_a_withdrawn_tool_requested_twice_ends_the_loop():
+    llm = ToolsLLM([step("local_search", "Ranni"), step("calculator"), step("calculator", allocation={"vigor": 1})])
+    p = await pipeline(llm, chat_tool_steps=4).prepare(req(), [])
+    assert p.trace["tool_stop"] == "repeated_unavailable_action"
+    assert llm.observations[2]["observations"][-1]["status"] == "not_available"

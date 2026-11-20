@@ -13,11 +13,18 @@ def folded(text: str) -> str:
     return " ".join(re.sub(r"[^\w\s]", " ", "".join(c for c in text if not unicodedata.combining(c))).split())
 
 
+_NUMBER_TOKEN = r"(?<!\w)[+-]?\d+(?:[.,]\d+)*(?!\w)"
+
+
+def numbers_in(text: str) -> list[str]:
+    """Numeric literals as written (level, stat, upgrade, patch); no unit or meaning is inferred."""
+    return re.findall(_NUMBER_TOKEN, text)
+
+
 def preserves_numbers(question: str, query: str) -> bool:
-    """Every numeric literal of the first text (level, stat, upgrade, patch) remains in the second."""
-    pattern = r"(?<!\w)[+-]?\d+(?:[.,]\d+)*(?!\w)"
-    expected = Counter(re.findall(pattern, question))
-    actual = Counter(re.findall(pattern, query))
+    """Every numeric literal of the first text remains in the second."""
+    expected = Counter(numbers_in(question))
+    actual = Counter(numbers_in(query))
     return all(actual[number] >= count for number, count in expected.items())
 
 

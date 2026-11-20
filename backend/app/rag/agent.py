@@ -12,7 +12,7 @@ from pydantic_core import PydanticCustomError
 
 from app.adapters.llm import LLMError
 from app.api.schemas.chat import ClarificationField
-from app.rag.matching import contains_name, contains_text, name_key, preserves_numbers
+from app.rag.matching import contains_name, contains_text, name_key, numbers_in
 from app.rag.output import OutputFormatError, decode_output
 from app.rag.prompts import prompt, rewrite_prompt
 from core.errors import UnavailableError, UpstreamError
@@ -178,7 +178,6 @@ def inactive_conditions(decision: AgentDecision, working: dict, changes: list[Co
 
 
 _NUMBER = r"[+-]?\d+(?:[.,]\d+)*"
-_CONDITION_UNITS = {"level": r"level|lv\.?|cấp", "patch": r"patch|version|phiên bản|bản vá"}
 _NUMBERED_NAME = re.compile(r"(.+?)\s+(\[\d+\])")
 
 
@@ -189,31 +188,28 @@ def contains_entity(text: str, name: str) -> bool:
     if not numbered:
         return False
     base, tier = map(name_key, numbered.groups())
-    # Shared name with numbered variants, e.g. "Smithing Stone [3] và [4]".
-    lists = re.findall(
-        rf"(?<!\w){re.escape(base)}\s+(\[\d+\](?:\s*(?:,|/|\band\b|\bor\b|\bvà\b|\bhoặc\b)\s*\[\d+\])+)",
-        name_key(text),
-    )
+    # Shared name with numbered variants, e.g. "Smithing Stone [3] và [4]". Any short separator
+    # (comma, slash or a conjunction in any language) joins the tiers; no word list decides it.
+    lists = re.findall(rf"(?<!\w){re.escape(base)}\s+(\[\d+\](?:[^\[\]\n]{{1,8}}\[\d+\])+)", name_key(text))
     return any(tier in re.findall(r"\[\d+\]", values) for values in lists)
 
 
-def contains_superseded(text: str, inactive: list[dict], comparison: str = "") -> bool:
+def contains_superseded(text: str, inactive: list[dict], comparison: str = "", active=()) -> bool:
+    """True if text revives a replaced/removed user value.
+
+    A name matches by surface. A numeric value has no reliable unit in free text ("level 90" vs
+    "attack power 90"), so it is stale only when the Agent did not mark that number again as an
+    active condition (`active`: current constraint/profile values) and it is not a compared option.
+    """
+    active_numbers = set(numbers_in("\n".join(active)))
     for item in inactive:
         old = item["value"]
         if contains_name(comparison, old):
             continue
-        if re.fullmatch(_NUMBER, old) and (unit := _CONDITION_UNITS.get(item["key"])):
-            # The number after "or" shares the unit of the first value.
-            alternatives = re.findall(
-                rf"\b(?:{unit})\s*[:=]?\s*({_NUMBER}(?!\w|[.,]\d)(?:\s*(?:/|,|or\b|and\b|hoặc\b|và\b)\s*{_NUMBER}(?!\w|[.,]\d))*)",
-                text,
-                re.I,
-            )
-            if any(preserves_numbers(old, part) for part in alternatives):
+        if re.fullmatch(_NUMBER, old):
+            if old in numbers_in(text) and old not in active_numbers:
                 return True
-            continue
-        matches = preserves_numbers(old, text) if re.fullmatch(_NUMBER, old) else contains_name(text, old)
-        if matches:
+        elif contains_name(text, old):
             return True
     return False
 
@@ -277,7 +273,8 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
     context = question + "\n" + "\n".join(row["text"] for row in selected)
     context += "\n" + request_text
     context += "\n" + "\n".join(c.value for c in decision.constraints)
-    if contains_superseded("\n".join([*decision.entities, *decision.subgoals]), inactive, comparison):
+    active = [c.value for c in decision.constraints]
+    if contains_superseded("\n".join([*decision.entities, *decision.subgoals]), inactive, comparison, active):
         raise DecisionError("superseded_constraint", "Remove superseded conditions from entities and goals")
     if unknown := next((name for name in decision.entities if not contains_entity(context, name)), None):
         raise DecisionError(
@@ -299,22 +296,22 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
         queries = {"resolved_question": decision.resolved_question}
         if decision.rewrite:
             queries["search_query"] = decision.search_query
-        numeric_question = question
-        for item in inactive:
-            if re.fullmatch(_NUMBER, item["value"]) and not contains_name(comparison, item["value"]):
-                old = re.escape(item["value"])
-                numeric_question = re.sub(rf"(?<![\w.,]){old}(?!\w|[.,]\d)", " ", numeric_question)
+        # The Agent decides which user numbers a query needs; dropping one is allowed. Only the
+        # provenance of the numbers it writes is checked: each must come from the user's own text.
+        supplied = set(numbers_in(context))
         for field, query in queries.items():
-            if contains_superseded(query, inactive, comparison):
+            if contains_superseded(query, inactive, comparison, active):
                 raise DecisionError(
                     "superseded_constraint",
                     f"Remove superseded values from {field}, including mentions such as 'instead of X' or 'from X'. "
-                    "Describe only the current task. Keep old values in superseded_constraints only.",
+                    "Describe only the current task. Keep old values in superseded_constraints only. "
+                    "If the same number is also a current condition, list it in constraints.",
                 )
-            if not preserves_numbers(numeric_question, query) or not preserves_numbers(query, context):
+            if unsupported := [n for n in numbers_in(query) if n not in supplied]:
                 raise DecisionError(
-                    "changed_numeric_constraints",
-                    "Keep supplied digits. Translate number words as words and keep their original meaning.",
+                    "unsupported_number",
+                    f"{field} contains numbers the user did not supply: {unsupported[:3]}. Use only the user's "
+                    "digits; write a number the user wrote in words as words, or omit it.",
                 )
             for name in decision.entities:
                 if not contains_entity(query, name):
@@ -359,7 +356,7 @@ async def decide(
                         check_decision(decision, question, candidates, working)
                     except DecisionError as exc:
                         if decision.rewrite and (
-                            isinstance(exc, QueryNameMismatch) or exc.reason == "changed_numeric_constraints"
+                            isinstance(exc, QueryNameMismatch) or exc.reason == "unsupported_number"
                         ):
                             prior_request = (
                                 working.get("request_text", "") if decision.turn_type == "clarification_reply" else ""

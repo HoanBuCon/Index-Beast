@@ -135,7 +135,7 @@ async def rank(store, encoded, mode, limit):
     from core.types import Hit
 
     if mode == "hybrid":
-        return await store.search(encoded, limit=limit, spoilers=True)
+        return await store.search(encoded, limit=limit)
     vector = (
         encoded.dense if mode == "e5" else SparseVector(indices=encoded.sparse_indices, values=encoded.sparse_values)
     )
@@ -143,7 +143,7 @@ async def rank(store, encoded, mode, limit):
         store.collection,
         query=vector,
         using="dense" if mode == "e5" else "bm25",
-        query_filter=store.policy.query_filter(spoilers=True),
+        query_filter=store.policy.query_filter(),
         limit=limit,
         with_payload=True,
     )
@@ -246,7 +246,6 @@ async def answer_case(case, rewritten, row, settings, store, generator, llm, tav
         values={
             "persona": prompt("persona"),
             "lang": case["lang"],
-            "spoilers": True,
             "policy": prompt("answer"),
             "history": [],
             "payload": json.dumps(payload, ensure_ascii=False),

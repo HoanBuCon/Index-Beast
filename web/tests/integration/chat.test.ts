@@ -78,7 +78,7 @@ test("web integrates with TV1 mock through the Vite proxy", { timeout: 30000 }, 
     assert.equal(response.headers.get("X-Request-ID"), new Headers(init.headers).get("X-Request-ID"));
     return response;
   });
-  const request: ChatRequest = { message: "Ranni là ai?", channel: "web", options: { lang: "vi", spoilers: true } };
+  const request: ChatRequest = { message: "Ranni là ai?", channel: "web", options: { lang: "vi" } };
   const capabilities = await nativeFetch(`${origin}/api/v1/chat/capabilities`);
   assert.equal(capabilities.status, 200);
   assert.deepEqual(await capabilities.json(), {

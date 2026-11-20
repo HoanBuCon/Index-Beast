@@ -269,10 +269,10 @@ class ImageCatalog:
             pass
         return {}
 
-    async def resolve(self, hits, source_indices, *, spoilers):
-        return await asyncio.to_thread(self._resolve, hits, source_indices, spoilers)
+    async def resolve(self, hits, source_indices):
+        return await asyncio.to_thread(self._resolve, hits, source_indices)
 
-    def _resolve(self, hits, source_indices, spoilers):
+    def _resolve(self, hits, source_indices):
         if not self.enabled:
             return Resolution([], {"disabled": 1})
         self._load()
@@ -285,7 +285,7 @@ class ImageCatalog:
                 continue
             p = hits[index - 1].payload
             if (
-                self.policy.exclusion_reason(p, spoilers=spoilers)
+                self.policy.exclusion_reason(p)
                 or p.get("source") != "wikigg"
                 or p.get("image_association") != "section"
             ):
@@ -309,9 +309,6 @@ class ImageCatalog:
                 doc = row["document"]
                 if doc.get("game_scope") != p.get("game_scope") or doc.get("release_scope") != p.get("release_scope"):
                     reasons["scope_mismatch"] += 1
-                    continue
-                if not spoilers and row.get("spoiler_level") != "0":
-                    reasons["image_spoiler_unknown"] += 1
                     continue
                 if image_id in images:
                     if images[image_id].game_scope != p.get("game_scope") or images[image_id].release_scope != p.get(

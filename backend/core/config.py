@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = Field(default=10, ge=1, le=1000)  # mỗi IP (web) hoặc mỗi external_ref (bot)
     rate_limit_guild_per_minute: int = Field(default=30, ge=1, le=10000)  # mỗi server Discord (bot gửi guild_id)
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
+    # Hạn riêng của SSE web (tính cả chờ token đầu); web không có giới hạn 60 s như bot. JSON/Discord giữ 45 s.
+    chat_stream_timeout_seconds: float = Field(default=90, gt=0, le=300)
+    # Ngân sách chuẩn bị (Agent + công cụ) trong một lượt; phần còn lại dành cho sinh câu trả lời.
+    chat_prepare_timeout_seconds: float = Field(default=25, gt=0, le=120)
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "rag"] = "mock"
@@ -88,6 +92,10 @@ class Settings(BaseSettings):
     chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int | None = Field(default=6, ge=1, le=8)
+    # Web auto (kiểm độ phủ bằng chứng): vẫn giới hạn số bước công cụ và lượt gọi mô hình.
+    chat_coverage_steps: int = Field(default=6, ge=1, le=12)
+    chat_coverage_max_calls: int = Field(default=12, ge=2, le=24)
+    chat_calculator_max_failures: int = Field(default=2, ge=1, le=5)
     chat_persistence: Literal["memory", "postgres"] = "memory"
     chat_memory_collection: str = "conversation_memories"
     chat_memory_candidates: int = Field(default=6, ge=1, le=12)
@@ -181,6 +189,13 @@ class Settings(BaseSettings):
             and self.chat_mode == "rag"
             and self.tavily_api_key
             and self.tavily_api_key.get_secret_value().strip()
+        )
+
+    @property
+    def prepare_budget_seconds(self) -> float:
+        """Preparation never takes more than half of a short turn, so generation always keeps time."""
+        return min(
+            self.chat_prepare_timeout_seconds, max(self.chat_timeout_seconds / 2, self.chat_timeout_seconds - 20)
         )
 
     @property

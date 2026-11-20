@@ -58,7 +58,6 @@ class HybridRetriever(BaseRetriever):
     encoder: Any
     store: QdrantStore
     limit: int = 30
-    spoilers: bool = True
     reranker: Any = Field(default=None, exclude=True, repr=False)
     reranker_timeout_seconds: float = 0
     search_timeout_seconds: float = 20
@@ -73,12 +72,12 @@ class HybridRetriever(BaseRetriever):
     async def _aget_relevant_documents(self, query: str, *, run_manager) -> list[Document]:
         return [hit_to_document(h) for h in await self._search(query)]
 
-    async def retrieve(self, query: str, *, spoilers: bool = True) -> list[Hit]:
+    async def retrieve(self, query: str) -> list[Hit]:
         # Backward-compatible domain API; delegates to the same LangChain retriever.
         from langsmith import tracing_context
 
         with tracing_context(enabled=False):
-            docs = await self.model_copy(update={"spoilers": spoilers}).ainvoke(query)
+            docs = await self.ainvoke(query)
         return [document_to_hit(d) for d in docs]
 
     async def _search(self, query: str) -> list[Hit]:
@@ -87,7 +86,7 @@ class HybridRetriever(BaseRetriever):
             async with asyncio.timeout(self.search_timeout_seconds):
                 await self.store.ready()  # Check before any model load/download.
                 vectors = await self.encoder.encode([query], query=True)
-                hits = await self.store.search(vectors[0], limit=self.limit, spoilers=self.spoilers)
+                hits = await self.store.search(vectors[0], limit=self.limit)
             # Shared boundary for both the legacy graph and Tool Agent's direct ainvoke calls.
             # Keep the full candidate pool: the Agent still chooses the final evidence.
             return await rank_with_deadline(self.reranker, query, hits, self.rerank_deadline)

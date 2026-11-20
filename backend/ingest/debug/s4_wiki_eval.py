@@ -120,17 +120,25 @@ def verify_payload(directory, output):
             ]
             with_client.upsert(COLLECTION, points, wait=True)
         indexed = with_client.count(COLLECTION, count_filter=policy.query_filter(), exact=True).count
+        # Chat no longer filters spoilers (removed 20/11/2026); this data-quality probe keeps its own
+        # spoiler_level == 0 filter to check the labels written by the chunker.
+        spoiler_free = models.Filter(
+            must=[
+                *policy.query_filter().must,
+                models.FieldCondition(key="spoiler_level", range=models.Range(gte=0, lte=0)),
+            ]
+        )
         safe, offset = set(), None
         while True:
             hits, offset = with_client.scroll(
                 COLLECTION,
-                scroll_filter=policy.query_filter(spoilers=False),
+                scroll_filter=spoiler_free,
                 offset=offset,
                 limit=128,
                 with_vectors=False,
             )
             for point in hits:
-                if policy.exclusion_reason(point.payload, spoilers=False):
+                if policy.exclusion_reason(point.payload) or point.payload.get("spoiler_level") != 0:
                     raise ValueError("Unsafe point passed the payload filter")
                 safe.add(str(point.id))
             if offset is None:

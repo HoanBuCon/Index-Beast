@@ -12,7 +12,7 @@ const request = {
   conversation_id: null,
   message: "Godrick là ai?",
   channel: "web" as const,
-  options: { lang: "auto" as const, spoilers: true },
+  options: { lang: "auto" as const },
 };
 const response = {
   conversation_id: "11111111-1111-4111-8111-111111111111",
