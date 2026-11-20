@@ -68,7 +68,6 @@ async def test_agent_tool_observes_reranked_candidates():
     "mode,key,enabled",
     [
         ("mock", "dummy", True),
-        ("llm_only", "dummy", True),
         ("rag", "", True),
         ("rag", "dummy", False),
         ("rag", "dummy", True),

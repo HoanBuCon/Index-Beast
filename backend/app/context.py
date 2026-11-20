@@ -70,8 +70,8 @@ def register_infra(ctx: AppContext) -> None:
         if not await ctx.redis.ping():
             raise ConnectionError("redis ping returned false")
 
-    # llm_only chat never constructs a Qdrant client. Keep the existing /health
-    # contract: an explicit infrastructure probe may lazily create its own client.
+    # A context without a Qdrant client (e.g. test fakes) still honours the /health
+    # contract: the explicit infrastructure probe lazily creates its own client.
     health_qdrant = ctx.qdrant
 
     async def check_qdrant() -> None:
@@ -101,15 +101,7 @@ def build_context(settings: Settings) -> AppContext:
         settings=settings,
         engine=engine,
         sessionmaker=create_sessionmaker(engine),
-        qdrant=(
-            AsyncQdrantClient(
-                url=settings.qdrant_url,
-                timeout=max(1, round(timeout)),
-                check_compatibility=False,
-            )
-            if settings.chat_mode != "llm_only"
-            else None
-        ),  # /health có thể tự tạo client probe riêng; llm_only chat không khởi tạo client
+        qdrant=AsyncQdrantClient(url=settings.qdrant_url, timeout=max(1, round(timeout)), check_compatibility=False),
         redis=Redis.from_url(
             settings.redis_url, decode_responses=True, socket_timeout=timeout, socket_connect_timeout=timeout
         ),

@@ -162,7 +162,7 @@ hoặc walkthrough toàn diện. Collection hiện tại dùng tiếp, không c�
 
 ## Trạng thái và luồng xử lý
 
-- `CHAT_MODE=mock` vẫn là mặc định. `llm_only` dùng ChatDeepSeek, không tạo encoder/retriever/reranker/Qdrant client cho chat.
+- `CHAT_MODE=mock` vẫn là mặc định; chế độ còn lại duy nhất là `rag`. Mode `llm_only` (gọi ChatDeepSeek không truy xuất) đã bị gỡ.
 - `rag` dùng LangGraph điều phối, LCEL prompt/model, async BaseRetriever/Document,
   E5 ONNX + BM25, Qdrant RRF và context tối đa 5 chunk.
 - Lượt triển khai đầu chỉ kiểm offline. Sau đó người dùng cho phép sửa `.env`, chạy embedding/index và DeepSeek thật.
@@ -263,7 +263,7 @@ Biến giữ nguyên: `RAG_PREFETCH=30`, `RAG_TOP_K=5`, `RAG_CONTEXT_CHARS=12000
 Model lấy từ Settings, không thay tên model theo ví dụ. Rewrite bật sẽ thêm lượt gọi model thật.
 `RAG_ENCODER_THREADS=2` là mặc định code (giới hạn 1–32); máy thử dùng 4 thread, batch 8 và cache
 `models/notebook-fastembed`. `RAG_THINKING_ENABLED=false` mặc định; máy thử bật `true` sau khi phát hiện
-non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi llm_only/dev test.
+non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi các lượt Agent/Tool Agent hay dev test.
 Thinking có thể tăng token/độ trễ; private reasoning không được gửi qua chat/SSE hoặc lưu báo cáo.
 Lượt kiểm thử cuối dùng `LLM_MAX_TOKENS=4096`; budget ảnh hưởng cả chi phí và khả năng hoàn tất JSON.
 
@@ -308,7 +308,7 @@ Từ gốc repo có thể bật Qdrant: `docker compose up -d --wait qdrant`. Sa
 Model FastEmbed: `intfloat/multilingual-e5-small`, ONNX mean pooling/normalization, dense 384 cosine;
 sparse `Qdrant/bm25`, IDF; Qdrant fusion RRF. Không có splitter mới hoặc embedding ảnh.
 Encoder thêm prefix đúng một lần, kiểm tokenizer thật trước inference; load/inference trong thread với
-lock bảo vệ tái sử dụng/cancellation. Không load model lúc import, mock hoặc llm_only.
+lock bảo vệ tái sử dụng/cancellation. Không load model lúc import hoặc ở mode mock.
 
 Preflight toàn file xong trước client/model. Batch upsert dùng ID ổn định; chạy lại cùng input không tăng
 số point. Kiểm schema và payload indexes, không drop/recreate collection không tương thích.
@@ -331,7 +331,7 @@ Không gọi DeepSeek hoặc ghi index. Thêm `--no-spoilers` để kiểm hành
 RRF score không phải xác suất đáp án đúng; chưa chốt threshold hoặc benchmark reranker.
 Nếu không có kết quả, kiểm collection, policy stamp, ngôn ngữ, spoiler và corpus trước khi kết luận model lỗi.
 
-## Tự bật API RAG / llm_only — có gọi DeepSeek và dùng credits
+## Tự bật API RAG — có gọi DeepSeek và dùng credits
 
 Sau khi index và kiểm retrieval, tự đặt `CHAT_MODE=rag` trong `.env` rồi restart API.
 Giữ `RAG_CORPUS_POLICY=pilot`, `RAG_LANGUAGES=en`, `RAG_COLLECTION=lore_pilot_v1` cho ví dụ trên.
@@ -352,10 +352,9 @@ Swagger ở `/api/docs`, thử `POST /api/v1/chat` hoặc `/api/v1/chat/stream`:
 }
 ```
 
-Nếu chưa muốn index, dùng `CHAT_MODE=llm_only` với key DeepSeek Platform hiện có. Mode này không retrieval,
-`sources=[]`, `grounded=false`, có nhãn chưa đối chiếu corpus. Không fallback giữa mode hoặc sang mock khi lỗi.
-App vẫn có health probes PostgreSQL/Redis/Qdrant; `/health` có thể 503 khi chúng tắt. Riêng llm_only chat
-không tạo Qdrant client; chỉ explicit health probe mới tạo client riêng, tái sử dụng và đóng lúc shutdown.
+Chưa index thì dùng `CHAT_MODE=mock` để thử giao diện; không còn mode gọi LLM mà không truy xuất.
+Không fallback giữa mode hoặc sang mock khi lỗi. App có health probes PostgreSQL/Redis/Qdrant;
+`/health` có thể 503 khi chúng tắt. Health probe Qdrant dùng lại client của app và đóng lúc shutdown.
 
 ## ID, context và contract ứng dụng
 
@@ -380,8 +379,9 @@ Không dùng history làm evidence.
 Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; rewrite JSON có Pydantic validation/fallback câu gốc;
 NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
 ChatDeepSeek/client dùng lifespan; usage thiếu là null, không bịa 0. Remote tracing tắt tại entry points.
-Prompt phân biệt [persona](prompts/persona.md), [llm_only](prompts/llm_only.md),
-[answer](prompts/answer.md) và [rewrite](prompts/rewrite.md).
+Prompt phân biệt [persona](prompts/persona.md), [agent](prompts/agent.md), [tools](prompts/tools.md),
+[assess](prompts/assess.md), [answer](prompts/answer.md), [overview](prompts/overview.md),
+[gameplay_advice](prompts/gameplay_advice.md), [format_retry](prompts/format_retry.md) và [language](prompts/language.md).
 
 Validation yêu cầu citation khớp index/evidence, quote nguyên văn, URL/title từ metadata server,
 chỉ trả nguồn thực sự trích. Đây là kiểm grounding hình thức, không phải entailment judge.
@@ -451,7 +451,7 @@ Duplicate key, NaN/Infinity, phần dư và JSON thiếu vẫn bị chặn. Outp
 Nguồn và quote vẫn phải vượt validator cũ. Chỉ answer hợp lệ mới vào history và chọn ảnh.
 
 SSE chỉ retry nếu **chưa gửi token đáp án nào**; sau khi đã gửi text, lỗi kết thúc bằng error và không done.
-Không chuyển sang llm_only khi lỗi hoặc thiếu bằng chứng. Không có context thì trả thông báo có sẵn,
+Không có đường trả lời không truy xuất khi lỗi hoặc thiếu bằng chứng. Không có context thì trả thông báo có sẵn,
 không gọi generation. Có context nhưng thiếu evidence thì model trả JSON `insufficient=true`, sources rỗng.
 Diagnostic JSON bổ sung vị trí dòng/cột/offset và số ký tự, không có output thô hay nội dung reasoning.
 Xem [phân tích và kiểm thử offline](../../../docs/testing/2026-10-31_rag-json-recovery.md).

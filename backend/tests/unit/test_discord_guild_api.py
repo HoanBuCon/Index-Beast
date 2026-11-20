@@ -354,7 +354,7 @@ class CapturingService:
 
 
 def test_guild_id_reaches_the_service_only_with_a_valid_service_token(ctx):
-    ctx.settings = Settings(_env_file=None, environment="test", chat_mode="llm_only", api_service_token=TOKEN)
+    ctx.settings = Settings(_env_file=None, environment="test", chat_mode="rag", api_service_token=TOKEN)
     with TestClient(create_app(ctx.settings, context=ctx)) as client:
         service = client.app.state.chat_service = CapturingService()
         body = {"message": "Ranni là ai?", "guild_id": GUILD}

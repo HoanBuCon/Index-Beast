@@ -67,14 +67,6 @@ class ConversationState:
     token: str | None = field(default=None, repr=False)
 
 
-def notice(lang: str) -> str:
-    return (
-        "Chế độ LLM: câu trả lời chưa được đối chiếu kho tri thức.\n\n"
-        if lang == "vi"
-        else "LLM mode: this answer has not been checked against the knowledge base.\n\n"
-    )
-
-
 class LiveChatService:
     def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, repository=None):
         self.pipeline = pipeline
@@ -298,7 +290,7 @@ class LiveChatService:
     async def _save(
         self, req, state, prepared: Prepared, result: Generated, started: float, images=None, player=None
     ) -> ChatResponse:
-        answer = (notice(prepared.lang) if prepared.mode == "llm_only" else "") + result.answer
+        answer = result.answer
         now = datetime.now(UTC)
         user_id = uuid5(state.conversation.id, f"user:{req.turn_id}") if req.turn_id else uuid4()
         message_id = uuid5(state.conversation.id, f"assistant:{req.turn_id}") if req.turn_id else uuid4()
@@ -450,8 +442,6 @@ class LiveChatService:
             try:
                 async with asyncio.timeout_at(deadline), aclosing(tokens):
                     yield "status", StatusEvent(status="generating")
-                    if prepared.mode == "llm_only":
-                        yield "token", TokenEvent(token=notice(prepared.lang))
                     yield "token", TokenEvent(token=first)
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)

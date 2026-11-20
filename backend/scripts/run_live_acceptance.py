@@ -11,10 +11,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from fastapi.testclient import TestClient
 from qdrant_client import AsyncQdrantClient
 
-from app.main import create_app
 from app.rag.pipeline import select_context
 from app.rag.retriever import HybridRetriever
 from core.config import REPO_ROOT, Settings
@@ -71,13 +69,6 @@ def acceptance_summary(result: dict) -> dict:
         or sse.get("done", {}).get("grounded") is not True
     ):
         failures.append("sse")
-    llm = result.get("llm_only", {})
-    if (
-        llm.get("http_status") != 200
-        or llm.get("response", {}).get("grounded") is not False
-        or llm.get("response", {}).get("sources")
-    ):
-        failures.append("llm_only")
     history = result.get("history_feedback", {})
     if (
         history.get("history_http_status") != 200
@@ -258,17 +249,6 @@ async def run(args):
                 "errors": [d for n, d in frames if n == "error"],
             }
             save(args.report, report)
-        # Real-provider llm_only through the same FastAPI lifespan/routes; no socket server or env edits.
-        with TestClient(create_app(Settings(chat_mode="llm_only", environment="test"))) as api:
-            response = api.post(
-                "/api/v1/chat",
-                json={"message": "Who is the Twinbird?", "channel": "web", "options": {"lang": "en", "spoilers": True}},
-            )
-            result["llm_only"] = {
-                "transport": "in-process ASGI with real provider",
-                "http_status": response.status_code,
-                "response": response.json(),
-            }
         result["finished_at"] = now()
         result["summary"] = acceptance_summary(result)
         save(args.report, report)
@@ -277,7 +257,6 @@ async def run(args):
                 {
                     "cases": len(result["cases"]),
                     "sse_done": bool(result["sse"]["done"]),
-                    "llm_only_status": result["llm_only"]["http_status"],
                     "report": str(args.report),
                 }
             ),

@@ -98,7 +98,7 @@ Không thêm slash command hoặc yêu cầu thành viên TV4 giữ Tavily key. 
 - `WEB_SEARCH_ENABLED=false` là công tắc vận hành khẩn cấp, không phải thao tác người dùng hàng ngày.
 - Client cũ bỏ option: dùng mặc định server `WEB_SEARCH_MODE=auto`; thiếu key thì giữ local-only.
 - Web yêu cầu always nhưng server chưa khả dụng: 503, không âm thầm giả đã search.
-- mock/llm_only không gọi Tavily. Các lời chào/cảm ơn/injection/ngoài phạm vi được xử lý trước tool.
+- mock không gọi Tavily. Các lời chào/cảm ơn/injection/ngoài phạm vi được xử lý trước tool.
 - Mơ hồ cần làm rõ không search; follow-up đã xác định chủ thể thì query gồm chủ thể/history.
 - Spoilers=false: web excerpt chưa có nhãn spoiler an toàn không được chọn vào context.
 

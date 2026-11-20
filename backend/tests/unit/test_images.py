@@ -252,7 +252,7 @@ def configure_chat(client, media, llm=None, mode="rag"):
     return live, llm
 
 
-def test_json_sse_history_and_three_modes_remain_compatible(client, media):
+def test_json_sse_history_and_both_modes_remain_compatible(client, media):
     live, llm = configure_chat(client, media)
     response = client.post("/api/v1/chat", json=BODY)
     assert response.status_code == 200
@@ -267,8 +267,6 @@ def test_json_sse_history_and_three_modes_remain_compatible(client, media):
     assert sources["images"] == data["images"] and frames[-1][0] == "event: done"
     assert "event: images" not in response.text
     assert all("images" not in p for event, p in frames if event == "event: token")
-    configure_chat(client, media, mode="llm_only")
-    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []
     client.app.dependency_overrides.clear()
     assert client.post("/api/v1/chat", json=BODY).json()["images"] == []  # Fixture app defaults mock.
 

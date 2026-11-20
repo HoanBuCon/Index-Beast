@@ -48,7 +48,7 @@ class Counts:
 
 class VectorPurger:
     """Cùng dáng với `MemoryVectors.delete_conversations(ids)` của PR #110: lọc theo payload `conversation_id`, không
-    đếm. `client` None (chế độ llm_only) hoặc chưa có collection thì không có gì để xóa."""
+    đếm. `client` None (chế độ mock/test) hoặc chưa có collection thì không có gì để xóa."""
 
     def __init__(self, client, collection: str):
         self.client, self.collection = client, collection

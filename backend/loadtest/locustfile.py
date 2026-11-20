@@ -3,7 +3,7 @@
 Mỗi người dùng ảo: hỏi câu lấy từ golden set, nghỉ (think time), giữ nguyên hội thoại qua nhiều lượt như người thật.
 - POST /api/v1/chat/stream (SSE): ghi 2 số đo: "TTFT" (tới token đầu tiên) và "total" (tới khung done).
 - POST /api/v1/chat (JSON, kiểu bot) và GET /api/v1/health.
-Cấu hình bằng biến môi trường (host dùng --host của Locust). CẢNH BÁO: chạy với CHAT_MODE=llm_only/rag là gọi LLM thật,
+Cấu hình bằng biến môi trường (host dùng --host của Locust). CẢNH BÁO: chạy với CHAT_MODE=rag là gọi LLM thật,
 tốn tiền và cần TV1 duyệt; thử trước với CHAT_MODE=mock.
 
 Phụ trách: TV3 (do TV1 dựng hộ) · [S5] Load test

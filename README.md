@@ -11,9 +11,9 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 > Repo đang ở giai đoạn nền tảng: API health, cấu hình và adapter DeepSeek đã có triển khai.
 > Pipeline dữ liệu và RAG đang được phát triển theo kế hoạch sprint.
 
-Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xem
+Chat hiện có hai mode server: `mock` (mặc định, dữ liệu giả) và `rag`. Xem
 [hướng dẫn LangChain + DeepSeek và tích hợp corpus thử nghiệm](backend/app/rag/README.md).
-`llm_only` dùng được khi dữ liệu chưa sẵn sàng. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
+Mode `llm_only` (gọi mô hình không truy xuất) đã bị gỡ; `rag` cần corpus đã index trong Qdrant. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
 
 **Phạm vi hiện tại:** Elden Ring có nguồn, gồm lore, gameplay và tư vấn build định tính; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Dữ liệu gameplay còn thiếu bảng stat/acquisition/combat đã bị lọc; xem [audit khả năng thực tế và cách thử](docs/testing/2026-10-29_elden-ring-assistant-capabilities.md). Các tài liệu SRS/ADR cũ cần nhóm đồng bộ riêng.
 

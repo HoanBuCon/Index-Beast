@@ -1,6 +1,6 @@
 """POST /chat (JSON, cho bot) và POST /chat/stream (SSE: status, token, sources, done, error; cho web).
 
-CHAT_MODE chọn mock/llm_only/rag qua cùng service contract, giữ nguyên schema/event v1.
+CHAT_MODE chọn mock/rag qua cùng service contract, giữ nguyên schema/event v1.
 
 Phụ trách: TV1 · [S2] API contract v1 · [S3] Endpoint /chat & /chat/stream thật
 """
