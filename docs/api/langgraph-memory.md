@@ -25,7 +25,7 @@ graph TD
     S --> G["gameplay: pending reply hoặc task mới"]
     G --> M["memory: chọn user turn liên quan trong conversation"]
     M --> MR{"Cần RAG và chưa có câu trả lời tĩnh?"}
-    MR -->|"Không: chào hỏi, mơ hồ, clarification, llm_only"| P["prompt"]
+    MR -->|"Không: chào hỏi, mơ hồ, clarification"| P["prompt"]
     MR -->|"Có"| R["rewrite: resolve chủ thể, English search query"]
     R --> RR{"Đã rõ chủ thể và trong phạm vi?"}
     RR -->|"Chưa: hỏi lại hoặc từ chối"| P
@@ -82,7 +82,6 @@ Không có Recall/MRR thật được đo trong tác vụ này. Không dùng syn
 | Local retriever và Tavily | Search query đã resolve | Tìm evidence mới theo policy |
 | Evidence assessor | Search query + context local, history rỗng | Kiểm mức đáp ứng của evidence |
 | RAG generator | Câu đã resolve + numbered evidence, history rỗng | Trả lời và trích dẫn |
-| llm_only generator | Câu hiện tại + user context đã chọn | Hội thoại không retrieval; giữ notice riêng của mode |
 
 Memory không biến thành Hit, Document hoặc source index; assistant từng nói sai không thể tự chứng minh
 đáp án mới. Rewrite lỗi với câu tiếp nối sẽ hỏi lại. Câu độc lập rewrite lỗi vẫn fallback nguyên câu theo policy cũ.

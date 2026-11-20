@@ -45,7 +45,7 @@ Không cần sửa `.env.example` hoặc Docker Compose cho bước này.
 - `API_SERVICE_TOKEN`: gửi `X-Service-Token` nếu được cấu hình khác `change-me`. Theo bàn giao TV1, xác thực service token thuộc S4; client không tự thêm yêu cầu bảo mật vào backend.
 - API timeout 60 giây; không tự retry POST để tránh gửi câu hỏi hai lần.
 
-Client không ép backend sang mock. Backend có thể đang ở mode `rag`/`llm_only`; chỉ dùng môi trường mock của TV1 khi nghiệm thu Sprint 2, tránh vô tình gọi LLM trả phí. Không tự sửa mode hoặc `.env` của thành viên khác.
+Client không ép backend sang mock. Backend có thể đang ở mode `rag`; chỉ dùng môi trường mock của TV1 khi nghiệm thu Sprint 2, tránh vô tình gọi LLM trả phí. Không tự sửa mode hoặc `.env` của thành viên khác.
 
 ## Khi sẵn sàng kiểm thử tích hợp
 

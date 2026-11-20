@@ -132,11 +132,7 @@ class GroundedAnswer(BaseModel):
     build_allocation: dict[str, int] | None = Field(default=None, min_length=8, max_length=8)
 
 
-def validate_answer(prepared: Prepared, data: str | dict) -> Generated:
-    if prepared.mode == "llm_only":
-        if not isinstance(data, str) or not data.strip() or CITATION.search(data) or URL.search(data):
-            raise UpstreamError("Câu trả lời chưa đúng chính sách không trích dẫn nguồn ở chế độ LLM.")
-        return Generated(data)
+def validate_answer(prepared: Prepared, data: dict) -> Generated:
     unchecked_notice = ""
     failure = "schema_invalid"
     try:
@@ -413,8 +409,7 @@ class Generator:
 
     def _retry(self, prepared: Prepared, attempt: int, diagnostics: dict, *, emitted: str = "") -> bool:
         allowed = (
-            prepared.mode == "rag"
-            and attempt < self.format_retries
+            attempt < self.format_retries
             and not emitted
             and diagnostics.get("reason") in RETRYABLE_REASONS
             and diagnostics.get("json_error") not in {"output_too_large", "nesting_too_deep"}
@@ -430,8 +425,6 @@ class Generator:
 
     @staticmethod
     def _decode(prepared: Prepared, raw: str):
-        if prepared.mode != "rag":
-            return raw
         data, wrapper = decode_output(raw)
         if wrapper != "none":
             prepared.trace["output_normalization"] = wrapper
@@ -449,10 +442,7 @@ class Generator:
 
     def chain(self, prepared: Prepared, *, recovery: bool = False) -> Runnable:
         template = prepared.template or generation_prompt()
-        params = {
-            "json_output": prepared.mode == "rag",
-            "thinking": self.thinking and prepared.mode == "rag" and not recovery,
-        }
+        params = {"json_output": True, "thinking": self.thinking and not recovery}
         if recovery:
             params["temperature"] = 0
         return template | self.llm.bind_model(**params)
@@ -611,7 +601,7 @@ class Generator:
                     if buffer_until_complete:
                         continue
                     try:
-                        text = answer_prefix(raw) if prepared.mode == "rag" else raw
+                        text = answer_prefix(raw)
                     except UpstreamError as exc:
                         if not emitted:
                             # JSON object keys may arrive in any order. Do not expose
@@ -630,8 +620,7 @@ class Generator:
                     boundary = max(text.rfind("\n"), text.rfind(". "), text.rfind("! "), text.rfind("? "))
                     safe = text[: boundary + 1] if boundary >= 0 else ""
                     self._check_visible(prepared, safe)
-                    if prepared.mode == "rag":
-                        safe = grounded_stream_prefix(safe)
+                    safe = grounded_stream_prefix(safe)
                     if len(safe) > len(emitted):
                         yield safe[len(emitted) :]
                         emitted = safe

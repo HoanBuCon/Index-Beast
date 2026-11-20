@@ -15,7 +15,7 @@ from app.services.mock_chat import MockChatService
 from core.config import Settings
 from core.errors import TimeoutAppError
 from tests.conftest import FakeRedis
-from tests.unit.test_live_chat import FakeLLM, service
+from tests.unit.test_live_chat import FakeLLM, FakeRetriever, service
 
 TOKEN = "bot-secret-for-tests"
 BODY = {"message": "Ranni là ai?", "channel": "web"}
@@ -26,7 +26,7 @@ BOT = {"message": "Ranni là ai?", "channel": "discord", "external_ref": "discor
 def guarded(ctx, fakes) -> Iterator[tuple[TestClient, FakeRedis]]:
     redis = fakes["redis"]
     ctx.settings = Settings(
-        _env_file=None, environment="test", chat_mode="llm_only", api_service_token=TOKEN, rate_limit_per_minute=2
+        _env_file=None, environment="test", chat_mode="rag", api_service_token=TOKEN, rate_limit_per_minute=2
     )
     with TestClient(create_app(ctx.settings, context=ctx)) as client:
         client.app.state.chat_service = MockChatService()  # chỉ kiểm guard, không gọi LLM
@@ -106,7 +106,7 @@ def test_mock_mode_skips_guard(client):
 
 async def test_same_external_ref_reuses_conversation_and_history():
     llm = FakeLLM()
-    chat = service(llm=llm)
+    chat = service(llm=llm, retriever=FakeRetriever())
     ask = ChatRequest(**BOT)
 
     first = await chat.answer(ask)
@@ -115,8 +115,10 @@ async def test_same_external_ref_reuses_conversation_and_history():
 
     assert second.conversation_id == first.conversation_id
     assert other.conversation_id != first.conversation_id
-    # Recall the user's subject, not the assistant's earlier unverified answer.
-    assert {"role": "user", "content": BOT["message"]} in llm.seen[1]
+    # The Agent recalls only the earlier USER turn of the same thread, never the assistant's answer.
+    assert chat.traces[second.message_id]["memory"]["candidates"] == 1
+    assert chat.traces[other.message_id]["memory"]["candidates"] == 0
+    # Generation never receives earlier turns as chat history.
     assert all(m["role"] != "assistant" for m in llm.seen[1])
 
 
@@ -135,8 +137,8 @@ async def test_slow_llm_hits_deadline_and_releases_conversation():
     async def slow(messages, **kwargs):
         await asyncio.sleep(5)
 
-    llm.complete = slow
-    chat = service(llm=llm, chat_timeout_seconds=0.05)
+    llm.complete_json = slow
+    chat = service(llm=llm, retriever=FakeRetriever(), chat_timeout_seconds=0.05)
 
     with pytest.raises(TimeoutAppError):
         await chat.answer(ChatRequest(**BODY))

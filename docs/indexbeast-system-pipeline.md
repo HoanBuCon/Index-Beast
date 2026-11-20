@@ -74,7 +74,7 @@ graph TD
     OUT --> MEDIA["Ảnh nội bộ hoặc ảnh web đủ điều kiện"]
 ```
 
-- Sơ đồ mô tả chế độ `rag` với Agent sử dụng công cụ. Máy chủ cũng có chế độ `mock` để giả lập và `llm_only` để gọi mô hình trực tiếp.
+- Sơ đồ mô tả chế độ `rag` với Agent sử dụng công cụ. Máy chủ chỉ có thêm chế độ `mock` để giả lập; chế độ `llm_only` (gọi mô hình không truy xuất) đã bị gỡ.
 - Với `CHAT_PERSISTENCE=memory`, Agent có thể dùng tối đa hai tin nhắn gần nhất của người dùng làm ứng viên ngữ cảnh. Với `postgres`, hệ thống lưu hội thoại và phản hồi đánh giá trong PostgreSQL. Khi xác định được phạm vi bộ nhớ, Agent truy xuất ký ức liên quan từ một collection riêng trong Qdrant.
 - API hỗ trợ JSON và truyền sự kiện qua SSE. Giao diện web dùng SSE để hiển thị câu trả lời trong khi hệ thống tiếp tục xử lý. Ảnh có thể đi kèm khi đáp ứng điều kiện liên kết với nguồn đã trích và thời hạn xử lý.
 

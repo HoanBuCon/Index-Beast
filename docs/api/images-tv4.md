@@ -17,7 +17,7 @@ xem [bàn giao tích hợp](../handover/2026-10-31_s2-tv3_noi-anh-backend-web.md
 
 Không thêm event `images`, không đổi event `done`/`token` hoặc field cũ. Web đã đọc images từ JSON và event sources,
 lưu metadata trong message/history, ánh xạ sang component ảnh TV4. Client cũ vẫn có thể bỏ qua field bổ sung.
-Không cần request opt-in; server dùng RAG_IMAGES_ENABLED. mock/llm_only trả images=[] cho chat.
+Không cần request opt-in; server dùng RAG_IMAGES_ENABLED. mock trả images=[] cho chat.
 
 Ảnh chỉ được resolve **sau khi đáp án và citation validation thành công**. SSE vẫn stream token thật trước đó,
 sau đó gửi sources (có ảnh) và done. Nếu generation/citation lỗi, không gửi ảnh hoặc done thành công.

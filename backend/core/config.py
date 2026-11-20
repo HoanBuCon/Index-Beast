@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=60, gt=0)
     llm_max_retries: int = Field(default=2, ge=0, le=5)
 
-    # --- Bảo vệ API (TV1): chỉ áp dụng khi CHAT_MODE gọi LLM thật (llm_only, rag) ---
+    # --- Bảo vệ API (TV1): chỉ áp dụng khi CHAT_MODE gọi LLM thật (rag) ---
     api_service_token: SecretStr | None = None  # bot gửi qua X-Service-Token; bỏ trống/"change-me" = chưa cấu hình
     admin_token: SecretStr | None = None  # X-Admin-Token cho /admin/*; bỏ trống/"change-me" = tắt /admin/*
     # --- Đăng nhập Discord OAuth2 (TV1, ADR-005): tắt cho tới khi có đủ client id, client secret và AUTH_SECRET ---
@@ -82,7 +82,7 @@ class Settings(BaseSettings):
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
-    chat_mode: Literal["mock", "llm_only", "rag"] = "mock"
+    chat_mode: Literal["mock", "rag"] = "mock"
     chat_tool_steps: int | None = Field(default=3, ge=1, le=4)
     chat_tool_queries: int | None = Field(default=2, ge=1, le=3)
     chat_clarification_max_rounds: int | None = Field(default=3, ge=1)

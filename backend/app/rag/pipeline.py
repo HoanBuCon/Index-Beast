@@ -219,9 +219,7 @@ class ChatPipeline:
             graph.add_node(name, self._guarded(name, node))
         graph.add_edge(START, "scope")
         graph.add_edge("scope", "memory")
-        graph.add_conditional_edges(
-            "memory", lambda s: "agent" if self._rag(s) else "answer", {"agent": "agent_decision", "answer": "prompt"}
-        )
+        graph.add_edge("memory", "agent_decision")
         graph.add_conditional_edges(
             "agent_decision",
             lambda s: "answer" if s["prepared"].static_answer is not None else "tools",
@@ -273,10 +271,6 @@ class ChatPipeline:
             result = await self.prepare_graph.ainvoke(state, config={"recursion_limit": 24})
             return result["prepared"]
 
-    @staticmethod
-    def _rag(state: PreparationState) -> bool:
-        return state["prepared"].mode == "rag"
-
     def _scope(self, state: dict) -> dict:
         req = state["req"]
         if self.llm is None:
@@ -288,12 +282,11 @@ class ChatPipeline:
         requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
-        if self._rag(state):
-            state["verify_coverage"] = (
-                self.web_search is not None and state["search_mode"] == "auto" and req.options.spoilers
-            )
-            if not state["verify_coverage"]:
-                prepared.max_calls = self.settings.chat_agent_max_calls
+        state["verify_coverage"] = (
+            self.web_search is not None and state["search_mode"] == "auto" and req.options.spoilers
+        )
+        if not state["verify_coverage"]:
+            prepared.max_calls = self.settings.chat_agent_max_calls
         return state
 
     async def _agent(self, state):
@@ -420,13 +413,6 @@ class ChatPipeline:
             state["memory_candidates"], state["history"] = [], []
             p.trace["memory"] = {"method": "disabled", "status": "disabled"}
             return state
-        if not self._rag(state):
-            # llm_only: recent USER turns only, newest last; the model decides whether they relate.
-            users = [r for r in state["history"] if r.get("role") == "user"][::-1]
-            rows = self._bounded(users)[::-1]
-            state["history"] = [{"role": "user", "content": r["content"]} for r in rows]
-            p.trace["memory"] = {"method": "recent_user_turns", "selected": len(rows)}
-            return state
         if self.memory is not None and state.get("memory_scope") is not None:
             rows, diagnostic = await self.memory.recall(state["memory_scope"], req.message)
         else:
@@ -498,12 +484,11 @@ class ChatPipeline:
             "persona": prompt("persona"),
             "lang": p.lang,
             "spoilers": req.options.spoilers,
-            "policy": prompt("answer" if p.mode == "rag" else "llm_only")
+            "policy": prompt("answer")
             + ("\n" + prompt("gameplay_advice") if p.gameplay_advice else "")
             + ("\n" + prompt("overview") if state.get("overview") else ""),
-            # In RAG, old turns cannot bias generation or masquerade as new evidence.
-            # In llm_only, recent USER context remains explicitly conversational, never assistant claims.
-            "history": [] if p.mode == "rag" else state["history"],
+            # Old turns cannot bias generation or masquerade as new evidence.
+            "history": [],
             "payload": json.dumps(
                 {
                     "question": state.get("resolved_question", req.message),

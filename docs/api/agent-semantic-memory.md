@@ -15,7 +15,7 @@ Không sửa `.env` thật, không reindex corpus. HTTP 200 cả 20 lượt khô
 
 `CHAT_AGENT_ENABLED=true` là default code cho mode RAG. `CHAT_PERSISTENCE=memory` vẫn là default an toàn
 cho môi trường chưa chuẩn bị migration. **Lưu bền/semantic cần bật PostgreSQL sau khi setup**; không giả
-default RAM đã nhớ lâu dài. Mode mock vẫn mặc định toàn ứng dụng, llm_only không bị đổi thành RAG.
+default RAM đã nhớ lâu dài. Mode mock vẫn mặc định toàn ứng dụng; mode còn lại duy nhất là RAG.
 
 ## Quyết định nào thuộc mô hình
 
