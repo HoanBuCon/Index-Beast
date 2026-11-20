@@ -36,7 +36,7 @@ export interface ChatRequest {
   external_ref?: string | null;
   // Snowflake của server Discord; bỏ qua với DM. Backend chỉ ghi khi có service token (cần cho /clear và trần tần suất).
   guild_id?: string | null;
-  options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean; web_search?: "off" | "auto" | "always" };
+  options?: { lang?: "auto" | "vi" | "en"; web_search?: "off" | "auto" | "always" };
 }
 export interface ChatResponse {
   conversation_id: string;

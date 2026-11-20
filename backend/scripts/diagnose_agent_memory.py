@@ -110,7 +110,7 @@ async def run_case(http, case, group, row, groups, state_path, *, case_budget, c
             "message": message,
             "channel": "web",
             "turn_id": str(uuid4()),
-            "options": {"web_search": case.get("web_search", "auto"), "lang": case["lang"], "spoilers": True},
+            "options": {"web_search": case.get("web_search", "auto"), "lang": case["lang"]},
             **continuation,
         }
         response = await http.post("/api/v1/" + endpoint, json=body)

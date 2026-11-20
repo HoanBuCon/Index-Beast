@@ -49,15 +49,10 @@ def restore_evidence(pipe, state):
     for row in prepared.player_state.pop("plan_evidence", []):
         hit = (WebHit if row["web"] else Hit)(row["id"], row["score"], row["payload"])
         if isinstance(hit, WebHit):
-            admitted = (
-                state["req"].options.spoilers
-                and state["search_mode"] != "off"
-                and allowed_url(hit.payload.get("url"), allowed_domains)
-            )
+            admitted = state["search_mode"] != "off" and allowed_url(hit.payload.get("url"), allowed_domains)
         else:
             admitted = (
-                row["collection"] == pipe.settings.rag_collection
-                and pipe.policy.exclusion_reason(hit.payload, spoilers=state["req"].options.spoilers) is None
+                row["collection"] == pipe.settings.rag_collection and pipe.policy.exclusion_reason(hit.payload) is None
             )
         if admitted:
             hits[hit.id] = hit

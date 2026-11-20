@@ -39,8 +39,8 @@ class QdrantStore:
         ]
         await self.client.upsert(self.collection, points=points, wait=True)
 
-    async def search(self, vector: Encoded, *, limit: int, spoilers: bool = True) -> list[Hit]:
-        filters = self.policy.query_filter(spoilers=spoilers)
+    async def search(self, vector: Encoded, *, limit: int) -> list[Hit]:
+        filters = self.policy.query_filter()
         result = await self.client.query_points(
             self.collection,
             prefetch=[
@@ -60,5 +60,5 @@ class QdrantStore:
         return [
             Hit(str(p.id), p.score, p.payload or {})
             for p in result.points
-            if self.policy.exclusion_reason(p.payload or {}, spoilers=spoilers) is None
+            if self.policy.exclusion_reason(p.payload or {}) is None
         ]

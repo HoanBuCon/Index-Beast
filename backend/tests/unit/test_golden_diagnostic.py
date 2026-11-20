@@ -73,7 +73,7 @@ async def test_ablation_uses_one_dense_or_sparse_branch_without_rrf_and_preserve
             "fixed", query=query, using=name, query_filter=policy.query_filter(), limit=30, with_payload=True
         )
     assert await rank(store, vector, "hybrid", 30) == []
-    store.search.assert_awaited_once_with(vector, limit=30, spoilers=True)
+    store.search.assert_awaited_once_with(vector, limit=30)
 
 
 def test_ablation_uses_same_case_keys_in_all_six_cells():

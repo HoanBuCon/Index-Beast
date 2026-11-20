@@ -89,7 +89,7 @@ async def test_qdrant_hybrid_uses_both_vectors_rrf_and_filters_every_query_branc
     client = AsyncMock()
     client.query_points.return_value = SimpleNamespace(points=[])
     store = QdrantStore(client, "existing-collection")
-    await store.search(Encoded([0.0] * 384, [7], [1.0]), limit=30, spoilers=False)
+    await store.search(Encoded([0.0] * 384, [7], [1.0]), limit=30)
     args = client.query_points.call_args
     assert args.args == ("existing-collection",)
     query = args.kwargs
@@ -101,7 +101,7 @@ async def test_qdrant_hybrid_uses_both_vectors_rrf_and_filters_every_query_branc
         conditions = {c.key: c for c in filters.must}
         assert conditions["game_scope"].match.value == "base"
         assert conditions["review_status"].match.value == "approved"
-        assert conditions["spoiler_level"].range.lte == 0
+        assert "spoiler_level" not in conditions  # Spoiler filtering was removed.
 
 
 def test_unknown_metadata_is_rejected_without_changing_source(tmp_path):
@@ -259,8 +259,9 @@ async def test_real_query_api_with_synthetic_vectors_is_idempotent_and_filters_m
         await index_chunks(chunks, encoder, store, 2)
         assert (await client.count("synthetic_only", exact=True)).count == 2
         retriever = HybridRetriever(encoder, store, limit=5)
-        results = await retriever.retrieve("Ranni", spoilers=False)
-        assert len(results) == 1 and results[0].id == str(chunks[0].point_uuid)
+        results = await retriever.retrieve("Ranni")
+        # A labelled spoiler chunk is no longer filtered out.
+        assert {r.id for r in results} == {str(c.point_uuid) for c in chunks}
         assert encoder.calls[-1] == (["Ranni"], True)
         # Bypass index adapter to confirm search still refuses non-base/unapproved payloads.
         await client.upsert(
@@ -273,7 +274,7 @@ async def test_real_query_api_with_synthetic_vectors_is_idempotent_and_filters_m
                 )
             ],
         )
-        assert len(await retriever.retrieve("Ranni", spoilers=False)) == 1
+        assert len(await retriever.retrieve("Ranni")) == 2
     finally:
         await client.close()
 

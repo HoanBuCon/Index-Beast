@@ -23,16 +23,21 @@ from app.adapters.llm import LLMError, LLMResponse
 from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Clarification, Source
 from app.rag.agent import spend
+from app.rag.build_data import unchecked_stat_pairs
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, char_class, decode_output, stream_body_prefix
-from app.rag.prompts import generation_prompt, prompt
-from core.errors import UpstreamError
+from app.rag.prompts import generation_prompt, prompt, rewrite_prompt
+from core.errors import UnavailableError, UpstreamError
 from core.types import Hit
 
 _STREAM_EMITTER: ContextVar[Callable[[str], Awaitable[None]]] = ContextVar("indexbeast_stream_emitter")
 
 CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
+# Payload/protocol field names are not player-facing words; an answer that echoes one is regenerated.
+INTERNAL_FIELD = re.compile(
+    r"\b(?:checked_build|build_check|player_profile|build_allocation|quote_ids?|evidence_units|task_plan)\b"
+)
 SECTION_HEADING = re.compile(r"#{2,3} [^\r\n]+")
 BLOCK_SEPARATOR = re.compile(r"(\r?\n[ \t]*\r?\n(?:[ \t]*\r?\n)*)")
 
@@ -132,6 +137,79 @@ class GroundedAnswer(BaseModel):
     build_allocation: dict[str, int] | None = Field(default=None, min_length=8, max_length=8)
 
 
+def build_issues(prepared, answer: str) -> list[dict]:
+    """Presentation problems of a build answer the Answer Guard should fix. Never a reason to drop the answer."""
+    from app.rag.build_data import ATTRIBUTES, build_rules, stat_pairs
+
+    pairs = stat_pairs(answer)
+    artifact = prepared.checked_build
+    if artifact is not None:
+        issues = []
+        if wrong := unchecked_stat_pairs(answer, artifact):
+            issues.append({"kind": "numbers", "pairs": [{"attribute": k, "printed": v} for k, v in wrong[:8]]})
+        if {k for k, _ in pairs} != set(ATTRIBUTES):
+            issues.append({"kind": "missing_table"})  # Not all eight attributes printed (wrong values: "numbers").
+        return issues
+    rules = build_rules((prepared.values or {}).get("player_profile") or {})
+    table = dict(pairs)
+    if rules and set(table) == set(ATTRIBUTES) and sum(table.values()) != rules["attribute_total"]:
+        return [
+            {
+                "kind": "total",
+                "printed_total": sum(table.values()),
+                "level": rules["level"],
+                "attribute_total": rules["attribute_total"],
+            }
+        ]
+    return []
+
+
+def log_stat_mismatch(prepared, wrong, artifact, where):
+    """Attribute names and numbers only (game values, not prose): which printed number did not match."""
+    from app.rag.build_data import checked_numbers
+
+    allowed = checked_numbers(artifact)
+    data = {
+        "where": where,
+        "pairs": [{"attribute": k, "printed": v, "allowed": sorted(allowed.get(k, set()))} for k, v in wrong[:8]],
+    }
+    prepared.trace.setdefault("stat_mismatch", []).append(data)
+    logging.getLogger(__name__).warning("Stat number mismatch", extra={"data": data})
+
+
+def allocation_label(artifact: dict, lang: str) -> str:
+    """Heading of the rendered allocation, stating every assumption and every unchecked part."""
+    weapon, cls = artifact.get("weapon"), artifact["starting_class"]
+    vi = lang == "vi"
+    notes = []
+    if weapon:
+        notes.append("một tay, không bonus" if vi else "one-handed, no bonuses")
+    if artifact["weapon_suggested"]:
+        notes.append("vũ khí do IndexBeast đề xuất" if vi else "weapon suggested by IndexBeast")
+    if artifact["class_assumed"]:
+        notes.append(
+            f"giả định class {cls} vì bạn chưa nêu class" if vi else f"assuming {cls} since no class was given"
+        )
+    if not artifact["class_floor_verified"]:
+        if cls:
+            notes.append(f"chưa kiểm chỉ số khởi đầu của class {cls}" if vi else f"{cls} starting values not checked")
+        else:
+            notes.append("chưa kiểm chỉ số khởi đầu của class" if vi else "starting-class values not checked")
+    if not artifact["requirements_checked"]:
+        if weapon:
+            notes.append("chưa kiểm yêu cầu vũ khí" if vi else "weapon requirements not checked")
+        else:
+            notes.append(
+                "chưa chọn vũ khí nên chưa kiểm yêu cầu vũ khí" if vi else "no weapon chosen, requirements not checked"
+            )
+    head = (
+        (f"Gợi ý phân bổ cho {weapon}" if weapon else "Gợi ý phân bổ 8 chỉ số")
+        if vi
+        else (f"Suggested allocation for {weapon}" if weapon else "Suggested eight-attribute allocation")
+    )
+    return head + (f" ({', '.join(notes)})" if notes else "")
+
+
 def validate_answer(prepared: Prepared, data: dict) -> Generated:
     unchecked_notice = ""
     failure = "schema_invalid"
@@ -160,6 +238,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
         if URL.search(parsed.answer):
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
+        if any(INTERNAL_FIELD.search(text or "") for text in (parsed.answer, parsed.limitation, parsed.recommendation)):
+            failure = "internal_field_name"
+            raise ValueError("Internal field names are not player-facing text")
         if parsed.advisory:
             failure = "invalid_gameplay_advice"
             if (
@@ -186,14 +267,21 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
             return Generated(parsed.answer)
-        if not used or used != set(evidence):
+        if not used or not used <= set(evidence):
             failure = "citation_evidence_indices"
             # Only numeric protocol metadata, never answer/quote contents or private reasoning.
             prepared.trace["citation_indices"] = {"answer_indices": sorted(used), "evidence_indices": sorted(evidence)}
             logging.getLogger(__name__).warning(
                 "Citation index mismatch", extra={"data": prepared.trace["citation_indices"]}
             )
-            raise ValueError("Citations and explicit evidence must match")
+            raise ValueError("Every citation needs explicit evidence")
+        if unused := set(evidence) - used:
+            # Extra evidence the answer never cites is not a claim: drop it rather than fail a valid answer
+            # (live 20/11: a complete quest answer was lost after streaming because of one spare evidence item).
+            for index in unused:
+                evidence.pop(index)
+            prepared.trace["dropped_unused_evidence"] = sorted(unused)
+            logging.getLogger(__name__).warning("Dropped uncited evidence", extra={"data": {"count": len(unused)}})
         for index, quotes in evidence.items():
             if index > len(prepared.hits) or any(
                 quote not in prepared.hits[index - 1].payload["text"] for quote in quotes
@@ -212,69 +300,66 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                 or CITATION.search(parsed.recommendation)
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
+        issues = build_issues(prepared, answer)
+        if issues and not prepared.trace.get("guard_done"):
+            # Presentation problems are not a reason to drop an answer: the Answer Guard rewrites it before display.
+            prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": issues}
         if prepared.checked_build is not None:
-            from app.rag.build_data import ATTRIBUTES, check, stat_numbers_in
+            from app.rag.build_data import ATTRIBUTES, check
 
             failure = "invalid_build_allocation"
             artifact = prepared.checked_build
-            if stat_numbers_in(answer):
-                raise ValueError("Stat numbers belong in the checked artifact, not model prose")
             verified = check(artifact["data"], artifact["allocation"], prepared.values["player_profile"], prepared.hits)
             if verified["version"] != artifact["version"] or (
                 parsed.build_allocation is not None and parsed.build_allocation != artifact["allocation"]
             ):
                 raise ValueError("Generator changed checked allocation")
             required_indices = {i for i, h in enumerate(prepared.hits, 1) if h.id in artifact["sources"]}
-            for i in required_indices:
-                hit = prepared.hits[i - 1]
-                data = artifact["data"]
-                keys = ("starting_level", "points_per_level", "attribute_cap", "attribute_offset", "class_floor_rule")
-                facts = [data[k] for k in keys if data.get(k) is not None]
-                facts += list((data.get("base") or {}).values()) + list(data["requirements"].values())
-                units = evidence_units(hit.payload["text"])
-                if any(units[f["quote_id"]] not in evidence.get(i, []) for f in facts if f["source_id"] == hit.id):
-                    raise ValueError("Missing exact accounting quotes")
-            if not required_indices <= used:
-                raise ValueError("Missing accounting citations")
-            weapon, cls = artifact["data"]["weapon"], artifact["data"].get("starting_class")
-            if prepared.lang == "vi":
-                label = f"Gợi ý phân bổ cho {weapon} (một tay, không bonus"
-                label += ", vũ khí do IndexBeast đề xuất" if artifact.get("weapon_suggested") else ""
-                label += f", giả định class {cls} vì bạn chưa nêu class" if artifact.get("class_assumed") else ""
+            # The backend renders the checked table and cites its rule/requirement sources itself; a source the
+            # prose did not quote is cited with its own text, never with model wording.
+            for i in required_indices - set(evidence):
+                evidence[i] = [next(iter(evidence_units(prepared.hits[i - 1].payload["text"]).values()))]
+            used |= required_indices
+            # Assumptions and unchecked parts are always stated. The checked numbers line is added only when the
+            # writer's own table is missing or (after the Answer Guard) still differs: nothing is dropped.
+            wrong = unchecked_stat_pairs(answer, artifact)
+            answer += "\n\n" + allocation_label(artifact, prepared.lang)
+            if any(i["kind"] == "missing_table" for i in issues) or wrong:
+                answer += ": " + " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
+                if wrong:
+                    log_stat_mismatch(prepared, wrong, artifact, "final")
+                    answer += (
+                        " (đây là bảng đã kiểm; dùng các số này nếu khác bảng phía trên)"
+                        if prepared.lang == "vi"
+                        else " (this is the checked table; use these numbers where they differ from the one above)"
+                    )
             else:
-                label = f"Suggested allocation for {weapon} (one-handed, no bonuses"
-                label += ", weapon suggested by IndexBeast" if artifact.get("weapon_suggested") else ""
-                label += f", assuming {cls} since no class was given" if artifact.get("class_assumed") else ""
-            answer += "\n\n" + label + "): "
-            answer += " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
-            if not artifact.get("class_floor_verified", True):
-                answer += (
-                    " (tổng điểm và yêu cầu vũ khí đã kiểm tra; chỉ số khởi đầu của class chưa kiểm tra)"
-                    if prepared.lang == "vi"
-                    else " (total and weapon requirements checked; starting-class minimums not checked)"
-                )
+                prepared.trace["allocation_printed_by_writer"] = True
             answer += " " + "".join(f"[{i}]" for i in sorted(required_indices))
         elif parsed.build_allocation is not None:
-            # Allocations are rendered only from the sourced calculator artifact (checked_build).
-            # Unchecked numbers are never shown: per-stat numbers in prose fail (and are regenerated
-            # before any visible text); a separate unchecked allocation is dropped with a short notice.
-            from app.rag.build_data import stat_numbers_in
-
-            failure = "invalid_build_allocation"
-            if stat_numbers_in(answer):
-                raise ValueError("Unchecked stat numbers in prose")
+            # A separate unchecked allocation field is not rendered; numbers the writer put in its own prose
+            # are a reference suggestion and stay (their total is checked below).
             prepared.trace["dropped_unchecked_allocation"] = True
             unchecked_notice = (
                 "Phân bổ chỉ số cụ thể chưa được công cụ tính kiểm tra nên không hiển thị."
                 if prepared.lang == "vi"
                 else "A specific stat allocation was not verified by the calculator, so it is not shown."
             )
-        answer, dropped = cited_blocks(answer)
+        total_issue = next((i for i in issues if i["kind"] == "total"), None)
+        if total_issue and prepared.trace.get("guard_done"):
+            answer += "\n\n" + (
+                f"Lưu ý: tổng 8 chỉ số trong bảng là {total_issue['printed_total']}; level "
+                f"{total_issue['level']} cần {total_issue['attribute_total']}."
+                if prepared.lang == "vi"
+                else f"Note: the table totals {total_issue['printed_total']}; level {total_issue['level']} needs "
+                f"{total_issue['attribute_total']}."
+            )
         if unchecked_notice:
             answer += "\n\n" + unchecked_notice
-        if dropped:
-            prepared.trace["dropped_uncited_paragraphs"] = dropped
-            logging.getLogger(__name__).warning("Dropped uncited paragraphs", extra={"data": {"count": dropped}})
+        # Every paragraph is kept (no truncated answers); uncited ones are only counted for evaluation.
+        if dropped := cited_blocks(answer)[1]:
+            prepared.trace["uncited_paragraphs"] = dropped
+            logging.getLogger(__name__).info("Uncited paragraphs kept", extra={"data": {"count": dropped}})
         if parsed.limitation is not None:
             failure = "invalid_limitation"
             if not parsed.limitation.strip() or URL.search(parsed.limitation) or CITATION.search(parsed.limitation):
@@ -351,6 +436,8 @@ RETRYABLE_REASONS = {
     "citation_evidence_indices",
     "unknown_quote_id",
     "model_url",
+    "internal_field_name",
+    "stat_number_mismatch",
     "invalid_limitation",
     "duplicate_evidence_index",
     "invalid_build_allocation",
@@ -370,10 +457,11 @@ class GenerationState(TypedDict, total=False):
 
 
 class Generator:
-    def __init__(self, llm: LLM, *, thinking: bool = False, format_retries: int = 1):
+    def __init__(self, llm: LLM, *, thinking: bool = False, format_retries: int = 1, guard_timeout: float = 15):
         if format_retries not in (0, 1):
             raise ValueError("format_retries must be 0 or 1")
         self.llm = llm
+        self.guard_timeout = guard_timeout
         self.thinking = thinking
         self.format_retries = format_retries
         graph = StateGraph(GenerationState)
@@ -501,15 +589,78 @@ class Generator:
         except ValueError:
             raise self._failed(p, {"reason": "generation_value_error"}) from None
 
-    def _validate_node(self, state: GenerationState) -> dict:
+    async def _validate_node(self, state: GenerationState) -> dict:
         p = state["prepared"]
         p.trace["generation_graph_nodes"].append("validate")
         if p.static_answer is not None or state["streaming"] or state.get("diagnostics"):
             return {}
         try:
-            return {"result": validate_answer(p, state["data"])}
+            return {"result": await self._finalize(p, state["data"])}
         except RAGValidationError as exc:
             return {"diagnostics": {"reason": exc.reason}, "error": exc}
+
+    async def _finalize(self, prepared: Prepared, data) -> Generated:
+        """Validate, and when the answer has a presentation problem let the Answer Guard rewrite it once.
+
+        Source falsification still fails in validate_answer. A guard rewrite that breaks citations is ignored and
+        the first (already safe) answer is kept, so nothing is dropped for presentation reasons.
+        """
+        result = validate_answer(prepared, data)
+        request = prepared.trace.pop("guard_request", None)
+        if request is None or not isinstance(data, dict):
+            return result
+        fixed = await self._guard(prepared, request)
+        if fixed is None:
+            return result
+        prepared.trace["guard_done"] = True
+        try:
+            guarded = validate_answer(prepared, {**data, "answer": fixed})
+        except RAGValidationError:
+            prepared.trace["answer_guard"]["status"] = "rejected_by_validation"
+            return result
+        prepared.trace["answer_guard"]["status"] = "applied"
+        return guarded
+
+    async def _guard(self, prepared: Prepared, request: dict) -> str | None:
+        """One LLM pass that fixes the build table (wrong numbers, missing table) and keeps everything else."""
+        from app.rag.build_data import build_rules
+
+        diagnostic = prepared.trace["answer_guard"] = {
+            "issues": [i["kind"] for i in request["issues"]],
+            "status": "error",
+        }
+        artifact = prepared.checked_build or {}
+        data = artifact.get("data") or {}
+        rules = build_rules((prepared.values or {}).get("player_profile") or {}) or {}
+        payload = {
+            "answer": request["answer"],
+            "issues": request["issues"],
+            "answer_language": "Vietnamese (tiếng Việt)" if prepared.lang == "vi" else "English",
+            "attribute_total": rules.get("attribute_total"),
+            "level": rules.get("level"),
+            "attribute_cap": rules.get("attribute_cap"),
+            "checked_allocation": artifact.get("allocation"),
+            "class_floors": {k: f["value"] for k, f in ((data.get("starting_class") or {}).get("base") or {}).items()}
+            or None,
+            "weapon_requirements": {k: f["value"] for k, f in (data.get("requirements") or {}).items()} or None,
+        }
+        try:
+            spend(prepared.trace, "answer_guard", prepared.max_calls)
+            async with asyncio.timeout(self.guard_timeout):
+                result = await self.llm.invoke_chain(
+                    rewrite_prompt()
+                    | self.llm.bind_model(json_output=True, thinking=False, temperature=0, max_tokens=4096),
+                    {"policy": prompt("guard"), "history": [], "question": json.dumps(payload, ensure_ascii=False)},
+                )
+            out, _ = decode_output(result.content)
+        except (LLMError, OutputFormatError, TimeoutError, UnavailableError, ValueError):
+            return None
+        fixed = out.get("answer") if isinstance(out, dict) else None
+        if not isinstance(fixed, str) or not fixed.strip():
+            diagnostic["status"] = "empty"
+            return None
+        diagnostic["status"] = "proposed"
+        return fixed
 
     def _generation_route(self, state: GenerationState) -> str:
         if state["streaming"]:
@@ -588,7 +739,8 @@ class Generator:
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
-        buffer_until_complete = False
+        # A build answer may need the Answer Guard, which reads the whole answer: hold it and show it once checked.
+        buffer_until_complete = prepared.checked_build is not None or prepared.agent_decision.get("intent") == "build"
         try:
             spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(
@@ -620,12 +772,15 @@ class Generator:
                     boundary = max(text.rfind("\n"), text.rfind(". "), text.rfind("! "), text.rfind("? "))
                     safe = text[: boundary + 1] if boundary >= 0 else ""
                     self._check_visible(prepared, safe)
-                    safe = grounded_stream_prefix(safe)
+                    if INTERNAL_FIELD.search(safe):
+                        # Before any visible token this is retried like a JSON answer; never shown to the player.
+                        raise RAGValidationError("internal_field_name")
+                    # Uncited paragraphs are no longer dropped, so complete clauses can be shown as they arrive.
                     if len(safe) > len(emitted):
                         yield safe[len(emitted) :]
                         emitted = safe
             data = self._decode(prepared, raw)
-            result = validate_answer(prepared, data)
+            result = await self._finalize(prepared, data)
             if not result.answer.startswith(emitted):
                 raise UpstreamError("Stream không nhất quán với câu trả lời cuối.")
             if len(result.answer) > len(emitted):

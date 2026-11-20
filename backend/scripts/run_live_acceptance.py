@@ -141,7 +141,7 @@ async def run(args):
                 channel = "discord" if identifier == "EN04" else "web"
                 row = {"id": identifier, "lang": lang, "question": question, "category": category, "channel": channel}
                 if category != "out_of_scope":
-                    hits = await retriever.retrieve(question, spoilers=True)
+                    hits = await retriever.retrieve(question)
                     selected = select_context(hits, settings.rag_top_k, settings.rag_context_chars, policy=policy)
                     row["retrieval_snapshot"] = [
                         {
@@ -166,7 +166,7 @@ async def run(args):
                         "message": question,
                         "channel": channel,
                         "external_ref": "discord:integration-test" if channel == "discord" else None,
-                        "options": {"lang": lang, "spoilers": True},
+                        "options": {"lang": lang},
                     },
                 )
                 row.update(
@@ -228,7 +228,7 @@ async def run(args):
                 json={
                     "message": "Twinbird và Deathbirds có quan hệ gì?",
                     "channel": "web",
-                    "options": {"lang": "vi", "spoilers": True},
+                    "options": {"lang": "vi"},
                 },
             ) as stream:
                 result["sse_http_status"] = stream.status_code

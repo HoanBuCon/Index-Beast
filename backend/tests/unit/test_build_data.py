@@ -1,94 +1,201 @@
-"""Sourced calculation tests use synthetic fixtures, not a claim of live factual correctness."""
+"""Allocation checks use synthetic requirement fixtures and the curated pack rules; not live factual claims."""
 
 import copy
 import json
+import re
+from contextlib import aclosing
 
 import pytest
 
-from app.rag.build_data import ATTRIBUTES, BuildCache, bound_value, check, stat_numbers_in
+from app.rag.build_data import (
+    ATTRIBUTES,
+    BuildCache,
+    bound_value,
+    build_rules,
+    check,
+    level_rule,
+    stat_numbers_in,
+)
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from tests.unit.test_live_chat import hit
 
 
-@pytest.fixture(params=[("Vagabond", "Zweihander", 9), ("Hero", "Great Stars", 7), ("Bandit", "Reduvia", 5)])
-def build(request):
-    cls, weapon, start = request.param
-    base = {k: 10 for k in ATTRIBUTES}
-    text = f"{cls} starting class; {weapon} one-handed requirements. Starting level: {start}.\n"
-    text += "\n".join(f"{k.title()}: {v}" for k, v in base.items())
-    text += "\nRequired Strength: 12. Points per level: 1. Attribute cap: 99.\n"
-    text += "Respec cannot reduce an attribute below its starting class base value."
-    h = hit(1, title=f"{cls} and {weapon}", text=text, release_scope="unknown")
+def n(value, label, source_id="1"):
+    return {"value": value, "label": label, "source_id": source_id, "quote_id": "q0"}
 
-    def n(value, label):
-        return {"value": value, "label": label, "source_id": "1", "quote_id": "q0"}
 
-    data = dict(
-        starting_class=cls,
-        weapon=weapon,
-        usage="one_handed_no_bonuses",
-        starting_level=n(start, "Starting level"),
-        base={k: n(v, k.title()) for k, v in base.items()},
-        requirements={"strength": n(12, "Required Strength")},
-        points_per_level=n(1, "Points per level"),
-        attribute_cap=n(99, "Attribute cap"),
-        class_floor_rule={
-            "source_id": "1",
-            "quote_id": "q0",
-            "quote": "Respec cannot reduce an attribute below its starting class base value.",
-        },
+def allocation(*values):
+    return dict(zip(ATTRIBUTES, values, strict=True))
+
+
+def rule_hits(_profile=None):
+    """The pack snapshot a checked artifact always cites: the level accounting rule."""
+    return [level_rule()[0]]
+
+
+def infobox(level, *values):
+    """Exact format of an origin Infobox chunk in the S5 corpus add-on (wiki.gg, 20/11/2026)."""
+    lines = ["Information", "Stats", f"Attributes / Level: {level}"]
+    extras = iter(
+        ["Base Stats / HP: 414", "Base Stats / FP: 78", "Base Stats / Stamina: 96", "Base Stats / Equip Load: 48.2"]
     )
-    allocation = {**base, "strength": 12, "vigor": 10 + 30 - start - 2}
-    profile = {"starting_class": cls, "weapon": weapon, "level": "30"}
-    return data, allocation, profile, [h]
+    for key, value in zip(ATTRIBUTES, values, strict=True):
+        lines.append(f"Attributes / {key.title()}: {value}")
+        if (extra := next(extras, None)) is not None:
+            lines.append(extra)
+    return "\n".join(lines)
 
 
-def test_arbitrary_classes_weapons_and_artifact(build):
-    data, allocation, profile, hits = build
+def origin(name, source_id, level, *values):
+    return {
+        "name": name,
+        "level": n(level, "Level", source_id),
+        "base": {k: n(v, k.title(), source_id) for k, v in zip(ATTRIBUTES, values, strict=True)},
+    }
+
+
+WRETCH = (1, *([10] * 8))
+VAGABOND = (9, 15, 10, 11, 14, 13, 9, 9, 7)
+GREATSWORD = "Greatsword requirements (one-handed): Required Strength: 31. Required Dexterity: 12."
+
+
+@pytest.fixture
+def build():
+    """Level 130 Greatsword, no class named: the planner quoted the default Wretch Infobox. Total 209."""
+    weapon = hit(1, title="Greatsword", text=GREATSWORD, release_scope="unknown")
+    wretch = hit("w", title="Wretch", section="Infobox", text=infobox(*WRETCH), release_scope="unknown")
+    data = {
+        "weapon": "Greatsword",
+        "requirements": {"strength": n(31, "Required Strength"), "dexterity": n(12, "Required Dexterity")},
+        "starting_class": origin("Wretch", "w", *WRETCH),
+    }
+    alloc = allocation(40, 15, 30, 60, 14, 10, 10, 30)  # 209 = 130 + 79
+    profile = {"level": "130", "weapon": "Greatsword"}
+    return data, alloc, profile, [weapon, wretch]
+
+
+def test_pack_keeps_only_the_level_rule_for_builds():
+    from app.rag.gameplay_knowledge import load_pack
+
+    hit_, data = level_rule()
+    assert f"minus {data['level_offset']}" in hit_.payload["text"]
+    kinds = {row["payload"].get("rule_kind") for g in load_pack()["groups"] for row in g["hits"]}
+    assert "class_rule" not in kinds  # Origins are corpus pages now; the agent quotes their Infobox.
+
+
+def test_build_rules_give_the_planner_its_targets():
+    rules = build_rules({"level": "level 95"})
+    assert rules["attribute_total"] == 174 and rules["attribute_cap"] == 99
+    assert rules["starting_class"] is None and rules["default_class"] == "Wretch"
+    assert build_rules({"level": "100", "starting_class": "Vagabond"})["starting_class"] == "Vagabond"
+    assert build_rules({}) is None
+
+
+def test_sourced_requirements_and_quoted_default_class(build):
     result = check(*build)
-    assert result["allocation"] == allocation and result["attribute_total"] == sum(allocation.values())
-    assert result["provenance"]["1"]["release_scope"] == "unknown"
-    assert not result["optimality_verified"] and result["review_status"] != "approved"
-    cache = BuildCache()
-    cache.put(data, hits)
-    cached, original = cache.get(profile)
-    cached["weapon"] = "mutated"
-    assert cache.get(profile)[0]["weapon"] == data["weapon"]
-    assert "level" not in cache.get(profile)[0] and original[0].id == "1"
-    assert cache.get({**profile, "weapon": "Other"}) is None
+    assert result["attribute_total"] == 209 and result["starting_class"] == "Wretch"
+    assert result["class_assumed"] and result["class_floor_verified"] and result["requirements_checked"]
+    assert not result["weapon_suggested"] and not result["optimality_verified"]
+    assert result["sources"] == [level_rule()[0].id, "w", "1"]
+    assert set(result["provenance"]) == set(result["sources"])
+
+
+def test_allocation_without_any_weapon_or_class_is_still_checked_arithmetic():
+    result = check({}, allocation(30, 20, 25, 10, 10, 10, 10, 10), {"level": "46"}, [])
+    assert result["weapon"] is None and not result["requirements_checked"] and result["attribute_total"] == 125
+    assert result["starting_class"] is None and not result["class_floor_verified"] and not result["class_assumed"]
+
+
+def test_named_weapon_without_requirement_source_is_labelled_not_checked():
+    result = check({}, allocation(30, 20, 25, 10, 10, 10, 10, 10), {"level": "46", "weapon": "Greatsword"}, [])
+    assert result["weapon"] == "Greatsword" and not result["requirements_checked"]
 
 
 @pytest.mark.parametrize(
-    "error", ["total", "floor", "cap", "requirements", "label", "source", "profile", "usage", "release", "floor_rule"]
+    ("change", "message"),
+    [
+        (lambda a: a.update(vigor=41), "sums to 210; level 130 needs exactly 209"),
+        (lambda a: a.update(strength=30, vigor=70), "strength 30 is below the Greatsword requirement 31"),
+        (lambda a: a.update(mind=9, vigor=46), "mind 9 is below the Wretch starting value 10"),
+        (lambda a: a.update(strength=100, vigor=0), "strength 100 exceeds 99"),
+    ],
 )
-def test_reject_bad_data_or_math(build, error):
-    data, allocation, profile, hits = copy.deepcopy(build)
-    if error == "total":
-        allocation["vigor"] += 1
-    elif error == "floor":
-        allocation["mind"] -= 1
-        allocation["vigor"] += 1
-    elif error == "cap":
-        data["attribute_cap"]["value"] = 12
-    elif error == "requirements":
-        allocation["strength"] = 11
-        allocation["vigor"] += 1
-    elif error == "label":
-        data["base"]["mind"]["label"] = "Missing Header"
-    elif error == "source":
-        data["base"]["mind"]["source_id"] = "invented"
-    elif error == "profile":
-        profile["weapon"] = "Other weapon"
-    elif error == "usage":
-        data["usage"] = "two_handed"
-    elif error == "floor_rule":
-        data["class_floor_rule"]["quote"] = "An invented respec rule"
+def test_rejections_tell_the_planner_exactly_what_to_fix(build, change, message):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    change(alloc)
+    with pytest.raises(ValueError, match=re.escape(message)):
+        check(data, alloc, profile, hits)
+
+
+def vagabond():
+    page = hit("v", title="Vagabond", section="Infobox", text=infobox(*VAGABOND), release_scope="unknown")
+    return {"starting_class": origin("Vagabond", "v", *VAGABOND)}, [page]
+
+
+def test_named_class_uses_its_quoted_floors_and_level():
+    data, hits = vagabond()
+    profile = {"level": "100", "starting_class": "Vagabond"}
+    ok = allocation(40, 10, 25, 14, 60, 9, 9, 12)  # 179 = 100 + 79
+    result = check(data, ok, profile, hits)
+    assert result["starting_class"] == "Vagabond" and result["class_floor_verified"] and not result["class_assumed"]
+    with pytest.raises(ValueError, match="vigor 14 is below the Vagabond starting value 15"):
+        check(data, {**ok, "vigor": 14, "dexterity": 86}, profile, hits)
+    with pytest.raises(ValueError, match="below the Vagabond starting level 9"):
+        check(data, ok, {"level": "5", "starting_class": "Vagabond"}, hits)
+
+
+def test_named_class_not_quoted_keeps_arithmetic_and_reports_floors_unchecked():
+    profile = {"level": "60", "starting_class": "Vagabond"}
+    result = check({}, allocation(40, 15, 25, 20, 20, 9, 9, 1), profile, [])  # 139 = 60 + 79
+    assert not result["class_floor_verified"] and not result["class_assumed"]
+    assert result["starting_class"] == "Vagabond" and result["rule_sources"] == [level_rule()[0].id]
+
+
+@pytest.mark.parametrize("error", ["other_class", "misread", "unbound", "page_names_other_class", "partial"])
+def test_class_values_need_the_confirmed_class_and_its_own_page(error):
+    data, hits = vagabond()
+    profile = {"level": "100", "starting_class": "Vagabond"}
+    ok = allocation(40, 10, 25, 14, 60, 9, 9, 12)
+    if error == "other_class":
+        data["starting_class"]["name"] = "Wretch"
+    elif error == "misread":  # Vigor 16 is not on the page, and the values no longer sum to level + 79.
+        data["starting_class"]["base"]["vigor"]["value"] = 16
+        hits[0].payload["text"] = hits[0].payload["text"].replace("Vigor: 15", "Vigor: 16")
+    elif error == "unbound":
+        data["starting_class"]["base"]["arcane"]["value"] = 8
+    elif error == "page_names_other_class":
+        hits[0].payload["title"] = "Hero"
     else:
-        hits.append(hit(2, text=hits[0].payload["text"], patch_version="2.0"))
-        hits[0].payload["patch_version"] = "1.0"
-        data["attribute_cap"]["source_id"] = "2"
+        data["starting_class"]["base"].pop("arcane")
     with pytest.raises(ValueError):
-        check(data, allocation, profile, hits)
+        check(data, ok, profile, hits)
+
+
+@pytest.mark.parametrize(
+    "error", ["weapon_mismatch", "unknown_source", "source_without_weapon", "requirements_without_weapon", "two_hand"]
+)
+def test_requirement_provenance_errors(build, error):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    if error == "weapon_mismatch":
+        data["weapon"] = "Zweihander"
+    elif error == "unknown_source":
+        data["requirements"]["strength"]["source_id"] = "unfetched"
+    elif error == "source_without_weapon":
+        hits[0].payload["title"] = "Claymore"
+        hits[0].payload["text"] = GREATSWORD.replace("Greatsword", "Claymore")
+    elif error == "requirements_without_weapon":
+        data.pop("weapon")
+        profile.pop("weapon")
+    else:
+        hits[0].payload["handedness"] = "two_handed"
+    with pytest.raises(ValueError):
+        check(data, alloc, profile, hits)
+
+
+def test_suggested_weapon_is_marked(build):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    profile.pop("weapon")
+    assert check(data, alloc, profile, hits)["weapon_suggested"]
 
 
 def test_headers_are_bound_to_values_and_correct_row():
@@ -99,35 +206,180 @@ def test_headers_are_bound_to_values_and_correct_row():
     assert not bound_value("Vigor: 15, Mind: 10", "Vigor", 10)
 
 
-def test_generator_receives_and_renders_checked_allocation(build):
-    data, allocation, profile, hits = build
-    artifact = check(*build)
-    p = Prepared("rag", "vi", [], hits=hits, checked_build=artifact, values={"player_profile": profile})
-    raw = {"answer": "Một phương án khả thi [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
-    out = validate_answer(p, raw)
-    for key, value in allocation.items():
-        assert f"{key.title()} {value}" in out.answer
-    assert json.loads(json.dumps(artifact))["allocation"] == allocation
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, {**raw, "build_allocation": {**allocation, "vigor": 99}})
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, {"answer": "Thiếu dữ liệu.", "evidence": [], "insufficient": True})
-    artifact["allocation"]["vigor"] += 1
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, raw)
+def test_a_number_cannot_move_to_another_attribute(build):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    # "Required Strength: 31" is Strength's number; filing it under Faith must fail even with that label.
+    data["requirements"] = {"faith": data["requirements"]["strength"]}
+    with pytest.raises(ValueError, match="faith 31 is not bound"):
+        check(data, alloc, profile, hits)
 
 
-def test_cache_expires(build, monkeypatch):
+def test_the_requirement_key_not_the_copied_label_decides_the_attribute(build):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    data["requirements"]["strength"]["label"] = "Requirements"  # Copied a section header; the source still binds.
+    assert check(data, alloc, profile, hits)["requirements_checked"]
+
+
+SPELL_INFOBOX = "Type: Sorcery\nCategory: Cold Sorcery\nFP Cost: 17\nAttributes Required\nInt: 36, Fth: 0, Arc: 0"
+STAFF_TABLE = (
+    "Attributes\nAttribute | Required | Scaling\nStrength: | 6 | E\nDexterity:\nIntelligence: | 28 | B\nFaith:\nArcane:"
+)
+
+
+def real_format_build(text, requirements):
+    """A requirement quote in the exact format of a local corpus chunk, level 95 Wretch."""
+    source = hit(2, title="Equipment", text=text, release_scope="unknown")
+    data = {"weapon": "Equipment", "requirements": {k: n(v, label, "2") for k, (v, label) in requirements.items()}}
+    return data, allocation(40, 20, 20, 10, 10, 54, 10, 10), {"level": "95"}, [source]  # 174 = 95 + 79
+
+
+@pytest.mark.parametrize(
+    ("text", "requirements"),
+    [
+        # Live 20/11: the model copied the section header, the wiki abbreviates Faith as "Fth".
+        (SPELL_INFOBOX, {"intelligence": (36, "Attributes Required"), "faith": (0, "Fth")}),
+        # Row-oriented staff table: the number sits under the "Required" column of the Intelligence row.
+        (STAFF_TABLE, {"intelligence": (28, "Required"), "strength": (6, "Strength")}),
+    ],
+)
+def test_requirements_in_real_corpus_formats_are_accepted(text, requirements):
+    assert check(*real_format_build(text, requirements))["attribute_total"] == 95 + 79
+
+
+@pytest.mark.parametrize(
+    ("text", "requirements"),
+    [
+        (SPELL_INFOBOX, {"intelligence": (17, "FP Cost")}),  # A number of a different field.
+        (STAFF_TABLE, {"intelligence": (6, "Required")}),  # Strength's cell, not Intelligence's.
+        (SPELL_INFOBOX, {"arcane": (36, "Int")}),  # Intelligence's number under another attribute.
+    ],
+)
+def test_requirements_in_real_corpus_formats_still_need_the_right_attribute(text, requirements):
+    with pytest.raises(ValueError, match="not bound"):
+        check(*real_format_build(text, requirements))
+
+
+@pytest.mark.parametrize(
+    ("label", "ok"), [("Str Req", True), ("Required Str.", True), ("Str/Dex", False), ("Req", False)]
+)
+def test_requirement_headers_must_name_exactly_one_attribute(build, label, ok):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    hits[0].payload["text"] = GREATSWORD.replace("Required Strength: 31", f"{label}: 31")
+    data["requirements"]["strength"]["label"] = label
+    if ok:
+        check(data, alloc, profile, hits)
+    else:
+        with pytest.raises(ValueError):
+            check(data, alloc, profile, hits)
+
+
+def test_tavily_rendered_attribute_cell_keeps_header_value_binding():
+    quote = (
+        "| Attribute | Required | Scaling |\n| Image 20: ER Custom Stat Icon Strength (Color).pngStrength: | 5 | E |"
+    )
+    assert bound_value(quote, "Strength", 5)
+    assert not bound_value(quote, "Strength", 20)
+    assert not bound_value(quote, "Strength", 13)
+
+
+@pytest.mark.parametrize("field", ["patch_version", "affinity", "upgrade_level"])
+def test_requirement_sources_cannot_mix_explicit_variants(build, field):
+    data, alloc, profile, hits = copy.deepcopy(build)
+    hits.append(hit(2, title="Greatsword", text=GREATSWORD))
+    hits[0].payload[field] = "first"
+    hits[-1].payload[field] = "second"
+    data["requirements"]["dexterity"]["source_id"] = "2"
+    with pytest.raises(ValueError, match="Conflicting"):
+        check(data, alloc, profile, hits)
+
+
+def test_cache_keeps_sourced_requirements_by_weapon_and_expires(build, monkeypatch):
     import app.rag.build_data as module
 
+    data, _, profile, hits = build
     cache = BuildCache()
-    cache.put(build[0], build[3])
+    cache.put({}, hits)  # Nothing sourced: nothing cached.
+    assert cache.get(profile) is None
+    cache.put(data, hits)
+    cached, original = cache.get({"weapon": "greatsword"})
+    cached["weapon"] = "mutated"
+    assert cache.get(profile)[0]["weapon"] == "Greatsword" and original[0].id == "1"
     monkeypatch.setattr(module.time, "monotonic", lambda: 10**12)
-    assert cache.get(build[2]) is None
+    assert cache.get(profile) is None
 
 
-async def test_tool_calculator_artifact_survives_context_and_generation(build):
+def answer_with(p, text="Dồn điểm vào Strength vì Greatsword cần Strength cao [1]."):
+    return validate_answer(p, {"answer": text, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False})
 
+
+def test_generator_renders_table_label_and_cites_rule_sources(build):
+    data, alloc, profile, hits = build
+    artifact = check(*build)
+    context = [*hits, *rule_hits(profile)]
+    p = Prepared("rag", "vi", [], hits=context, checked_build=artifact, values={"player_profile": profile})
+    out = answer_with(p)
+    assert "Gợi ý phân bổ cho Greatsword (một tay, không bonus, giả định class Wretch vì bạn chưa nêu class)" in (
+        out.answer
+    )
+    assert all(f"{k.title()} {v}" in out.answer for k, v in alloc.items())
+    # The prose cited only the weapon; the backend cites the accounting and class snapshots itself.
+    assert [s.index for s in out.sources] == [1, 2, 3] and out.answer.rstrip().endswith("[1][2][3]")
+    with pytest.raises(RAGValidationError):
+        validate_answer(
+            p,
+            {
+                "answer": "Ok [1].",
+                "evidence": [{"index": 1, "quote_id": "q0"}],
+                "insufficient": False,
+                "build_allocation": {**alloc, "vigor": 99},
+            },
+        )
+    with pytest.raises(RAGValidationError):
+        validate_answer(p, {"answer": "Thiếu dữ liệu.", "evidence": [], "insufficient": True})
+
+
+@pytest.mark.parametrize(
+    ("profile", "label"),
+    [
+        ({"level": "46"}, "Gợi ý phân bổ 8 chỉ số (chưa kiểm chỉ số khởi đầu của class, chưa chọn vũ khí"),
+        ({"level": "46", "weapon": "Greatsword"}, "(một tay, không bonus, chưa kiểm chỉ số khởi đầu của class,"),
+        ({"level": "60", "starting_class": "Vagabond"}, "chưa kiểm chỉ số khởi đầu của class Vagabond"),
+    ],
+)
+def test_labels_state_every_assumption_and_unchecked_part(profile, label):
+    alloc = (
+        allocation(30, 20, 25, 10, 10, 10, 10, 10)
+        if profile["level"] == "46"
+        else (allocation(40, 15, 25, 20, 20, 9, 9, 1))
+    )
+    artifact = check({}, alloc, profile, [])
+    context = [hit(1, title="Note", text="Strength scales Greatsword damage."), *rule_hits(profile)]
+    p = Prepared("rag", "vi", [], hits=context, checked_build=artifact, values={"player_profile": profile})
+    out = answer_with(p, "Ưu tiên Strength [1].")
+    assert label in out.answer
+    if profile.get("weapon"):
+        assert "chưa kiểm yêu cầu vũ khí" in out.answer
+
+
+@pytest.mark.parametrize("prose", ["Vigor 99 [1].", "| Vigor | Mind |\n| 99 | 99 | [1]"])
+def test_different_stats_in_prose_ask_the_guard_and_show_the_checked_table(build, prose):
+    """Policy 20/11/2026: wrong numbers are not a reason to drop the answer. Without a guard pass the checked
+    table is appended with a note, and the Answer Guard is requested to fix the writer's own table."""
+    profile = build[2]
+    p = Prepared(
+        "rag",
+        "vi",
+        [],
+        hits=[*build[3], *rule_hits(profile)],
+        checked_build=check(*build),
+        values={"player_profile": profile},
+    )
+    out = answer_with(p, prose)
+    assert "Vigor 40 | Mind 15" in out.answer and "đây là bảng đã kiểm" in out.answer
+    assert p.trace["guard_request"]["issues"][0]["kind"] == "numbers"
+
+
+async def test_tool_calculator_needs_only_level_and_cites_pack_rules(build):
     from app.api.schemas.chat import ChatRequest
     from app.rag.pipeline import ChatPipeline
     from app.rag.tool_agent import run_tools
@@ -135,11 +387,11 @@ async def test_tool_calculator_artifact_survives_context_and_generation(build):
     from tests.unit.test_live_chat import FakeRetriever
     from tests.unit.test_tool_agent import ToolsLLM, step
 
-    data, allocation, profile, hits = build
+    data, alloc, profile, hits = build
     llm = ToolsLLM(
         [
-            step("local_search", "source numerical data"),
-            step("calculator", build_data=data, allocation=allocation),
+            step("local_search", "Greatsword requirements"),
+            step("calculator", build_data=data, allocation=alloc),
             step("finish", evidence_ids=["1"]),
         ]
     )
@@ -158,25 +410,19 @@ async def test_tool_calculator_artifact_survives_context_and_generation(build):
         "next_player": player,
     }
     state = await run_tools(pipe, state)
-    assert p.checked_build["allocation"] == allocation
-    # No finish IDs / exhausted step budget must still retain every accounting source.
+    # The planner saw the targets before proposing numbers, and never had to open accounting sources.
+    assert llm.observations[0]["build_rules"]["attribute_total"] == 209
+    assert "calculator" in llm.observations[0]["available_actions"]
+    assert p.checked_build["allocation"] == alloc and p.trace["build_check"]["status"] == "checked"
     p.trace.pop("evidence_selection")
     pipe._context(state)
-    assert [h.id for h in p.hits] == ["1"]
+    assert [h.id for h in p.hits] == p.checked_build["sources"]
     result = pipe._prompt(state)
-    assert json.loads(result.values["payload"])["checked_build"]["allocation"] == allocation
-    assert pipe.build_cache.get(profile)[0] == data
-    assert result.values["player_profile"] == profile
+    assert json.loads(result.values["payload"])["checked_build"]["allocation"] == alloc
+    assert pipe.build_cache.get(profile)[0] == p.checked_build["data"]
 
 
-def test_attribute_header_cannot_be_swapped_even_if_same_integer(build):
-    data, allocation, profile, hits = copy.deepcopy(build)
-    data["base"]["vigor"]["label"] = "Mind"
-    with pytest.raises(ValueError, match="header"):
-        check(data, allocation, profile, hits)
-
-
-async def test_calculator_validation_feedback_reports_unknown_source_without_accepting(build):
+async def test_calculator_rejection_is_fed_back_and_withdrawn_after_two(build):
     from app.api.schemas.chat import ChatRequest
     from app.rag.pipeline import ChatPipeline
     from app.rag.tool_agent import run_tools
@@ -184,17 +430,21 @@ async def test_calculator_validation_feedback_reports_unknown_source_without_acc
     from tests.unit.test_live_chat import FakeRetriever
     from tests.unit.test_tool_agent import ToolsLLM, step
 
-    data, allocation, profile, hits = copy.deepcopy(build)
-    data["starting_level"]["source_id"] = "unfetched-snapshot"
+    data, alloc, profile, hits = copy.deepcopy(build)
+    wrong = {**alloc, "vigor": alloc["vigor"] + 1}
     llm = ToolsLLM(
-        [step("local_search", "sources"), step("calculator", build_data=data, allocation=allocation), step("finish")]
+        [
+            step("calculator", build_data={}, allocation=wrong),
+            step("calculator", build_data={"weapon": "Greatsword"}, allocation=wrong),
+            step("finish"),
+        ]
     )
-    pipe = ChatPipeline(settings(), llm, FakeRetriever(hits))
+    pipe = ChatPipeline(settings(chat_tool_steps=4), llm, FakeRetriever(hits))
     p = Prepared(
         "rag",
         "vi",
         [],
-        max_calls=6,
+        max_calls=8,
         trace={"web_search": {"requested": "off"}},
         player_state={"constraints": [{"key": k, "value": v} for k, v in profile.items()]},
     )
@@ -203,155 +453,55 @@ async def test_calculator_validation_feedback_reports_unknown_source_without_acc
         pipe, {"prepared": p, "req": req, "search_mode": "off", "resolved_question": "Build", "query": "Build"}
     )
     assert p.checked_build is None
-    assert llm.observations[2]["observations"][-1]["validation"] == "Unknown numeric source"
-
-
-@pytest.mark.parametrize("prose", ["Vigor 99 [1].", "| Vigor | Mind |\n| 99 | 99 | [1]"])
-def test_generator_cannot_smuggle_different_stats_in_prose(build, prose):
-    p = Prepared("rag", "vi", [], hits=build[3], checked_build=check(*build), values={"player_profile": build[2]})
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, {"answer": prose, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False})
-
-
-def test_tavily_rendered_attribute_cell_keeps_header_value_binding():
-    quote = (
-        "| Attribute | Required | Scaling |\n| Image 20: ER Custom Stat Icon Strength (Color).pngStrength: | 5 | E |"
-    )
-    assert bound_value(quote, "Strength", 5)
-    assert not bound_value(quote, "Strength", 20)
-    assert not bound_value(quote, "Strength", 13)
-
-
-@pytest.mark.parametrize("field", ["variant_context", "affinity", "upgrade_level"])
-def test_numerical_sources_cannot_mix_explicit_variants(build, field):
-    data, allocation, profile, hits = copy.deepcopy(build)
-    hits.append(hit(2, text=hits[0].payload["text"]))
-    hits[0].payload[field] = {"value": "first"}
-    hits[1].payload[field] = {"value": "second"}
-    data["attribute_cap"]["source_id"] = "2"
-    with pytest.raises(ValueError, match="Conflicting"):
-        check(data, allocation, profile, hits)
-
-
-def test_unchecked_allocation_is_dropped_with_notice_and_prose_numbers_still_fail(build):
-    data, allocation, profile, hits = build
-    p = Prepared("rag", "vi", [], hits=hits, values={"player_profile": profile})
-    raw = {"answer": "Ưu tiên Intelligence [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
-    out = validate_answer(p, {**raw, "build_allocation": allocation})
-    assert out.answer.startswith(raw["answer"]) and "chưa được công cụ tính kiểm tra" in out.answer
-    assert not any(f"{k.title()} {v}" in out.answer for k, v in allocation.items())
-    assert p.trace["dropped_unchecked_allocation"] is True
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, {**raw, "answer": "Vigor 40, Intelligence 60 [1].", "build_allocation": allocation})
-
-
-def classless_build():
-    text = (
-        "A character's level equals the sum of the eight primary attributes minus 79.\n"
-        "Required Faith: 25. Required Strength: 12. Attribute cap: 99."
-    )
-    h = hit(1, title="Blasphemous Blade", text=text, release_scope="unknown")
-
-    def n(value, label):
-        return {"value": value, "label": label, "source_id": "1", "quote_id": "q0"}
-
-    data = dict(
-        weapon="Blasphemous Blade",
-        usage="one_handed_no_bonuses",
-        requirements={"faith": n(25, "Required Faith"), "strength": n(12, "Required Strength")},
-        attribute_cap=n(99, "Attribute cap"),
-        attribute_offset=n(79, "minus"),
-    )
-    allocation = dict(zip(ATTRIBUTES, (50, 20, 25, 12, 10, 9, 60, 9), strict=True))
-    return data, allocation, {"weapon": "Blasphemous Blade", "level": "116"}, [h]
-
-
-def test_class_is_optional_because_level_accounting_is_shared():
-    data, allocation, profile, hits = classless_build()
-    result = check(data, allocation, profile, hits)
-    assert result["attribute_total"] == 116 + 79 and result["class_floor_verified"] is False
-    p = Prepared("rag", "vi", [], hits=hits, checked_build=result, values={"player_profile": profile})
-    raw = {"answer": "Ưu tiên Faith [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
-    out = validate_answer(p, raw)
-    assert "Faith 60" in out.answer and "chưa kiểm tra" in out.answer
-
-
-@pytest.mark.parametrize("error", ["total", "requirement", "partial_class", "offset_missing", "weapon"])
-def test_classless_build_still_checks_total_requirements_and_provenance(error):
-    data, allocation, profile, hits = classless_build()
-    if error == "total":
-        allocation["vigor"] += 1
-    elif error == "requirement":
-        allocation["faith"], allocation["vigor"] = 24, allocation["vigor"] + 1
-    elif error == "partial_class":
-        data["starting_class"] = "Prophet"
-    elif error == "offset_missing":
-        data.pop("attribute_offset")
-    else:
-        profile["weapon"] = "Other weapon"
-    with pytest.raises(ValueError):
-        check(data, allocation, profile, hits)
-
-
-def test_missing_weapon_and_class_become_labelled_suggestion_and_wretch_assumption():
-    text = (
-        "A character's level equals the sum of the eight primary attributes minus 79.\n"
-        "Wretch starting attributes. Starting level: 1.\n"
-        + "\n".join(f"{k.title()}: 10" for k in ATTRIBUTES)
-        + "\nRespec cannot reduce an attribute below its starting class base value.\n"
-        "Str Req: 11. Dex Req: 15. Attribute cap: 99."
-    )
-    h = hit(1, title="Wretch and Hand of Malenia", text=text, release_scope="unknown")
-
-    def n(value, label):
-        return {"value": value, "label": label, "source_id": "1", "quote_id": "q0"}
-
-    data = dict(
-        weapon="Hand of Malenia",
-        usage="one_handed_no_bonuses",
-        requirements={"strength": n(11, "Str Req"), "dexterity": n(15, "Dex Req")},
-        attribute_cap=n(99, "Attribute cap"),
-        attribute_offset=n(79, "minus"),
-        starting_class="Wretch",
-        starting_level=n(1, "Starting level"),
-        base={k: n(10, k.title()) for k in ATTRIBUTES},
-        points_per_level=n(1, "Points per level"),
-        class_floor_rule={
-            "source_id": "1",
-            "quote_id": "q0",
-            "quote": "Respec cannot reduce an attribute below its starting class base value.",
-        },
-    )
-    h.payload["text"] = h.payload["text"].replace("Starting level: 1.", "Starting level: 1. Points per level: 1.")
-    allocation = dict(zip(ATTRIBUTES, (40, 15, 25, 12, 60, 10, 17, 10), strict=True))
-    profile = {"level": "110"}  # The player named neither a weapon nor a class.
-    result = check(data, allocation, profile, [h])
-    assert result["weapon_suggested"] and result["class_assumed"] and result["class_floor_verified"]
-    p = Prepared("rag", "vi", [], hits=[h], checked_build=result, values={"player_profile": profile})
-    raw = {
-        "answer": "Hand of Malenia hợp build Dex [1].",
-        "evidence": [{"index": 1, "quote_id": "q0"}],
-        "insufficient": False,
-    }
-    out = validate_answer(p, raw)
-    assert "vũ khí do IndexBeast đề xuất" in out.answer and "giả định class Wretch" in out.answer
-    assert "Dexterity 60" in out.answer
-    with pytest.raises(ValueError):
-        check(data, allocation, {"level": "110", "starting_class": "Samurai"}, [h])
+    assert "needs exactly 209" in llm.observations[1]["observations"][-1]["validation"]
+    assert "calculator" not in llm.observations[2]["available_actions"]
+    assert p.trace["build_check"]["status"] == "failed"
 
 
 @pytest.mark.parametrize(
-    ("label", "ok"), [("Str Req", True), ("Required Str.", True), ("Str/Dex", False), ("Req", False)]
+    "answer",
+    [
+        "Chưa có lớp xuất phát hoặc checked_build nên không thể chốt số điểm [1].",
+        "Theo player_profile, ưu tiên Intelligence [1].",
+    ],
 )
-def test_requirement_headers_must_name_exactly_one_attribute(label, ok):
-    data, allocation, profile, hits = classless_build()
-    hits[0].payload["text"] = hits[0].payload["text"].replace("Required Strength: 12", f"{label}: 12")
-    data["requirements"]["strength"]["label"] = label
-    if ok:
-        check(data, allocation, profile, hits)
-    else:
-        with pytest.raises(ValueError):
-            check(data, allocation, profile, hits)
+def test_answers_that_leak_internal_field_names_are_regenerated(build, answer):
+    p = Prepared("rag", "vi", [], hits=build[3], values={"player_profile": build[2]})
+    with pytest.raises(RAGValidationError) as error:
+        answer_with(p, answer)
+    assert error.value.reason == "internal_field_name"
+    assert answer_with(p, "Mình chưa kiểm chứng được bảng chia điểm chính xác từ nguồn; ưu tiên Strength [1].")
+
+
+async def test_stream_never_shows_an_internal_field_name():
+    from app.api.schemas.chat import ChatRequest
+    from app.rag.generator import RAGValidationError
+    from tests.unit.test_live_chat import BODY, FakeLLM, FakeRetriever, service
+
+    evidence = '"evidence": [{"index": 1, "quote": "Ranni is an Empyrean"}], "insufficient": false}'
+    leak = '{"answer": "Thiếu checked_build nên chưa chia điểm [1]. ", ' + evidence
+    live = service(llm=FakeLLM(tokens=[leak]), retriever=FakeRetriever(), rag_format_retries=0)
+    with pytest.raises(RAGValidationError) as error:
+        await live.open_stream(ChatRequest(**BODY))
+    assert error.value.reason == "internal_field_name" and not live.traces
+    # The same answer without the field name streams normally.
+    clean = FakeLLM(tokens=[leak.replace("checked_build", "bảng chia điểm đã kiểm chứng")])
+    live = service(llm=clean, retriever=FakeRetriever(), rag_format_retries=0)
+    async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
+        assert [name async for name, _ in events][-1] == "done"
+
+
+def test_unchecked_allocation_field_is_dropped_but_prose_numbers_are_a_reference(build):
+    data, alloc, profile, hits = build
+    p = Prepared("rag", "vi", [], hits=hits, values={"player_profile": profile})
+    raw = {"answer": "Ưu tiên Strength [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
+    out = validate_answer(p, {**raw, "build_allocation": alloc})
+    assert out.answer.startswith(raw["answer"]) and "chưa được công cụ tính kiểm tra" in out.answer
+    assert not any(f"{k.title()} {v}" in out.answer for k, v in alloc.items())
+    assert p.trace["dropped_unchecked_allocation"] is True
+    # Prose numbers without a calculator are a reference suggestion: kept, not a failure.
+    kept = validate_answer(p, {**raw, "answer": "Vigor 40, Strength 60 [1].", "build_allocation": alloc})
+    assert "Vigor 40, Strength 60" in kept.answer
 
 
 @pytest.mark.parametrize(
@@ -360,6 +510,7 @@ def test_requirement_headers_must_name_exactly_one_attribute(label, ok):
         ("Vigor 40", True),
         ("Str 40, Dex 60", True),
         ("INT: 60", True),
+        ("Fth 20", True),
         ("Sức mạnh 40", True),
         ("Dex. 50", True),
         ("| Str | Dex |", True),
@@ -373,9 +524,90 @@ def test_unchecked_stat_numbers_are_detected_in_english_abbreviations_and_vietna
     assert stat_numbers_in(text) is leaks
 
 
-def test_unchecked_abbreviated_stats_in_prose_are_rejected():
-    data, allocation, profile, hits = classless_build()
-    p = Prepared("rag", "vi", [], hits=hits, values={"player_profile": profile})
-    raw = {"answer": "Str 12, Fai 60 [1].", "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False}
-    with pytest.raises(RAGValidationError):
-        validate_answer(p, {**raw, "build_allocation": allocation})
+def test_fill_lets_the_calculator_do_the_arithmetic():
+    data, hits = vagabond()
+    profile = {"level": "100", "starting_class": "Vagabond"}  # 179 points
+    result = check(data, {"vigor": 40, "endurance": 25}, profile, hits, fill="strength")
+    # Unset attributes stay at the Vagabond floor; Strength takes exactly what is left.
+    assert result["allocation"] == allocation(40, 10, 25, 66, 13, 9, 9, 7)
+    assert sum(result["allocation"].values()) == 179
+
+
+@pytest.mark.parametrize(
+    ("targets", "fill", "message"),
+    [
+        ({"vigor": 99, "endurance": 99}, "strength", "below its starting value"),
+        ({}, "strength", "over 99"),
+        ({"vigor": 40}, "", "Give all eight attributes"),
+        ({"vigor": 40}, "luck", "fill must be one of the eight attributes"),
+    ],
+)
+def test_fill_rejections_say_what_to_change(targets, fill, message):
+    data, hits = vagabond()
+    with pytest.raises(ValueError, match=message):
+        check(data, targets, {"level": "100", "starting_class": "Vagabond"}, hits, fill=fill)
+
+
+def writer_table(alloc, wrong=None):
+    rows = [f"| {k.title()} | {wrong if k == 'vigor' and wrong else v} | lý do |" for k, v in alloc.items()]
+    return "\n".join(["| Chỉ số | Điểm | Lý do |", "|---|---|---|", *rows, "[1]"])
+
+
+def checked_prepared(build):
+    profile = build[2]
+    return Prepared(
+        "rag",
+        "vi",
+        [],
+        hits=[*build[3], *rule_hits(profile)],
+        checked_build=check(*build),
+        values={"player_profile": profile},
+    )
+
+
+def test_writer_prints_the_checked_table_and_the_backend_only_adds_assumptions(build):
+    p = checked_prepared(build)
+    text = "Dồn Strength cho Greatsword (yêu cầu Strength 31) [1].\n\n" + writer_table(build[1])
+    out = answer_with(p, text)
+    assert "| Vigor | 40 |" in out.answer and p.trace["allocation_printed_by_writer"]
+    assert "Vigor 40 | Mind 15" not in out.answer  # No duplicate numbers line.
+    assert "giả định class Wretch" in out.answer
+
+
+def test_a_wrong_number_in_the_writer_table_requests_the_guard(build):
+    p = checked_prepared(build)
+    out = answer_with(p, "Bảng [1].\n\n" + writer_table(build[1], wrong=41))
+    assert "| Vigor | 41 |" in out.answer and "Vigor 40 | Mind 15" in out.answer
+    assert p.trace["guard_request"]["issues"] == [{"kind": "numbers", "pairs": [{"attribute": "vigor", "printed": 41}]}]
+
+
+async def test_build_stream_is_held_until_the_guard_fixed_the_table(build):
+    from app.rag.generator import Generator
+    from tests.unit.test_live_chat import FakeLLM
+
+    p = checked_prepared(build)
+    p.template, p.values = (
+        None,
+        {**p.values, "policy": "", "persona": "", "lang": "vi", "spoilers": True, "history": [], "payload": "{}"},
+    )
+    evidence = '"evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": false}'
+    llm = FakeLLM(tokens=['{"answer": "Vigor 41 cho build này [1].\\n', 'Phần còn lại [1]. ", ' + evidence])
+    fixed = "Bảng đã sửa [1].\n\n" + writer_table(build[1])
+    llm.data = {"answer": fixed}  # What the Answer Guard returns (JSON call of the fake model).
+    async with aclosing(Generator(llm, format_retries=0).stream(p)) as tokens:
+        shown = [token async for token in tokens]
+    # Nothing was shown before the guard: one chunk, already corrected, plus the assumptions line.
+    assert len(shown) == 1 and shown[0].startswith(fixed) and "Vigor 41" not in shown[0]
+    assert p.trace["answer_guard"]["status"] == "applied"
+
+
+def test_fill_without_quoted_class_floors_is_refused():
+    with pytest.raises(ValueError, match="Quote the starting class Infobox"):
+        check({}, {"vigor": 40}, {"level": "100"}, [], fill="strength")
+
+
+def test_class_name_may_be_omitted_and_defaults_to_the_users_class():
+    data, hits = vagabond()
+    data["starting_class"].pop("name")
+    result = check(data, {"vigor": 40}, {"level": "100", "starting_class": "Vagabond"}, hits, fill="strength")
+    assert result["starting_class"] == "Vagabond" and result["class_floor_verified"]

@@ -27,7 +27,7 @@ bot Discord ──────────────────────�
 
 Quyết định đáng biết:
 
-- `ENVIRONMENT`, `CHAT_MODE`, `CHAT_PERSISTENCE`, `CHAT_AGENT_ENABLED` đặt **cứng** trong overlay; `WEB_URL`, `CORS_ORIGINS`, `AUTH_REDIRECT_URI` **suy ra từ `DOMAIN`**. Đặt chúng ở `.env` không có tác dụng, nên một `.env` sao từ máy dev không làm production chạy mock hay `dev`.
+- `ENVIRONMENT`, `CHAT_MODE`, `CHAT_PERSISTENCE` đặt **cứng** trong overlay (cờ `CHAT_AGENT_ENABLED` đã bị bỏ: `rag` luôn dùng Agent); `WEB_URL`, `CORS_ORIGINS`, `AUTH_REDIRECT_URI` **suy ra từ `DOMAIN`**. Đặt chúng ở `.env` không có tác dụng, nên một `.env` sao từ máy dev không làm production chạy mock hay `dev`.
 - Log container ghi bằng driver `local` (xoay vòng 5×20 MB) để còn xem được khi sự cố. API không ghi access log và Caddy không ghi access log mặc định, nên IP người dùng không lưu lại. Muốn tắt hẳn: `DOCKER_LOG_DRIVER=none`.
 - uvicorn chạy với `--forwarded-allow-ips "*"` (trong `backend/Dockerfile`): chấp nhận được vì api không công khai cổng, chỉ Caddy trong mạng Docker chạm tới nó, và Caddy ghi đè `X-Forwarded-For`. Nếu sau này có thêm service khác trong mạng, đổi `*` thành IP của Caddy.
 - `no-new-privileges` + `cap_drop: [ALL]` cho api, bot, Caddy (Caddy thêm lại `NET_BIND_SERVICE`). PostgreSQL/Qdrant/Redis **không** bỏ capability vì entrypoint của image cần `chown`/hạ quyền; chưa thử nên không liều.

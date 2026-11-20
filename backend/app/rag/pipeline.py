@@ -109,16 +109,13 @@ def select_context(
     budget: int,
     *,
     policy: CorpusPolicy | None = None,
-    spoilers: bool = True,
 ) -> list[Hit]:
     """Admission, dedup and budget only. Order is the Agent's (or retrieval's) order, never re-ranked here."""
     admission = policy or CorpusPolicy()
     selected, seen, seen_content, used = [], set(), set(), 0
     for hit in hits:
         p = hit.payload
-        if (not isinstance(hit, WebHit) and admission.exclusion_reason(p, spoilers=spoilers)) or (
-            isinstance(hit, WebHit) and not spoilers
-        ):
+        if not isinstance(hit, WebHit) and admission.exclusion_reason(p):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
             continue
@@ -297,9 +294,7 @@ class ChatPipeline:
         requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
-        state["verify_coverage"] = (
-            self.web_search is not None and state["search_mode"] == "auto" and req.options.spoilers
-        )
+        state["verify_coverage"] = self.web_search is not None and state["search_mode"] == "auto"
         if not state["verify_coverage"]:
             prepared.max_calls = self.settings.chat_agent_max_calls
         return state
@@ -334,11 +329,11 @@ class ChatPipeline:
         if decision is None:
             raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
         p.agent_decision = decision.model_dump()
-        p.gameplay_advice = (
-            decision.action == "retrieve"
-            and decision.intent in {"mechanics", "build", "gameplay_comparison"}
-            and req.options.spoilers
-        )
+        p.gameplay_advice = decision.action == "retrieve" and decision.intent in {
+            "mechanics",
+            "build",
+            "gameplay_comparison",
+        }
         if req.options.lang == "auto" and decision.answer_language:
             p.lang = state["answer_language"] = decision.answer_language
         continuing = decision.turn_type != "new" and decision.intent != "cancel"
@@ -474,7 +469,6 @@ class ChatPipeline:
                 self.settings.rag_top_k,
                 self.settings.rag_context_chars,
                 policy=self.policy,
-                spoilers=state["req"].options.spoilers,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
             checks = p.trace.get("coverage_checks", [])
@@ -498,7 +492,6 @@ class ChatPipeline:
         p.values = {
             "persona": prompt("persona"),
             "lang": p.lang,
-            "spoilers": req.options.spoilers,
             "policy": prompt("answer")
             + ("\n" + prompt("gameplay_advice") if p.gameplay_advice else "")
             + ("\n" + prompt("overview") if state.get("overview") else ""),
@@ -515,6 +508,7 @@ class ChatPipeline:
                     **({"player_profile": profile} if profile else {}),
                     **({"task_plan": p.trace["task_plan"]} if p.trace.get("task_plan") else {}),
                     **({"verified_name": p.trace["verified_name"]} if p.trace.get("verified_name") else {}),
+                    **({"build_check": p.trace["build_check"]} if p.trace.get("build_check") else {}),
                 },
                 ensure_ascii=False,
             ),

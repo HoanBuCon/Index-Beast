@@ -1,5 +1,10 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Phân bổ chỉ số do Agent làm, Answer Guard, hạn thời gian (21/11/2026)](2026-11-21_s5-tv3_build-guard-va-thoi-gian.md)
+- [TV4 (TV3 làm thay) · Bỏ tùy chọn `spoilers` khỏi web, bot và API (21/11/2026)](2026-11-21_s5-tv4_bo-tuy-chon-spoiler.md)
+
+- [TV2 (TV3 làm thay) · Bổ sung 11 trang Origins/Attributes vào corpus (20/11/2026)](2026-11-20_s5-tv2_bo-sung-trang-class.md)
+
 - [TV3 · Chuyển rule con số cho Agent (20/11/2026)](2026-11-20_s4-tv3_agent-rule-con-so.md)
 
 - [TV3 · Gỡ chế độ chat `llm_only` (20/11/2026)](2026-11-20_s4-tv3_go-llm-only.md)

@@ -40,7 +40,7 @@ export interface ChatRequest {
   message: string;
   channel: "web" | "discord";
   external_ref?: string | null;
-  options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean; web_search?: "off" | "auto" | "always" };
+  options?: { lang?: "auto" | "vi" | "en"; web_search?: "off" | "auto" | "always" };
   clarification_id?: string;
 }
 export interface Clarification {

@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import time
 import unicodedata
 from datetime import UTC, datetime
@@ -17,7 +18,7 @@ from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import Clarification, ClarificationField
 from app.rag.agent import GoalText, contains_superseded, spend
 from app.rag.entity_spelling import correct_name, matching_names
-from app.rag.output import decode_output
+from app.rag.output import OutputFormatError, decode_output
 from app.rag.prompts import prompt, rewrite_prompt
 from app.rag.retriever import document_to_hit, hit_to_document
 from app.rag.task_plan import MAX_GOAL_SOURCES, MAX_GOALS, restore_evidence, save_evidence, update_plan
@@ -43,6 +44,8 @@ class ToolStep(BaseModel):
     evidence_ids: list[str] = Field(default_factory=list, max_length=5)
     snapshot_ids: list[str] = Field(default_factory=list, max_length=5)
     allocation: dict[str, int] = Field(default_factory=dict, max_length=8)
+    # The attribute that takes the remainder of the level's points; the calculator does the arithmetic.
+    fill: Literal["", "vigor", "mind", "endurance", "strength", "dexterity", "intelligence", "faith", "arcane"] = ""
     build_data: dict = Field(default_factory=dict)
     question: str = Field(default="", max_length=1000)
     missing: list[ClarificationField] = Field(default_factory=list, max_length=2)
@@ -54,6 +57,21 @@ class ToolStep(BaseModel):
     reason: Literal[
         "initial", "missing_evidence", "different_query", "player_detail", "ambiguous_name", "sufficient", "unavailable"
     ]
+
+
+def invalid_output_issue(exc) -> dict:
+    """What was wrong with a tool step, without echoing any model content."""
+    if isinstance(exc, ValidationError):
+        return {
+            "kind": "schema",
+            "fields": [
+                {"field": ".".join(map(str, e["loc"])), "type": e["type"]}
+                for e in exc.errors(include_input=False, include_url=False)
+            ][:5],
+        }
+    if isinstance(exc, OutputFormatError):
+        return {"kind": "json", "json_error": exc.diagnostics.get("json_error") or exc.diagnostics.get("reason")}
+    return {"kind": "value", "type": type(exc).__name__}
 
 
 def key(action, arguments):
@@ -75,12 +93,12 @@ async def run_tools(pipe, state):
             row["id"]: row
             for group in load_pack()["groups"]
             for row in group["hits"]
-            if pipe.policy.exclusion_reason(row["payload"], spoilers=req.options.spoilers) is None
+            if pipe.policy.exclusion_reason(row["payload"]) is None
         }
         if pipe.settings.gameplay_knowledge_enabled
         else {}
     )
-    from app.rag.build_data import BuildCache
+    from app.rag.build_data import BuildCache, build_rules, check, level_rule
 
     if not hasattr(pipe, "build_cache"):
         pipe.build_cache = BuildCache()
@@ -88,7 +106,7 @@ async def run_tools(pipe, state):
     cached = pipe.build_cache.get(profile)
     if cached:
         for h in cached[1]:
-            if isinstance(h, WebHit) or pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None:
+            if isinstance(h, WebHit) or pipe.policy.exclusion_reason(h.payload) is None:
                 catalog[h.id] = {"id": h.id, "payload": h.payload, "web": isinstance(h, WebHit)}
     task_plan = (p.player_state or {}).get("plan", [])
     hits = restore_evidence(pipe, state) if task_plan else {}
@@ -119,6 +137,7 @@ async def run_tools(pipe, state):
         return prepare_deadline - time.perf_counter()
 
     calculator_failures = 0
+    calculator_offered = False
     stalled = set()
     followup = None
     web_queries = []
@@ -160,15 +179,17 @@ async def run_tools(pipe, state):
         profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
         if name_status == "verified":
             profile = {k: correct_name(v, raw_name, name_options[0]) for k, v in profile.items()}
+        # Level is the only player input the arithmetic needs: level accounting and class floors are built-in
+        # sourced rules, a missing class becomes Wretch, a missing weapon a suggestion or "not checked".
+        targets = build_rules(profile) if not unresolved_name else None
         if (
-            hits
-            and not unresolved_name
-            # Level is the only player input the math needs: a missing class/weapon becomes a stated assumption.
-            and profile.get("level")
+            targets is not None
+            and p.checked_build is None
             # Two rejected calculations end the attempt; the answer explains priorities without numbers.
             and calculator_failures < pipe.settings.chat_calculator_max_failures
         ):
             available.append("calculator")
+            calculator_offered = True
         carried_ids = dict.fromkeys(key for item in task_plan for key in item["evidence_ids"] if key in hits)
         interleaved = (key for batch in zip_longest(*reversed(source_batches)) for key in batch if key is not None)
         candidate_ids = list(dict.fromkeys([*carried_ids, *covered_ids, *interleaved, *hits]))[:30]
@@ -196,6 +217,8 @@ async def run_tools(pipe, state):
                 else {}
             ),
             "checked_build": p.checked_build,
+            # Targets the allocation must meet (total, class floors, cap), so one calculator call can pass.
+            **({"build_rules": {k: v for k, v in targets.items() if k != "rule_sources"}} if targets else {}),
             "cached_build_data": cached[0] if cached else None,
             "evidence_details": [{**context_item(hits[i], pos), "id": i} for pos, i in enumerate(inspected_ids, 1)],
             "candidates": [
@@ -250,12 +273,27 @@ async def run_tools(pipe, state):
                 step = ToolStep.model_validate(data)
         except LLMError:
             raise UpstreamError("Bước chọn công cụ của mô hình chưa hợp lệ.") from None
-        except ValueError:
-            actions.append({"status": "denied", "reason": "invalid_tool_output"})
-            if step_limit is None and "invalid_tool_output" in stalled:
-                raise UpstreamError("Bước chọn công cụ của mô hình chưa hợp lệ.") from None
+        except ValueError as exc:
+            # Category and field names only, never the model output: tells the planner what to fix and lets the
+            # trace distinguish broken JSON from a schema mistake (e.g. a malformed build_data).
+            issue = invalid_output_issue(exc)
+            actions.append({"status": "denied", "reason": "invalid_tool_output", "issue": issue})
+            logging.getLogger(__name__).warning("Invalid tool output", extra={"data": issue})
+            if "invalid_tool_output" in stalled:
+                if hits:
+                    # A second malformed step in a row: answer from the evidence already gathered, not a 502.
+                    stop_reason = "invalid_tool_output"
+                    break
+                if step_limit is None:
+                    raise UpstreamError("Bước chọn công cụ của mô hình chưa hợp lệ.") from None
             stalled.add("invalid_tool_output")
-            observations.append({"status": "invalid_tool_output"})
+            observations.append(
+                {
+                    "status": "invalid_tool_output",
+                    "error": issue,
+                    "fix": "Return one JSON object with only the documented fields and value types.",
+                }
+            )
             continue
         except TimeoutError:
             if verify_coverage and hits:
@@ -280,19 +318,31 @@ async def run_tools(pipe, state):
                 {
                     "ids": sorted(step.evidence_ids if action == "inspect_evidence" else step.snapshot_ids),
                     "allocation": step.allocation,
+                    "fill": step.fill,
                     "build_data": step.build_data,
                 },
                 sort_keys=True,
             )
         )
         identity = key(action, arguments)
-        if action not in available or (identity in seen and action not in {"finish", "stop", "clarify"}):
+        if action not in available:
+            # E.g. calculator withdrawn after two rejections. Asking again with other arguments does not
+            # bring it back (live 20/11: three wasted steps), so a second request ends the loop.
+            row["status"] = "denied"
+            unavailable = ("unavailable", action)
+            if unavailable in stalled:
+                stop_reason = "repeated_unavailable_action"
+                break
+            stalled.add(unavailable)
+            observations.append({"action": action, "status": "not_available", "available_actions": available})
+            continue
+        if identity in seen and action not in {"finish", "stop", "clarify"}:
             row["status"] = "denied"
             if step_limit is None and identity in stalled:
                 stop_reason = "repeated_action"
                 break
             stalled.add(identity)
-            observations.append({"action": action, "status": "not_available_or_duplicate"})
+            observations.append({"action": action, "status": "duplicate"})
             continue
         planned_text = "\n".join([step.query, *step.add_goals])
         if contains_superseded(planned_text, inactive, comparison, profile.values()):
@@ -359,7 +409,6 @@ async def run_tools(pipe, state):
                     pipe.settings.rag_top_k,
                     pipe.settings.rag_context_chars,
                     policy=pipe.policy,
-                    spoilers=req.options.spoilers,
                 )
                 context = [context_item(hit, i) for i, hit in enumerate(evaluated, 1)]
                 if context:
@@ -447,7 +496,6 @@ async def run_tools(pipe, state):
                 local_calls += 1
                 retriever = pipe.retriever.model_copy(
                     update={
-                        "spoilers": req.options.spoilers,
                         "limit": pipe.settings.rag_prefetch,
                         "search_timeout_seconds": min(5, pipe.settings.rag_retrieval_timeout_seconds),
                         "rerank_deadline": prepare_deadline,
@@ -496,20 +544,17 @@ async def run_tools(pipe, state):
                 inspected_ids = step.evidence_ids
                 row["opened"] = len(inspected_ids)
             elif action == "calculator":
-                # Only sourced build data is calculated; there is no hardcoded class/weapon table.
-                if not step.build_data:
-                    raise ValueError("build_data_required")
-                from app.rag.build_data import check
-
-                p.checked_build = check(step.build_data, step.allocation, profile, list(hits.values()))
-                pipe.build_cache.put(p.checked_build["data"], [hits[i] for i in p.checked_build["sources"]])
-                row["calculation"] = {k: v for k, v in p.checked_build.items() if k != "data"}
+                # Arithmetic against the pack's sourced rules; weapon requirements only when quoted from a source.
+                p.checked_build = check(step.build_data, step.allocation, profile, list(hits.values()), step.fill)
+                requirement_hits = [hits[i] for i in p.checked_build["requirement_sources"]]
+                pipe.build_cache.put(p.checked_build["data"], requirement_hits)
+                # The level accounting snapshot becomes evidence so the answer can cite it.
+                rule_hit, _ = level_rule()
+                hits[rule_hit.id] = rule_hit
+                row["calculation"] = {k: v for k, v in p.checked_build.items() if k not in {"data", "provenance"}}
             if action == "check_name" or (name_status == "not_found" and action in {"local_search", "web_search"}):
                 candidates = [
-                    h
-                    for h in found
-                    if isinstance(h, WebHit)
-                    or pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None
+                    h for h in found if isinstance(h, WebHit) or pipe.policy.exclusion_reason(h.payload) is None
                 ]
                 matches, can_verify = matching_names(
                     raw_name,
@@ -529,9 +574,9 @@ async def run_tools(pipe, state):
             admitted, novel = [], False
             for h in found:
                 eligible = (
-                    req.options.spoilers and state["search_mode"] != "off"
+                    state["search_mode"] != "off"
                     if isinstance(h, WebHit)
-                    else pipe.policy.exclusion_reason(h.payload, spoilers=req.options.spoilers) is None
+                    else pipe.policy.exclusion_reason(h.payload) is None
                 )
                 if eligible:
                     hits[h.id] = h
@@ -571,6 +616,15 @@ async def run_tools(pipe, state):
         observations.append({k: v for k, v in row.items() if k != "query"})
     p.trace["tool_stop"] = stop_reason
     p.trace.pop("tool_step_running", None)
+    if calculator_offered or calculator_failures or p.checked_build is not None:
+        # What actually happened to the exact allocation, so the answer states the true reason.
+        # A missing class or weapon is never the cause: the class defaults to Wretch, equipment can be suggested.
+        p.trace["build_check"] = {
+            "status": "checked" if p.checked_build is not None else "failed" if calculator_failures else "not_run",
+            "failed_attempts": calculator_failures,
+            "class_given": bool(profile.get("starting_class")),
+            "weapon_given": bool(profile.get("weapon")),
+        }
     if task_plan:
         if p.clarification is not None:
             p.player_state["plan"] = task_plan

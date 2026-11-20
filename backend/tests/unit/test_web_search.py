@@ -69,7 +69,7 @@ def test_web_admission_is_typed_not_a_payload_bypass_and_citations_keep_origin()
         },
     )
     assert answer.sources[0].origin == "web" and answer.sources[0].url == web.payload["url"]
-    assert select_context([web], 5, 12000, spoilers=False) == []
+    assert select_context([web], 5, 12000) == [web]  # Web evidence is no longer gated by spoilers.
 
 
 def test_merge_uses_no_score_arithmetic_and_keeps_context_limit():

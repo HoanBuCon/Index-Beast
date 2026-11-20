@@ -34,7 +34,7 @@ const request = {
   conversation_id: null,
   message: "Lore?",
   channel: "web" as const,
-  options: { lang: "auto" as const, spoilers: true },
+  options: { lang: "auto" as const },
 };
 test("chat rejects partial output without done", async (t) => {
   t.mock.method(

@@ -16,7 +16,7 @@ class DenseOnlyRetriever:
     def __init__(self, encoder, store, limit):
         self.encoder, self.store, self.limit = encoder, store, limit
 
-    async def retrieve(self, query, *, spoilers):
+    async def retrieve(self, query):
         from core.types import Hit
 
         await self.store.ready()
@@ -26,14 +26,14 @@ class DenseOnlyRetriever:
             self.store.collection,
             query=vector,
             using="dense",
-            query_filter=policy.query_filter(spoilers=spoilers),
+            query_filter=policy.query_filter(),
             limit=self.limit,
             with_payload=True,
         )
         return [
             Hit(str(point.id), point.score, point.payload or {})
             for point in result.points
-            if policy.exclusion_reason(point.payload or {}, spoilers=spoilers) is None
+            if policy.exclusion_reason(point.payload or {}) is None
         ]
 
 
@@ -56,7 +56,7 @@ async def measure(manifest, retriever):
         if not case["source_urls"]:
             continue
         started = time.perf_counter()
-        hits = await retriever.retrieve(case["question"], spoilers=True)
+        hits = await retriever.retrieve(case["question"])
         urls = [hit.payload["url"] for hit in hits]
         rows.append(
             {
