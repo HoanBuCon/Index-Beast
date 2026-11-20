@@ -1,6 +1,6 @@
 # TV3 · Chuyển rule con số cho Agent
 
-Ngày 20/11/2026 · Nhánh `fix/s4-tv3-agent-rule-con-so` (tách từ `origin/develop` tại `f930de3`). Chưa push, chưa có PR. Độc lập với nhánh `refactor/s4-tv3-go-llm-only` (gỡ `llm_only`, handover `2026-11-20_s4-tv3_go-llm-only.md` nằm trên nhánh đó).
+Ngày 20/11/2026 · Nhánh `fix/s4-tv3-agent-rule-con-so` (tách từ `origin/develop` tại `bcbbf4c`, đã gồm PR #123 gỡ `llm_only`, xem [handover](2026-11-20_s4-tv3_go-llm-only.md)). Chưa push, chưa có PR.
 
 ## Vấn đề
 
