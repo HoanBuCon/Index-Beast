@@ -4,7 +4,7 @@ from contextlib import aclosing
 
 import pytest
 
-from app.rag.gameplay_knowledge import level_rule, load_pack
+from app.rag.gameplay_knowledge import LEVEL_RULE_ID, level_rule
 from app.rag.generator import Prepared, validate_answer
 from tests.unit.test_live_chat import hit
 
@@ -13,10 +13,11 @@ def answer_with(p, text):
     return validate_answer(p, {"answer": text, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False})
 
 
-def test_pack_keeps_the_level_rule_the_agent_can_cite():
+def test_the_level_rule_the_agent_can_cite_keeps_its_id_and_is_a_fresh_copy():
+    rule = level_rule()
+    assert rule.id == LEVEL_RULE_ID and "minus 79" in rule.payload["text"]
+    rule.payload["text"] = "changed"
     assert "minus 79" in level_rule().payload["text"]
-    kinds = {row["payload"].get("rule_kind") for g in load_pack()["groups"] for row in g["hits"]}
-    assert "class_rule" not in kinds  # Origin là các trang corpus; Agent trích Infobox của chúng.
 
 
 @pytest.mark.parametrize(

@@ -164,59 +164,17 @@ def offline_agent_turn(messages, tools, script=None):
     )
 
 
-AGENT_POLICY = "IndexBeast's request decision component"
-TOOL_POLICY = "IndexBeast's bounded tool planner"
-
-
-def agent_step(policy, question, decision_overrides=None):
-    """Agent offline: lấy câu hỏi đúng như được hỏi, tìm local một lần, rồi finish theo thứ hạng."""
-    if AGENT_POLICY not in policy and TOOL_POLICY not in policy:
-        return None
-    payload = json.loads(question)
-    if AGENT_POLICY in policy:
-        return {
-            "intent": "other",
-            "turn_type": "new",
-            "action": "retrieve",
-            "rewrite": False,
-            "answer_language": payload.get("answer_language"),
-            "resolved_question": payload["question"],
-            "search_query": payload["question"],
-            "entities": [],
-            "selected_memory_ids": [],
-            "constraints": [],
-            "missing": [],
-            "reply": "",
-            "reason": "ready",
-            **(decision_overrides or {}),
-        }
-    done = {o.get("action") for o in payload["observations"]}
-    available = payload["available_actions"]
-    if "local_search" in available and "local_search" not in done:
-        return {"action": "local_search", "query": payload["initial_query"], "reason": "initial"}
-    if payload["web_policy"] == "always" and "web_search" in available and "web_search" not in done:
-        return {"action": "web_search", "query": payload["initial_query"], "reason": "missing_evidence"}
-    # Agent (không phải server) quyết định tìm web sau khi bước kiểm evidence báo còn thiếu.
-    gap = next((o for o in reversed(payload["observations"]) if o.get("status") == "needs_evidence"), None)
-    if gap and "web_search" in available and "web_search" not in done:
-        query = gap.get("suggested_query") or payload["initial_query"]
-        return {"action": "web_search", "query": query, "reason": "missing_evidence"}
-    return {"action": "finish", "evidence_ids": [], "reason": "sufficient"}
-
-
 IMAGE_POLICY = "Select images for the requested entity"
 
 
-def planned_response(inputs, decision_overrides=None):
-    """LLMResponse cho các lời gọi Agent/Tool/chọn ảnh; None cho bước sinh và các lời gọi khác."""
+def planned_response(inputs):
+    """LLMResponse cho lời gọi chọn ảnh; None cho bước sinh và các lời gọi khác (Agent đi qua FakeChatModel)."""
     if not isinstance(inputs, dict) or "policy" not in inputs or "question" not in inputs:
         return None
-    if inputs["policy"].startswith(IMAGE_POLICY):
-        candidates = json.loads(inputs["question"])["candidates"]
-        planned = {"ids": [candidates[0]["id"]] if candidates else []}
-    else:
-        planned = agent_step(inputs["policy"], inputs["question"], decision_overrides)
-    return None if planned is None else LLMResponse(json.dumps(planned), "fake", 10, 5, "stop")
+    if not inputs["policy"].startswith(IMAGE_POLICY):
+        return None
+    candidates = json.loads(inputs["question"])["candidates"]
+    return LLMResponse(json.dumps({"ids": [candidates[0]["id"]] if candidates else []}), "fake", 10, 5, "stop")
 
 
 class FakeLLM(DeepSeekLLM):
@@ -225,7 +183,7 @@ class FakeLLM(DeepSeekLLM):
         self.tokens = tokens or ["Ranni is an Empyrean. ", "She is a lunar princess."]
         self.fail_at = fail_at
         self.calls, self.seen, self.produced, self.closed = 0, [], 0, False
-        self.agent_calls, self.decision, self.agent_script = 0, {}, []
+        self.agent_calls, self.agent_script = 0, []
         self.data = {
             "answer": "Ranni is an Empyrean [1].",
             "evidence": [{"index": 1, "quote": "Ranni is an Empyrean"}],
@@ -245,9 +203,9 @@ class FakeLLM(DeepSeekLLM):
         return LLMResponse(self.text, "fake", 10, 5, "stop")
 
     async def invoke_chain(self, chain, inputs):
-        # Quyết định của Agent và lời gọi Tool Agent được một planner offline trung tính trả lời, nên `calls`/`seen` chỉ
-        # đếm lời gọi sinh, đúng như các test sinh mong đợi.
-        if (planned := planned_response(inputs, self.decision)) is not None:
+        # Lời gọi chọn ảnh được trả lời offline, nên `calls`/`seen` chỉ đếm lời gọi sinh, đúng như các test sinh mong
+        # đợi.
+        if (planned := planned_response(inputs)) is not None:
             self.agent_calls += 1
             return planned
         return await super().invoke_chain(chain, inputs)
@@ -792,7 +750,7 @@ class SequenceLLM(FakeLLM):
         self.attempts = 0
 
     async def invoke_chain(self, chain, inputs):
-        if (planned := planned_response(inputs, self.decision)) is not None:
+        if (planned := planned_response(inputs)) is not None:
             return planned
         self.attempts += 1
         self.seen.append(dict(inputs))

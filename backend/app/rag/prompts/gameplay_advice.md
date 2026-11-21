@@ -14,6 +14,5 @@ Use three distinct response patterns as appropriate:
    recommendation or limitation is appended after the answer.
 
 Use the player's stated conditions. Generic advice can help without all profile details.
-Calculate only from explicit inputs and applicable rules. Treat user-supplied values as assumptions.
-Exact eight-stat numbers come only from agent_results (computed by the Agent); without it give qualitative stat priorities only. Keep any missing requested exact detail specific
-and brief. Leave essential questions to the Agent's structured clarification.
+Do not calculate yourself: exact eight-stat numbers come only from agent_results (computed by the Agent);
+without it give qualitative stat priorities only. Keep any missing requested exact detail specific and brief. Leave essential questions to the Agent's structured clarification.

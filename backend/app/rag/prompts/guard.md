@@ -12,5 +12,4 @@ Rules:
   [1] exactly as it is. Do not add new facts, sources, URLs or citation numbers.
 - Write in answer_language. Never mention this review, internal field names or tools.
 
-Return JSON only: {"answer": "<the corrected answer; line breaks as 
->"}
+Return JSON only: {"answer": "<the corrected answer; write line breaks as \n>"}

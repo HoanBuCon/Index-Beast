@@ -22,8 +22,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.adapters.llm import LLMError
 from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import Clarification, ClarificationField
-from app.rag.entity_spelling import matching_names
 from app.rag.gameplay_knowledge import level_rule
+from app.rag.generator import leaked_fields, plain_field_names
 from app.rag.matching import contains_name, contains_text
 from app.rag.prompts import prompt
 from app.rag.python_sandbox import run_python
@@ -126,7 +126,11 @@ class FinishArgs(_Args):
 TOOLS = {
     "search_corpus": (SearchArgs, "Search the local Elden Ring wiki corpus."),
     "search_web": (SearchArgs, "Search the web when the corpus cannot fill a gap."),
-    "check_name": (NameArgs, "Look up a possibly misspelled proper name; returns candidate titles."),
+    "check_name": (
+        NameArgs,
+        "Look up a possibly misspelled proper name; returns the page titles found for it. You decide which one "
+        "the player means.",
+    ),
     "open_evidence": (OpenArgs, "Show the full text and quote IDs of evidence already seen."),
     "set_conditions": (ConditionArgs, "Record or retire the player's conditions (level, class, weapon, goal…)."),
     "run_python": (
@@ -358,11 +362,11 @@ async def run_agent(pipe, state: dict) -> dict:
             return {"status": "ok", "pages": _web_results(admit(found))}, None
         if name == "check_name":
             found = admit(await local(args.name))
-            matches, close = matching_names(args.name, found)
+            # Chỉ các tiêu đề tìm được theo thứ tự retrieval; server không còn chấm chính tả (24/11), Agent tự chọn.
+            titles = dict.fromkeys(t for h in found if isinstance(t := h.payload.get("title"), str) and t.strip())
             return {
                 "status": "ok",
-                "candidates": [title for title, _ in matches][:5],
-                "single_close_match": close and len(matches) == 1,
+                "candidates": list(titles)[:RESULTS_PER_SEARCH],
                 "results": [_preview(h) for h in found[:RESULTS_PER_SEARCH]],
             }, None
         if name == "open_evidence":
@@ -572,19 +576,24 @@ async def run_agent(pipe, state: dict) -> dict:
     state["resolved_question"] = request
     trace["rewritten_query"] = request
     state["overview"] = intent == "overview"
-    if state["overview"]:
-        trace["request_kind"] = "overview"
+    if name in ("ask_user", "reply"):
+        # Văn bản này đi thẳng ra người chơi, không qua bước viết: lưới an toàn thay tên trường nội bộ bằng chữ
+        # thường, như câu trả lời RAG (AG-2, 24/11). Không gọi thêm model.
+        text = args.question if name == "ask_user" else args.text
+        if leaked := leaked_fields(text):
+            trace["internal_field_replaced"] = leaked
+            text = plain_field_names(text, p.lang)
     if name == "ask_user":
         p.clarification = Clarification(
             id=uuid4(),
-            question=args.question,
+            question=text,
             fields=[ClarificationField(key=m.key, label=m.label) for m in args.missing],
             expires_at=datetime.fromtimestamp(time.time() + STATE_TTL_SECONDS, UTC).isoformat(),
         )
         p.player_state["pending"] = p.clarification.model_dump(mode="json")
-        p.static_answer = args.question
+        p.static_answer = text
     elif name == "reply":
-        p.static_answer = args.text
+        p.static_answer = text
     else:
         p.gameplay_advice = bool(args and args.gameplay_advice)
         # Chỉ để chẩn đoán: bước viết có nhận được chính sách hay không.

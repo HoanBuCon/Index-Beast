@@ -65,9 +65,9 @@ class CountedLLM:
         row = {
             "phase": "generation"
             if "persona" in inputs
-            else "assessment"
-            if inputs["policy"].startswith("Evaluate")
-            else "rewrite",
+            else "image_selection"
+            if inputs["policy"].startswith("Select images")
+            else "answer_guard",
             "streaming": streaming,
             "status": "running",
         }
@@ -199,7 +199,6 @@ async def execute(args, manifest, cases):
             for p in [
                 ROOT / "eval/golden_set_s3.jsonl",
                 ROOT / "eval/gameplay_diagnostic_25.json",
-                ROOT / "app/rag/knowledge/gameplay.json",
                 *sorted((ROOT / "app/rag/prompts").glob("*.md")),
                 *sorted((ROOT / "app/rag").glob("*.py")),
                 *sorted((ROOT / "app/services").glob("*.py")),

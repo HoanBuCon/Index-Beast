@@ -1,5 +1,13 @@
 # Evidence, ảnh và build có nguồn — TV3
 
+> **Lịch sử (24/11/2026):** tài liệu này mô tả luồng trước vòng lặp Agent (Agent decision, Tool planner, assessor, calculator build, gói `knowledge/gameplay.json`), nay đã gỡ. Hiện trạng: [ADR 006](../adr/006-true-agent.md) và mục Hiện trạng trong [README RAG](../../backend/app/rag/README.md).
+>
+> **Ảnh hiện nay (từ 23/11):** chọn ảnh chạy ngay khi Agent `finish`, song song với bước viết, trên các nguồn Agent
+> đã chọn (`LiveChatService._start_images`). Viết xong thì chỉ giữ ảnh của nguồn được trích dẫn; nếu không còn ảnh
+> nào thì chọn lại một lần trên nguồn được trích dẫn (trace `images.parallel = "fallback"`). Prompt chọn ảnh ở
+> `backend/app/rag/prompts/image_selection.md`; trace có `images.ms`. Phần build bên dưới (`build_data`,
+> `CheckedBuild`, calculator) đã thay bằng `run_python` của Agent.
+
 Áp dụng khi `CHAT_MODE=rag`, `CHAT_AGENT_ENABLED=true`, `CHAT_TOOL_AGENT_ENABLED=true`.
 Không cần đổi `.env` nếu đã bật ba cấu hình này. Đợt triển khai này không sửa `.env` thật.
 

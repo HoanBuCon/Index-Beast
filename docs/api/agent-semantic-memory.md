@@ -15,7 +15,7 @@ xem [kết quả live và nhận xét](../testing/2026-11-06_agent-memory-20-liv
 Report [preflight bị chặn trước đó](../testing/2026-11-06_agent-memory-20/README.md) được giữ nguyên làm lịch sử.
 Không sửa `.env` thật, không reindex corpus. HTTP 200 cả 20 lượt không có nghĩa tất cả trả lời đúng.
 
-`CHAT_AGENT_ENABLED=true` là default code cho mode RAG. `CHAT_PERSISTENCE=memory` vẫn là default an toàn
+Vòng lặp Agent luôn bật trong mode RAG (cờ `CHAT_AGENT_ENABLED` đã gỡ). `CHAT_PERSISTENCE=memory` vẫn là default an toàn
 cho môi trường chưa chuẩn bị migration. **Lưu bền/semantic cần bật PostgreSQL sau khi setup**; không giả
 default RAM đã nhớ lâu dài. Mode mock vẫn mặc định toàn ứng dụng; mode còn lại duy nhất là RAG.
 
@@ -37,8 +37,7 @@ weapon/class không bị giới hạn bởi danh sách mẫu của parser cũ.
 
 Planner gộp intent, clarification và rewrite trong một call. `_QUESTION_WORDS`, regex `intent_of`/`extract`/
 `advance`, lexical memory và legacy rewrite **không làm nguồn quyết định trong đường agent mặc định**.
-Code cũ được giữ làm đường tương thích khi chủ động đặt `CHAT_AGENT_ENABLED=false`; không tự fallback
-sang đường này khi model lỗi. PostgreSQL RAG yêu cầu agent=true để không giả legacy PlayerState đã được serialize.
+(Lịch sử) Đường tương thích `CHAT_AGENT_ENABLED=false` và code cũ tương ứng đã gỡ cùng vòng lặp Agent (22/11).
 
 Server kiểm tra constraint value xuất hiện trong nguồn user đã cấp; current message ưu tiên correction.
 Đây là kiểm tra provenance/literal, không phải chứng minh mô hình hiểu đúng nghĩa hay quan hệ canon.
@@ -153,10 +152,10 @@ Mất localStorage/token chưa có cơ chế khôi phục tài khoản. RAM cũ 
 
 ## Ngân sách và lỗi
 
-`CHAT_AGENT_MAX_CALLS=6` là giới hạn logical model calls/lượt: decision, assessment và generation/repair.
+Ngân sách lượt gọi model của vòng lặp Agent: `CHAT_AGENT_MAX_CALLS` (web off/always) hoặc `CHAT_COVERAGE_MAX_CALLS`
+(web auto); lượt cuối chỉ cho `finish`. Bước viết thêm tối đa một lần sinh lại, Answer Guard và chọn ảnh.
 SDK transport retries vẫn có giới hạn riêng `LLM_MAX_RETRIES`; runner live đặt 0 để đếm chi phí rõ ràng.
-Decision tối đa một call; generation có tối đa một repair, không retry sau token hiển thị.
-Tavily chỉ một Search + một Extract batch, không loop tìm đến khi “ra đáp án”.
+Mỗi `search_web` là một Search + một Extract batch; số lần gọi do Agent quyết trong ngân sách.
 Deadline `CHAT_TIMEOUT_SECONDS` gồm chờ lock, memory, model/tool và lưu; client/provider được đóng khi hủy.
 PG commit và client acknowledgement là hai thời điểm khác nhau: timeout/mất kết nối sau commit có thể cần replay.
 CPU ONNX không bị cưỡng bức kill; encoder giữ lock đến khi worker dừng để tránh chạy song song trên cùng model.
@@ -181,11 +180,10 @@ Push-Location backend
 Pop-Location
 ```
 
-Đặt thủ công trong `.env` của máy sử dụng, sau khi migration 0002 và collection setup thành công:
+Đặt thủ công trong `.env` của máy sử dụng, sau khi migration (`alembic upgrade head`, hiện là 0005) và collection setup thành công:
 
 ```dotenv
 CHAT_MODE=rag
-CHAT_AGENT_ENABLED=true
 CHAT_PERSISTENCE=postgres
 CHAT_MEMORY_COLLECTION=conversation_memories
 CHAT_MEMORY_CANDIDATES=6
@@ -215,7 +213,7 @@ Pop-Location
 
 `<UUID>` là placeholder để thay, không nhập nguyên dấu ngoặc. Đây là CLI operator có quyền DB,
 không phải API public. Sync/rebuild xử lý một batch; lặp sync nếu còn pending. Rebuild không xóa history.
-Rollback vận hành: về CHAT_PERSISTENCE=memory để chạy RAM; chỉ tắt agent khi dùng đường legacy tương ứng.
+Rollback vận hành: về CHAT_PERSISTENCE=memory để chạy RAM.
 Không downgrade/drop bảng chỉ để đổi mode; dữ liệu PG giữ lại. Rollback code theo PR/quy ước Git.
 
 ## Bộ thử thật 20 lượt

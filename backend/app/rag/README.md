@@ -1,5 +1,41 @@
 # IndexBeast: LangGraph, LangChain và corpus thử nghiệm
 
+## Hiện trạng — 24/11/2026
+
+Đọc mục này trước. Các mục có ngày bên dưới là nhật ký thay đổi; nhiều chi tiết trong đó (rewrite truy vấn, Agent
+decision, Tool Agent, assessor, calculator build, gói `knowledge/gameplay.json`, recall lexical) đã bị gỡ.
+
+Luồng một lượt RAG ([pipeline.py](pipeline.py)): `scope` → `memory` (ứng viên ký ức, lượt gần đây) → `agent`
+(vòng lặp tool của [true_agent.py](true_agent.py), quyết định theo [ADR 006](../../../docs/adr/006-true-agent.md)) →
+`context` (chỉ evidence Agent chọn, tối đa 5, trong ngân sách ký tự) → `prompt`. Sau đó [generator.py](generator.py)
+viết JSON có trích dẫn, kiểm, sinh lại tối đa một lần, gọi Answer Guard khi lộ tên trường nội bộ. Chọn ảnh chạy
+song song với bước viết ([answer_media.py](../services/answer_media.py)), chỉ giữ ảnh của nguồn được trích dẫn.
+
+Agent quyết: hiểu yêu cầu, ngôn ngữ trả lời, truy vấn, tìm web, chọn tên (`check_name` chỉ trả các tiêu đề tìm
+được, không chấm chính tả), điều kiện người chơi,
+tính build bằng `run_python`, chọn evidence, hỏi lại, câu cần thinking (`needs_reasoning`). Server chỉ giữ guard
+xác định:
+
+| Guard | Ở đâu | Vì sao giữ |
+|---|---|---|
+| Schema tham số tool, tool không có trong chính sách (web tắt, hết lượt hỏi lại) | `true_agent.execute` | Hợp đồng tool |
+| Điều kiện người chơi phải có nguyên văn trong nguồn ghi kèm; giả định không đè lời người chơi | `set_conditions` | Chống bịa dữ kiện người chơi |
+| Corpus policy (scope, ngôn ngữ, admission) cho mọi hit local | `admit`, `select_context` | Phạm vi dữ liệu |
+| Web `always`: phải gọi `search_web` trước `finish` | `execute` | Lựa chọn của người chơi |
+| Nhắc một lần khi `finish` không có `evidence_ids` mà đã tìm được nguồn | `execute` | Agent tự quyết lại |
+| Ngân sách lượt gọi model và thời gian; lượt cuối chỉ cho `finish` | `run_agent` | Hạn 45 s của bot |
+| JSON, trích dẫn khớp nguồn, quote nguyên văn, không URL do model viết | `validate_answer` | Grounding hình thức |
+| Ký ức `fact` không dùng trong thread Discord chung | `_memory` | Quyền riêng tư |
+| Tên trường nội bộ trong câu gửi người chơi (RAG, `reply`, `ask_user`) được thay bằng chữ thường | `plain_field_names` | Không lộ nội bộ |
+
+Quy tắc level có nguồn (tổng 8 chỉ số = level + 79) luôn có trong `built_in_sources` để Agent trích dẫn
+([gameplay_knowledge.py](gameplay_knowledge.py)); chỉ vào câu trả lời khi Agent chọn.
+
+Prompt: [true_agent](prompts/true_agent.md) (Agent), [persona](prompts/persona.md), [answer](prompts/answer.md),
+[language](prompts/language.md), [gameplay_advice](prompts/gameplay_advice.md) và [overview](prompts/overview.md)
+(khi Agent bật), [format_retry](prompts/format_retry.md) và [format_retry_gameplay](prompts/format_retry_gameplay.md)
+(lần sinh lại), [guard](prompts/guard.md) (Answer Guard), [image_selection](prompts/image_selection.md) (chọn ảnh).
+
 ## Jina Reranker tùy chọn — 16/11/2026
 
 RAG có thể xếp hạng lại các kết quả local sau khi E5 và BM25 được hợp nhất bằng RRF. Mặc định tính năng tắt.
@@ -180,12 +216,13 @@ flowchart TD
     B --> D["Không được chọn: thống kê lý do"]
     B --> E["Được chọn — giữ metadata/ID"]
     E -.-> F["Người dùng tự chạy E5/BM25 và upsert Qdrant"]
-    G["Chat API + current conversation"] --> H["LangGraph scope → gameplay → relevant user memory → rewrite"]
-    H --> I["BaseRetriever → Qdrant RRF với cùng CorpusPolicy"]
+    G["Chat API + current conversation"] --> H["LangGraph scope → memory → vòng lặp Agent gọi tool"]
+    H --> I["search_corpus: BaseRetriever → Qdrant RRF với cùng CorpusPolicy → optional rerank"]
     F --> I
-    I --> J["Document → optional rerank → cùng policy → top-5/context budget"]
+    I --> H
+    H --> J["context: evidence Agent chọn → cùng policy → top-5/context budget"]
     J --> K["ChatPromptTemplate + MessagesPlaceholder → ChatDeepSeek"]
-    K --> L["LangGraph validation → bounded repair → JSON hoặc SSE"]
+    K --> L["LangGraph validation → bounded repair → Answer Guard → JSON hoặc SSE"]
 ```
 
 ## Artifact và dry-run thực tế
@@ -382,12 +419,9 @@ Không nâng candidate thành verified. Prompt yêu cầu ưu tiên đúng relea
 không gộp canon theo co-retrieval. Release còn là candidate, chưa phải filter release được xác minh.
 Không dùng history làm evidence.
 
-Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; rewrite JSON có Pydantic validation/fallback câu gốc;
-NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
+Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
 ChatDeepSeek/client dùng lifespan; usage thiếu là null, không bịa 0. Remote tracing tắt tại entry points.
-Prompt phân biệt [persona](prompts/persona.md), [true_agent](prompts/true_agent.md), [answer](prompts/answer.md),
-[guard](prompts/guard.md), [overview](prompts/overview.md),
-[gameplay_advice](prompts/gameplay_advice.md), [format_retry](prompts/format_retry.md) và [language](prompts/language.md).
+Danh sách prompt và việc của từng file: xem mục Hiện trạng ở đầu trang.
 
 Validation yêu cầu citation khớp index/evidence, quote nguyên văn, URL/title từ metadata server,
 chỉ trả nguồn thực sự trích. Đây là kiểm grounding hình thức, không phải entailment judge.
@@ -438,8 +472,8 @@ Duplicate key, NaN/Infinity, phần dư và JSON thiếu vẫn bị chặn. Outp
 Nguồn và quote vẫn phải vượt validator cũ. Chỉ answer hợp lệ mới vào history và chọn ảnh.
 
 SSE chỉ retry nếu **chưa gửi token đáp án nào**; sau khi đã gửi text, lỗi kết thúc bằng error và không done.
-Không có đường trả lời không truy xuất khi lỗi hoặc thiếu bằng chứng. Không có context thì trả thông báo có sẵn,
-không gọi generation. Có context nhưng thiếu evidence thì model trả JSON `insufficient=true`, sources rỗng.
+Không có đường trả lời không truy xuất khi lỗi hoặc thiếu bằng chứng. Agent không chọn evidence nào thì bước viết
+vẫn chạy và trả JSON `insufficient=true` nêu rõ còn thiếu gì, sources rỗng (từ 22/11 không còn câu cố định của server).
 Diagnostic JSON bổ sung vị trí dòng/cột/offset và số ký tự, không có output thô hay nội dung reasoning.
 Xem [phân tích và kiểm thử offline](../../../docs/testing/2026-10-31_rag-json-recovery.md).
 Xem [kiểm chứng DeepSeek thật và cập nhật protocol recovery](../../../docs/testing/2026-10-31_deepseek-live-output-fix.md).
@@ -477,7 +511,7 @@ và sinh `s2-chunk-1.0`; artifact bàn giao dùng `s2-full-*`. Adapter đọc ar
 được workflow tạo bộ full hoặc thay code cleaner/chunker.
 
 Đã kiểm hạ tầng server Docker, embedding và DeepSeek thật theo báo cáo liên kết ở đầu trang. Chưa kiểm image API
-trên Linux hoặc benchmark lore/entailment độc lập. Heuristic đại từ chỉ xử lý tham chiếu đầu câu đơn giản,
-không phải NER; câu có tên/nội dung trước đại từ được chuyển cho rewrite/LLM. Validator chỉ log mã lỗi/chỉ số protocol.
+trên Linux hoặc benchmark lore/entailment độc lập. Tham chiếu ngược ("con boss đó") do Agent hiểu từ
+`recent_turns`, không còn heuristic đại từ. Validator chỉ log mã lỗi/chỉ số protocol.
 Không sửa web/bot, SRS/ADR/planning/Trello hoặc dữ liệu nguồn. `.env` đã sửa theo yêu cầu mới, không đổi key.
 Không commit/push/merge và không tạo handover riêng.
