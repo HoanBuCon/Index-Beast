@@ -22,15 +22,17 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from app.adapters.llm import LLMError
 from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import Clarification, ClarificationField
-from app.rag.build_data import build_rules, check, level_rule
 from app.rag.entity_spelling import matching_names
+from app.rag.gameplay_knowledge import level_rule
 from app.rag.matching import contains_name, contains_text
 from app.rag.prompts import prompt
+from app.rag.python_sandbox import run_python
 from app.rag.retriever import document_to_hit, hit_to_document
 from core.errors import UnavailableError, UpstreamError
 
 logger = logging.getLogger(__name__)
 STATE_TTL_SECONDS = 1800
+ASSUMPTION = "assumption"
 PREVIEW_CHARS = 320
 RESULTS_PER_SEARCH = 8
 INTENTS = Literal["lore", "acquisition", "mechanics", "build", "route", "quest", "comparison", "overview", "other"]
@@ -54,9 +56,11 @@ class OpenArgs(_Args):
 
 class Condition(_Args):
     key: str = Field(pattern=r"^[a-z][a-z0-9_]{0,39}$", description="e.g. level, starting_class, weapon, goal")
-    value: str = Field(min_length=1, max_length=120, description="Exactly as the player wrote it")
+    value: str = Field(min_length=1, max_length=120, description="Exactly as the player wrote it, or your assumption")
     source_id: str = Field(
-        min_length=1, max_length=100, description='"current" or the memory/condition ID it came from'
+        min_length=1,
+        max_length=100,
+        description='"current" or the memory/condition ID it came from; "assumption" for your own stated assumption',
     )
 
 
@@ -65,16 +69,12 @@ class ConditionArgs(_Args):
     retire: list[str] = Field(default_factory=list, max_length=10, description="Keys the player withdrew or replaced")
 
 
-class CalculatorArgs(_Args):
-    allocation: dict[str, int] = Field(description="Targets per attribute (vigor, mind, …); unset ones stay at floor")
-    fill: str = Field(default="", description="One attribute that takes the remaining points, or empty")
-    build_data: dict = Field(
-        default_factory=dict,
-        description=(
-            "Quoted facts: {weapon, requirements: {attribute: NUMBER}, starting_class: {name, level: NUMBER, "
-            "base: {all eight attributes: NUMBER}}}; NUMBER = {value:int, source_id:evidence ID, quote_id:'q0', "
-            "label:'exact label in the quote'}"
-        ),
+class PythonArgs(_Args):
+    code: str = Field(
+        min_length=1,
+        max_length=4000,
+        description="A short Python calculation; print() what you need. No imports, files, network or names "
+        "starting with an underscore.",
     )
 
 
@@ -107,6 +107,12 @@ class FinishArgs(_Args):
     answer_language: Literal["vi", "en"]
     evidence_ids: list[str] = Field(default_factory=list, max_length=5, description="Evidence supporting the answer")
     gameplay_advice: bool = Field(default=False, description="General gameplay know-how may supplement evidence")
+    results: str = Field(
+        default="",
+        max_length=3000,
+        description="Results you computed with run_python that the answer must use as they are (e.g. the final "
+        "eight-attribute allocation, its total, and which values are assumptions)",
+    )
 
 
 TOOLS = {
@@ -115,7 +121,10 @@ TOOLS = {
     "check_name": (NameArgs, "Look up a possibly misspelled proper name; returns candidate titles."),
     "open_evidence": (OpenArgs, "Show the full text and quote IDs of evidence already seen."),
     "set_conditions": (ConditionArgs, "Record or retire the player's conditions (level, class, weapon, goal…)."),
-    "calculator": (CalculatorArgs, "Check an eight-attribute allocation against the level, class floors and weapon."),
+    "run_python": (
+        PythonArgs,
+        "Run a short Python calculation (sums, allocations, comparisons) and get its printed output.",
+    ),
     "ask_user": (AskArgs, "Ask the player one question and stop."),
     "reply": (
         ReplyArgs,
@@ -126,12 +135,10 @@ TOOLS = {
 }
 
 
-def tool_specs(*, web: bool, calculator: bool = True, ask: bool = True) -> list[dict]:
+def tool_specs(*, web: bool, ask: bool = True) -> list[dict]:
     skip = set()
     if not web:
         skip.add("search_web")
-    if not calculator:
-        skip.add("calculator")
     if not ask:
         skip.add("ask_user")
     return [
@@ -208,7 +215,17 @@ async def run_agent(pipe, state: dict) -> dict:
     can_ask = limit is None or rounds < limit
     web = state["search_mode"] != "off" and pipe.web_search is not None
     hits: dict = {}
-    calculator_attempts = web_calls = local_ok = local_failed = 0
+    # The sourced level rule (attributes total = level + 79) is always available to cite; it is never added to
+    # an answer unless the Agent chooses it.
+    rule_hit, _ = level_rule()
+    hits[rule_hit.id] = rule_hit
+
+    def gathered() -> list[str]:
+        """Evidence the Agent actually found (the built-in rule does not count)."""
+        return [i for i in hits if i != rule_hit.id]
+
+    web_calls = local_ok = local_failed = 0
+    reminded = {"evidence": False}
     retired: set[str] = set()
     started = time.perf_counter()
     deadline = state.get("started", started) + pipe.settings.prepare_budget_seconds
@@ -222,7 +239,10 @@ async def run_agent(pipe, state: dict) -> dict:
     trace["web_search"]["status"] = "not_run"
 
     def active_profile() -> dict:
-        return {k: c["value"] for k, c in conditions.items()}
+        """Conditions for this turn, with the keys the Agent only assumed (stated to the player, never stored)."""
+        profile = {k: c["value"] for k, c in conditions.items()}
+        assumed = sorted(k for k, c in conditions.items() if c["source_id"] == ASSUMPTION)
+        return {**profile, "assumed": ",".join(assumed)} if assumed else profile
 
     payload = {
         "player_message": req.message,
@@ -242,6 +262,9 @@ async def run_agent(pipe, state: dict) -> dict:
         "recent_turns": state.get("recent_turns", []),
         "requested_language": req.options.lang,
         "web_policy": state["search_mode"] if web else "off",
+        "built_in_sources": [
+            {"id": rule_hit.id, "title": rule_hit.payload.get("title"), "text": rule_hit.payload["text"]}
+        ],
         "can_ask_user": can_ask,
     }
     messages = [SystemMessage(prompt("true_agent")), HumanMessage(json.dumps(payload, ensure_ascii=False))]
@@ -283,12 +306,16 @@ async def run_agent(pipe, state: dict) -> dict:
         return found
 
     def stated(c: Condition) -> bool:
+        if c.source_id == ASSUMPTION:
+            # An assumption fills a gap; it may never replace what the player said.
+            current = conditions.get(c.key)
+            return current is None or current["source_id"] == ASSUMPTION
         text = sources.get(c.source_id)
         return text is not None and (contains_text(text, c.value) or contains_name(text, c.value))
 
     async def execute(name: str, raw: dict):
         """(result for the model, terminal outcome or None)."""
-        nonlocal calculator_attempts, web_calls
+        nonlocal web_calls
         if name not in TOOLS or (name == "search_web" and not web) or (name == "ask_user" and not can_ask):
             return {"status": "error", "error": f"Tool {name} is not available"}, None
         try:
@@ -331,7 +358,8 @@ async def run_agent(pipe, state: dict) -> dict:
             if unstated:
                 return {
                     "status": "error",
-                    "error": "Values must be the player's own words from the named source",
+                    "error": "Values must be the player's own words from the named source; an assumption cannot "
+                    "replace a condition the player stated",
                     "keys": unstated,
                 }, None
             for key in args.retire:
@@ -344,29 +372,19 @@ async def run_agent(pipe, state: dict) -> dict:
                     trace["agent"]["normalized_source_refs"] = trace["agent"].get("normalized_source_refs", 0) + 1
                 conditions[c.key] = row
             return {"status": "ok", "conditions": list(conditions.values())}, None
-        if name == "calculator":
-            calculator_attempts += 1
-            if calculator_attempts > pipe.settings.chat_calculator_max_failures + 1:
-                return {"status": "error", "error": "Calculator budget used; finish with a reference suggestion"}, None
-            profile = active_profile()
-            if build_rules(profile) is None:
-                return {"status": "error", "error": "Record the player's level with set_conditions first"}, None
-            try:
-                p.checked_build = check(
-                    args.build_data, args.allocation, profile, list(hits.values()), args.fill or None
-                )
-            except (ValueError, ValidationError) as exc:
-                return {"status": "error", "error": str(exc)[:500]}, None
-            rule_hit, _ = level_rule()
-            hits[rule_hit.id] = rule_hit
-            keep = ("allocation", "starting_class", "weapon", "class_floor_verified", "requirements_checked")
-            return {
-                "status": "ok",
-                "checked_build": {k: p.checked_build[k] for k in keep},
-                "rule_source": rule_hit.id,
-            }, None
+        if name == "run_python":
+            # The Agent's own calculation (22/11: replaces the hard-coded build calculator); a separate process.
+            return await asyncio.to_thread(run_python, args.code), None
         if name == "finish" and state["search_mode"] == "always" and not web_calls and web:
             return {"status": "error", "error": "Web policy is always: call search_web before finish"}, None
+        if name == "finish" and not args.evidence_ids and gathered() and not reminded["evidence"]:
+            # 22/11: the server no longer falls back to everything found; the Agent is reminded once to choose.
+            reminded["evidence"] = True
+            return {
+                "status": "error",
+                "error": "evidence_ids is empty: choose the evidence that supports the answer, "
+                "or send finish again with no evidence_ids if none of it does",
+            }, None
         return {"status": "ok"}, (name, args)
 
     outcome = None
@@ -382,12 +400,12 @@ async def run_agent(pipe, state: dict) -> dict:
             async with asyncio.timeout(pipe.settings.chat_agent_timeout_seconds):
                 ai = await bound.ainvoke(messages)
         except TimeoutError:
-            if hits:
+            if gathered():
                 break
             raise UnavailableError("Bước Agent vượt thời gian xử lý.") from None
         except Exception as exc:  # noqa: BLE001 - provider failure; answer from evidence when there is some
             logger.warning("Agent model error", extra={"data": {"error": type(exc).__name__}})
-            if hits:
+            if gathered():
                 break
             raise UpstreamError("Dịch vụ mô hình đang gặp sự cố. Vui lòng thử lại.") from None
         usage = ai.usage_metadata or {}
@@ -415,9 +433,17 @@ async def run_agent(pipe, state: dict) -> dict:
                 result, terminal = await execute(call["name"], call.get("args") or {})
             except (UnavailableError, TimeoutError, LLMError, WebSearchError) as exc:
                 result, terminal = {"status": "error", "error": type(exc).__name__}, None
-            trace["agent"]["steps"].append(
-                {"tool": call["name"], "status": result.get("status"), "ms": round((time.perf_counter() - t0) * 1000)}
-            )
+            step = {
+                "tool": call["name"],
+                "status": result.get("status"),
+                "ms": round((time.perf_counter() - t0) * 1000),
+            }
+            if result.get("status") == "error":
+                # The server's own rejection message (no model output), so a failed step can be diagnosed.
+                step["error"] = str(result.get("error", ""))[:160]
+                if result.get("keys") or result.get("fields"):
+                    step["fields"] = result.get("keys") or result.get("fields")
+            trace["agent"]["steps"].append(step)
             messages.append(ToolMessage(json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
             if terminal is not None:
                 outcome = terminal
@@ -454,10 +480,12 @@ async def run_agent(pipe, state: dict) -> dict:
     p.agent_decision = {"action": action, "intent": intent, "resolved_question": request}
     trace["agent"].update(action=action, intent=intent)
     trace["memory"]["selected_ids"] = sorted(
-        {c["source_id"] for c in conditions.values() if c["source_id"] not in {"current", "request"}}
+        {c["source_id"] for c in conditions.values() if c["source_id"] not in {"current", "request", ASSUMPTION}}
     )
+    # Assumptions shape this turn's answer only; the stored state (and its fact memories) keeps player facts.
+    state["turn_profile"] = active_profile()
     p.player_state = {
-        "constraints": list(conditions.values()),
+        "constraints": [c for c in conditions.values() if c["source_id"] != ASSUMPTION],
         "original": working.get("original", req.message) if replying else req.message,
         "request_text": working.get("request_text", req.message) if replying else req.message,
         "clarification_rounds": rounds + int(name == "ask_user"),
@@ -489,22 +517,18 @@ async def run_agent(pipe, state: dict) -> dict:
         p.static_answer = args.text
     else:
         p.gameplay_advice = bool(args and args.gameplay_advice)
+        trace["agent"]["gameplay_advice"] = p.gameplay_advice  # Diagnostic only: whether the writer got the policy.
         chosen = [i for i in (args.evidence_ids if args else []) if i in hits]
-        trace["evidence_selection"] = (
-            {"method": "model", "ids": chosen} if chosen else {"method": "all_evidence", "ids": list(hits)}
-        )
-        if p.checked_build is not None or calculator_attempts:
-            trace["build_check"] = {
-                "status": "checked" if p.checked_build is not None else "failed",
-                "failed_attempts": calculator_attempts - int(p.checked_build is not None),
-                "class_given": "starting_class" in conditions,
-                "weapon_given": "weapon" in conditions,
-            }
-        if not hits and local_failed and not local_ok and not p.gameplay_advice:
+        found = gathered()
+        trace["evidence_selection"] = {"method": "model", "ids": chosen}
+        state["agent_results"] = args.results if args else ""
+        if not found and local_failed and not local_ok and not p.gameplay_advice:
             # The corpus itself was unavailable: a service error, not an empty "no information" answer.
             raise UnavailableError("Kho tri thức chưa sẵn sàng.")
-        if web and state["search_mode"] == "always" and not web_calls and not hits:
+        if web and state["search_mode"] == "always" and not web_calls and not found:
             raise UnavailableError("Agent chưa hoàn tất tìm web bắt buộc trong ngân sách.")
+    if rule_hit.id not in trace.get("evidence_selection", {}).get("ids", []):
+        hits.pop(rule_hit.id, None)  # Not chosen: not part of this turn's evidence.
     state["documents"] = [hit_to_document(h) for h in hits.values() if not isinstance(h, WebHit)]
     state["web_hits"] = [h for h in hits.values() if isinstance(h, WebHit)]
     return state

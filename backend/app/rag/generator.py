@@ -23,7 +23,6 @@ from app.adapters.llm import LLMError, LLMResponse
 from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Clarification, Source
 from app.rag.budget import spend
-from app.rag.build_data import unchecked_stat_pairs
 from app.rag.evidence import evidence_units
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output
 from app.rag.prompts import generation_prompt, prompt, rewrite_prompt
@@ -36,29 +35,21 @@ CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
 # Payload/protocol field names are not player-facing words: the Answer Guard rewrites an answer that echoes one,
 # and any name left after that is replaced with plain words (never a reason to drop the answer).
-INTERNAL_FIELD = re.compile(
-    r"`?\b(checked_build|build_check|player_profile|build_allocation|quote_ids?|evidence_units|task_plan)\b`?"
-)
+INTERNAL_FIELD = re.compile(r"`?\b(player_profile|agent_results|quote_ids?|evidence_units)\b`?")
 PLAIN_FIELD_WORDS = {
     "vi": {
-        "checked_build": "bảng chia điểm đã kiểm",
-        "build_check": "phần kiểm bảng chia điểm",
         "player_profile": "thông tin bạn đưa ra",
-        "build_allocation": "bảng chia điểm",
+        "agent_results": "kết quả đã tính",
         "quote_id": "trích dẫn",
         "quote_ids": "trích dẫn",
         "evidence_units": "nguồn",
-        "task_plan": "kế hoạch tra cứu",
     },
     "en": {
-        "checked_build": "the checked allocation",
-        "build_check": "the allocation check",
         "player_profile": "the details you gave",
-        "build_allocation": "the allocation",
+        "agent_results": "the computed results",
         "quote_id": "the quote",
         "quote_ids": "the quotes",
         "evidence_units": "the sources",
-        "task_plan": "the lookup plan",
     },
 }
 
@@ -120,7 +111,6 @@ class Prepared:
     player_state: object = None  # Request-local copy; service commits only after successful completion.
     agent_decision: dict = field(default_factory=dict)
     max_calls: int | None = None
-    checked_build: dict | None = None
     gameplay_advice: bool = False
 
 
@@ -165,167 +155,15 @@ class GroundedAnswer(BaseModel):
     advisory: bool = False
     recommendation: str | None = Field(default=None, min_length=1, max_length=1000)
     limitation: str | None = Field(default=None, min_length=1, max_length=1000)
-    build_allocation: dict[str, int] | None = Field(default=None, min_length=8, max_length=8)
-
-
-def build_issues(prepared, answer: str) -> list[dict]:
-    """Presentation problems of a build answer the Answer Guard should fix. Never a reason to drop the answer."""
-    from app.rag.build_data import ATTRIBUTES, build_rules, stat_pairs
-
-    pairs = stat_pairs(answer)
-    artifact = prepared.checked_build
-    if artifact is not None:
-        issues = []
-        if wrong := unchecked_stat_pairs(answer, artifact):
-            issues.append({"kind": "numbers", "pairs": [{"attribute": k, "printed": v} for k, v in wrong[:8]]})
-        if {k for k, _ in pairs} != set(ATTRIBUTES):
-            issues.append({"kind": "missing_table"})  # Not all eight attributes printed (wrong values: "numbers").
-        return issues
-    rules = build_rules((prepared.values or {}).get("player_profile") or {})
-    table = allocation_table(answer) or dict(pairs)
-    if rules and set(table) == set(ATTRIBUTES) and sum(table.values()) != rules["attribute_total"]:
-        return [
-            {
-                "kind": "total",
-                "printed_total": sum(table.values()),
-                "level": rules["level"],
-                "attribute_total": rules["attribute_total"],
-            }
-        ]
-    return []
-
-
-def log_stat_mismatch(prepared, wrong, artifact, where):
-    """Attribute names and numbers only (game values, not prose): which printed number did not match."""
-    from app.rag.build_data import checked_numbers
-
-    allowed = checked_numbers(artifact)
-    data = {
-        "where": where,
-        "pairs": [{"attribute": k, "printed": v, "allowed": sorted(allowed.get(k, set()))} for k, v in wrong[:8]],
-    }
-    prepared.trace.setdefault("stat_mismatch", []).append(data)
-    logging.getLogger(__name__).warning("Stat number mismatch", extra={"data": data})
-
-
-def allocation_label(artifact: dict, lang: str) -> str:
-    """Heading of the backend-rendered allocation, stating every assumption and every unchecked part."""
-    weapon, vi = artifact.get("weapon"), lang == "vi"
-    notes = assumption_notes(artifact, lang)
-    head = (
-        (f"Gợi ý phân bổ cho {weapon}" if weapon else "Gợi ý phân bổ 8 chỉ số")
-        if vi
-        else (f"Suggested allocation for {weapon}" if weapon else "Suggested eight-attribute allocation")
-    )
-    return head + (f" ({', '.join(notes)})" if notes else "")
-
-
-TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
-CITATION_LINE = re.compile(r"^\s*(?:\[\d+\]\s*)+$")
-
-
-def table_blocks(answer: str) -> list[str]:
-    blocks, current = [], []
-    for line in [*answer.split("\n"), ""]:
-        if TABLE_ROW.match(line):
-            current.append(line)
-        elif current:
-            blocks.append("\n".join(current))
-            current = []
-    return blocks
-
-
-def allocation_table(answer: str) -> dict[str, int]:
-    """The eight numbers of the last complete Markdown allocation table, ignoring stat numbers in the prose.
-
-    Live-11: prose quoting the class starting values ("Vigor 9, Mind 15, …") overrode the table, so a correct
-    229-point table was reported as totalling 85 and sent to the Answer Guard.
-    """
-    from app.rag.build_data import ATTRIBUTES, stat_pairs
-
-    for block in reversed(table_blocks(answer)):
-        table = dict(stat_pairs(block))
-        if set(table) == set(ATTRIBUTES):
-            return table
-    return {}
-
-
-def place_under_table(answer: str, note: str, citations: str) -> str:
-    """Put the assumption note and rule citations directly under the writer's allocation table, not at the end.
-
-    Live-10: a label appended after the closing prose read as detached. The note becomes its own paragraph right
-    after the table (and the citation line the writer put under it); without a table it is appended as before.
-    """
-    from app.rag.build_data import stat_pairs
-
-    lines = answer.split("\n")
-    end = None
-    i = 0
-    while i < len(lines):
-        if TABLE_ROW.match(lines[i]):
-            start = i
-            while i < len(lines) and TABLE_ROW.match(lines[i]):
-                i += 1
-            if len(stat_pairs("\n".join(lines[start:i]))) >= 2:
-                end = i  # Last allocation table wins.
-            continue
-        i += 1
-    text = " ".join(part for part in (note, citations) if part)
-    if end is None:
-        return answer + "\n\n" + text
-    if end < len(lines) and CITATION_LINE.match(lines[end]):
-        if not note:
-            lines[end] = lines[end].rstrip() + citations
-            return "\n".join(lines)
-        end += 1
-    return "\n".join([*lines[:end], "", text, *([""] if end < len(lines) and lines[end].strip() else []), *lines[end:]])
-
-
-def assumption_sentence(artifact: dict, lang: str) -> str:
-    notes = assumption_notes(artifact, lang)
-    if not notes:
-        return ""
-    return ("Ghi chú cho bảng: " if lang == "vi" else "About this table: ") + "; ".join(notes) + "."
-
-
-def assumption_notes(artifact: dict, lang: str) -> list[str]:
-    weapon, cls = artifact.get("weapon"), artifact["starting_class"]
-    vi = lang == "vi"
-    notes = []
-    if weapon:
-        notes.append("một tay, không bonus" if vi else "one-handed, no bonuses")
-    if artifact["weapon_suggested"]:
-        notes.append("vũ khí do IndexBeast đề xuất" if vi else "weapon suggested by IndexBeast")
-    if artifact["class_assumed"]:
-        notes.append(
-            f"giả định class {cls} vì bạn chưa nêu class" if vi else f"assuming {cls} since no class was given"
-        )
-    if not artifact["class_floor_verified"]:
-        if cls:
-            notes.append(f"chưa kiểm chỉ số khởi đầu của class {cls}" if vi else f"{cls} starting values not checked")
-        else:
-            notes.append("chưa kiểm chỉ số khởi đầu của class" if vi else "starting-class values not checked")
-    if not artifact["requirements_checked"]:
-        if weapon:
-            notes.append("chưa kiểm yêu cầu vũ khí" if vi else "weapon requirements not checked")
-        else:
-            notes.append(
-                "chưa chọn vũ khí nên chưa kiểm yêu cầu vũ khí" if vi else "no weapon chosen, requirements not checked"
-            )
-    return notes
 
 
 def validate_answer(prepared: Prepared, data: dict) -> Generated:
-    unchecked_notice = ""
     failure = "schema_invalid"
     try:
         parsed = GroundedAnswer.model_validate(data)
         used = {int(n) for n in CITATION.findall(parsed.answer)}
         evidence = {}
         for item in parsed.evidence:
-            if item.index in evidence:
-                failure = "duplicate_evidence_index"
-                raise ValueError("Use one evidence object per source with quote_ids")
             if item.index > len(prepared.hits):
                 failure = "quote_not_verbatim_or_index"
                 raise ValueError("Evidence index is outside selected context")
@@ -339,7 +177,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             if any(quote is None for quote in quotes):
                 failure = "unknown_quote_id"
                 raise ValueError("Unknown evidence unit ID")
-            evidence[item.index] = quotes
+            # Two evidence items for one source are a layout slip, not a false claim: merge their quotes (22/11).
+            merged = evidence.setdefault(item.index, [])
+            merged.extend(q for q in quotes if q not in merged)
         if URL.search(parsed.answer):
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
@@ -352,26 +192,19 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                 prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": field_issues}
         if parsed.advisory:
             failure = "invalid_gameplay_advice"
+            extras = [x.strip() for x in (parsed.recommendation, parsed.limitation) if x is not None]
             if (
                 not prepared.gameplay_advice
                 or parsed.insufficient
                 or not parsed.answer.strip()
                 or used
                 or evidence
-                or parsed.limitation is not None
-                or parsed.recommendation is not None
-                or parsed.build_allocation is not None
-                or prepared.checked_build is not None
+                or any(not x or URL.search(x) or CITATION.search(x) for x in extras)
             ):
-                raise ValueError("Gameplay advice requires an eligible request and uncited qualitative guidance")
+                raise ValueError("Gameplay advice must be uncited, without URLs, and enabled by the Agent")
             prepared.trace["answer_basis"] = "gameplay_advice"
-            return Generated(plain_field_names(parsed.answer, lang))
+            return Generated(plain_field_names("\n\n".join([parsed.answer, *extras]), lang))
         if parsed.insufficient:
-            if prepared.checked_build is not None:
-                failure = "invalid_build_allocation"
-                raise ValueError("Checked build cannot be silently discarded")
-            if parsed.build_allocation is not None:
-                raise ValueError("Insufficient answers cannot include a build allocation")
             if used or evidence or parsed.limitation is not None or parsed.recommendation is not None:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
@@ -402,71 +235,11 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             failure = "invalid_gameplay_advice"
             if (
                 not prepared.gameplay_advice
-                or prepared.checked_build is not None
-                or parsed.build_allocation is not None
                 or not parsed.recommendation.strip()
                 or URL.search(parsed.recommendation)
                 or CITATION.search(parsed.recommendation)
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
-        issues = build_issues(prepared, answer)
-        if issues and not guard_done:
-            # Presentation problems are not a reason to drop an answer: the Answer Guard rewrites it before display.
-            prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": field_issues + issues}
-        if prepared.checked_build is not None:
-            from app.rag.build_data import ATTRIBUTES, check
-
-            failure = "invalid_build_allocation"
-            artifact = prepared.checked_build
-            verified = check(artifact["data"], artifact["allocation"], prepared.values["player_profile"], prepared.hits)
-            if verified["version"] != artifact["version"] or (
-                parsed.build_allocation is not None and parsed.build_allocation != artifact["allocation"]
-            ):
-                raise ValueError("Generator changed checked allocation")
-            required_indices = {i for i, h in enumerate(prepared.hits, 1) if h.id in artifact["sources"]}
-            # The backend renders the checked table and cites its rule/requirement sources itself; a source the
-            # prose did not quote is cited with its own text, never with model wording.
-            for i in required_indices - set(evidence):
-                evidence[i] = [next(iter(evidence_units(prepared.hits[i - 1].payload["text"]).values()))]
-            used |= required_indices
-            # Assumptions and unchecked parts are always stated. The checked numbers line is added only when the
-            # writer's own table is missing or (after the Answer Guard) still differs: nothing is dropped.
-            wrong = unchecked_stat_pairs(answer, artifact)
-            rule_citations = "".join(f"[{i}]" for i in sorted(required_indices))
-            if any(i["kind"] == "missing_table" for i in issues) or wrong:
-                answer += "\n\n" + allocation_label(artifact, prepared.lang)
-                answer += ": " + " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
-                if wrong:
-                    log_stat_mismatch(prepared, wrong, artifact, "final")
-                    answer += (
-                        " (đây là bảng đã kiểm; dùng các số này nếu khác bảng phía trên)"
-                        if prepared.lang == "vi"
-                        else " (this is the checked table; use these numbers where they differ from the one above)"
-                    )
-                answer += " " + rule_citations
-            else:
-                prepared.trace["allocation_printed_by_writer"] = True
-                answer = place_under_table(answer, assumption_sentence(artifact, prepared.lang), rule_citations)
-        elif parsed.build_allocation is not None:
-            # A separate unchecked allocation field is not rendered; numbers the writer put in its own prose
-            # are a reference suggestion and stay (their total is checked below).
-            prepared.trace["dropped_unchecked_allocation"] = True
-            unchecked_notice = (
-                "Phân bổ chỉ số cụ thể chưa được công cụ tính kiểm tra nên không hiển thị."
-                if prepared.lang == "vi"
-                else "A specific stat allocation was not verified by the calculator, so it is not shown."
-            )
-        total_issue = next((i for i in issues if i["kind"] == "total"), None)
-        if total_issue and prepared.trace.get("guard_done"):
-            answer += "\n\n" + (
-                f"Lưu ý: tổng 8 chỉ số trong bảng là {total_issue['printed_total']}; level "
-                f"{total_issue['level']} cần {total_issue['attribute_total']}."
-                if prepared.lang == "vi"
-                else f"Note: the table totals {total_issue['printed_total']}; level {total_issue['level']} needs "
-                f"{total_issue['attribute_total']}."
-            )
-        if unchecked_notice:
-            answer += "\n\n" + unchecked_notice
         # Every paragraph is kept (no truncated answers); uncited ones are only counted for evaluation.
         if dropped := cited_blocks(answer)[1]:
             prepared.trace["uncited_paragraphs"] = dropped
@@ -511,10 +284,7 @@ RETRYABLE_REASONS = {
     "citation_evidence_indices",
     "unknown_quote_id",
     "model_url",
-    "stat_number_mismatch",
     "invalid_limitation",
-    "duplicate_evidence_index",
-    "invalid_build_allocation",
     "invalid_gameplay_advice",
 }
 
@@ -696,27 +466,15 @@ class Generator:
         return guarded
 
     async def _guard(self, prepared: Prepared, request: dict) -> str | None:
-        """One LLM pass that fixes the build table (wrong numbers, missing table) and keeps everything else."""
-        from app.rag.build_data import build_rules
-
+        """One LLM pass that rewrites the listed presentation problems (internal field names) and keeps the rest."""
         diagnostic = prepared.trace["answer_guard"] = {
             "issues": [i["kind"] for i in request["issues"]],
             "status": "error",
         }
-        artifact = prepared.checked_build or {}
-        data = artifact.get("data") or {}
-        rules = build_rules((prepared.values or {}).get("player_profile") or {}) or {}
         payload = {
             "answer": request["answer"],
             "issues": request["issues"],
             "answer_language": "Vietnamese (tiếng Việt)" if prepared.lang == "vi" else "English",
-            "attribute_total": rules.get("attribute_total"),
-            "level": rules.get("level"),
-            "attribute_cap": rules.get("attribute_cap"),
-            "checked_allocation": artifact.get("allocation"),
-            "class_floors": {k: f["value"] for k, f in ((data.get("starting_class") or {}).get("base") or {}).items()}
-            or None,
-            "weapon_requirements": {k: f["value"] for k, f in (data.get("requirements") or {}).items()} or None,
         }
         try:
             spend(prepared.trace, "answer_guard", prepared.max_calls)

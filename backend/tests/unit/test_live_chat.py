@@ -12,7 +12,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, convert_to_openai_messages
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage, convert_to_openai_messages
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
@@ -105,14 +105,27 @@ def fake_agent_language(text: str) -> str:
     return "vi" if any(unicodedata.combining(c) for c in normalized) or "đ" in text.lower() else "en"
 
 
+def seen_evidence(messages):
+    """Evidence IDs the Agent saw in search results, in the order shown (corpus results, then web blocks)."""
+    ids = []
+    for m in messages:
+        if isinstance(m, ToolMessage):
+            data = json.loads(m.content)
+            ids += [r["id"] for r in data.get("results", [])]
+            ids += [b["id"] for page in data.get("pages", []) for b in page["blocks"]]
+    return list(dict.fromkeys(ids))
+
+
 def offline_agent_turn(messages, tools, script=None):
-    """Offline Agent: search the player's message once (web too when policy is always), then finish with
-    all evidence. A test may pass `script`, a list of (tool name, args) consumed one per model call."""
+    """Offline Agent: search the player's message once (web too when policy is always), then finish choosing
+    the evidence it saw. A test may pass `script`, a list of (tool name, args) consumed one per model call."""
     names = {t["function"]["name"] for t in tools}
     payload = json.loads(next(m.content for m in messages if isinstance(m, HumanMessage)))
     called = [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
     if script:
         name, args = script.pop(0)
+        if name == "finish" and args.get("evidence_ids") == "seen":
+            args = {**args, "evidence_ids": seen_evidence(messages)[:5]}
         if name == "__invalid__":  # A call whose arguments are not valid JSON.
             bad = {"name": "calculator", "args": "{broken", "id": f"call_{len(called) + 1}", "error": "bad json"}
             return AIMessage(content="", invalid_tool_calls=[bad])
@@ -129,7 +142,7 @@ def offline_agent_turn(messages, tools, script=None):
                 "request": payload["player_message"],
                 "intent": "other",
                 "answer_language": lang,
-                "evidence_ids": [],
+                "evidence_ids": seen_evidence(messages)[:5],
             },
         )
     return AIMessage(
@@ -232,6 +245,11 @@ class FakeLLM(DeepSeekLLM):
         self.seen.append(messages)
         return self.data
 
+    def insufficient(self, text="Mình chưa tìm thấy nguồn cho câu này."):
+        """The writer's answer when the Agent chose no evidence (22/11: no fixed server sentence)."""
+        self.data = {"answer": text, "evidence": [], "insufficient": True}
+        return self
+
     async def stream(self, messages, **kwargs):
         self.seen.append(messages)
         try:
@@ -327,10 +345,10 @@ async def test_rag_missing_corpus_is_not_empty_results_or_general_fallback():
     missing = service("rag", llm, FakeRetriever(missing=True))
     with pytest.raises(UnavailableError):
         await missing.answer(ChatRequest(**BODY))
-    empty = service("rag", llm, FakeRetriever(hits=[]))
+    empty = service("rag", llm.insufficient(), FakeRetriever(hits=[]))
     result = await empty.answer(ChatRequest(**BODY))
     assert result.grounded is False and result.sources == []
-    assert llm.calls == 0
+    assert llm.calls == 1  # No evidence: the writer says so (an insufficient answer), no server sentence.
 
 
 async def test_rag_citations_use_selected_sources_and_verifiable_quotes():
@@ -368,7 +386,7 @@ async def test_role_aware_prompt_keeps_braces_history_and_sources_as_data():
 
 async def test_chat_accepts_legacy_spoiler_flag_and_retrieves_for_both_values():
     retrieval = FakeRetriever(hits=[])
-    live = service("rag", FakeLLM(), retrieval)
+    live = service("rag", FakeLLM().insufficient(), retrieval)
     await asyncio.gather(
         live.answer(ChatRequest(**BODY, options={"spoilers": False})),
         live.answer(ChatRequest(**BODY, options={"spoilers": True})),
@@ -757,11 +775,12 @@ class SequenceLLM(FakeLLM):
 
 
 @pytest.mark.parametrize("lang", ["vi", "en"])
-async def test_no_context_bypasses_generation_but_insufficient_context_uses_valid_json(lang):
-    llm = FakeLLM()
+async def test_no_context_and_insufficient_context_both_use_the_writers_valid_json(lang):
+    llm = FakeLLM().insufficient()
     req = ChatRequest(**BODY, options={"lang": lang})
     empty = await service("rag", llm, FakeRetriever([])).answer(req)
-    assert not empty.grounded and empty.sources == [] and llm.calls == 0
+    assert not empty.grounded and empty.sources == [] and llm.calls == 1
+    llm.calls = 0
     llm.data = {
         "answer": "Chưa đủ bằng chứng." if lang == "vi" else "Not enough evidence.",
         "evidence": [],
@@ -1063,10 +1082,10 @@ async def test_broken_stream_is_retried_and_never_shows_partial_text():
     ],
 )
 async def test_gameplay_and_build_questions_reach_retrieval(question):
-    llm, retriever = FakeLLM(), FakeRetriever(hits=[])
+    llm, retriever = FakeLLM().insufficient(), FakeRetriever(hits=[])
     response = await service("rag", llm, retriever).answer(ChatRequest(message=question, channel="web"))
     assert retriever.calls == [(question, True)]
-    assert not response.grounded and response.sources == [] and llm.calls == 0
+    assert not response.grounded and response.sources == [] and llm.calls == 1
     assert "Please ask about its story" not in response.answer and "hãy hỏi về câu chuyện" not in response.answer
 
 

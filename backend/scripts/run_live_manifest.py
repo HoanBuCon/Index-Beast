@@ -25,9 +25,7 @@ TRACE_KEYS = (
     "answer_basis",
     "images",
     "latency_ms",
-    "build_check",
     "answer_guard",
-    "stat_mismatch",
     "uncited_paragraphs",
     "internal_field_replaced",
     "generation_failure",
@@ -68,7 +66,9 @@ def trace_summary(trace: dict | None) -> dict | None:
     return {
         **{k: trace.get(k) for k in TRACE_KEYS},
         "model_calls": [c.get("phase") for c in trace.get("model_calls", [])],
-        "agent": {k: agent.get(k) for k in ("status", "action", "intent", "steps", "usage", "model_calls")},
+        "agent": {
+            k: agent.get(k) for k in ("status", "action", "intent", "gameplay_advice", "steps", "usage", "model_calls")
+        },
     }
 
 

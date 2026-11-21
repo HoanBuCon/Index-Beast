@@ -87,9 +87,9 @@ def test_direct_style_keeps_evidence_contract():
 
 
 async def test_empty_context_is_normal_response_without_retrieval_narration():
-    llm = FakeLLM()
+    llm = FakeLLM().insufficient("Mình chưa rõ về điều này.")
     result = await service("rag", llm, FakeRetriever([])).answer(ChatRequest(**BODY))
-    assert not result.grounded and not result.sources and llm.calls == 0
+    assert not result.grounded and not result.sources and llm.calls == 1
     assert "nguồn" not in result.answer and "tìm được" not in result.answer
 
 

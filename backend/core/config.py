@@ -90,9 +90,8 @@ class Settings(BaseSettings):
     chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int | None = Field(default=6, ge=1, le=8)
-    # Web auto: ngân sách lượt gọi mô hình của vòng lặp Agent; calculator được thử lại sau tối đa số lần lỗi này.
+    # Web auto: ngân sách lượt gọi mô hình của vòng lặp Agent.
     chat_coverage_max_calls: int = Field(default=12, ge=2, le=24)
-    chat_calculator_max_failures: int = Field(default=2, ge=1, le=5)
     chat_persistence: Literal["memory", "postgres"] = "memory"
     chat_memory_collection: str = "conversation_memories"
     chat_memory_candidates: int = Field(default=6, ge=1, le=12)

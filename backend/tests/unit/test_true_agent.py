@@ -45,7 +45,8 @@ def test_tool_specs_follow_web_policy_and_clarification_budget():
     names = lambda specs: {s["function"]["name"] for s in specs}  # noqa: E731
     assert "search_web" not in names(tool_specs(web=False)) and "search_web" in names(tool_specs(web=True))
     assert "ask_user" not in names(tool_specs(web=False, ask=False))
-    assert {"set_conditions", "calculator", "finish", "reply"} <= names(tool_specs(web=False))
+    assert {"set_conditions", "run_python", "finish", "reply"} <= names(tool_specs(web=False))
+    assert "calculator" not in names(tool_specs(web=False))  # 22/11: the Agent computes with run_python.
 
 
 async def test_the_agent_searches_and_chooses_evidence_for_the_generator():
@@ -78,11 +79,24 @@ async def test_conditions_need_the_players_words_and_persist_in_working_state():
     assert p2.player_state["constraints"] == [] and p2.player_state["retired_condition_keys"] == ["level"]
 
 
-async def test_calculator_needs_a_recorded_level():
-    llm = RecordingLLM([("calculator", {"allocation": {"vigor": 40}, "fill": "strength"}), finish()])
-    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Build Strength giúp mình"), [])
-    assert "set_conditions" in llm.tool_result(1)["error"] and p.checked_build is None
-    assert p.trace["build_check"]["status"] == "failed"
+async def test_the_agent_computes_with_python_and_the_writer_gets_its_results():
+    code = "plan = {'vigor': 60, 'strength': 80}\nprint(sum(plan.values()))"
+    results = "Allocation (assumed level 150): Vigor 60, Strength 80 ... total 229"
+    llm = RecordingLLM(
+        [
+            ("set_conditions", {"set": [{"key": "level", "value": "150", "source_id": "assumption"}]}),
+            ("run_python", {"code": code}),
+            ("run_python", {"code": "import os"}),
+            finish(intent="build", results=results),
+        ]
+    )
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Cho mình một build Strength"), [])
+    assert llm.tool_result(2) == {"status": "ok", "output": "140\n"}
+    assert llm.tool_result(3)["status"] == "error" and "not allowed" in llm.tool_result(3)["error"]
+    # The Agent's own computed numbers reach the writer as they are; the server does not re-check them.
+    assert json.loads(p.values["payload"])["agent_results"] == results
+    # The built-in level rule is offered to the Agent but not added to the answer unless chosen.
+    assert llm.payload()["built_in_sources"][0]["id"] and all(h.id == "1" for h in p.hits)
 
 
 async def test_ask_user_creates_a_clarification_and_the_reply_continues_the_request():
@@ -172,3 +186,58 @@ def test_recent_turns_keep_the_newest_within_the_history_budget():
     history = [{"role": "user", "content": f"message {i} " + "x" * 5} for i in range(5)]
     turns = pipe._recent_turns(history)
     assert [t["text"][:9] for t in turns] == ["message 3", "message 4"]  # Third-newest is over the char budget.
+
+
+async def test_an_assumed_level_serves_this_turn_but_is_never_stored_as_a_player_fact():
+    llm = RecordingLLM(
+        [
+            ("set_conditions", {"set": [{"key": "level", "value": "150", "source_id": "assumption"}]}),
+            finish(intent="build"),
+        ]
+    )
+    pipe = ChatPipeline(settings(), llm, FakeRetriever())
+    p = await pipe.prepare(req("Cho mình một build Strength"), [])
+    assert llm.tool_result(1)["status"] == "ok"
+    # Used for this answer (calculator, writer), marked as assumed; not kept as a player condition.
+    assert json.loads(p.values["payload"])["player_profile"] == {"level": "150", "assumed": "level"}
+    assert p.player_state["constraints"] == []
+    # An assumption may not replace what the player said.
+    llm2 = RecordingLLM(
+        [
+            ("set_conditions", {"set": [{"key": "level", "value": "60", "source_id": "current"}]}),
+            ("set_conditions", {"set": [{"key": "level", "value": "150", "source_id": "assumption"}]}),
+            finish(intent="build"),
+        ]
+    )
+    p2 = await ChatPipeline(settings(), llm2, FakeRetriever()).prepare(req("Build Strength level 60"), [])
+    assert llm2.tool_result(2)["status"] == "error" and p2.player_state["constraints"][0]["value"] == "60"
+
+
+async def test_finish_without_evidence_is_reminded_once_and_never_filled_in_by_the_server():
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni"}), finish(), finish()])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req(), [])
+    assert "evidence_ids is empty" in llm.tool_result(2)["error"]
+    # The Agent finished again without choosing: no evidence, the writer says what is missing.
+    assert p.trace["evidence_selection"] == {"method": "model", "ids": []} and p.hits == []
+    assert p.static_answer is None
+
+
+async def test_discord_uses_the_same_web_default_as_other_channels():
+    discord = ChatRequest(message="Ranni là ai?", channel="discord", external_ref="discord:channel:1")
+    llm = RecordingLLM([finish()])
+    p = await ChatPipeline(settings(web_search_mode="off"), llm, FakeRetriever()).prepare(discord, [])
+    assert p.trace["web_search"]["requested"] == "off"
+
+
+def test_gameplay_advice_may_carry_a_recommendation_but_never_a_citation_or_url():
+    from app.rag.generator import Prepared, RAGValidationError, validate_answer
+
+    advice = Prepared("rag", "vi", [], gameplay_advice=True)
+    data = {"answer": "Ưu tiên Vigor trước.", "evidence": [], "insufficient": False, "advisory": True}
+    result = validate_answer(advice, {**data, "recommendation": "Sau đó tăng chỉ số chính."})
+    assert result.answer == "Ưu tiên Vigor trước.\n\nSau đó tăng chỉ số chính." and not result.grounded
+    for bad in ("Xem https://example.com", "Theo nguồn [1]"):
+        with pytest.raises(RAGValidationError):
+            validate_answer(advice, {**data, "recommendation": bad})
+    with pytest.raises(RAGValidationError):  # The flag is the Agent's decision.
+        validate_answer(Prepared("rag", "vi", []), data)

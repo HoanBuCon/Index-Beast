@@ -495,7 +495,7 @@ async def execute(args, manifest, cases):
                         row["trace"] = {k: v for k, v in prepared.trace.items() if k != "result"}
                         row["resolved_question"] = json.loads(prepared.values["payload"])["question"]
                         row["evidence_ids"] = [h.id for h in prepared.hits]
-                        row["checked_build"] = prepared.checked_build
+                        row["agent_results"] = prepared.trace.get("agent", {}).get("steps")
                 except Exception as exc:
                     row.update(status="error", error_type=type(exc).__name__)
                 finally:

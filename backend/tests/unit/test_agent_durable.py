@@ -170,7 +170,7 @@ def decision_script(decision, payload, *, web, insufficient):
                 "request": decision.get("resolved_question") or payload["question"],
                 "intent": intent,
                 "answer_language": lang,
-                "evidence_ids": [],
+                "evidence_ids": "seen",  # The evidence the scripted Agent saw (offline_agent_turn fills it in).
                 "gameplay_advice": bool(decision.get("gameplay_advice")),
             },
         )
@@ -310,12 +310,11 @@ async def test_invalid_model_output_is_provider_failure_not_fake_clarification()
 
 
 async def test_budget_is_enforced_before_generation():
-    llm = AgentLLM()
+    llm = AgentLLM().insufficient()
     live = service(llm=llm, chat_agent_max_calls=1)
-    # The tool step reserves the only call for generation, so no evidence is gathered or invented.
+    # The one call is reserved for writing: no Agent step, nothing searched or invented; the writer says so.
     result = await live.answer(req())
-    # A one-call budget leaves no Agent step at all: nothing is searched, invented or generated.
-    assert not result.grounded and result.sources == [] and llm.calls == 0 and len(llm.plans) == 0
+    assert not result.grounded and result.sources == [] and llm.calls == 1 and len(llm.plans) == 0
     assert live.traces[result.message_id]["tool_stop"] == "model_budget"
 
 
@@ -764,7 +763,8 @@ async def test_clarification_round_budget_prevents_infinite_questions():
     )
     assert result.clarification is None
     trace = live.traces[result.message_id]["agent"]
-    assert trace["steps"][0] == {"tool": "ask_user", "status": "error", "ms": trace["steps"][0]["ms"]}
+    first = trace["steps"][0]
+    assert (first["tool"], first["status"]) == ("ask_user", "error") and "not available" in first["error"]
 
 
 async def test_build_resume_accepts_selected_memory_handle_and_persists_message_provenance(repo, memory):

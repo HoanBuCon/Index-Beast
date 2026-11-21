@@ -24,7 +24,6 @@ from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.retriever import document_to_hit
-from app.rag.web_search import merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
 from core.errors import AppError, UnavailableError
@@ -52,6 +51,8 @@ class PreparationState(TypedDict, total=False):
     memory_scope: object
     memory_candidates: list[dict]
     recent_turns: list[dict]
+    turn_profile: dict
+    agent_results: str
     name_to_check: str
     verify_coverage: bool
 
@@ -278,7 +279,8 @@ class ChatPipeline:
         trace.update(mode=mode, rewrite_fallback=False)
         prepared = Prepared(mode, lang, [], trace=trace)
         state.update(prepared=prepared, query=req.message, documents=[], answer_language=lang)
-        requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
+        # Same default on every channel (22/11: Discord no longer forced to auto); the Agent decides when to search.
+        requested = req.options.web_search or self.settings.web_search_mode
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
         state["verify_coverage"] = self.web_search is not None and state["search_mode"] == "auto"
@@ -353,17 +355,10 @@ class ChatPipeline:
     def _context(self, state: dict) -> dict:
         p = state["prepared"]
         if p.static_answer is None:
-            original_candidates = [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])
-            selection = p.trace.get("evidence_selection", {})
-            ids = selection.get("ids", [])
-            if p.checked_build is not None:
-                ids = list(dict.fromkeys([*p.checked_build["sources"], *ids]))[:5]
-            if ids or selection.get("method") == "model":
-                by_id = {h.id: h for h in original_candidates}
-                candidates = [by_id[i] for i in ids if i in by_id]
-            else:
-                candidates = merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", []))
-                p.trace.setdefault("evidence_selection", {"method": "all_evidence", "ids": []})
+            # Only the evidence the Agent chose (22/11: no server fallback to everything found).
+            by_id = {h.id: h for h in [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])}
+            p.trace.setdefault("evidence_selection", {"method": "model", "ids": []})
+            candidates = [by_id[i] for i in p.trace["evidence_selection"]["ids"] if i in by_id]
             p.hits = select_context(
                 candidates,
                 self.settings.rag_top_k,
@@ -371,18 +366,16 @@ class ChatPipeline:
                 policy=self.policy,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            if not p.hits and not p.gameplay_advice:
-                p.static_answer = (
-                    "Mình chưa có đủ thông tin để trả lời câu này."
-                    if p.lang == "vi"
-                    else "I don't have enough information to answer this question."
-                )
+            # No evidence: the writer says what is missing (an insufficient answer), not a fixed server sentence.
         return state
 
     def _prompt(self, state: dict) -> Prepared:
         p, req = state["prepared"], state["req"]
         player = state.get("next_player")
-        profile = {c["key"]: c["value"] for c in player.get("constraints", [])} if isinstance(player, dict) else {}
+        # This turn's conditions, including the Agent's stated assumptions (which are not stored in player).
+        profile = state.get("turn_profile")
+        if profile is None:
+            profile = {c["key"]: c["value"] for c in player.get("constraints", [])} if isinstance(player, dict) else {}
         p.template = self.template
         p.values = {
             "persona": prompt("persona"),
@@ -398,9 +391,9 @@ class ChatPipeline:
                     "original_user_message": req.message,
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
-                    "checked_build": p.checked_build,
                     **({"player_profile": profile} if profile else {}),
-                    **({"build_check": p.trace["build_check"]} if p.trace.get("build_check") else {}),
+                    # Numbers the Agent computed with run_python (e.g. a build allocation); used as they are.
+                    **({"agent_results": state["agent_results"]} if state.get("agent_results") else {}),
                 },
                 ensure_ascii=False,
             ),
