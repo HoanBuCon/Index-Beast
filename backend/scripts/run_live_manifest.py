@@ -47,7 +47,7 @@ class Recorder(logging.Handler):
         self.rerank = []
 
     def emit(self, record):
-        if getattr(record, "event", None) == "jina_reranker_outcome":
+        if getattr(record, "event", None) == "reranker_outcome":
             reason = getattr(record, "reason_category", None)
             code = getattr(record, "provider_status_code", None)
             self.rerank.append(record.status if record.status == "ok" else f"{record.status}:{reason}:{code or ''}")

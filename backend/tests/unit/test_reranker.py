@@ -54,7 +54,7 @@ async def test_success_emits_sanitized_structured_outcome(caplog):
             result = await JinaReranker("secret", model="test-model", client=client).rank("private query", hits)
 
     assert result == [hits[1], hits[0]]
-    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "jina_reranker_outcome")
+    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "reranker_outcome")
     assert {
         "provider": outcome.provider,
         "model": outcome.model,
@@ -93,7 +93,7 @@ async def test_fallback_outcome_has_safe_reason_category(failure, reason, caplog
             result = await JinaReranker("secret", client=client).rank("private query", hits)
 
     assert result == hits
-    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "jina_reranker_outcome")
+    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "reranker_outcome")
     assert outcome.status == "fallback"
     assert outcome.reason_category == reason
     assert outcome.ranked_count == 0
@@ -120,7 +120,7 @@ async def test_cancellation_propagates_and_logs_without_call_state_leaking(caplo
             with pytest.raises(asyncio.CancelledError):
                 await task
 
-    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "jina_reranker_outcome")
+    outcome = next(record for record in caplog.records if getattr(record, "event", None) == "reranker_outcome")
     assert outcome.status == "fallback" and outcome.reason_category == "cancelled"
     assert "secret" not in caplog.text and "private" not in caplog.text
 
@@ -143,7 +143,7 @@ async def test_concurrent_calls_keep_outcomes_per_call(caplog):
             results = await asyncio.gather(reranker.rank("slow", hits), reranker.rank("fast", hits))
 
     assert results == [[hits[1], hits[0]], hits]
-    outcomes = [record for record in caplog.records if getattr(record, "event", None) == "jina_reranker_outcome"]
+    outcomes = [record for record in caplog.records if getattr(record, "event", None) == "reranker_outcome"]
     assert len(outcomes) == 2
     observed = {
         (record.status, record.reason_category, record.candidate_count, record.ranked_count) for record in outcomes
@@ -248,7 +248,7 @@ async def test_reranker_keeps_rrf_order_without_calling_when_the_budget_is_spent
         with caplog.at_level(logging.INFO):
             assert await reranker.rank("q", hits) == hits
     assert len(calls) == 1
-    outcome = [r for r in caplog.records if getattr(r, "event", None) == "jina_reranker_outcome"][-1]
+    outcome = [r for r in caplog.records if getattr(r, "event", None) == "reranker_outcome"][-1]
     assert (outcome.status, outcome.reason_category) == ("fallback", "rate_budget")
 
 
@@ -260,3 +260,72 @@ async def test_rate_limited_response_blocks_the_budget_for_retry_after():
         reranker = JinaReranker("secret", client=client, tokens_per_minute=100_000, max_wait_seconds=5)
         assert await reranker.rank("q", hits) == hits
     assert reranker.budget.blocked_until - monotonic() > 25
+
+
+class FakeCrossEncoder:
+    def __init__(self, scores=None, error=None, gate=None):
+        self.scores, self.error, self.gate, self.calls = scores, error, gate, []
+
+    def rerank(self, query, documents, batch_size):
+        self.calls.append((query, list(documents), batch_size))
+        if self.gate is not None:
+            self.gate.wait(5)
+        if self.error:
+            raise self.error
+        return iter(self.scores[: len(documents)])
+
+
+async def test_local_reranker_orders_by_score_in_small_batches_and_truncates(caplog):
+    from app.rag.reranker import LocalReranker
+
+    hits = [Hit(str(i), 0.5, {"title": f"t{i}", "text": "x" * 500}) for i in range(4)]
+    reranker = LocalReranker("m", "cache", max_candidates=3, max_chars=120, batch_size=2)
+    reranker._encoder = FakeCrossEncoder([0.1, 2.0, -1.0])
+    with caplog.at_level(logging.INFO):
+        assert await reranker.rank("q", hits) == [hits[1], hits[0], hits[2], hits[3]]
+    _, documents, batch = reranker._encoder.calls[0]
+    assert batch == 2 and all(len(doc) == 120 for doc in documents)
+    outcome = [r for r in caplog.records if getattr(r, "event", None) == "reranker_outcome"][-1]
+    assert (outcome.provider, outcome.status) == ("local", "ok")
+
+
+async def test_local_reranker_keeps_rrf_order_on_model_error_or_bad_scores():
+    from app.rag.reranker import LocalReranker
+
+    hits = [Hit("a", 0.9, {"text": "a"}), Hit("b", 0.8, {"text": "b"})]
+    reranker = LocalReranker("m", "cache")
+    reranker._encoder = FakeCrossEncoder(error=RuntimeError("onnx"))
+    assert await reranker.rank("q", hits) == hits
+    reranker._encoder = FakeCrossEncoder([float("nan"), 1.0])
+    assert await reranker.rank("q", hits) == hits and not reranker._busy
+
+
+async def test_timed_out_inference_blocks_new_runs_until_the_worker_really_ends(caplog):
+    """Regression 24/11: lượt quá giờ vẫn chạy ngầm; không được cho lượt mới chạy chồng (từng ăn ~18 GB RAM)."""
+    import threading
+
+    from app.rag.reranker import LocalReranker
+
+    hits = [Hit("a", 0.9, {"text": "a"}), Hit("b", 0.8, {"text": "b"})]
+    gate = threading.Event()
+    reranker = LocalReranker("m", "cache", timeout_seconds=0.05)
+    reranker._encoder = FakeCrossEncoder([0.1, 0.9], gate=gate)
+    with caplog.at_level(logging.INFO):
+        assert await reranker.rank("q", hits) == hits  # quá giờ -> RRF
+        assert await reranker.rank("q", hits) == hits  # worker cũ còn chạy -> bận, không gọi model lần hai
+    assert len(reranker._encoder.calls) == 1
+    reasons = [r.reason_category for r in caplog.records if getattr(r, "event", None) == "reranker_outcome"]
+    assert reasons[-2:] == ["timeout", "busy"]
+    gate.set()
+    for _ in range(100):
+        if not reranker._busy:
+            break
+        await asyncio.sleep(0.01)
+    assert await reranker.rank("q", hits) == [hits[1], hits[0]]
+
+
+def test_local_provider_needs_no_jina_key():
+    from core.config import Settings
+
+    assert Settings(rag_reranker_enabled=True, rag_reranker_provider="local", jina_api_key=None).reranker_available
+    assert not Settings(rag_reranker_enabled=False, rag_reranker_provider="local").reranker_available

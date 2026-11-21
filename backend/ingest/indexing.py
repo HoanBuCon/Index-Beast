@@ -16,11 +16,6 @@ from core.vector.schema import ensure_collection
 from core.vector.store import QdrantStore
 
 
-def rejection_reason(chunk: ChunkRecord) -> str | None:
-    """Compatibility entry point: old low-level callers retain reviewed-only admission."""
-    return CorpusPolicy().exclusion_reason(chunk.model_dump())
-
-
 @dataclass
 class Inspection:
     chunks: list[ChunkRecord] = field(default_factory=list)
