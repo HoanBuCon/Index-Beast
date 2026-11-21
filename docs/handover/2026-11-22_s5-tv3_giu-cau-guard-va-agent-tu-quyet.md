@@ -70,6 +70,7 @@ Giữ lại có chủ đích: tập intent so sánh (`agent.py`) vì chỉ đọ
 | live-12 (1 câu) | Chạy lại câu lỗi G | Đạt, 27 giây; lỗi không tái hiện nên nhánh xử lý mới chỉ kiểm offline |
 | live-13 (5 câu) | Bỏ server quyết định thay Agent | 5/5 trả lời được, grounded, 17–36 giây. Agent tự chọn "Moonveil" cho "Mooonveil"; lỗi lặp tên ở finish lộ ra và đã sửa (chưa chạy thật lại) |
 
+- **Baseline trước True Agent** (22/11, 10 câu cố định, cùng code nhánh này): 10/10 trả lời được và grounded, p50 17,6 s / p95 36,4 s, trung bình 7,8 lượt gọi model và 3,7 bước công cụ mỗi câu; calculator 1 đạt / 1 lỗi; Answer Guard không chạy. Báo cáo: [docs/testing/2026-11-22_baseline-truoc-true-agent](../testing/2026-11-22_baseline-truoc-true-agent/README.md).
 - Ngày 22/11 có thử "calculator mục tiêu mềm" (code tự cân điểm theo ưu tiên, live-14) rồi **rollback toàn bộ** vì đó là rule server quyết thay Agent; nhánh không còn phần này.
 
 ## Hạn chế và việc còn lại
