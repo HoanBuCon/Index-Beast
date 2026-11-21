@@ -22,10 +22,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_valida
 from app.adapters.llm import LLMError, LLMResponse
 from app.adapters.tavily import WebHit
 from app.api.schemas.chat import Clarification, Source
-from app.rag.agent import spend
+from app.rag.budget import spend
 from app.rag.build_data import unchecked_stat_pairs
 from app.rag.evidence import evidence_units
-from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, char_class, decode_output, stream_body_prefix
+from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output
 from app.rag.prompts import generation_prompt, prompt, rewrite_prompt
 from core.errors import UnavailableError, UpstreamError
 from core.types import Hit
@@ -98,12 +98,6 @@ def cited_blocks(answer: str) -> tuple[str, int]:
         else:
             dropped += 1
     return ("".join(kept) if dropped else answer), dropped
-
-
-def grounded_stream_prefix(text: str) -> str:
-    # A block without a citation can still gain one while its tokens arrive. Hold it
-    # until then, together with any heading that labels it. Use the same filter as JSON.
-    return cited_blocks(text)[0].rstrip("\r\n") if text.strip() else ""
 
 
 class LLM(Protocol):
@@ -506,43 +500,6 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
         # Static category only: never log model output, source quotes, prompts or private reasoning.
         logging.getLogger(__name__).warning("RAG validation failed", extra={"data": {"reason": failure}})
         raise RAGValidationError(failure) from None
-
-
-class StreamPrefixError(UpstreamError):
-    """Stream prefix cannot be decoded; carries only a character category for diagnostics."""
-
-    def __init__(self, char_class: str):
-        super().__init__("Định dạng stream RAG không hợp lệ.")
-        self.char_class = char_class
-
-
-def answer_prefix(raw: str) -> str:
-    """Decode complete JSON string units while answer is still streaming; never expose JSON metadata."""
-    raw = stream_body_prefix(raw)
-    match = re.match(r'^\s*\{\s*"answer"\s*:\s*"', raw)
-    if not match:
-        if len(raw) > 64:
-            raise StreamPrefixError("answer_not_first")
-        return ""
-    start = end = match.end()
-    while end < len(raw):
-        char = raw[end]
-        if char == '"':
-            break
-        if char == "\\":
-            if end + 1 >= len(raw):
-                break
-            width = 6 if raw[end + 1] == "u" else 2
-            if end + width > len(raw):
-                break
-            end += width
-        else:
-            end += 1
-    try:
-        # Same tolerance as decode_output: raw line breaks/tabs inside the string are accepted.
-        return json.loads('"' + raw[start:end] + '"', strict=False)
-    except json.JSONDecodeError as exc:
-        raise StreamPrefixError(char_class(raw[start:end], max(0, exc.pos - 1))) from None
 
 
 # Lỗi giao thức trích dẫn có thể sửa bằng cách sinh lại; lần sau vẫn qua validate_answer nên không nới kiểm chứng.

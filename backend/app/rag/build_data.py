@@ -11,8 +11,6 @@ import copy
 import hashlib
 import json
 import re
-import time
-from collections import OrderedDict
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -119,18 +117,6 @@ def checked_numbers(artifact: dict) -> dict[str, set[int]]:
 def unchecked_stat_pairs(text: str, artifact: dict) -> list[tuple[str, int]]:
     allowed = checked_numbers(artifact)
     return [(k, v) for k, v in stat_pairs(text) if v not in allowed.get(k, set())]
-
-
-def stat_numbers_in(text: str) -> bool:
-    """True if prose pairs an attribute with a number ("Str 40", "Sức mạnh: 40") or tabulates attributes."""
-    if _STAT_NUMBER.search(text):
-        return True
-    return any(
-        "|" in line
-        and len({_NAME_TO_ATTRIBUTE.get(m, _NAME_TO_ATTRIBUTE.get(m.casefold())) for m in _STAT_WORD.findall(line)})
-        >= 2
-        for line in text.splitlines()
-    )
 
 
 class Number(BaseModel):
@@ -248,36 +234,6 @@ def bound_value(quote, label, value, *, entity=None):
             if cells[columns[0]] == str(value):
                 return True
     return False
-
-
-class BuildCache:
-    """Per-pipeline sourced weapon requirements, 32 entries / one-hour TTL. Never player profiles."""
-
-    def __init__(self):
-        self.entries = OrderedDict()
-
-    @staticmethod
-    def key(weapon, usage="one_handed_no_bonuses"):
-        return (name_key(weapon or ""), usage)
-
-    def put(self, data, hits):
-        if not data.get("weapon") or not data.get("requirements"):
-            return
-        key = self.key(data["weapon"], data.get("usage", "one_handed_no_bonuses"))
-        self.entries[key] = (time.monotonic(), copy.deepcopy(data), copy.deepcopy(hits))
-        self.entries.move_to_end(key)
-        while len(self.entries) > 32:
-            self.entries.popitem(last=False)
-
-    def get(self, profile):
-        if not profile.get("weapon"):
-            return None
-        key = self.key(profile["weapon"])
-        item = self.entries.get(key)
-        if item is None or time.monotonic() - item[0] > 3600:
-            self.entries.pop(key, None)
-            return None
-        return copy.deepcopy(item[1:])
 
 
 _PROVENANCE_KEYS = (

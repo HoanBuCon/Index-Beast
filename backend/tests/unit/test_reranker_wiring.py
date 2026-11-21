@@ -16,7 +16,7 @@ from core.errors import UnavailableError
 from core.vector.store import QdrantStore
 from tests.unit.test_agent_durable import req, settings
 from tests.unit.test_live_chat import FakeLLM, hit
-from tests.unit.test_tool_agent import ToolsLLM, step
+from tests.unit.test_true_agent import RecordingLLM, finish
 
 
 class Encoder:
@@ -56,10 +56,10 @@ async def test_reranker_is_used_by_retrieval_and_copied_tool_settings():
 
 async def test_agent_tool_observes_reranked_candidates():
     reranker = ReverseReranker()
-    llm = ToolsLLM([step("local_search", "Ranni identity"), step("finish", evidence_ids=["2"])])
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni identity"}), finish(evidence_ids=["2"])])
     pipe = ChatPipeline(settings(), llm, HybridRetriever(Encoder(), Store(), reranker=reranker))
     prepared = await pipe.prepare(req(options={"web_search": "off"}), [])
-    assert [c["id"] for c in llm.observations[1]["candidates"]] == ["2", "1"]
+    assert [c["id"] for c in llm.tool_result(1)["results"]] == ["2", "1"]
     assert [h.id for h in prepared.hits] == ["2"]
     assert reranker.queries == ["Ranni identity"]
 
@@ -184,14 +184,14 @@ async def test_agent_uses_remaining_turn_budget_and_keeps_retrieved_hits():
             await asyncio.sleep(1)
             return list(reversed(hits))
 
-    llm = ToolsLLM([step("local_search", "Ranni identity"), step("finish", evidence_ids=["1"])])
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni identity"}), finish(evidence_ids=["1"])])
     retriever = HybridRetriever(Encoder(), Store(), reranker=SlowReranker(), reranker_timeout_seconds=1)
     pipe = ChatPipeline(settings(chat_timeout_seconds=1), llm, retriever)
     started = time.perf_counter() - 0.45
     async with asyncio.timeout(0.3):
         prepared = await pipe.prepare(req(options={"web_search": "off"}), [], started=started)
     assert [h.id for h in prepared.hits] == ["1"]
-    assert [c["id"] for c in llm.observations[1]["candidates"]] == ["1", "2"]
+    assert [c["id"] for c in llm.tool_result(1)["results"]] == ["1", "2"]
     assert retriever.rerank_deadline is None
 
 

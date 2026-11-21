@@ -158,9 +158,11 @@ class TavilySearch:
                     text, cleanup = clean_markdown(text)
                     for key, value in cleanup.items():
                         diagnostics[key] = diagnostics.get(key, 0) + value
-                    blocks, oversized = select_excerpts(text, query)
+                    # Page order, no ranking: the Agent sees every block (within the per-page budget) and opens
+                    # the ones it needs.
+                    blocks, oversized = select_excerpts(text)
                     diagnostics["excluded"] += oversized
-                    for ordinal, block in enumerate(blocks[:3]):
+                    for ordinal, block in enumerate(blocks):
                         digest = hashlib.sha256((url + "\n" + block).encode()).hexdigest()
                         if not block or digest in seen:
                             continue
@@ -173,13 +175,13 @@ class TavilySearch:
                                     "text": block,
                                     "title": selected[url],
                                     "url": url,
-                                    "section": f"Web excerpt {ordinal + 1}",
+                                    "section": f"Web excerpt {ordinal + 1}/{len(blocks)}",
                                     "origin": "web",
                                     "retrieved_at": datetime.now(UTC).isoformat(),
                                     "source": "tavily_extract",
                                     "source_type": "unclassified_web",
                                     "source_type_evidence": "web_extraction_not_content_review",
-                                    "content_processing": "markdown-clean-excerpts-v1",
+                                    "content_processing": "markdown-clean-page-blocks-v2",
                                     "game_scope": "unknown",
                                     "release_scope": "unknown",
                                     "patch_version": "unknown",

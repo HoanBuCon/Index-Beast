@@ -18,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.adapters.tavily import WebHit
 from app.api.schemas.chat import ChatImage
-from app.rag.agent import spend
+from app.rag.budget import spend
 from app.rag.output import decode_output
 from app.rag.prompts import rewrite_prompt
 from app.services.images import FORMATS, plain, ui_image

@@ -39,21 +39,25 @@ def test_cleaning_preserves_table_headers_numbers_negation_and_step_order():
         "| Stat | Required |\n| --- | --- |\n| INT | 23 |\n\nDo not use a shield."
     )
     text, _ = clean_markdown(raw)
-    chunks, dropped = select_excerpts(text, "Elden Ring INT requirements")
+    chunks, dropped = select_excerpts(text)
     assert dropped == 0 and len(chunks) == 1
     assert "| Stat | Required |" in chunks[0] and "| INT | 23 |" in chunks[0]
     assert "Do not use a shield" in chunks[0]
     assert chunks[0].index("First unlock") < chunks[0].index("Then talk")
 
 
-def test_query_relevant_late_section_can_replace_unrelated_page_start_without_cutting_table():
-    unrelated = "Unrelated history. " * 160
-    raw = "# Example\n\n" + unrelated + "\n\n## Starting classes\n\nClass list and character creation."
-    chunks, _ = select_excerpts(raw, "starting classes list character creation", limit=1)
-    assert len(chunks) == 1 and "Class list" in chunks[0]
-    assert "## Starting classes" in chunks[0]
+def test_blocks_keep_page_order_and_headings_without_keyword_ranking():
+    # 22/11: no server-side relevance ranking; the Agent sees every block (within the budget) and chooses.
+    history = "Unrelated history. " * 95
+    raw = "# Example\n\n" + history + "\n\n" + history + "\n\n## Starting classes\n\nClass list and character creation."
+    chunks, _ = select_excerpts(raw)
+    assert len(chunks) == 2 and chunks[0].startswith("# Example") and "## Starting classes" in chunks[1]
+    # The second chunk starts with its section heading again, but no heading is repeated inside a chunk.
+    assert chunks[1].startswith("# Example") and all(c.count("# Example") == 1 for c in chunks)
+    assert chunks[1].count("## Starting classes") == 1
+    assert select_excerpts(raw, limit=1)[0] == chunks[:1]  # The budget keeps the page start, not a "best" block.
     oversized = "| Stat | Value |\n" + "| INT | 23 |\n" * 400
-    chunks, count = select_excerpts(oversized, "stats")
+    chunks, count = select_excerpts(oversized)
     assert chunks == [] and count == 1
 
 

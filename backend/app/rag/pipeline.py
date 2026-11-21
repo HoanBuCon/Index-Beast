@@ -1,6 +1,6 @@
 """LangGraph request preparation; clients stay outside invocation state/checkpoints.
 
-Một đường RAG duy nhất: Agent quyết định → Tool Agent thu thập bằng chứng → context → prompt.
+Một đường RAG duy nhất: vòng lặp Agent (gọi tool) → context → prompt; Generator viết câu trả lời.
 Backend chỉ giữ guard xác định (schema, provenance, citation, budget, quyền bộ nhớ).
 
 Phụ trách: TV3 · [S2–S3] Pipeline
@@ -9,11 +9,8 @@ Phụ trách: TV3 · [S2–S3] Pipeline
 import inspect
 import json
 import time
-import unicodedata
-from datetime import UTC, datetime
 from typing import TypedDict
 from urllib.parse import urlsplit
-from uuid import uuid4
 
 from langchain_core.documents import Document
 from langchain_core.messages import convert_to_openai_messages
@@ -22,17 +19,15 @@ from langgraph.graph import END, START, StateGraph
 from langsmith import tracing_context
 
 from app.adapters.tavily import WebHit
-from app.api.schemas.chat import ChatRequest, Clarification
-from app.rag.agent import condition_changes, decide, inactive_conditions
+from app.api.schemas.chat import ChatRequest
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.retriever import document_to_hit
-from app.rag.task_plan import start_plan
 from app.rag.web_search import merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
-from core.errors import AppError, BadRequestError, UnavailableError, UpstreamError
+from core.errors import AppError, UnavailableError
 from core.types import Hit
 
 
@@ -56,16 +51,9 @@ class PreparationState(TypedDict, total=False):
     search_mode: str
     memory_scope: object
     memory_candidates: list[dict]
+    recent_turns: list[dict]
     name_to_check: str
     verify_coverage: bool
-
-
-def language(question: str, requested: str) -> str:
-    """Provisional language before the Agent decides; RAG overrides it with answer_language."""
-    if requested != "auto":
-        return requested
-    normalized = unicodedata.normalize("NFD", question.lower())
-    return "vi" if any(unicodedata.combining(c) for c in normalized) or "đ" in question.lower() else "en"
 
 
 def content_key(hit: Hit) -> str | None:
@@ -209,21 +197,19 @@ class ChatPipeline:
         for name, node in (
             ("scope", self._scope),
             ("memory", self._memory),
-            ("agent_decision", self._agent),
-            ("tool_agent", self._tool_agent),
+            ("agent", self._agent),
             ("context", self._context),
             ("prompt", self._prompt_node),
         ):
             graph.add_node(name, self._guarded(name, node))
         graph.add_edge(START, "scope")
         graph.add_edge("scope", "memory")
-        graph.add_edge("memory", "agent_decision")
+        graph.add_edge("memory", "agent")
         graph.add_conditional_edges(
-            "agent_decision",
-            lambda s: "answer" if s["prepared"].static_answer is not None else "tools",
-            {"tools": "tool_agent", "answer": "prompt"},
+            "agent",
+            lambda s: "answer" if s["prepared"].static_answer is not None else "context",
+            {"context": "context", "answer": "prompt"},
         )
-        graph.add_edge("tool_agent", "context")
         graph.add_edge("context", "prompt")
         graph.add_edge("prompt", END)
         # Invocation-local state, overwrite semantics, no MessagesState/append reducer or shared checkpointer.
@@ -284,7 +270,8 @@ class ChatPipeline:
         if self.llm is None:
             raise UnavailableError("Chưa cấu hình DeepSeek API key.")
         mode = self.settings.chat_mode
-        lang = language(req.message, req.options.lang)
+        # No guessing from the message (22/11): the player's choice, else the Agent's declared language (default vi).
+        lang = req.options.lang if req.options.lang != "auto" else "vi"
         trace = state.get("trace")
         if trace is None:
             trace = state["trace"] = {}
@@ -300,107 +287,9 @@ class ChatPipeline:
         return state
 
     async def _agent(self, state):
-        p, req = state["prepared"], state["req"]
-        working = state.get("player") if isinstance(state.get("player"), dict) else {}
-        shared_thread = req.channel == "discord" and (req.external_ref or "").startswith("discord:thread:")
-        if shared_thread:
-            working = {}  # No verified actor identity in the shared-thread transport.
-        if time.time() - working.get("updated", 0) > 1800:
-            working = {}
-        pending = working.get("pending")
-        if pending and datetime.fromisoformat(pending["expires_at"]).timestamp() <= time.time():
-            working = {}
-            pending = None
-        if req.clarification_id and (not pending or str(req.clarification_id) != pending["id"]):
-            raise BadRequestError("Câu hỏi bổ sung đã hết hạn hoặc không thuộc hội thoại này.")
-        decision = await decide(
-            self.llm,
-            req.message,
-            state.get("memory_candidates", []),
-            working,
-            p.lang,
-            self.settings.model_copy(update={"chat_agent_max_calls": None})
-            if state.get("verify_coverage")
-            else self.settings,
-            p.trace,
-            shared_thread=shared_thread,
-            requested_lang=req.options.lang,
-        )
-        if decision is None:
-            raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
-        p.agent_decision = decision.model_dump()
-        p.gameplay_advice = decision.action == "retrieve" and decision.gameplay_advice
-        if req.options.lang == "auto" and decision.answer_language:
-            p.lang = state["answer_language"] = decision.answer_language
-        continuing = decision.turn_type != "new" and decision.intent != "cancel"
-        changes = condition_changes(decision, working)
-        inactive = inactive_conditions(decision, working, changes)
-        rounds = working.get("clarification_rounds", 0) if continuing and pending else 0
-        limit = self.settings.chat_clarification_max_rounds
-        if decision.action == "clarify" and limit is not None and rounds >= limit:
-            raise UnavailableError(
-                "Đã đạt giới hạn hỏi bổ sung. Bạn có thể gửi yêu cầu cụ thể hơn hoặc hủy yêu cầu này."
-            )
-        p.player_state = {
-            "constraints": [c.model_dump() for c in decision.constraints],
-            "original": working.get("original", req.message) if continuing else req.message,
-            "request_text": working.get("request_text", req.message) if continuing else req.message,
-            "clarification_rounds": rounds + int(decision.action == "clarify"),
-            "intent": decision.intent,
-            "lang": p.lang,
-            "pending": None,
-            "updated": time.time(),
-        }
-        if inactive:
-            p.player_state["inactive_conditions"] = inactive
-        if changes:
-            p.trace["updated_condition_keys"] = sorted({c.key for c in changes})
-            active_keys = {c.key for c in decision.constraints}
-            p.player_state["retired_condition_keys"] = sorted({c.key for c in changes} - active_keys)
-        if decision.turn_type == "clarification_reply" and pending and working.get("plan") and not changes:
-            p.player_state["plan"] = [{**item} for item in working["plan"]]
-            p.player_state["plan_evidence"] = working.get("plan_evidence", [])
-        elif decision.subgoals:
-            p.player_state["plan"] = start_plan(decision.subgoals)
-        state["next_player"] = p.player_state
-        if decision.intent == "cancel":
-            p.player_state = state["next_player"] = {"updated": time.time(), "constraints": [], "pending": None}
-        state["history"] = []
-        state["name_to_check"] = decision.name_to_check
-        state["query"] = decision.search_query if decision.rewrite else req.message
-        state["resolved_question"] = decision.resolved_question or req.message
-        state["gameplay"] = decision.intent in {"build", "route", "quest", "mechanics", "acquisition"}
-        # Overview is the Agent's intent decision, not a keyword table.
-        state["overview"] = decision.action == "retrieve" and decision.intent == "overview"
-        if state["overview"]:
-            p.trace["request_kind"] = "overview"
-        # The Agent's own (possibly repaired) decision; the server never substitutes the original question.
-        p.trace["rewrite"] = {
-            "status": "accepted" if decision.rewrite else "not_run",
-            "reason": "agent_decision",
-            "model_calls": 0,
-        }
-        p.trace["rewritten_query"] = state["query"]
-        p.trace["memory"]["selected_ids"] = decision.selected_memory_ids
-        if decision.action == "clarify":
-            clarification = Clarification(
-                id=uuid4(),
-                question=decision.reply,
-                fields=decision.missing,
-                expires_at=datetime.fromtimestamp(time.time() + 1800, UTC).isoformat(),
-            )
-            p.clarification = clarification
-            p.player_state["pending"] = clarification.model_dump(mode="json")
-            if p.player_state.get("plan"):
-                p.trace["task_plan"] = p.player_state["plan"]
-        if decision.action != "retrieve":
-            p.static_answer = decision.reply
-        return state
+        from app.rag.true_agent import run_agent
 
-    async def _tool_agent(self, state):
-        from app.rag.tool_agent import run_tools
-
-        return await run_tools(self, state)
+        return await run_agent(self, state)
 
     def _bounded(self, rows: list[dict]) -> list[dict]:
         # Candidate count and chars are budgets, not semantic relevance decisions.
@@ -412,10 +301,25 @@ class ChatPipeline:
                 used += len(text)
         return bounded
 
+    def _recent_turns(self, history: list[dict]) -> list[dict]:
+        """The last turns of this conversation (player and assistant), within the history budget.
+
+        Lets the Agent answer questions about the conversation itself ("what did I just ask?"). Never evidence
+        about the game: the Agent only quotes them back in a reply. Older turns are dropped first.
+        """
+        rows, used = [], 0
+        for msg in reversed(history[-self.settings.chat_history_messages :]):
+            text = (msg.get("content") or "")[:800]
+            if not text or used + len(text) > self.settings.chat_history_chars:
+                break
+            rows.append({"role": msg.get("role"), "text": text})
+            used += len(text)
+        return list(reversed(rows))
+
     async def _memory(self, state: PreparationState) -> dict:
         p, req = state["prepared"], state["req"]
         if not self.settings.chat_history_messages or not self.settings.chat_history_chars:
-            state["memory_candidates"], state["history"] = [], []
+            state["memory_candidates"], state["history"], state["recent_turns"] = [], [], []
             p.trace["memory"] = {"method": "disabled", "status": "disabled"}
             return state
         if self.memory is not None and state.get("memory_scope") is not None:
@@ -435,6 +339,7 @@ class ChatPipeline:
             ]
             diagnostic = {"method": "ram_recent", "status": "limited", "candidates": len(rows)}
         rows = self._bounded(rows)
+        state["recent_turns"] = self._recent_turns(state["history"])
         if req.channel == "discord" and (req.external_ref or "").startswith("discord:thread:"):
             rows = [row for row in rows if row.get("kind") != "fact"]
         state["memory_candidates"] = rows
@@ -466,11 +371,6 @@ class ChatPipeline:
                 policy=self.policy,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            checks = p.trace.get("coverage_checks", [])
-            if checks:
-                check = checks[-1]
-                if check["status"] in {"sufficient", "partial"} and check.get("context_ids") == p.trace["selected_ids"]:
-                    p.trace["answer_coverage"] = {key: check[key] for key in ("status", "covered", "missing")}
             if not p.hits and not p.gameplay_advice:
                 p.static_answer = (
                     "Mình chưa có đủ thông tin để trả lời câu này."
@@ -499,10 +399,7 @@ class ChatPipeline:
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
                     "checked_build": p.checked_build,
-                    **({"evidence_coverage": p.trace["answer_coverage"]} if "answer_coverage" in p.trace else {}),
                     **({"player_profile": profile} if profile else {}),
-                    **({"task_plan": p.trace["task_plan"]} if p.trace.get("task_plan") else {}),
-                    **({"verified_name": p.trace["verified_name"]} if p.trace.get("verified_name") else {}),
                     **({"build_check": p.trace["build_check"]} if p.trace.get("build_check") else {}),
                 },
                 ensure_ascii=False,

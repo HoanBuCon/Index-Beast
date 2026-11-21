@@ -109,7 +109,7 @@ graph TD
 
 - **Ngôn ngữ.** Agent có thể viết lại truy vấn sang tiếng Anh để khớp kho tiếng Anh, giữ tên riêng và điều kiện của người chơi. Câu trả lời vẫn dùng tiếng Việt hoặc tiếng Anh theo yêu cầu.
 - **Nguồn web.** Tavily có thể trả về các domain ngoài danh sách ưu tiên. Trong các nguồn cộng đồng phù hợp ngang nhau, Agent ưu tiên Fextralife. Ghi chú chính thức được ưu tiên khi câu hỏi hỏi về thay đổi ở một patch cụ thể. Đoạn từ trang khác vẫn dùng được nếu hỗ trợ trực tiếp dữ kiện.
-- **Đánh giá bằng chứng.** Trong Auto, Tool Agent có bước đánh giá riêng khi Tavily khả dụng và lượt hỏi cho phép nội dung tiết lộ tình tiết. Một nguồn có thể đủ nếu hỗ trợ trực tiếp các ý được hỏi. Khi có mâu thuẫn quan trọng, Agent có thể tìm thêm hoặc nêu rõ dữ kiện còn bỏ ngỏ. Tư vấn định tính có thể kết hợp kiến thức chung theo chính sách của hệ thống. Các thông số, dữ kiện cốt truyện, tuyến đường và bước nhiệm vụ cụ thể cần bằng chứng.
+- **Đánh giá bằng chứng.** Từ 22/11 không còn bước đánh giá riêng: Agent tự đọc kết quả tool và quyết định đã đủ hay cần tìm thêm (kể cả tìm web khi chính sách cho phép). Một nguồn có thể đủ nếu hỗ trợ trực tiếp các ý được hỏi. Khi có mâu thuẫn quan trọng, Agent có thể tìm thêm hoặc nêu rõ dữ kiện còn bỏ ngỏ. Tư vấn định tính có thể kết hợp kiến thức chung theo chính sách của hệ thống. Các thông số, dữ kiện cốt truyện, tuyến đường và bước nhiệm vụ cụ thể cần bằng chứng.
 - **Kiểm tra đầu ra.** LangGraph điều phối các bước Agent lựa chọn. Backend áp dụng giới hạn xử lý và kiểm tra cấu trúc dữ liệu, phép tính phân bổ chỉ số và liên kết trích dẫn. Việc đối chiếu nguyên văn xác nhận câu trích có trong đoạn nguồn. Mức độ đoạn nguồn hỗ trợ kết luận được đánh giá riêng.
 - **Xếp hạng lại local (tùy chọn).** Sau khi hợp nhất E5 và BM25 bằng RRF, API có thể dùng Jina Reranker để sắp xếp lại một số ứng viên đầu. Tính năng mặc định tắt; thiếu key, timeout hoặc phản hồi sai định dạng thì giữ thứ tự RRF. Mức timeout rerank độc lập với timeout truy xuất. Xem [cấu hình và giới hạn](../backend/app/rag/README.md).
 
@@ -141,6 +141,6 @@ Nhóm xây dựng bộ câu hỏi đánh giá (golden set) gồm câu hỏi, đ�
 
 ## Mã nguồn và tài liệu đối chiếu
 
-- [Chuẩn bị request bằng LangGraph](../backend/app/rag/pipeline.py) · [Vòng lặp công cụ](../backend/app/rag/tool_agent.py) · [Prompt đánh giá bằng chứng](../backend/app/rag/prompts/assess.md).
+- [Chuẩn bị request bằng LangGraph](../backend/app/rag/pipeline.py) · [Vòng lặp Agent](../backend/app/rag/true_agent.py) · [Prompt của Agent](../backend/app/rag/prompts/true_agent.md) · [ADR 006](adr/006-true-agent.md).
 - [Tavily](../backend/app/adapters/tavily.py) · [Truy xuất Qdrant](../backend/core/vector/store.py) · [Generator](../backend/app/rag/generator.py) · [Chat service](../backend/app/services/chat.py).
 - [Golden set](../backend/eval/golden_set.jsonl) · [Handover dữ liệu S4](handover/2026-11-12_s4-tv2_wiki-quality.md) · [Handover Agent nhiều nguồn](handover/2026-11-14_s4-tv3_gameplay-multi-source.md).

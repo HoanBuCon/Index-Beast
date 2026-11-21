@@ -82,6 +82,11 @@ class CapturedLLM:
     def bind_model(self, **kwargs):
         return self.delegate.bind_model(**kwargs)
 
+    @property
+    def model(self):
+        # The Agent loop binds tools on the chat model directly; its calls are counted in the turn trace.
+        return self.delegate.model
+
     async def invoke_chain(self, chain, inputs):
         if len(self.outputs) >= self.max_calls:
             raise RuntimeError("Diagnostic model call budget exhausted")

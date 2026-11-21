@@ -16,12 +16,10 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 
-from app.adapters.llm import LLMError, LLMResponse
+from app.adapters.llm import LLMError
 from app.api.schemas.chat import ChatRequest
 from app.api.schemas.conversation import ConversationOut, MessageOut
-from app.rag.agent import AgentDecision, check_decision
 from app.rag.pipeline import ChatPipeline
-from app.rag.prompts import prompt
 from app.rag.semantic_memory import MemoryScope, MemoryVectors, SemanticMemory
 from app.services.chat import LiveChatService
 from app.services.memory_repository import MemoryRepository, Snapshot, owner_hash
@@ -128,38 +126,101 @@ def plan(**kwargs):
     }
 
 
+TRUE_AGENT_INTENTS = {"lore", "acquisition", "mechanics", "build", "route", "quest", "comparison", "overview"}
+
+
+def decision_script(decision, payload, *, web, insufficient):
+    """Turn a decision dict (the former Agent decision shape) into the tool calls the Agent loop makes."""
+    from tests.unit.test_live_chat import fake_agent_language
+
+    lang = decision.get("answer_language") or fake_agent_language(payload["question"])
+    action = decision.get("action")
+    conditions = []
+    if decision.get("constraints") or decision.get("superseded_constraints"):
+        conditions.append(
+            (
+                "set_conditions",
+                {
+                    "set": decision.get("constraints") or [],
+                    "retire": [c["key"] for c in decision.get("superseded_constraints") or []],
+                },
+            )
+        )
+    if action == "clarify":
+        missing = [{"key": m["key"], "label": m.get("label") or m["key"]} for m in decision.get("missing") or []]
+        return [*conditions, ("ask_user", {"question": decision["reply"], "missing": missing, "answer_language": lang})]
+    if action in {"respond", "refuse"}:
+        args = {"text": decision["reply"], "answer_language": lang}
+        if decision.get("intent") == "cancel":
+            args["end_task"] = True
+        if action == "refuse":
+            args["unrelated"] = True
+        return [("reply", args)]
+    script = list(conditions)
+    query = (decision.get("search_query") if decision.get("rewrite", True) else None) or payload["question"]
+    script.append(("search_corpus", {"query": query}))
+    if web and insufficient:
+        script.append(("search_web", {"query": query}))
+    intent = decision.get("intent")
+    intent = "comparison" if intent == "gameplay_comparison" else intent if intent in TRUE_AGENT_INTENTS else "other"
+    script.append(
+        (
+            "finish",
+            {
+                "request": decision.get("resolved_question") or payload["question"],
+                "intent": intent,
+                "answer_language": lang,
+                "evidence_ids": [],
+                "gameplay_advice": bool(decision.get("gameplay_advice")),
+            },
+        )
+    )
+    return script
+
+
 class AgentLLM(FakeLLM):
+    """Scripted Agent: each user turn consumes the next decision dict and plays it as Agent tool calls."""
+
     def __init__(self, decisions=None):
         super().__init__()
         self.decisions = decisions or [plan()]
         self.plans = []
         self.assessment_status = "sufficient"
 
-    async def invoke_chain(self, chain, inputs):
-        if inputs.get("policy") == prompt("agent"):
-            payload = json.loads(inputs["question"])
+    async def agent_turn(self, messages, tools):
+        from langchain_core.messages import AIMessage as AI
+        from langchain_core.messages import HumanMessage as Human
+
+        if not any(isinstance(m, AI) for m in messages):
+            shown = json.loads(next(m.content for m in messages if isinstance(m, Human)))
+            payload = {
+                "question": shown["player_message"],
+                "memories": shown["memories"],
+                "working_state": {
+                    "constraints": shown["conditions"],
+                    "pending": shown.get("replying_to"),
+                    "request_text": (shown.get("replying_to") or {}).get("original_request"),
+                    "original": (shown.get("replying_to") or {}).get("original_request"),
+                },
+                "requested_language": shown["requested_language"],
+            }
             self.plans.append(payload)
             output = self.decisions[min(len(self.plans) - 1, len(self.decisions) - 1)]
             if callable(output):
                 output = output(payload)
-            return LLMResponse(json.dumps(output), "fake", 10, 5, "stop")
-        if inputs.get("policy", "").startswith("Evaluate whether"):
-            status = self.assessment_status
-            return LLMResponse(
-                json.dumps(
-                    {
-                        "status": status,
-                        "covered": ["identity"] if status == "sufficient" else [],
-                        "missing": [] if status == "sufficient" else ["detail"],
-                        "evidence": {"1": ["q0"]} if status == "sufficient" else {},
-                    }
-                ),
-                "fake",
-                10,
-                5,
-                "stop",
+            if not isinstance(output, dict) or "action" not in output:
+                self.agent_script = [("__text__", None)] * 12  # Never a usable tool call.
+            else:
+                web = "search_web" in {t["function"]["name"] for t in tools}
+                self.agent_script = decision_script(
+                    output, payload, web=web, insufficient=self.assessment_status != "sufficient"
+                )
+        if self.agent_script and self.agent_script[0][0] == "__text__":
+            self.agent_script.pop(0)
+            return AI(
+                content="not a tool call", usage_metadata={"input_tokens": 1, "output_tokens": 1, "total_tokens": 2}
             )
-        return await super().invoke_chain(chain, inputs)
+        return await super().agent_turn(messages, tools)
 
 
 class Encoder:
@@ -191,18 +252,6 @@ def service(repo=None, memory=None, llm=None, **config):
     )
 
 
-def test_no_closed_weapon_allowlist():
-    item = AgentDecision.model_validate(
-        plan(
-            intent="build",
-            entities=["Great Stars"],
-            search_query="Great Stars build",
-            resolved_question="Great Stars build",
-        )
-    )
-    check_decision(item, "Great Stars build", [], {})
-
-
 async def test_model_can_greet_without_fabricating_a_search_query():
     llm = AgentLLM(
         [
@@ -223,37 +272,6 @@ async def test_model_can_greet_without_fabricating_a_search_query():
     assert "Chào bạn" in result.answer and not live.pipeline.retriever.calls and llm.calls == 0
 
 
-async def test_no_rewrite_uses_original_request_despite_unused_query_punctuation():
-    # Captured live decision: its unused English search query drops the city's comma.
-    question = "Is Maliketh optional if I want to unlock Leyndell, Ashen Capital?"
-    decision = plan(
-        intent="route",
-        rewrite=False,
-        answer_language="en",
-        resolved_question=question,
-        search_query="Maliketh optional required to unlock Leyndell Ashen Capital progression",
-        entities=["Maliketh", "Leyndell, Ashen Capital"],
-    )
-    check_decision(AgentDecision.model_validate(decision), question, [], {})
-    pipe = ChatPipeline(settings(), AgentLLM([decision]), FakeRetriever())
-    prepared = await pipe.prepare(req(question), [])
-    assert prepared.trace["agent"]["status"] == "ok"
-    assert pipe.retriever.calls == [(question, True)]
-
-
-@pytest.mark.parametrize("rewrite", [False, True])
-def test_active_queries_and_entities_still_require_user_provenance(rewrite):
-    question = "Is Maliketh optional?"
-    decision = plan(
-        rewrite=rewrite,
-        resolved_question=question,
-        search_query="Is Maliketh optional in Leyndell?",
-        entities=["Maliketh", "Leyndell"],
-    )
-    with pytest.raises(ValueError, match="Entity has no supplied user provenance"):
-        check_decision(AgentDecision.model_validate(decision), question, [], {})
-
-
 async def test_agent_language_choice_cannot_override_explicit_request_language():
     llm = AgentLLM([plan(answer_language="en")])
     pipe = ChatPipeline(settings(), llm, FakeRetriever())
@@ -261,23 +279,6 @@ async def test_agent_language_choice_cannot_override_explicit_request_language()
     assert p.lang == "vi" and p.values["lang"] == "vi"
     p = await pipe.prepare(req(options={"lang": "auto"}), [])
     assert p.lang == "en" and p.values["lang"] == "en"
-
-
-@pytest.mark.parametrize(
-    "changes",
-    [
-        {"action": "respond"},
-        {"action": "clarify", "reply": "Which level?"},
-        {"selected_memory_ids": ["invented"]},
-        {"constraints": [{"key": "level", "value": "150", "source_id": "current"}]},
-        {"search_query": "Ranni level 150"},
-        {"entities": ["Marika"], "search_query": "Who is Marika?"},
-    ],
-)
-def test_invalid_plans_do_not_authorize_facts_or_memory(changes):
-    with pytest.raises(ValueError):
-        item = AgentDecision.model_validate(plan(**changes))
-        check_decision(item, "Ranni là ai?", [], {})
 
 
 async def test_agent_bypasses_legacy_regex_and_selects_no_unnecessary_clarification():
@@ -294,7 +295,7 @@ async def test_agent_bypasses_legacy_regex_and_selects_no_unnecessary_clarificat
     live = service(llm=llm)
     result = await live.answer(req("Great Stars hợp lối chơi nào?"))
     assert not result.clarification and len(llm.plans) == 1
-    assert "agent_decision" in live.traces[result.message_id]["graph_nodes"]
+    assert "agent" in live.traces[result.message_id]["graph_nodes"]
     assert live.traces[result.message_id]["agent"]["intent"] == "build"
     assert llm.plans[0]["memories"] == []
 
@@ -313,7 +314,8 @@ async def test_budget_is_enforced_before_generation():
     live = service(llm=llm, chat_agent_max_calls=1)
     # The tool step reserves the only call for generation, so no evidence is gathered or invented.
     result = await live.answer(req())
-    assert not result.grounded and result.sources == [] and llm.calls == 0 and len(llm.plans) == 1
+    # A one-call budget leaves no Agent step at all: nothing is searched, invented or generated.
+    assert not result.grounded and result.sources == [] and llm.calls == 0 and len(llm.plans) == 0
     assert live.traces[result.message_id]["tool_stop"] == "model_budget"
 
 
@@ -549,12 +551,6 @@ async def test_provider_failure_is_error_not_successful_clarification():
     assert all(not s.conversation.messages for s in live._conversations.values())
 
 
-def test_numbers_and_resolved_request_guards():
-    # Negation is preserved by the Agent prompt; the server only checks digits and provenance.
-    with pytest.raises(ValueError):
-        check_decision(AgentDecision.model_validate(plan(resolved_question="Ranni level 150")), "Ranni là ai?", [], {})
-
-
 def test_cli_dry_run_creates_no_clients(monkeypatch, capsys):
     import qdrant_client
 
@@ -762,11 +758,13 @@ async def test_clarification_round_budget_prevents_infinite_questions():
         result = await live.answer(
             req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
         )
-    with pytest.raises(UnavailableError, match="giới hạn hỏi bổ sung"):
-        await live.answer(
-            req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
-        )
-    assert not live.pipeline.retriever.calls
+    # Past the round limit ask_user is no longer offered: the Agent has to answer instead of asking again.
+    result = await live.answer(
+        req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
+    )
+    assert result.clarification is None
+    trace = live.traces[result.message_id]["agent"]
+    assert trace["steps"][0] == {"tool": "ask_user", "status": "error", "ms": trace["steps"][0]["ms"]}
 
 
 async def test_build_resume_accepts_selected_memory_handle_and_persists_message_provenance(repo, memory):

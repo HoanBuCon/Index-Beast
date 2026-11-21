@@ -9,15 +9,19 @@ from scripts.diagnose_agent_memory import continuation_case, run_case
 
 async def test_auto_can_give_general_advice_when_web_is_unavailable():
     from app.adapters.tavily import WebSearchError
-    from tests.unit.test_agent_durable import plan, req
+    from app.rag.pipeline import ChatPipeline
+    from tests.unit.test_agent_durable import settings
     from tests.unit.test_live_chat import FakeRetriever
-    from tests.unit.test_tool_agent import ToolsLLM, pipeline, step
+    from tests.unit.test_true_agent import RecordingLLM, req
     from tests.unit.test_web_search import FakeSearch
 
     query = "Elden Ring general dodge and block practice"
-    llm = ToolsLLM(
-        [step("local_search", query), step("web_search", query), step("stop")],
-        [plan(intent="mechanics", entities=[], resolved_question=query, search_query=query, gameplay_advice=True)],
+    llm = RecordingLLM(
+        [
+            ("search_corpus", {"query": query}),
+            ("search_web", {"query": query}),
+            ("finish", {"request": query, "intent": "mechanics", "answer_language": "vi", "gameplay_advice": True}),
+        ]
     )
     llm.data = {
         "answer": "Tập né từng đòn trước khi ghép đòn phản công.",
@@ -25,12 +29,13 @@ async def test_auto_can_give_general_advice_when_web_is_unavailable():
         "insufficient": False,
         "advisory": True,
     }
-    pipe = pipeline(llm, tavily_api_key="test-key")
-    pipe.retriever = FakeRetriever([])
+    pipe = ChatPipeline(settings(tavily_api_key="test-key"), llm, FakeRetriever([]))
     pipe.web_search = FakeSearch(error=WebSearchError("network"))
     p = await pipe.prepare(req("Tập né hay đỡ đòn thế nào?", options={"web_search": "auto"}), [])
+    # The failed web search is an observation for the Agent, which still chose general advice.
+    assert llm.tool_result(2)["status"] == "error" and p.trace["web_search"]["status"] == "error"
     answer = await pipe.generator.generate(p)
-    assert p.trace["web_search"]["status"] == "error" and p.trace["answer_basis"] == "gameplay_advice"
+    assert p.trace["answer_basis"] == "gameplay_advice"
     assert answer.answer == llm.data["answer"] and not answer.grounded and not answer.sources
 
 
@@ -59,43 +64,6 @@ def test_continue_case_retries_failed_clarification_in_the_same_conversation(htt
     assert credentials == {**group, "clarification_id": "pending"}
     assert continuation_case(case, row, {}) == (case, {})
     assert row["restart_offset"] == 2
-
-
-async def test_numbered_item_shorthand_is_repaired_by_the_agent_not_replaced_by_the_question():
-    from app.rag.agent import contains_entity
-    from tests.unit.test_agent_durable import AgentLLM, plan, req, service
-
-    user = "Claymore: lấy đâu Smithing Stone [3] và [4]?"
-    assert contains_entity(user, "Smithing Stone [4]")
-    assert not contains_entity(user, "Somber Smithing Stone [4]")
-    assert not contains_entity(user, "Smithing Stone [40]")
-    # No conjunction list: any short separator in any language joins numbered tiers.
-    for joined in ("Smithing Stone [3] or [4]", "Smithing Stone [3], [4]", "Smithing Stone [3] y [4]"):
-        assert contains_entity(joined, "Smithing Stone [4]")
-    assert not contains_entity("Smithing Stone [3] rồi đi tìm thêm [4]", "Smithing Stone [4]")
-    model = plan(
-        intent="acquisition",
-        entities=["Claymore", "Smithing Stone [3]", "Smithing Stone [4]"],
-        resolved_question="Where to get Smithing Stone [3] and Smithing Stone [4] for Claymore?",
-        search_query="Elden Ring Smithing Stone [3] and Smithing Stone [4] locations",
-    )
-    from core.errors import UpstreamError
-
-    # The same rejected decision three times: the server no longer substitutes the user's question for it.
-    live = service(llm=AgentLLM([model, model, model]), chat_agent_max_calls=None)
-    with pytest.raises(UpstreamError):
-        await live.answer(req(user))
-    assert live.pipeline.retriever.calls == []
-    # A repaired decision that keeps the user's own numbered names is accepted.
-    fixed = plan(
-        intent="acquisition",
-        entities=["Claymore", "Smithing Stone [3]", "Smithing Stone [4]"],
-        resolved_question=user,
-        search_query="Claymore Smithing Stone [3] Smithing Stone [4] locations",
-    )
-    live = service(llm=AgentLLM([model, fixed]), chat_agent_max_calls=None)
-    result = await live.answer(req(user))
-    assert live.traces[result.message_id]["agent"]["repair_attempts"] == 1
 
 
 @pytest.mark.parametrize("endpoint", ["chat", "chat/stream"])

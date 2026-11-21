@@ -18,17 +18,17 @@ Web/Discord không phải đổi schema; nguồn/citation/image vẫn trong cont
 
 ## Sơ đồ triển khai
 
-Cập nhật 21/11/2026: chỉ còn một luồng RAG (đã gỡ rewrite, overview heuristic, `llm_only` và tính năng tránh spoiler).
+Cập nhật 22/11/2026: chỉ còn một luồng RAG; Agent decision + Tool Agent + Assessor được thay bằng một vòng lặp Agent
+gọi tool ([ADR 006](../adr/006-true-agent.md)). Trước đó đã gỡ rewrite, overview heuristic, `llm_only` và tính năng tránh spoiler.
 
 ```mermaid
 graph TD
     A["Chat JSON hoặc SSE"] --> B["API validation, guard, conversation routing, lock"]
     B --> S["scope: mode, ngôn ngữ tạm, web policy"]
     S --> M["memory: ứng viên user turn (RAM) hoặc semantic memory (PostgreSQL + Qdrant)"]
-    M --> D["agent_decision: Agent chọn intent, rewrite, memory, constraint, clarify/respond/refuse"]
-    D -->|"respond, clarify, refuse"| P["prompt"]
-    D -->|"retrieve"| T["tool_agent: Agent lặp chọn tool (local/web search, snapshot, inspect, calculator, clarify, finish)"]
-    T --> X["context: admission, dedup, top-5, budget"]
+    M --> D["agent: vòng lặp Agent gọi tool (search_corpus/web, check_name, open_evidence, set_conditions, calculator)"]
+    D -->|"reply, ask_user"| P["prompt"]
+    D -->|"finish: yêu cầu, intent, ngôn ngữ, bằng chứng"| X["context: admission, dedup, top-5, budget"]
     X --> P
     P --> E["generate: static, JSON hoặc stream (mọi câu được giữ tới khi kiểm xong mới gửi)"]
     E --> V["validate: JSON, citation, quote, URL; đếm đoạn không trích dẫn"]
@@ -60,9 +60,7 @@ Auth, lock, optional images và commit ở service boundary, không giả chúng
 
 | Thành phần | Được nhận gì | Vai trò |
 |---|---|---|
-| Agent decision | Câu hiện tại, ứng viên ký ức, working state | Hiểu yêu cầu, quyết định viết lại câu hỏi, hỏi lại |
-| Tool Agent | Câu đã resolve, profile người chơi, observation | Chọn tool, tìm evidence, gọi calculator |
-| Evidence assessor | Câu hỏi + context, history rỗng | Kiểm mức đáp ứng của evidence (web `auto`) |
+| Vòng lặp Agent | Câu hiện tại, điều kiện người chơi, ứng viên ký ức, câu đang hỏi lại; kết quả tool | Hiểu yêu cầu, ghi điều kiện, tìm và chọn bằng chứng, hỏi lại, gọi calculator, tự đánh giá đủ/thiếu |
 | RAG generator | Câu đã resolve + numbered evidence, history rỗng | Trả lời và trích dẫn |
 | Answer Guard | Câu trả lời + lỗi trình bày (bảng chỉ số, tên trường nội bộ) | Sửa đúng lỗi đó, không thêm dữ kiện hay nguồn |
 

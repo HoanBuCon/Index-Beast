@@ -9,12 +9,10 @@ import pytest
 
 from app.rag.build_data import (
     ATTRIBUTES,
-    BuildCache,
     bound_value,
     build_rules,
     check,
     level_rule,
-    stat_numbers_in,
 )
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from tests.unit.test_live_chat import hit
@@ -293,21 +291,6 @@ def test_requirement_sources_cannot_mix_explicit_variants(build, field):
         check(data, alloc, profile, hits)
 
 
-def test_cache_keeps_sourced_requirements_by_weapon_and_expires(build, monkeypatch):
-    import app.rag.build_data as module
-
-    data, _, profile, hits = build
-    cache = BuildCache()
-    cache.put({}, hits)  # Nothing sourced: nothing cached.
-    assert cache.get(profile) is None
-    cache.put(data, hits)
-    cached, original = cache.get({"weapon": "greatsword"})
-    cached["weapon"] = "mutated"
-    assert cache.get(profile)[0]["weapon"] == "Greatsword" and original[0].id == "1"
-    monkeypatch.setattr(module.time, "monotonic", lambda: 10**12)
-    assert cache.get(profile) is None
-
-
 def answer_with(p, text="Dồn điểm vào Strength vì Greatsword cần Strength cao [1]."):
     return validate_answer(p, {"answer": text, "evidence": [{"index": 1, "quote_id": "q0"}], "insufficient": False})
 
@@ -379,83 +362,59 @@ def test_different_stats_in_prose_ask_the_guard_and_show_the_checked_table(build
     assert p.trace["guard_request"]["issues"][0]["kind"] == "numbers"
 
 
-async def test_tool_calculator_needs_only_level_and_cites_pack_rules(build):
-    from app.api.schemas.chat import ChatRequest
+async def prepare_with_profile(profile, hits, script, message):
+    """Agent loop over the build fixture; the profile is kept from an earlier player message."""
+    import time
+
     from app.rag.pipeline import ChatPipeline
-    from app.rag.tool_agent import run_tools
     from tests.unit.test_agent_durable import settings
     from tests.unit.test_live_chat import FakeRetriever
-    from tests.unit.test_tool_agent import ToolsLLM, step
+    from tests.unit.test_true_agent import RecordingLLM, req
+
+    llm = RecordingLLM(script)
+    working = {
+        "constraints": [{"key": k, "value": v, "source_id": "m1"} for k, v in profile.items()],
+        "updated": time.time(),
+    }
+    p = await ChatPipeline(settings(), llm, FakeRetriever(hits)).prepare(req(message), [], player=working)
+    return llm, p
+
+
+async def test_tool_calculator_needs_only_level_and_cites_pack_rules(build):
+    from tests.unit.test_true_agent import finish
 
     data, alloc, profile, hits = build
-    llm = ToolsLLM(
-        [
-            step("local_search", "Greatsword requirements"),
-            step("calculator", build_data=data, allocation=alloc),
-            step("finish", evidence_ids=["1"]),
-        ]
-    )
-    pipe = ChatPipeline(settings(), llm, FakeRetriever(hits))
-    req = ChatRequest(message="Chia chỉ số cho tôi.", channel="web", options={"web_search": "off"})
-    player = {"constraints": [{"key": k, "value": v} for k, v in profile.items()]}
-    p = Prepared("rag", "vi", [], player_state=player, max_calls=6, trace={"web_search": {"requested": "off"}})
-    state = {
-        "prepared": p,
-        "req": req,
-        "search_mode": "off",
-        "resolved_question": req.message,
-        "query": "build",
-        "history": [],
-        "started": 0,
-        "next_player": player,
-    }
-    state = await run_tools(pipe, state)
-    # The planner saw the targets before proposing numbers, and never had to open accounting sources.
-    assert llm.observations[0]["build_rules"]["attribute_total"] == 209
-    assert "calculator" in llm.observations[0]["available_actions"]
+    script = [
+        ("search_corpus", {"query": "Greatsword requirements"}),
+        ("calculator", {"build_data": data, "allocation": alloc}),
+        finish(intent="build", evidence_ids=["1"]),
+    ]
+    llm, p = await prepare_with_profile(profile, hits, script, "Chia chỉ số cho tôi.")
+    # The level comes from the kept condition; the accounting rule is built in, not searched.
+    assert llm.tool_result(2)["status"] == "ok" and llm.tool_result(2)["checked_build"]["allocation"] == alloc
     assert p.checked_build["allocation"] == alloc and p.trace["build_check"]["status"] == "checked"
-    p.trace.pop("evidence_selection")
-    pipe._context(state)
-    assert [h.id for h in p.hits] == p.checked_build["sources"]
-    result = pipe._prompt(state)
-    assert json.loads(result.values["payload"])["checked_build"]["allocation"] == alloc
-    assert pipe.build_cache.get(profile)[0] == p.checked_build["data"]
+    assert {h.id for h in p.hits} >= set(p.checked_build["sources"])
+    assert json.loads(p.values["payload"])["checked_build"]["allocation"] == alloc
 
 
-async def test_calculator_rejection_is_fed_back_and_withdrawn_after_two(build):
-    from app.api.schemas.chat import ChatRequest
-    from app.rag.pipeline import ChatPipeline
-    from app.rag.tool_agent import run_tools
-    from tests.unit.test_agent_durable import settings
-    from tests.unit.test_live_chat import FakeRetriever
-    from tests.unit.test_tool_agent import ToolsLLM, step
+async def test_calculator_rejection_is_fed_back_to_the_agent(build):
+    from tests.unit.test_true_agent import finish
 
     data, alloc, profile, hits = copy.deepcopy(build)
     wrong = {**alloc, "vigor": alloc["vigor"] + 1}
-    llm = ToolsLLM(
-        [
-            step("calculator", build_data={}, allocation=wrong),
-            step("calculator", build_data={"weapon": "Greatsword"}, allocation=wrong),
-            step("finish"),
-        ]
-    )
-    pipe = ChatPipeline(settings(chat_tool_steps=4), llm, FakeRetriever(hits))
-    p = Prepared(
-        "rag",
-        "vi",
-        [],
-        max_calls=8,
-        trace={"web_search": {"requested": "off"}},
-        player_state={"constraints": [{"key": k, "value": v} for k, v in profile.items()]},
-    )
-    req = ChatRequest(message="Build", channel="web")
-    await run_tools(
-        pipe, {"prepared": p, "req": req, "search_mode": "off", "resolved_question": "Build", "query": "Build"}
-    )
-    assert p.checked_build is None
-    assert "needs exactly 209" in llm.observations[1]["observations"][-1]["validation"]
-    assert "calculator" not in llm.observations[2]["available_actions"]
-    assert p.trace["build_check"]["status"] == "failed"
+    script = [
+        ("calculator", {"build_data": {}, "allocation": wrong}),
+        ("calculator", {"build_data": {"weapon": "Greatsword"}, "allocation": wrong}),
+        finish(intent="build"),
+    ]
+    llm, p = await prepare_with_profile(profile, hits, script, "Build")
+    assert p.checked_build is None and "needs exactly 209" in llm.tool_result(1)["error"]
+    assert p.trace["build_check"] == {
+        "status": "failed",
+        "failed_attempts": 2,
+        "class_given": False,
+        "weapon_given": True,
+    }
 
 
 @pytest.mark.parametrize(
@@ -505,26 +464,6 @@ def test_unchecked_allocation_field_is_dropped_but_prose_numbers_are_a_reference
     # Prose numbers without a calculator are a reference suggestion: kept, not a failure.
     kept = validate_answer(p, {**raw, "answer": "Vigor 40, Strength 60 [1].", "build_allocation": alloc})
     assert "Vigor 40, Strength 60" in kept.answer
-
-
-@pytest.mark.parametrize(
-    ("text", "leaks"),
-    [
-        ("Vigor 40", True),
-        ("Str 40, Dex 60", True),
-        ("INT: 60", True),
-        ("Fth 20", True),
-        ("Sức mạnh 40", True),
-        ("Dex. 50", True),
-        ("| Str | Dex |", True),
-        ("In the end 2 bosses remain", False),
-        ("Strength scaling is D [1].", False),
-        ("| Strength | Str |", False),
-        ("Ở level 150, tổng là 229 [1].", False),
-    ],
-)
-def test_unchecked_stat_numbers_are_detected_in_english_abbreviations_and_vietnamese(text, leaks):
-    assert stat_numbers_in(text) is leaks
 
 
 def test_fill_lets_the_calculator_do_the_arithmetic():

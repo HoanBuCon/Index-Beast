@@ -195,7 +195,7 @@ class MemoryRepository:
                         )
                     )
                 await session.flush()
-                if decision and decision.get("intent") not in {"smalltalk", "cancel", "out_of_scope"}:
+                if decision and decision.get("intent") not in {"smalltalk", "cancel", "out_of_scope", "conversation"}:
                     user = pair[0]
                     topic = decision["resolved_question"] if decision.get("action") == "retrieve" else user.content
                     session.add(

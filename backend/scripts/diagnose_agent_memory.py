@@ -318,8 +318,6 @@ async def execute(args, manifest, cases):
                 "chat_mode": "rag",
                 "chat_persistence": "postgres",
                 "chat_agent_max_calls": None,
-                "chat_tool_steps": None,
-                "chat_tool_queries": None,
                 **({"chat_clarification_max_rounds": None} if case_budget else {}),
                 "chat_memory_collection": collection,
                 "web_search_mode": "auto",
@@ -376,8 +374,6 @@ async def execute(args, manifest, cases):
                 "rag_top_k",
                 "chat_timeout_seconds",
                 "chat_agent_max_calls",
-                "chat_tool_steps",
-                "chat_tool_queries",
             )
         }
         app = create_app(settings, context=ctx)

@@ -1,120 +1,174 @@
-"""Offline tests for the True Agent spike: a scripted tool-calling model, the real tools and guards."""
+"""The Agent loop that prepares every RAG turn: real tools and guards, a scripted tool-calling model."""
 
 import json
+from uuid import UUID
 
-from langchain_core.messages import AIMessage, ToolMessage
+import pytest
+from langchain_core.messages import HumanMessage, ToolMessage
 
 from app.api.schemas.chat import ChatRequest
 from app.rag.pipeline import ChatPipeline
-from app.rag.true_agent import run_true_agent, tool_specs
+from app.rag.true_agent import tool_specs
+from core.errors import BadRequestError
 from tests.unit.test_agent_durable import settings
 from tests.unit.test_live_chat import FakeLLM, FakeRetriever
 
 
-class ScriptedToolModel:
-    """Returns one scripted AIMessage per call; records what the Agent saw."""
+class RecordingLLM(FakeLLM):
+    """FakeLLM whose Agent turns are scripted; keeps every message list the Agent saw."""
 
-    def __init__(self, steps):
-        self.steps, self.seen, self.bound = list(steps), [], None
+    def __init__(self, script):
+        super().__init__()
+        self.agent_script, self.agent_seen = list(script), []
 
-    def bind_tools(self, tools, **kwargs):
-        self.bound = {"tools": [t["function"]["name"] for t in tools], **kwargs}
-        return self
+    async def agent_turn(self, messages, tools):
+        self.agent_seen.append(list(messages))
+        return await super().agent_turn(messages, tools)
 
-    async def ainvoke(self, messages):
-        self.seen.append(list(messages))
-        name, args = self.steps.pop(0)
-        if name == "__invalid__":
-            bad = {"name": "calculator", "args": "{broken", "id": f"call_{len(self.seen)}", "error": "bad json"}
-            return AIMessage(content="", invalid_tool_calls=[bad])
-        return AIMessage(
-            content="",
-            tool_calls=[{"name": name, "args": args, "id": f"call_{len(self.seen)}"}],
-            usage_metadata={"input_tokens": 100, "output_tokens": 10, "total_tokens": 110},
+    def tool_result(self, turn):
+        """The last tool result shown to the Agent at model call `turn` (0-based)."""
+        return json.loads([m for m in self.agent_seen[turn] if isinstance(m, ToolMessage)][-1].content)
+
+    def payload(self, turn=0):
+        return json.loads(next(m.content for m in self.agent_seen[turn] if isinstance(m, HumanMessage)))
+
+
+def req(message="Ranni là ai?", **kw):
+    return ChatRequest(message=message, channel="web", options={"web_search": "off", **kw.pop("options", {})}, **kw)
+
+
+def finish(**kw):
+    return ("finish", {"request": "Who is Ranni?", "intent": "lore", "answer_language": "en", **kw})
+
+
+def test_tool_specs_follow_web_policy_and_clarification_budget():
+    names = lambda specs: {s["function"]["name"] for s in specs}  # noqa: E731
+    assert "search_web" not in names(tool_specs(web=False)) and "search_web" in names(tool_specs(web=True))
+    assert "ask_user" not in names(tool_specs(web=False, ask=False))
+    assert {"set_conditions", "calculator", "finish", "reply"} <= names(tool_specs(web=False))
+
+
+async def test_the_agent_searches_and_chooses_evidence_for_the_generator():
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni identity"}), finish(evidence_ids=["1"])])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req(), [])
+    assert p.trace["evidence_selection"] == {"method": "model", "ids": ["1"]} and [h.id for h in p.hits] == ["1"]
+    assert p.agent_decision == {"action": "retrieve", "intent": "lore", "resolved_question": "Who is Ranni?"}
+    assert p.lang == "en" and p.static_answer is None
+    assert [s["tool"] for s in p.trace["agent"]["steps"]] == ["search_corpus", "finish"]
+    assert p.trace["model_calls"] == [{"phase": "agent"}, {"phase": "agent"}]
+    result = await ChatPipeline(settings(), llm, FakeRetriever()).generator.generate(p)
+    assert result.grounded
+
+
+async def test_conditions_need_the_players_words_and_persist_in_working_state():
+    llm = RecordingLLM(
+        [
+            ("set_conditions", {"set": [{"key": "level", "value": "150", "source_id": "current"}]}),
+            ("set_conditions", {"set": [{"key": "level", "value": "60", "source_id": "current"}]}),
+            finish(),
+        ]
+    )
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Build Strength level 60 giúp mình"), [])
+    assert llm.tool_result(1)["status"] == "error" and llm.tool_result(1)["keys"] == ["level"]
+    assert p.player_state["constraints"] == [{"key": "level", "value": "60", "source_id": "current"}]
+    # Next turn: the condition is shown again and kept unless the Agent retires or replaces it.
+    llm2 = RecordingLLM([("set_conditions", {"retire": ["level"]}), finish()])
+    p2 = await ChatPipeline(settings(), llm2, FakeRetriever()).prepare(req("bỏ level đi"), [], player=p.player_state)
+    assert llm2.payload()["conditions"] == [{"key": "level", "value": "60", "source_id": "current"}]
+    assert p2.player_state["constraints"] == [] and p2.player_state["retired_condition_keys"] == ["level"]
+
+
+async def test_calculator_needs_a_recorded_level():
+    llm = RecordingLLM([("calculator", {"allocation": {"vigor": 40}, "fill": "strength"}), finish()])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Build Strength giúp mình"), [])
+    assert "set_conditions" in llm.tool_result(1)["error"] and p.checked_build is None
+    assert p.trace["build_check"]["status"] == "failed"
+
+
+async def test_ask_user_creates_a_clarification_and_the_reply_continues_the_request():
+    ask = (
+        "ask_user",
+        {
+            "question": "Bạn đang level bao nhiêu?",
+            "missing": [{"key": "level", "label": "Level"}],
+            "answer_language": "vi",
+        },
+    )
+    llm = RecordingLLM([ask])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Chia điểm thế nào?"), [])
+    assert p.static_answer == "Bạn đang level bao nhiêu?" and p.clarification.fields[0].key == "level"
+    assert p.player_state["pending"]["id"] == str(p.clarification.id) and p.agent_decision["action"] == "clarify"
+    reply = RecordingLLM(
+        [("set_conditions", {"set": [{"key": "level", "value": "90", "source_id": "current"}]}), finish()]
+    )
+    later = req("level 90", clarification_id=p.clarification.id)
+    p2 = await ChatPipeline(settings(), reply, FakeRetriever()).prepare(later, [], player=p.player_state)
+    shown = reply.payload()["replying_to"]
+    assert shown == {
+        "id": str(p.clarification.id),
+        "question": "Bạn đang level bao nhiêu?",
+        "original_request": "Chia điểm thế nào?",
+    }
+    assert p2.player_state["request_text"] == "Chia điểm thế nào?" and p2.player_state["clarification_rounds"] == 1
+    with pytest.raises(BadRequestError):
+        await ChatPipeline(settings(), RecordingLLM([]), FakeRetriever()).prepare(
+            req("level 90", clarification_id=UUID(int=1)), [], player=p.player_state
         )
 
-    def last_tool_result(self):
-        return json.loads(next(m for m in reversed(self.seen[-1]) if isinstance(m, ToolMessage)).content)
+
+async def test_reply_cancel_clears_the_working_state():
+    llm = RecordingLLM([("reply", {"text": "Đã hủy.", "answer_language": "vi", "end_task": True})])
+    working = {"constraints": [{"key": "level", "value": "60", "source_id": "current"}], "updated": 9e12}
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("thôi hủy"), [], player=working)
+    assert p.static_answer == "Đã hủy." and p.player_state["constraints"] == []
+    assert p.agent_decision["intent"] == "cancel"
 
 
-def req(message="Ranni là ai?"):
-    return ChatRequest(message=message, channel="web", options={"web_search": "off"})
+async def test_a_call_with_broken_json_arguments_is_answered_so_the_loop_continues():
+    llm = RecordingLLM([("__invalid__", None), finish()])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req(), [])
+    answered = [m for m in llm.agent_seen[1] if isinstance(m, ToolMessage)]
+    assert answered[-1].tool_call_id == "call_1" and "not valid JSON" in answered[-1].content
+    assert p.trace["agent"]["steps"][0]["status"] == "invalid_arguments"
 
 
-def test_tool_specs_follow_the_variant_and_web_policy():
-    names = lambda specs: {s["function"]["name"] for s in specs}  # noqa: E731
-    assert "finish" in names(tool_specs("generator", web=False)) and "final_answer" not in names(
-        tool_specs("generator", web=False)
-    )
-    assert "final_answer" in names(tool_specs("final_answer", web=True))
-    assert "search_web" not in names(tool_specs("generator", web=False))
+async def test_always_web_policy_requires_a_web_search_before_finish():
+    from tests.unit.test_web_search import FakeSearch, web_hit
+
+    llm = RecordingLLM([finish(), ("search_web", {"query": "Ranni"}), finish()])
+    pipe = ChatPipeline(settings(tavily_api_key="offline-test-key"), llm, FakeRetriever())
+    pipe.web_search = FakeSearch(rows=[web_hit()])
+    p = await pipe.prepare(req(options={"web_search": "always"}), [])
+    assert "search_web" in llm.tool_result(1)["error"] and pipe.web_search.calls
+    page = llm.tool_result(2)["pages"][0]  # Web blocks grouped by page, in page order, with short previews.
+    assert page["url"] and page["blocks"][0]["id"] and len(page["blocks"][0]["text"]) <= 200
+    assert p.trace["web_search"]["status"] == "ok"
 
 
-async def test_generator_variant_searches_then_the_existing_writer_answers():
-    model = ScriptedToolModel(
-        [
-            ("search_corpus", {"query": "Ranni identity"}),
-            ("finish", {"request": "Who is Ranni?", "answer_language": "en", "evidence_ids": ["1"]}),
-        ]
-    )
-    pipe = ChatPipeline(settings(), FakeLLM(), FakeRetriever())
-    run = await run_true_agent(pipe, req(), variant="generator", model=model)
-    assert run.stop == "finish" and run.result.grounded and run.result.answer.startswith("Ranni is an Empyrean")
-    assert run.model_calls == 2 and [t["name"] for t in run.tool_calls] == ["search_corpus", "finish"]
-    assert run.prepared.trace["evidence_selection"] == {"method": "model", "ids": ["1"]}
-    assert model.bound["tool_choice"] == "auto" and "finish" in model.bound["tools"]
-    assert run.usage == {"input_tokens": 200, "output_tokens": 20}
+async def test_the_agent_sees_recent_turns_and_answers_about_the_conversation():
+    history = [
+        {"role": "user", "content": "Ranni là ai?", "message_id": "m1"},
+        {"role": "assistant", "content": "Ranni là một Empyrean [1].", "message_id": "m2"},
+    ]
+    reply = {
+        "text": "Câu trước bạn hỏi: Ranni là ai?",
+        "answer_language": "vi",
+        "about_conversation": True,
+    }
+    llm = RecordingLLM([("reply", reply)])
+    pipe = ChatPipeline(settings(), llm, FakeRetriever())
+    p = await pipe.prepare(req("Câu hỏi trước của tôi là gì?"), history)
+    # Both the player's question and the assistant's answer are shown, oldest first; nothing was searched.
+    assert llm.payload()["recent_turns"] == [
+        {"role": "user", "text": "Ranni là ai?"},
+        {"role": "assistant", "text": "Ranni là một Empyrean [1]."},
+    ]
+    assert p.static_answer == reply["text"] and p.agent_decision["intent"] == "conversation"
+    assert not pipe.retriever.calls and not p.hits
 
 
-async def test_final_answer_variant_is_checked_and_a_rejection_goes_back_to_the_agent():
-    model = ScriptedToolModel(
-        [
-            ("search_corpus", {"query": "Ranni identity"}),
-            ("open_evidence", {"ids": ["1"]}),
-            (
-                "final_answer",
-                {"answer": "Ranni [1].", "answer_language": "en", "evidence": [{"id": "9", "quote_ids": ["q0"]}]},
-            ),
-            (
-                "final_answer",
-                {
-                    "answer": "Ranni is an Empyrean [1].",
-                    "answer_language": "en",
-                    "evidence": [{"id": "1", "quote_ids": ["q0"]}],
-                },
-            ),
-        ]
-    )
-    pipe = ChatPipeline(settings(), FakeLLM(), FakeRetriever())
-    run = await run_true_agent(pipe, req(), variant="final_answer", model=model)
-    # The unknown evidence ID was returned to the Agent as a tool error, then fixed.
-    assert [t["status"] for t in run.tool_calls] == ["ok", "ok", "error", "ok"]
-    assert run.stop == "final_answer" and run.result.grounded and run.result.sources[0].index == 1
-    assert run.prepared.trace["model_calls"] == [{"phase": "true_agent"}] * 4  # No separate generation call.
-
-
-async def test_calculator_only_accepts_player_facts_and_reports_errors_to_the_agent():
-    model = ScriptedToolModel(
-        [
-            ("calculator", {"level": "150", "allocation": {"vigor": 40}, "fill": "strength"}),
-            ("calculator", {"level": "60", "allocation": {"vigor": 40}}),
-            ("reply", {"text": "ok"}),
-        ]
-    )
-    pipe = ChatPipeline(settings(), FakeLLM(), FakeRetriever())
-    run = await run_true_agent(pipe, req("Build Strength level 60 giúp mình"), variant="generator", model=model)
-    first = json.loads(next(m for m in model.seen[1] if isinstance(m, ToolMessage)).content)
-    assert first["status"] == "error" and first["fields"] == ["level"]  # 150 is not in the player's message.
-    second = model.last_tool_result()
-    assert second["status"] == "error" and "eight attributes" in second["error"]
-    assert run.prepared.checked_build is None and run.stop == "reply"
-
-
-async def test_a_call_with_broken_json_arguments_is_answered_so_the_loop_can_continue():
-    # Live spike 22/11: an unanswered invalid tool call made DeepSeek reject the next request (HTTP 400).
-    model = ScriptedToolModel([("__invalid__", None), ("reply", {"text": "ok"})])
-    pipe = ChatPipeline(settings(), FakeLLM(), FakeRetriever())
-    run = await run_true_agent(pipe, req(), variant="generator", model=model)
-    answered = [m for m in model.seen[1] if isinstance(m, ToolMessage)]
-    assert answered and answered[-1].tool_call_id == "call_1" and "not valid JSON" in answered[-1].content
-    assert run.stop == "reply" and run.tool_calls[0]["status"] == "invalid_arguments"
+def test_recent_turns_keep_the_newest_within_the_history_budget():
+    pipe = ChatPipeline(settings(chat_history_messages=3, chat_history_chars=30), FakeLLM(), FakeRetriever())
+    history = [{"role": "user", "content": f"message {i} " + "x" * 5} for i in range(5)]
+    turns = pipe._recent_turns(history)
+    assert [t["text"][:9] for t in turns] == ["message 3", "message 4"]  # Third-newest is over the char budget.

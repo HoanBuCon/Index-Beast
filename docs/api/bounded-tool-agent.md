@@ -1,5 +1,7 @@
 # Agent chọn tool có giới hạn — 06/11/2026
 
+> **Lịch sử (22/11/2026):** dây chuyền mô tả ở đây (Agent decision, Tool Agent `tool_agent.py`, assessor, prompt `agent.md`/`tools.md`/`assess.md`) đã được thay bằng một vòng lặp Agent gọi tool; xem [ADR 006](../adr/006-true-agent.md) và [handover GĐ2](../handover/2026-11-22_s5-tv3_true-agent-gd2.md).
+
 TV3 MinhMuc · IndexBeast / 4 Hollows · nhánh `feature/s3-tv3-bounded-tool-agent`.
 
 > **Cập nhật 22/11/2026:** tài liệu này mô tả đợt 06/11. Các cờ `CHAT_AGENT_ENABLED`, `CHAT_TOOL_AGENT_ENABLED` và

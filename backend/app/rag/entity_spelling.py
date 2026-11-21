@@ -91,9 +91,3 @@ def matching_names(raw, hits, *, contextual_query=""):
             partial.setdefault(name_key(title), (title, []))[1].append(hit)
     # A partial title provides options for clarification, never grounds an automatic correction.
     return list((exact or close or partial).values()), bool(exact or close)
-
-
-def correct_name(text: str, raw: str, canonical: str) -> str:
-    names = [r"(?:\s*,\s*|\s+)".join(map(re.escape, re.split(r"[\s,]+", name.strip()))) for name in (canonical, raw)]
-    pattern = r"(?<!\w)(?:" + "|".join(names) + r")(?!\w)"
-    return re.sub(pattern, lambda _: canonical, text, flags=re.I)
