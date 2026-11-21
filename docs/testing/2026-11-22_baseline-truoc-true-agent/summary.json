@@ -1,0 +1,313 @@
+{
+ "summary": {
+  "questions": 10,
+  "success": 10,
+  "grounded": 10,
+  "latency_ms": {
+   "p50": 17620,
+   "p95": 36386,
+   "max": 36621,
+   "mean": 20349
+  },
+  "over_45s": 0,
+  "model_calls": {
+   "mean": 7.8,
+   "max": 11
+  },
+  "tool_steps": {
+   "mean": 3.7,
+   "max": 6
+  },
+  "denied_steps": 2,
+  "calculator": {
+   "checked": 1,
+   "failed": 1
+  },
+  "guard": {},
+  "evidence_selection": {
+   "model": 10
+  }
+ },
+ "rows": [
+  {
+   "id": "BL-01",
+   "kind": "lore",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 19303,
+   "model_calls": 7,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 3,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 3,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 556
+  },
+  {
+   "id": "BL-02",
+   "kind": "acquisition",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 7911,
+   "model_calls": 6,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 2,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 2,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 176
+  },
+  {
+   "id": "BL-03",
+   "kind": "tên gõ sai",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 10242,
+   "model_calls": 8,
+   "call_phases": {
+    "decision": 1,
+    "decision_repair": 1,
+    "tool_decision": 3,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 3,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 488
+  },
+  {
+   "id": "BL-04",
+   "kind": "tên mơ hồ",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 16058,
+   "model_calls": 7,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 3,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 3,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 1299
+  },
+  {
+   "id": "BL-05",
+   "kind": "build có level (calculator)",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 36621,
+   "model_calls": 9,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 6,
+    "assessment": 1,
+    "generation": 1
+   },
+   "tool_steps": 6,
+   "denied_steps": 1,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": "checked",
+   "guard": null,
+   "answer_chars": 906
+  },
+  {
+   "id": "BL-06",
+   "kind": "build có vũ khí, level thấp",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 36098,
+   "model_calls": 10,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 6,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 6,
+   "denied_steps": 1,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": "failed",
+   "guard": null,
+   "answer_chars": 1110
+  },
+  {
+   "id": "BL-07",
+   "kind": "so sánh",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 17835,
+   "model_calls": 11,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 6,
+    "assessment": 2,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 6,
+   "denied_steps": 0,
+   "tool_stop": [
+    "step_budget"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 367
+  },
+  {
+   "id": "BL-08",
+   "kind": "chiến thuật boss",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 30888,
+   "model_calls": 8,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 4,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 4,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 1111
+  },
+  {
+   "id": "BL-09",
+   "kind": "quest/route",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 11130,
+   "model_calls": 6,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 2,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 2,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 793
+  },
+  {
+   "id": "BL-10",
+   "kind": "tiếng Anh, tổng quan DLC",
+   "turns": 1,
+   "ok": true,
+   "http": 200,
+   "error": null,
+   "grounded": true,
+   "clarified": false,
+   "ms": 17404,
+   "model_calls": 6,
+   "call_phases": {
+    "decision": 1,
+    "tool_decision": 2,
+    "assessment": 1,
+    "generation": 1,
+    "image_selection": 1
+   },
+   "tool_steps": 2,
+   "denied_steps": 0,
+   "tool_stop": [
+    "finish"
+   ],
+   "evidence": "model",
+   "build_check": null,
+   "guard": null,
+   "answer_chars": 1069
+  }
+ ]
+}
