@@ -1,5 +1,7 @@
 # Hỏi lại và trợ lý gameplay — contract cho TV4
 
+> **Lịch sử (24/11/2026):** tài liệu này mô tả luồng trước vòng lặp Agent (Agent decision, Tool planner, assessor, calculator build, gói `knowledge/gameplay.json`), nay đã gỡ. Hiện trạng: [ADR 006](../adr/006-true-agent.md) và mục Hiện trạng trong [README RAG](../../backend/app/rag/README.md).
+
 > Cập nhật 06/11: web đã dùng **khung nhập tự do ngay dưới câu hỏi**, không dropdown/key=value.
 > Retry giữ văn bản, clarification ID và turn ID; câu hỏi gốc được giữ qua nhiều lượt bổ sung.
 > Backend giới hạn 3 lượt hỏi bổ sung/task; lỗi decision không hợp lệ trả upstream error, không giả làm câu hỏi mới.

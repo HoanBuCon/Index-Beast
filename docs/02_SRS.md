@@ -62,7 +62,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | Sparse / BM25 | Tìm kiếm theo từ khoá |
 | Hybrid / RRF | Kết hợp 2 danh sách kết quả bằng Reciprocal Rank Fusion |
 | Reranker | Mô hình cross-encoder chấm lại độ liên quan (bge-reranker-base); **chưa bật**, hệ thống giữ thứ tự RRF |
-| Agent chọn tool | Mô hình quyết định (structured output) gọi `local_search`, `web_search`, `source_snapshot`, `calculator`, `clarify`; giới hạn số bước, server kiểm mọi kết quả |
+| Agent chọn tool | Vòng lặp Agent dùng native tool calling: `search_corpus`, `search_web`, `check_name`, `open_evidence`, `set_conditions`, `run_python`, `ask_user`, `reply`, `finish`; giới hạn số lượt gọi model, lỗi tool trả lại cho Agent tự sửa (ADR 006) |
 | LangGraph | Thư viện đồ thị trạng thái dùng cho bước chuẩn bị truy vấn, sinh câu trả lời và agent |
 | Tavily | Dịch vụ tìm web (Search + Extract) dùng khi kho nội bộ thiếu bằng chứng |
 | Bộ nhớ ngữ nghĩa | Các mục nhớ chủ đề/sự kiện của một hội thoại, lưu PostgreSQL và tìm lại bằng vector |

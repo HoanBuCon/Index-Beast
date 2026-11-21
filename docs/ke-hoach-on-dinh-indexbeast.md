@@ -1,5 +1,7 @@
 # Kế hoạch ổn định IndexBeast trước khi phát triển tiếp
 
+> **Lịch sử (24/11/2026):** kế hoạch ngày 07/11 cho luồng cũ (`agent.py`, Tool planner, calculator), đã hết hiệu lực; xem [ADR 006](adr/006-true-agent.md).
+
 Ngày 07/11/2026 · TV3 MinhMuc · nhóm 4 Hollows.
 Đây là **kế hoạch**, chưa thực thi các thay đổi hoặc lượt API mới bên dưới.
 Mục tiêu: tiếp tục được khi phiên hiện tại bị giới hạn, sửa đúng điểm nghẽn và tránh tốn quota cho test lặp.

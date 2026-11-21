@@ -11,7 +11,7 @@ from app.rag.pipeline import ChatPipeline
 from app.rag.true_agent import tool_specs
 from core.errors import BadRequestError
 from tests.unit.test_agent_durable import settings
-from tests.unit.test_live_chat import FakeLLM, FakeRetriever
+from tests.unit.test_live_chat import FakeLLM, FakeRetriever, hit
 
 
 class RecordingLLM(FakeLLM):
@@ -130,6 +130,31 @@ async def test_ask_user_creates_a_clarification_and_the_reply_continues_the_requ
         await ChatPipeline(settings(), RecordingLLM([]), FakeRetriever()).prepare(
             req("level 90", clarification_id=UUID(int=1)), [], player=p.player_state
         )
+
+
+async def test_check_name_returns_the_titles_found_and_leaves_the_choice_to_the_agent():
+    # 24/11: không còn heuristic chính tả phía server; tiêu đề nào tìm được cũng tới Agent, theo thứ tự retrieval.
+    found = [hit(1, title="Ranni the Witch"), hit(2, title="Rennala"), hit(3, title="Ranni the Witch"), hit(4)]
+    llm = RecordingLLM([("check_name", {"name": "Rani"}), finish(evidence_ids=["1"])])
+    await ChatPipeline(settings(), llm, FakeRetriever(found)).prepare(req("Rani là ai?"), [])
+    result = llm.tool_result(1)
+    assert result["candidates"] == ["Ranni the Witch", "Rennala", "Ranni"]
+    assert "single_close_match" not in result and [r["id"] for r in result["results"]] == ["1", "2", "3", "4"]
+
+
+@pytest.mark.parametrize("tool", ["reply", "ask_user"])
+async def test_texts_shown_directly_never_name_internal_fields(tool):
+    text = "Mình chưa có `player_profile` của bạn, cho mình biết level nhé."
+    args = (
+        {"text": text, "answer_language": "vi"}
+        if tool == "reply"
+        else {"question": text, "missing": [{"key": "level", "label": "Level"}], "answer_language": "vi"}
+    )
+    p = await ChatPipeline(settings(), RecordingLLM([(tool, args)]), FakeRetriever()).prepare(req("chia điểm"), [])
+    assert "player_profile" not in p.static_answer and "thông tin bạn đưa ra" in p.static_answer
+    assert p.trace["internal_field_replaced"] == ["player_profile"]
+    if tool == "ask_user":
+        assert p.clarification.question == p.static_answer
 
 
 async def test_reply_cancel_clears_the_working_state():

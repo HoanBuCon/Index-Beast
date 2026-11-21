@@ -34,14 +34,11 @@ class PreparationState(TypedDict, total=False):
     req: ChatRequest
     trace: dict
     history: list[dict]
-    original_question: str
     resolved_question: str
-    query: str  # Câu truy vấn retrieval; không bao giờ dùng để đổi ngôn ngữ trả lời.
     answer_language: str
     started: float
     prepared: Prepared
     diagnostic_queries: bool
-    gameplay: bool
     player: object
     next_player: object
     documents: list[Document]
@@ -53,7 +50,6 @@ class PreparationState(TypedDict, total=False):
     recent_turns: list[dict]
     turn_profile: dict
     agent_results: str
-    name_to_check: str
     verify_coverage: bool
 
 
@@ -259,7 +255,6 @@ class ChatPipeline:
             "diagnostic_queries": diagnostic_queries,
             "player": player,
             "memory_scope": memory_scope,
-            "original_question": req.message,
             "resolved_question": req.message,
         }
         with tracing_context(enabled=False):
@@ -276,9 +271,9 @@ class ChatPipeline:
         trace = state.get("trace")
         if trace is None:
             trace = state["trace"] = {}
-        trace.update(mode=mode, rewrite_fallback=False)
+        trace["mode"] = mode
         prepared = Prepared(mode, lang, [], trace=trace)
-        state.update(prepared=prepared, query=req.message, documents=[], answer_language=lang)
+        state.update(prepared=prepared, documents=[], answer_language=lang)
         # Cùng mặc định trên mọi kênh (22/11: Discord không còn bị ép auto); Agent tự quyết khi nào tìm kiếm.
         requested = req.options.web_search or self.settings.web_search_mode
         state["search_mode"] = requested if self.settings.web_search_available else "off"

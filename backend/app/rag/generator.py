@@ -349,10 +349,9 @@ class Generator:
         values["policy"] += language_policy
         return values
 
-    def _retry(self, prepared: Prepared, attempt: int, diagnostics: dict, *, emitted: str = "") -> bool:
+    def _retry(self, prepared: Prepared, attempt: int, diagnostics: dict) -> bool:
         allowed = (
             attempt < self.format_retries
-            and not emitted
             and diagnostics.get("reason") in RETRYABLE_REASONS
             and diagnostics.get("json_error") not in {"output_too_large", "nesting_too_deep"}
         )
@@ -587,7 +586,7 @@ class Generator:
                 await task
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
-        raw, emitted = "", ""
+        raw = ""
         # Mọi câu trả lời được giữ lại tới khi hoàn tất và đã kiểm (MinhMuc, 21/11): Answer Guard đọc toàn bộ câu trả
         # lời, vẫn có thể thử lại, và người chơi không bao giờ thấy chữ bị cắt hay bị thay bằng lỗi về sau.
         usage: dict = {}
@@ -618,14 +617,14 @@ class Generator:
                 yield result.answer
             prepared.trace["result"] = result
         except RAGValidationError as exc:
-            if self._retry(prepared, attempt, {"reason": exc.reason}, emitted=emitted):
+            if self._retry(prepared, attempt, {"reason": exc.reason}):
                 prepared.trace.pop("validation_failure", None)
                 prepared.trace["_format_retry"] = True
                 return
             self._failed(prepared, {"reason": exc.reason})
             raise
         except (LLMError, OutputFormatError) as exc:
-            if self._retry(prepared, attempt, exc.diagnostics, emitted=emitted):
+            if self._retry(prepared, attempt, exc.diagnostics):
                 prepared.trace["_format_retry"] = True
                 return
             raise self._failed(prepared, exc.diagnostics) from None

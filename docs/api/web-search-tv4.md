@@ -1,5 +1,7 @@
 # Web search — contract và giao diện
 
+> **Lịch sử (24/11/2026):** tài liệu này mô tả luồng trước vòng lặp Agent (Agent decision, Tool planner, assessor, calculator build, gói `knowledge/gameplay.json`), nay đã gỡ. Hiện trạng: [ADR 006](../adr/006-true-agent.md) và mục Hiện trạng trong [README RAG](../../backend/app/rag/README.md).
+
 Ngày 04/11/2026 · TV3 MinhMuc · IndexBeast / 4 Hollows.
 
 ## Hỏi lại gameplay và kết quả HTTP mới

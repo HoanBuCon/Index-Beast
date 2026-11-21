@@ -93,9 +93,9 @@ class CapturedLLM:
         phase = (
             "generation"
             if "persona" in inputs
-            else "assessment"
-            if inputs["policy"].startswith("Evaluate")
-            else "rewrite"
+            else "image_selection"
+            if inputs["policy"].startswith("Select images")
+            else "answer_guard"
         )
         row = {"phase": phase}
         self.outputs.append(row)

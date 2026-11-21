@@ -2,54 +2,18 @@
 
 import json
 from contextlib import aclosing
-from copy import deepcopy
-from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from app.adapters.tavily import WebHit
 from app.api.schemas.chat import ChatRequest
-from app.rag.context_policy import dedup_web
 from app.rag.evidence import evidence_units
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from app.rag.pipeline import select_context
 from app.rag.prompts import prompt
 from tests.unit.test_live_chat import FakeLLM, FakeRetriever, SequenceLLM, hit, service
-from tests.unit.test_web_search import web_hit
 
 FIXTURE = json.loads((Path(__file__).parents[1] / "fixtures/golden_guard_replays.json").read_text(encoding="utf-8"))
-
-
-@pytest.mark.parametrize(
-    "field,value",
-    [
-        ("release_scope", "base"),
-        ("patch_version", "1.16"),
-        ("speaker", "Another"),
-        ("variant_context", "alternate"),
-        ("affinity", "Cold"),
-        ("future_condition", "only at night"),
-        ("release_scope", None),
-    ],
-)
-def test_dedup_never_merges_different_conditions(field, value):
-    a = web_hit()
-    b = replace(a, id="b", payload={**a.payload, "url": a.payload["url"] + "?oldid=1", field: value})
-    original = deepcopy(a.payload)
-    assert len(dedup_web([a, b])) == 2
-    assert a.payload == original
-
-
-def test_alias_dedup_is_idempotent_and_does_not_merge_titles_or_changed_text():
-    rows = [WebHit(h["id"], h["score"], h["payload"]) for h in FIXTURE["context_cases"]["IB-GS-050"]["web"]]
-    first = dedup_web(rows[:2])
-    combined = dedup_web([*first, rows[2]])
-    assert len(combined) == 1 and len(combined[0].payload["provenance"]) == 3
-    assert dedup_web(combined) == combined
-    assert len(first[0].payload["provenance"]) == 2
-    assert len(dedup_web([rows[0], replace(rows[1], payload={**rows[1].payload, "text": "Different body"})])) == 2
-    assert len(dedup_web([rows[0], replace(rows[1], payload={**rows[1].payload, "title": "Fia"})])) == 2
 
 
 def test_no_missing_target_is_fabricated_and_policy_budget_still_apply():

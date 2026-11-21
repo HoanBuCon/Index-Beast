@@ -26,7 +26,7 @@ graph TD
     A["Chat JSON hoặc SSE"] --> B["API validation, guard, conversation routing, lock"]
     B --> S["scope: mode, ngôn ngữ tạm, web policy"]
     S --> M["memory: ứng viên user turn (RAM) hoặc semantic memory (PostgreSQL + Qdrant)"]
-    M --> D["agent: vòng lặp Agent gọi tool (search_corpus/web, check_name, open_evidence, set_conditions, calculator)"]
+    M --> D["agent: vòng lặp Agent gọi tool (search_corpus/web, check_name, open_evidence, set_conditions, run_python)"]
     D -->|"reply, ask_user"| P["prompt"]
     D -->|"finish: yêu cầu, intent, ngôn ngữ, bằng chứng"| X["context: admission, dedup, top-5, budget"]
     X --> P
