@@ -1,7 +1,7 @@
-"""Measure a full corpus pass through the real index_chunks path. Explicit --allow-write required.
+"""Đo một lượt đi qua toàn corpus bằng đường index_chunks thật. Bắt buộc --allow-write.
 
-No LLM, crawl or notebook. Model initialization is lazy and included in the first encode timing.
-Run from backend; JSON report is updated atomically during progress and on completion/failure.
+Không LLM, crawl hay notebook. Khởi tạo model là lazy và được tính vào thời gian encode đầu tiên.
+Chạy từ backend; báo cáo JSON được cập nhật nguyên tử trong lúc chạy và khi xong/lỗi.
 """
 
 import argparse

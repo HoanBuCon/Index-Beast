@@ -1,4 +1,4 @@
-"""Answer Guard and held answers: internal field names are rewritten, never shown; the level rule pack."""
+"""Answer Guard và câu trả lời được giữ lại: tên trường nội bộ được viết lại, không bao giờ hiện ra; pack rule level."""
 
 from contextlib import aclosing
 
@@ -14,10 +14,9 @@ def answer_with(p, text):
 
 
 def test_pack_keeps_the_level_rule_the_agent_can_cite():
-    hit_, data = level_rule()
-    assert f"minus {data['level_offset']}" in hit_.payload["text"]
+    assert "minus 79" in level_rule().payload["text"]
     kinds = {row["payload"].get("rule_kind") for g in load_pack()["groups"] for row in g["hits"]}
-    assert "class_rule" not in kinds  # Origins are corpus pages; the Agent quotes their Infobox.
+    assert "class_rule" not in kinds  # Origin là các trang corpus; Agent trích Infobox của chúng.
 
 
 @pytest.mark.parametrize(
@@ -30,7 +29,7 @@ def test_pack_keeps_the_level_rule_the_agent_can_cite():
 def test_internal_field_names_go_to_the_guard_and_are_never_shown(answer, fields):
     p = Prepared("rag", "vi", [], hits=[hit()])
     out = answer_with(p, answer)
-    # Not dropped: the Answer Guard is asked to rewrite it, and the fallback answer already reads naturally.
+    # Không bị bỏ: Answer Guard được yêu cầu viết lại, và câu trả lời dự phòng đã đọc tự nhiên.
     assert p.trace["guard_request"]["issues"] == [{"kind": "internal_field_name", "fields": fields}]
     assert not any(f in out.answer for f in fields) and "`" not in out.answer
     clean = Prepared("rag", "vi", [], hits=[hit()])
@@ -50,6 +49,6 @@ async def test_every_answer_is_held_and_the_guard_rewrites_an_internal_field_nam
     async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
         frames = [frame async for frame in events]
     tokens = [p.token for n, p in frames if n == "token"]
-    # Shown once, after the check: nothing visible is cut or replaced by an error afterwards.
+    # Hiện một lần, sau khi kiểm: không có gì đã hiện bị cắt hay bị thay bằng lỗi về sau.
     assert frames[-1][0] == "done" and len(tokens) == 1
     assert "player_profile" not in tokens[0] and tokens[0].startswith(llm.data["answer"])

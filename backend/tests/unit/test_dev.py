@@ -1,4 +1,4 @@
-"""Dev startup ordering and cleanup; local stub HTTP/processes only, no app/model/server services."""
+"""Thứ tự khởi động và dọn dẹp khi dev; chỉ dùng HTTP/tiến trình stub local, không app/model/server."""
 
 import json
 import os

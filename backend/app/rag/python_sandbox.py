@@ -1,15 +1,15 @@
-"""Run small calculation code written by the Agent (22/11/2026: replaces the hard-coded build calculator).
+"""Chạy đoạn code tính toán nhỏ do Agent viết (22/11/2026: thay calculator build viết cứng).
 
-The model reads untrusted web and corpus text, so its code is treated as hostile:
-1. Static check: only a calculation subset of Python is accepted (literals, names, arithmetic, comparisons,
-   if/for/while, comprehensions, functions, list/dict/set/tuple, f-strings, method calls on values). No import,
-   no attribute or name starting with "_", no exec/eval/open/compile/globals/getattr and similar, no classes,
-   with, try, global or async.
-2. Execution in a separate, isolated Python process (`-I`, no site, empty environment) with restricted builtins,
-   a wall-clock timeout and bounded output.
+Model đọc text web và corpus không tin cậy, nên code của nó được coi là có hại:
+1. Kiểm tĩnh: chỉ nhận một tập con Python dùng để tính toán (literal, tên, số học, so sánh,
+   if/for/while, comprehension, hàm, list/dict/set/tuple, f-string, gọi method trên giá trị). Không import,
+   không thuộc tính hay tên bắt đầu bằng "_", không exec/eval/open/compile/globals/getattr và tương tự, không class,
+   with, try, global hay async.
+2. Chạy trong một tiến trình Python riêng, cô lập (`-I`, không site, môi trường rỗng) với builtins bị giới hạn,
+   timeout theo thời gian thực và output có giới hạn.
 
-This is a language-level sandbox, not an operating-system one: production should also run the worker in a
-container without network or writable filesystem (see docs/adr/006-true-agent.md).
+Đây là sandbox ở mức ngôn ngữ, không phải mức hệ điều hành: production nên chạy worker trong
+container không có mạng và filesystem không ghi được (xem docs/adr/006-true-agent.md).
 """
 
 import ast
@@ -40,12 +40,12 @@ FORBIDDEN_NAMES = {
     "open", "exec", "eval", "compile", "globals", "locals", "vars", "getattr", "setattr", "delattr", "dir",
     "input", "breakpoint", "help", "memoryview", "object", "type", "super", "classmethod", "staticmethod",
     "property",
-    # str.format can reach dunder attributes through its field syntax ("{0.__class__}").
+    # str.format có thể chạm tới thuộc tính dunder qua cú pháp trường ("{0.__class__}").
     "format", "format_map",
 }  # fmt: skip
 MEMORY_LIMIT_BYTES = 256 * 1024 * 1024
 
-# Runs in the child process: re-checks nothing (the parent already did) but gives the code only safe builtins.
+# Chạy trong tiến trình con: không kiểm lại gì (tiến trình cha đã kiểm) nhưng chỉ cho code dùng builtins an toàn.
 _WORKER = r"""
 import builtins, json, sys
 
@@ -78,7 +78,7 @@ def _limit_memory():  # pragma: no cover - POSIX only (production containers)
 
 
 class SandboxError(ValueError):
-    """The code was rejected before running (not allowed) or failed while running."""
+    """Code bị từ chối trước khi chạy (không được phép) hoặc lỗi khi chạy."""
 
 
 def check_code(code: str) -> None:
@@ -103,12 +103,12 @@ def check_code(code: str) -> None:
 
 
 def run_python(code: str, *, timeout: float = TIMEOUT_SECONDS) -> dict:
-    """Run checked code; returns {"status": "ok", "output"} or {"status": "error", "error"}. Never raises."""
+    """Chạy code đã kiểm; trả về {"status": "ok", "output"} hoặc {"status": "error", "error"}. Không bao giờ raise."""
     try:
         check_code(code)
     except SandboxError as exc:
         return {"status": "error", "error": str(exc)}
-    # Windows needs SYSTEMROOT to start Python; nothing else from the server environment is passed on.
+    # Windows cần SYSTEMROOT để khởi động Python; ngoài ra không truyền gì khác từ môi trường của server.
     env = {"SYSTEMROOT": os.environ.get("SYSTEMROOT", "")} if os.name == "nt" else {}
     try:
         done = subprocess.run(

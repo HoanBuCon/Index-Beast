@@ -1,4 +1,4 @@
-"""Small transparent source snapshots; no vectors, models or network writes."""
+"""Ảnh chụp nguồn nhỏ, minh bạch; không vector, không model, không ghi qua mạng."""
 
 import copy
 import json
@@ -14,11 +14,11 @@ def load_pack():
 
 
 def level_rule():
-    """The curated level accounting rule (attributes total = level + offset) from the pack, as a citable hit."""
+    """Quy tắc tính level đã tuyển chọn (tổng chỉ số = level + 79) lấy từ pack, ở dạng hit có thể trích dẫn."""
     from core.types import Hit
 
     for group in load_pack()["groups"]:
         for row in group["hits"]:
-            if row["payload"].get("rule_kind") == "level_rule" and row["payload"].get("rule_data"):
-                return Hit(row["id"], 0.0, copy.deepcopy(row["payload"])), row["payload"]["rule_data"]
+            if row["payload"].get("rule_kind") == "level_rule":
+                return Hit(row["id"], 0.0, copy.deepcopy(row["payload"]))
     raise RuntimeError("Knowledge pack lacks the level accounting rule")

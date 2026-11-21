@@ -72,7 +72,8 @@ def step_timings(latency_ms: float | None, trace: dict[str, Any] | None) -> dict
     steps.update(retrieval)
     for action, elapsed in _sum_ms(trace.get("tool_actions")).items():
         steps[f"tool:{action}"] = elapsed
-    # Agent loop (22/11): the node time and each tool's own time; model thinking time is the difference.
+    # Vòng lặp Agent (22/11): thời gian node và thời gian riêng của từng tool; thời gian model suy nghĩ là phần chênh
+    # lệch.
     nodes = trace.get("node_ms")
     agent_ms = _ms(nodes.get("agent")) if isinstance(nodes, dict) else None
     if agent_ms is not None:

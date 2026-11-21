@@ -56,10 +56,4 @@ Nếu một ca đang chờ câu trả lời bổ sung, dùng `--resume --answer-
 
 [Thiết kế thí nghiệm](../../docs/evaluation/s4-retrieval-ablation-meta-prompt.md) dùng 200 câu S4 và [12 câu bổ sung](s4_retrieval_supplement.jsonl). Harness chạy truy xuất một lần mỗi cấu hình, dùng context của cấu hình đó cho generator và ghi điểm theo [rubric](../../docs/evaluation/s4-rubric.md). Tắt hoặc bật rewrite để thay truy vấn tìm kiếm. Giữ nguyên bước nhận diện ý định, câu đưa vào generator, collection và bộ lọc của cả hai nhánh. Tavily Auto có tập 18 ca đặt trước. [Báo cáo kết quả](../../docs/testing/2026-11-14_s4-retrieval-matrix.md)
 
-```powershell
-.venv/Scripts/python.exe -X utf8 -m eval.s4_retrieval_matrix --output data/research_runs/s4-retrieval-matrix
-.venv/Scripts/python.exe -X utf8 -m eval.s4_retrieval_matrix --output data/research_runs/s4-retrieval-matrix --execute
-.venv/Scripts/python.exe -X utf8 -m eval.summarize_retrieval_matrix data/research_runs/s4-retrieval-matrix --output data/research_runs/s4-retrieval-matrix/summary.json
-```
-
-Lệnh đầu chỉ đếm ca. Lệnh có `--execute` gọi DeepSeek, thực hiện truy xuất Qdrant bằng encoder đã có cache và gọi Tavily trong nhóm Auto. Có thể chạy tiếp với cùng thư mục để dùng checkpoint. Dùng thư mục mới khi đổi tập câu, cấu hình hoặc muốn lặp lại thí nghiệm từ đầu.
+Harness `s4_retrieval_matrix.py` và `summarize_retrieval_matrix.py` đã gỡ ngày 22/11/2026: chúng gọi Agent decision và `web_search.assess` của luồng cũ (đã thay bằng vòng lặp Agent), nên không chạy được nữa. Mã lúc đo nằm ở commit `26259c2`: [mã chạy](https://github.com/HoanBuCon/Index-Beast/blob/26259c2/backend/eval/s4_retrieval_matrix.py), [mã tổng hợp](https://github.com/HoanBuCon/Index-Beast/blob/26259c2/backend/eval/summarize_retrieval_matrix.py).

@@ -37,7 +37,7 @@ def test_web_search_calls_prefers_agent_actions_then_pipeline_status():
 def test_web_search_calls_count_search_web_steps_of_the_agent_loop():
     loop = {"agent": {"steps": [{"tool": "search_corpus"}, {"tool": "search_web"}, {"tool": "search_web"}]}}
     assert llm_cost.web_search_calls({**loop, "web_search": {"status": "ok"}}) == 2
-    # No web step in the loop: falls back to the web status, as for old traces.
+    # Vòng lặp không có bước web: dùng trạng thái web, như với trace cũ.
     assert (
         llm_cost.web_search_calls({"agent": {"steps": [{"tool": "finish"}]}, "web_search": {"status": "not_run"}}) == 0
     )

@@ -1,4 +1,4 @@
-"""Offline search policy, wire contract and evidence admission. No model/server calls."""
+"""Chính sách tìm kiếm offline, hợp đồng wire và việc nhận evidence. Không gọi model/server."""
 
 import asyncio
 import json
@@ -12,7 +12,6 @@ from app.adapters.tavily import TavilySearch, WebHit, WebSearchError, allowed_ur
 from app.api.schemas.chat import ChatOptions
 from app.rag.generator import Prepared, validate_answer
 from app.rag.pipeline import context_item, select_context
-from app.rag.web_search import merge_evidence
 from core.config import Settings
 from tests.unit.rag_fakes import hit
 
@@ -69,16 +68,10 @@ def test_web_admission_is_typed_not_a_payload_bypass_and_citations_keep_origin()
         },
     )
     assert answer.sources[0].origin == "web" and answer.sources[0].url == web.payload["url"]
-    assert select_context([web], 5, 12000) == [web]  # Web evidence is no longer gated by spoilers.
+    assert select_context([web], 5, 12000) == [web]  # Evidence web không còn bị chặn theo spoiler.
 
 
-def test_merge_uses_no_score_arithmetic_and_keeps_context_limit():
-    local = [hit(str(i), text=f"Text {i}") for i in range(8)]
-    web = [replace(web_hit(), id=f"web:{i}", payload={**web_hit().payload, "text": f"web text {i}"}) for i in range(3)]
-    assert merge_evidence(local, []) == local
-    selected = select_context(merge_evidence(local, web), 5, 12000)
-    assert len(selected) == 5 and selected[0].id == "web:0"
-    assert all(h.score in (0, 0.1) for h in selected)
+def test_web_search_option_rejects_unknown_modes():
     with pytest.raises(ValidationError):
         ChatOptions(web_search="unbounded")
 

@@ -1,7 +1,8 @@
-"""Sequential, read-only retrieval benchmark. --allow-inference permits real query embedding.
+"""Benchmark retrieval tuần tự, chỉ đọc. --allow-inference cho phép embed câu truy vấn thật.
 
-No LLM, indexing or Qdrant writes. A fresh encoder's first request is reported separately;
-the same encoder/client is reused for warm requests. Qdrant time is client round-trip, not server CPU time.
+Không LLM, không index, không ghi Qdrant. Request đầu của encoder mới được báo riêng;
+cùng encoder/client được dùng lại cho các request đã ấm. Thời gian Qdrant là round-trip phía client,
+không phải CPU server.
 """
 
 import argparse
@@ -38,7 +39,7 @@ METRICS = ("ready_ms", "embedding_ms", "qdrant_ms", "total_retrieve_ms")
 
 
 class Probe:
-    """Shared by sequential wrappers; never share across concurrent retrieval requests."""
+    """Dùng chung cho các wrapper tuần tự; không bao giờ dùng chung giữa các request retrieval đồng thời."""
 
     def __init__(self):
         self.metrics = {}
@@ -128,7 +129,7 @@ async def measure_one(retriever, probe, question, *, phase, round_number):
             ],
         )
     except Exception as exc:
-        row["error_type"] = type(exc).__name__  # Never persist exception bodies/credentials/model inputs.
+        row["error_type"] = type(exc).__name__  # Không bao giờ lưu nội dung exception/credential/input của model.
     finally:
         row.update(probe.metrics)
         row["total_retrieve_ms"] = (time.perf_counter() - started) * 1000
@@ -177,7 +178,7 @@ async def run(args):
             probe=probe,
         )
         store = MeasuredStore(client, settings.rag_collection, policy, probe=probe)
-        await store.ready()  # Fail before model loading if collection missing/incompatible/empty.
+        await store.ready()  # Lỗi trước khi nạp model nếu collection thiếu/không tương thích/rỗng.
         report["points_before"] = (await client.count(settings.rag_collection, exact=True)).count
         report["filters"] = policy.query_filter().model_dump(mode="json", exclude_none=True)
         encoder = MeasuredEncoder(

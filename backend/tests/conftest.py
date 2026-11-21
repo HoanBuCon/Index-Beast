@@ -26,7 +26,7 @@ def settings() -> Settings:
 
 @pytest.fixture(autouse=True)
 def disable_remote_tracing(monkeypatch):
-    """Offline tests must not export traces because a developer enabled tracing in their shell."""
+    """Test offline không được xuất trace chỉ vì lập trình viên bật tracing trong shell của họ."""
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
 

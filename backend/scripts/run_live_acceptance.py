@@ -1,4 +1,4 @@
-"""Opt-in paid/manual acceptance checks against a running local API and real Qdrant corpus."""
+"""Kiểm tra nghiệm thu thủ công/tốn phí, chỉ chạy khi bật, với API local đang chạy và corpus Qdrant thật."""
 
 import argparse
 import asyncio

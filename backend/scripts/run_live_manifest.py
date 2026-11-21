@@ -34,7 +34,7 @@ TRACE_KEYS = (
 
 
 class Recorder(logging.Handler):
-    """Warnings from the app (categories only, as logged), for the run report."""
+    """Cảnh báo từ app (chỉ nhóm lỗi, như trong log), cho báo cáo lần chạy."""
 
     def __init__(self):
         super().__init__()

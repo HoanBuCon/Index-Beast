@@ -66,7 +66,7 @@ class FakeChatModel(BaseChatModel):
 
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
         if kwargs.get("tools"):
-            # The Agent loop (native tool calling): scripted per test, or the neutral offline Agent.
+            # Vòng lặp Agent (tool calling native): soạn sẵn cho từng test, hoặc Agent offline trung tính.
             return ChatResult(
                 generations=[ChatGeneration(message=await self.owner.agent_turn(messages, kwargs["tools"]))]
             )
@@ -98,7 +98,7 @@ class FakeChatModel(BaseChatModel):
 
 
 def fake_agent_language(text: str) -> str:
-    """The offline Agent's own language choice (Vietnamese diacritics), standing in for the model's decision."""
+    """Lựa chọn ngôn ngữ riêng của Agent offline (tiếng Việt có dấu), thay cho quyết định của model."""
     import unicodedata
 
     normalized = unicodedata.normalize("NFD", text.lower())
@@ -106,7 +106,7 @@ def fake_agent_language(text: str) -> str:
 
 
 def seen_evidence(messages):
-    """Evidence IDs the Agent saw in search results, in the order shown (corpus results, then web blocks)."""
+    """Evidence ID Agent thấy trong kết quả tìm kiếm, theo thứ tự hiển thị (kết quả corpus, rồi khối web)."""
     ids = []
     for m in messages:
         if isinstance(m, ToolMessage):
@@ -117,8 +117,8 @@ def seen_evidence(messages):
 
 
 def offline_agent_turn(messages, tools, script=None):
-    """Offline Agent: search the player's message once (web too when policy is always), then finish choosing
-    the evidence it saw. A test may pass `script`, a list of (tool name, args) consumed one per model call."""
+    """Agent offline: tìm tin nhắn của người chơi một lần (cả web khi chính sách là always), rồi finish chọn
+    evidence đã thấy. Test có thể truyền `script`, danh sách (tên tool, tham số) dùng mỗi cái cho một lượt gọi model."""
     names = {t["function"]["name"] for t in tools}
     payload = json.loads(next(m.content for m in messages if isinstance(m, HumanMessage)))
     called = [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
@@ -126,7 +126,7 @@ def offline_agent_turn(messages, tools, script=None):
         name, args = script.pop(0)
         if name == "finish" and args.get("evidence_ids") == "seen":
             args = {**args, "evidence_ids": seen_evidence(messages)[:5]}
-        if name == "__invalid__":  # A call whose arguments are not valid JSON.
+        if name == "__invalid__":  # Lời gọi có tham số không phải JSON hợp lệ.
             bad = {"name": "calculator", "args": "{broken", "id": f"call_{len(called) + 1}", "error": "bad json"}
             return AIMessage(content="", invalid_tool_calls=[bad])
     elif "search_corpus" not in called:
@@ -157,7 +157,7 @@ TOOL_POLICY = "IndexBeast's bounded tool planner"
 
 
 def agent_step(policy, question, decision_overrides=None):
-    """Offline Agent: retrieve the question as asked, search locally once, then finish in rank order."""
+    """Agent offline: lấy câu hỏi đúng như được hỏi, tìm local một lần, rồi finish theo thứ hạng."""
     if AGENT_POLICY not in policy and TOOL_POLICY not in policy:
         return None
     payload = json.loads(question)
@@ -184,7 +184,7 @@ def agent_step(policy, question, decision_overrides=None):
         return {"action": "local_search", "query": payload["initial_query"], "reason": "initial"}
     if payload["web_policy"] == "always" and "web_search" in available and "web_search" not in done:
         return {"action": "web_search", "query": payload["initial_query"], "reason": "missing_evidence"}
-    # The Agent (not the server) decides to search the web after the evidence check reports a gap.
+    # Agent (không phải server) quyết định tìm web sau khi bước kiểm evidence báo còn thiếu.
     gap = next((o for o in reversed(payload["observations"]) if o.get("status") == "needs_evidence"), None)
     if gap and "web_search" in available and "web_search" not in done:
         query = gap.get("suggested_query") or payload["initial_query"]
@@ -196,7 +196,7 @@ IMAGE_POLICY = "Select images for the requested entity"
 
 
 def planned_response(inputs, decision_overrides=None):
-    """LLMResponse for Agent/Tool/image-selection calls; None for generation and other calls."""
+    """LLMResponse cho các lời gọi Agent/Tool/chọn ảnh; None cho bước sinh và các lời gọi khác."""
     if not isinstance(inputs, dict) or "policy" not in inputs or "question" not in inputs:
         return None
     if inputs["policy"].startswith(IMAGE_POLICY):
@@ -233,8 +233,8 @@ class FakeLLM(DeepSeekLLM):
         return LLMResponse(self.text, "fake", 10, 5, "stop")
 
     async def invoke_chain(self, chain, inputs):
-        # The Agent decision and Tool Agent calls are answered by a neutral offline planner, so
-        # `calls`/`seen` keep counting only generation calls, as the generation tests expect.
+        # Quyết định của Agent và lời gọi Tool Agent được một planner offline trung tính trả lời, nên `calls`/`seen` chỉ
+        # đếm lời gọi sinh, đúng như các test sinh mong đợi.
         if (planned := planned_response(inputs, self.decision)) is not None:
             self.agent_calls += 1
             return planned
@@ -246,7 +246,7 @@ class FakeLLM(DeepSeekLLM):
         return self.data
 
     def insufficient(self, text="Mình chưa tìm thấy nguồn cho câu này."):
-        """The writer's answer when the Agent chose no evidence (22/11: no fixed server sentence)."""
+        """Câu trả lời của bước viết khi Agent không chọn evidence nào (22/11: không có câu cố định của server)."""
         self.data = {"answer": text, "evidence": [], "insufficient": True}
         return self
 
@@ -294,7 +294,7 @@ async def test_conversation_history_is_kept_and_isolated_by_channel():
     await live.answer(ChatRequest(**BODY, conversation_id=first.conversation_id))
     assert "IndexBeast" in llm.seen[0][0]["content"]
     assert "Language: vi" in llm.seen[0][0]["content"]
-    # RAG generation never receives earlier turns as chat history.
+    # Bước sinh RAG không bao giờ nhận các lượt trước làm lịch sử chat.
     assert [m["role"] for m in llm.seen[1]] == ["system", "user"]
     assert live.has_message(first.message_id)
     assert len(live.history(first.conversation_id).messages) == 4
@@ -348,7 +348,7 @@ async def test_rag_missing_corpus_is_not_empty_results_or_general_fallback():
     empty = service("rag", llm.insufficient(), FakeRetriever(hits=[]))
     result = await empty.answer(ChatRequest(**BODY))
     assert result.grounded is False and result.sources == []
-    assert llm.calls == 1  # No evidence: the writer says so (an insufficient answer), no server sentence.
+    assert llm.calls == 1  # Không có evidence: bước viết nói rõ (câu trả lời insufficient), không có câu của server.
 
 
 async def test_rag_citations_use_selected_sources_and_verifiable_quotes():
@@ -403,13 +403,13 @@ def test_context_budget_and_duplicates_preserve_whole_chunks():
 
 
 def rag_tokens(*tail):
-    """Chunks of a valid grounded JSON answer: a complete cited first clause, then `tail` answer chunks."""
+    """Các chunk của một câu trả lời JSON grounded hợp lệ: một mệnh đề đầu đủ trích dẫn, rồi `tail` chunk trả lời."""
     evidence = json.dumps([{"index": 1, "quote": "Ranni is an Empyrean"}])
     return ['{"answer": "Ranni is an Empyrean [1]. ', *tail, f'", "evidence": {evidence}, "insufficient": false}}']
 
 
 async def test_stream_is_held_until_checked_and_closes_even_before_consumer_starts():
-    # Every answer is held until complete and validated (21/11): the first visible token is the checked answer.
+    # Mọi câu trả lời được giữ tới khi hoàn tất và đã kiểm (21/11): token hiển thị đầu tiên là câu trả lời đã kiểm.
     llm = FakeLLM(tokens=rag_tokens(*["word "] * 100))
     live = service(llm=llm, retriever=FakeRetriever())
     events = await live.open_stream(ChatRequest(**BODY))
@@ -434,7 +434,7 @@ async def test_cancelling_inflight_stream_closes_provider_and_does_not_save_turn
 
     llm = BlockingLLM()
     live = service(llm=llm, retriever=FakeRetriever())
-    # The answer is held until complete, so the request is still opening the stream when it is cancelled.
+    # Câu trả lời được giữ tới khi hoàn tất, nên request vẫn đang mở stream lúc bị hủy.
     task = asyncio.create_task(live.open_stream(ChatRequest(**BODY)))
     await entered.wait()
     task.cancel()
@@ -469,7 +469,7 @@ def test_live_json_api_and_feedback_remain_compatible(settings, ctx):
         assert (
             client.post("/api/v1/feedback", json={"message_id": result["message_id"], "rating": 1}).status_code == 204
         )
-        llm.data = {"answer": "Ranni [1]."}  # Schema-invalid generation: never a fake success.
+        llm.data = {"answer": "Ranni [1]."}  # Bước sinh sai schema: không bao giờ là thành công giả.
         response = client.post("/api/v1/chat", json=BODY)
         assert response.status_code == 502 and response.json()["code"] == "upstream_error"
 
@@ -498,7 +498,7 @@ def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(se
         assert response.status_code == 502 and response.json()["code"] == "upstream_error"
         assert llm.closed
         llm.fail_at = 1
-        # Nothing is visible before the answer is checked, so a later provider failure is also a JSON error.
+        # Không có gì hiện ra trước khi câu trả lời được kiểm, nên lỗi provider sau đó cũng là lỗi JSON.
         response = client.post("/api/v1/chat/stream", json=BODY)
         assert response.status_code == 502 and "event: done" not in response.text
         assert "fake provider failure" not in response.text and llm.closed
@@ -506,7 +506,7 @@ def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(se
 
 
 class SlowStreamLLM(FakeLLM):
-    """A slow first token, like a thinking model that buffers before the first cited clause."""
+    """Token đầu chậm, như một model suy nghĩ phải đệm trước mệnh đề có trích dẫn đầu tiên."""
 
     async def stream(self, messages, **kwargs):
         await asyncio.sleep(0.3)
@@ -530,7 +530,7 @@ async def test_web_stream_has_its_own_longer_deadline(channel):
         **{**BODY, "channel": channel, "external_ref": "discord:thread:9"} if channel == "discord" else BODY
     )
     if channel == "discord":
-        # Discord/JSON keep CHAT_TIMEOUT_SECONDS: the bot gives up at 60 s.
+        # Discord/JSON giữ CHAT_TIMEOUT_SECONDS: bot bỏ cuộc sau 60 s.
         with pytest.raises(TimeoutAppError):
             await live.open_stream(request)
         return
@@ -595,7 +595,7 @@ async def test_rag_stream_buffered_json_still_requires_valid_output(kind):
 
 
 def test_unused_evidence_is_dropped_but_a_citation_still_needs_evidence():
-    # Live 20/11 (quest Millicent): one spare evidence item failed a complete answer after streaming.
+    # Live 20/11 (quest Millicent): một evidence thừa làm rớt một câu trả lời đầy đủ sau khi stream.
     prepared = Prepared("rag", "vi", [], hits=[hit(), hit(2)])
     spare = [{"index": 1, "quote": "Ranni is an Empyrean"}, {"index": 2, "quote": "Ranni is an Empyrean"}]
     result = validate_answer(prepared, {"answer": "Ranni [1].", "evidence": spare, "insufficient": False})
@@ -756,7 +756,7 @@ def test_malformed_json_stream_logs_reason_and_never_done(client, caplog):
 
 
 class SequenceLLM(FakeLLM):
-    """Provider-shaped failures, not pre-serialized dicts that hide JSON parsing bugs."""
+    """Lỗi có hình dạng như của provider, không phải dict serialize sẵn làm che lỗi parse JSON."""
 
     def __init__(self, outputs):
         super().__init__()
@@ -872,7 +872,7 @@ async def test_uncited_paragraphs_are_kept_and_only_counted(caplog):
     live = service("rag", llm, FakeRetriever())
     result = await live.answer(ChatRequest(**BODY))
     assert result.grounded and llm.attempts == 1
-    # Policy 20/11/2026: no truncated answers; uncited paragraphs stay and are only counted.
+    # Chính sách 20/11/2026: không cắt câu trả lời; đoạn không trích dẫn được giữ và chỉ được đếm.
     assert result.answer == data["answer"] + "\n\n" + data["limitation"]
     assert live.traces[result.message_id]["uncited_paragraphs"] == 2
     assert "private kết luận" not in caplog.text
@@ -989,7 +989,7 @@ async def test_insufficient_protocol_stream_is_recovered_before_anything_is_show
 
     llm = ProtocolStream()
     live = service("rag", llm, FakeRetriever())
-    # Nothing is shown before validation, so even an answer with complete clauses can still be recovered.
+    # Không hiện gì trước khi kiểm, nên kể cả câu trả lời có mệnh đề đầy đủ vẫn có thể được phục hồi.
     stream = await live.open_stream(ChatRequest(**BODY))
     async with aclosing(stream):
         frames = [frame async for frame in stream]
@@ -1139,7 +1139,7 @@ async def test_missing_equipment_evidence_remains_insufficient_without_ungrounde
         ChatRequest(message="Give me the exact stats for a Moonveil build at level 100", channel="web")
     )
     assert not response.grounded and response.sources == [] and response.answer == llm.data["answer"]
-    assert llm.calls == 1  # One RAG generation, no second ungrounded request.
+    assert llm.calls == 1  # Một lần sinh RAG, không có request thứ hai không grounded.
 
 
 async def test_partial_build_stream_matches_json_and_emits_limitation_only_after_validation():

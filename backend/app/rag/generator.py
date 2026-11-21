@@ -33,8 +33,8 @@ _STREAM_EMITTER: ContextVar[Callable[[str], Awaitable[None]]] = ContextVar("inde
 
 CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
-# Payload/protocol field names are not player-facing words: the Answer Guard rewrites an answer that echoes one,
-# and any name left after that is replaced with plain words (never a reason to drop the answer).
+# Tên trường payload/giao thức không phải từ ngữ cho người chơi: Answer Guard viết lại câu trả lời có nhắc tới, và tên
+# nào còn sót sau đó được thay bằng chữ thường (không bao giờ là lý do bỏ câu trả lời).
 INTERNAL_FIELD = re.compile(r"`?\b(player_profile|agent_results|quote_ids?|evidence_units)\b`?")
 PLAIN_FIELD_WORDS = {
     "vi": {
@@ -59,7 +59,7 @@ def leaked_fields(text: str | None) -> list[str]:
 
 
 def plain_field_names(text: str | None, lang: str) -> str | None:
-    """Last safety net after the Answer Guard: swap any internal field name for words a player understands."""
+    """Lưới an toàn cuối sau Answer Guard: thay mọi tên trường nội bộ bằng chữ người chơi hiểu được."""
     if not text:
         return text
     words = PLAIN_FIELD_WORDS["vi" if lang == "vi" else "en"]
@@ -108,7 +108,7 @@ class Prepared:
     template: ChatPromptTemplate | None = None
     values: dict = field(default_factory=dict)
     clarification: Clarification | None = None
-    player_state: object = None  # Request-local copy; service commits only after successful completion.
+    player_state: object = None  # Bản sao theo request; service chỉ commit khi hoàn tất thành công.
     agent_decision: dict = field(default_factory=dict)
     max_calls: int | None = None
     gameplay_advice: bool = False
@@ -122,7 +122,7 @@ class Generated:
 
 
 class RAGValidationError(UpstreamError):
-    """Static reason used internally for bounded protocol recovery; no answer bodies."""
+    """Lý do tĩnh dùng nội bộ cho việc phục hồi giao thức có giới hạn; không chứa nội dung câu trả lời."""
 
     def __init__(self, reason: str):
         super().__init__("Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ.")
@@ -177,7 +177,8 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             if any(quote is None for quote in quotes):
                 failure = "unknown_quote_id"
                 raise ValueError("Unknown evidence unit ID")
-            # Two evidence items for one source are a layout slip, not a false claim: merge their quotes (22/11).
+            # Hai evidence cho cùng một nguồn là lỗi trình bày, không phải khẳng định sai: gộp các trích dẫn lại
+            # (22/11).
             merged = evidence.setdefault(item.index, [])
             merged.extend(q for q in quotes if q not in merged)
         if URL.search(parsed.answer):
@@ -211,15 +212,15 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             return Generated(plain_field_names(parsed.answer, lang))
         if not used or not used <= set(evidence):
             failure = "citation_evidence_indices"
-            # Only numeric protocol metadata, never answer/quote contents or private reasoning.
+            # Chỉ metadata giao thức dạng số, không bao giờ nội dung câu trả lời/trích dẫn hay suy luận riêng.
             prepared.trace["citation_indices"] = {"answer_indices": sorted(used), "evidence_indices": sorted(evidence)}
             logging.getLogger(__name__).warning(
                 "Citation index mismatch", extra={"data": prepared.trace["citation_indices"]}
             )
             raise ValueError("Every citation needs explicit evidence")
         if unused := set(evidence) - used:
-            # Extra evidence the answer never cites is not a claim: drop it rather than fail a valid answer
-            # (live 20/11: a complete quest answer was lost after streaming because of one spare evidence item).
+            # Evidence thừa mà câu trả lời không trích dẫn thì không phải khẳng định: bỏ nó đi thay vì đánh rớt một câu
+            # trả lời hợp lệ (live 20/11: một câu trả lời quest đầy đủ bị mất sau khi stream chỉ vì một evidence thừa).
             for index in unused:
                 evidence.pop(index)
             prepared.trace["dropped_unused_evidence"] = sorted(unused)
@@ -240,7 +241,7 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                 or CITATION.search(parsed.recommendation)
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
-        # Every paragraph is kept (no truncated answers); uncited ones are only counted for evaluation.
+        # Giữ mọi đoạn (không cắt câu trả lời); đoạn không trích dẫn chỉ được đếm để đánh giá.
         if dropped := cited_blocks(answer)[1]:
             prepared.trace["uncited_paragraphs"] = dropped
             logging.getLogger(__name__).info("Uncited paragraphs kept", extra={"data": {"count": dropped}})
@@ -259,8 +260,8 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             )
             for i in sorted(used)
         ]
-        # Operational grounding: model supplied evidence, exact quotes and indices checked.
-        # This is NOT a guarantee of semantic entailment of every claim.
+        # Grounding ở mức vận hành: kiểm evidence do model đưa, trích dẫn chính xác và chỉ số.
+        # Đây KHÔNG đảm bảo mọi khẳng định đều được nguồn hàm ý về mặt ngữ nghĩa.
         if parsed.recommendation is not None:
             answer += "\n\n" + parsed.recommendation.strip()
             prepared.trace["answer_basis"] = "evidence_with_recommendation"
@@ -268,9 +269,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             answer += "\n\n" + parsed.limitation.strip()
         return Generated(plain_field_names(answer, lang), sources, True)
     except (ValidationError, ValueError, KeyError, TypeError):
-        prepared.trace.pop("guard_request", None)  # A rejected answer is never sent to the Answer Guard.
+        prepared.trace.pop("guard_request", None)  # Câu trả lời bị từ chối không bao giờ được gửi tới Answer Guard.
         prepared.trace["validation_failure"] = failure
-        # Static category only: never log model output, source quotes, prompts or private reasoning.
+        # Chỉ ghi nhóm lỗi tĩnh: không bao giờ log output của model, trích dẫn nguồn, prompt hay suy luận riêng.
         logging.getLogger(__name__).warning("RAG validation failed", extra={"data": {"reason": failure}})
         raise RAGValidationError(failure) from None
 
@@ -322,17 +323,17 @@ class Generator:
 
     @staticmethod
     def _inputs(prepared: Prepared, attempt: int) -> dict:
-        # The server-selected reply language wins over stale model/template values and English retrieval.
+        # Ngôn ngữ trả lời do server chọn thắng giá trị cũ của model/template và retrieval tiếng Anh.
         values = dict(prepared.values)
         values["lang"] = prepared.lang
         target = "Vietnamese (tiếng Việt)" if prepared.lang == "vi" else "English"
-        # Policies live in prompts/*.md; str.replace keeps literal JSON braces in those files intact.
+        # Chính sách nằm trong prompts/*.md; str.replace giữ nguyên dấu ngoặc nhọn JSON trong các file đó.
         language_policy = "\n" + prompt("language").strip().replace("{target}", target) + "\n"
         if not attempt:
             values["policy"] = values.get("policy", "") + language_policy
             return values
-        # Retry with the SAME evidence/question/history and a fixed protocol reminder.
-        # Never feed malformed output or private reasoning back into the prompt.
+        # Thử lại với CÙNG evidence/câu hỏi/lịch sử và một lời nhắc giao thức cố định.
+        # Không bao giờ đưa output sai định dạng hay suy luận riêng ngược vào prompt.
         values["policy"] = values.get("policy", "") + "\n" + prompt("format_retry").strip() + " "
         if prepared.gameplay_advice:
             values["policy"] += " " + prompt("format_retry_gameplay").strip()
@@ -366,7 +367,7 @@ class Generator:
     def _usage(prepared: Prepared, usage: dict):
         attempts = prepared.trace.setdefault("generation_usage", [])
         attempts.append({key: usage.get(key) for key in ("prompt_tokens", "completion_tokens")})
-        # Preserve usage of discarded malformed completions as well as the accepted one.
+        # Giữ số liệu usage của cả các completion sai định dạng bị bỏ lẫn completion được chấp nhận.
         prepared.trace["usage"] = {
             key: sum(row[key] for row in attempts) if all(type(row[key]) is int for row in attempts) else None
             for key in ("prompt_tokens", "completion_tokens")
@@ -409,8 +410,8 @@ class Generator:
                 await _STREAM_EMITTER.get()(result.answer)
             return {"result": result, "diagnostics": None, "retry_stream": False}
         if state["streaming"]:
-            # Reuse the guarded incremental decoder. Validation happens before completion;
-            # no retry is possible after a visible token. The bridge enforces backpressure/cleanup.
+            # Dùng lại bộ giải mã tăng dần có bảo vệ. Kiểm tra diễn ra trước khi hoàn tất; không thể thử lại sau khi đã
+            # có token hiển thị. Cầu nối lo backpressure/dọn dẹp.
             async with aclosing(self._stream_attempt(p, attempt)) as tokens:
                 async for token in tokens:
                     await _STREAM_EMITTER.get()(token)
@@ -444,10 +445,10 @@ class Generator:
             return {"diagnostics": {"reason": exc.reason}, "error": exc}
 
     async def _finalize(self, prepared: Prepared, data) -> Generated:
-        """Validate, and when the answer has a presentation problem let the Answer Guard rewrite it once.
+        """Kiểm tra, và khi câu trả lời có lỗi trình bày thì cho Answer Guard viết lại một lần.
 
-        Source falsification still fails in validate_answer. A guard rewrite that breaks citations is ignored and
-        the first (already safe) answer is kept, so nothing is dropped for presentation reasons.
+        Làm giả nguồn vẫn bị validate_answer đánh rớt. Bản viết lại của guard mà làm hỏng trích dẫn thì bị bỏ qua và
+        giữ câu trả lời đầu (vốn đã an toàn), nên không có gì bị bỏ vì lý do trình bày.
         """
         result = validate_answer(prepared, data)
         request = prepared.trace.pop("guard_request", None)
@@ -466,7 +467,7 @@ class Generator:
         return guarded
 
     async def _guard(self, prepared: Prepared, request: dict) -> str | None:
-        """One LLM pass that rewrites the listed presentation problems (internal field names) and keeps the rest."""
+        """Một lượt LLM viết lại các lỗi trình bày được liệt kê (tên trường nội bộ) và giữ nguyên phần còn lại."""
         diagnostic = prepared.trace["answer_guard"] = {
             "issues": [i["kind"] for i in request["issues"]],
             "status": "error",
@@ -522,9 +523,9 @@ class Generator:
         return {}
 
     async def stream(self, prepared: Prepared) -> AsyncIterator[str]:
-        # A single owned graph task and one-delta handoff. Closing/cancelling this iterator
-        # always cancels AND awaits that task, including provider finally/aclose handlers.
-        # No callback/client is stored in graph state or a checkpoint.
+        # Một task graph duy nhất do mình sở hữu và bàn giao từng delta một. Đóng/hủy iterator này luôn hủy VÀ chờ task
+        # đó, kể cả các handler finally/aclose của provider.
+        # Không lưu callback/client nào trong graph state hay checkpoint.
         queue = asyncio.Queue(maxsize=1)
 
         async def emit(token):
@@ -571,8 +572,8 @@ class Generator:
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
-        # Every answer is held until it is complete and checked (MinhMuc, 21/11): the Answer Guard reads the whole
-        # answer, a retry is still possible, and the player never sees text that is later cut or replaced by an error.
+        # Mọi câu trả lời được giữ lại tới khi hoàn tất và đã kiểm (MinhMuc, 21/11): Answer Guard đọc toàn bộ câu trả
+        # lời, vẫn có thể thử lại, và người chơi không bao giờ thấy chữ bị cắt hay bị thay bằng lỗi về sau.
         try:
             spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(

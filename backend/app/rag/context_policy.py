@@ -1,4 +1,4 @@
-"""Conservative duplicate grouping of web excerpts; no model/score fusion or keyword ordering."""
+"""Gộp trùng đoạn web một cách thận trọng; không trộn điểm/model, không sắp xếp theo từ khóa."""
 
 import json
 from dataclasses import replace
@@ -12,10 +12,10 @@ def title_key(title):
 
 
 def dedup_web(hits):
-    # Only equal text, equal normalized title and equal semantic metadata may be collapsed.
-    # Keep all original point IDs/URLs/timestamps; do not mutate incoming payloads.
+    # Chỉ gộp khi trùng text, trùng tiêu đề đã chuẩn hóa và trùng metadata ngữ nghĩa.
+    # Giữ nguyên mọi point ID/URL/timestamp gốc; không sửa payload đầu vào.
     result, groups = [], {}
-    # Compare ALL remaining metadata, including future condition fields. Missing is not null.
+    # So sánh TẤT CẢ metadata còn lại, kể cả các trường điều kiện sau này. Thiếu khác với null.
     identity = {"text", "title", "url", "retrieved_at", "provenance"}
 
     for hit in hits:

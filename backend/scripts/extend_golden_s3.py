@@ -1,4 +1,4 @@
-"""Append-only Sprint 3 authoring; exact local slices, no models/network or index writes."""
+"""Soạn dữ liệu Sprint 3 chỉ nối thêm; lát cắt local chính xác, không model/mạng, không ghi index."""
 
 import hashlib
 import json
@@ -7,7 +7,7 @@ from core.config import REPO_ROOT
 
 ROOT = REPO_ROOT / "backend"
 
-# title, section, evidence substring; these select source records, never model-produced answers.
+# title, section, chuỗi con evidence; dùng để chọn bản ghi nguồn, không bao giờ là câu trả lời do model tạo.
 CASES = [
     (
         "vi",
@@ -536,7 +536,7 @@ def main():
     for case in BEHAVIOR:
         add(*case)
     assert len(new) == 40 and sum(r["lang"] == "vi" for r in rows + new) >= 50
-    # Append exact bytes: preserve the existing 60 records and existing review records.
+    # Nối thêm đúng từng byte: giữ nguyên 60 bản ghi hiện có và các bản ghi review hiện có.
     for path, records in ((golden, new), (sidecar, reviews)):
         with path.open("ab") as stream:
             stream.write(

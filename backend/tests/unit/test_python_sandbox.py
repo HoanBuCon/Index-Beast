@@ -1,4 +1,4 @@
-"""The Agent's calculation sandbox: plain arithmetic runs, anything reaching outside is refused."""
+"""Sandbox tính toán của Agent: số học thuần chạy được, mọi thứ vươn ra ngoài đều bị từ chối."""
 
 import pytest
 
@@ -52,7 +52,7 @@ def test_runtime_errors_timeouts_and_floods_are_reported_not_raised():
 
 
 def test_unsafe_builtins_are_absent_even_if_named_indirectly():
-    # Names are checked statically; the child process also exposes only the safe builtins.
+    # Tên được kiểm tĩnh; tiến trình con cũng chỉ mở các builtins an toàn.
     with pytest.raises(ValueError):
         check_code("vars()")
     assert "NameError" in run_python("print(hash(1))")["error"]

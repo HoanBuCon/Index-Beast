@@ -54,8 +54,8 @@ def web_search_calls(rag_trace: dict[str, Any] | None) -> int:
     agent = rag_trace.get("agent")
     steps = agent.get("steps") if isinstance(agent, dict) else None
     if isinstance(steps, list):
-        # Each call reaches Tavily, even one that failed there; a step refused before running ("error" with no
-        # call) cannot be told apart in the trace, so every search_web step counts (upper bound).
+        # Mỗi lời gọi đều tới Tavily, kể cả khi lỗi ở đó; bước bị từ chối trước khi chạy ("error" mà không có lời gọi)
+        # không phân biệt được trong trace, nên mọi bước search_web đều được đếm (cận trên).
         from_loop = sum(1 for s in steps if isinstance(s, dict) and s.get("tool") == "search_web")
         if from_loop:
             return from_loop

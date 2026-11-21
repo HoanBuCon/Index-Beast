@@ -98,7 +98,6 @@ class Settings(BaseSettings):
     chat_memory_timeout_seconds: float = Field(default=5, gt=0, le=15)
     chat_history_messages: int = Field(default=8, ge=0, le=32)
     chat_history_chars: int = Field(default=8000, ge=0, le=32000)
-    gameplay_knowledge_enabled: bool = True
     rag_collection: str = "lore_chunks"
     rag_corpus_policy: Literal["reviewed", "pilot"] = "pilot"
     rag_languages: Annotated[list[str], NoDecode] = ["en"]
@@ -131,7 +130,6 @@ class Settings(BaseSettings):
     web_search_enabled: bool = True
     web_search_mode: Literal["off", "auto", "always"] = "auto"
     web_search_timeout_seconds: float = Field(default=8, gt=0, le=20)
-    web_search_assessment_seconds: float = Field(default=3, gt=0, le=8)
     web_search_max_results: int = Field(default=3, ge=1, le=5)
     web_search_domains_mode: Literal["prefer", "restrict"] = "prefer"
     web_search_domains: Annotated[list[str], NoDecode] = [

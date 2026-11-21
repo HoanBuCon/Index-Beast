@@ -32,7 +32,7 @@ async def test_auto_can_give_general_advice_when_web_is_unavailable():
     pipe = ChatPipeline(settings(tavily_api_key="test-key"), llm, FakeRetriever([]))
     pipe.web_search = FakeSearch(error=WebSearchError("network"))
     p = await pipe.prepare(req("Tập né hay đỡ đòn thế nào?", options={"web_search": "auto"}), [])
-    # The failed web search is an observation for the Agent, which still chose general advice.
+    # Tìm web lỗi là một quan sát cho Agent, và Agent vẫn chọn lời khuyên chung.
     assert llm.tool_result(2)["status"] == "error" and p.trace["web_search"]["status"] == "error"
     answer = await pipe.generator.generate(p)
     assert p.trace["answer_basis"] == "gameplay_advice"

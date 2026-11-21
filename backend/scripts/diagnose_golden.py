@@ -1,4 +1,4 @@
-"""Golden diagnostic: plan-only by default; checkpoint each explicit live request, never index."""
+"""Chẩn đoán golden: mặc định chỉ lập kế hoạch; checkpoint từng request live được bật rõ, không bao giờ index."""
 
 import argparse
 import asyncio
@@ -74,7 +74,7 @@ def summary(rows):
 
 
 class CapturedLLM:
-    """Only final response text/counters; never serialize private reasoning or model/client objects."""
+    """Chỉ text phản hồi cuối/bộ đếm; không bao giờ serialize suy luận riêng hay object model/client."""
 
     def __init__(self, delegate, max_calls=100):
         self.delegate, self.outputs, self.max_calls = delegate, [], max_calls
@@ -84,7 +84,7 @@ class CapturedLLM:
 
     @property
     def model(self):
-        # The Agent loop binds tools on the chat model directly; its calls are counted in the turn trace.
+        # Vòng lặp Agent gắn tool trực tiếp lên chat model; các lời gọi của nó được đếm trong trace của lượt.
         return self.delegate.model
 
     async def invoke_chain(self, chain, inputs):
@@ -121,7 +121,7 @@ class CapturedLLM:
 
 
 async def diagnose(cases, pipeline, llm, *, checkpoint=None):
-    """Never pass expected answers, author quotes or URLs into model/retriever inputs."""
+    """Không bao giờ đưa đáp án mong đợi, trích dẫn của tác giả hay URL vào input của model/retriever."""
     from app.api.schemas.chat import ChatRequest
 
     rows = []
@@ -236,7 +236,7 @@ def write_review(directory, report):
 
 
 async def live(args, cases, validation, selection):
-    # Explicit execution gate reached before all model/network imports and construction.
+    # Cổng chạy thật được kiểm trước mọi import và khởi tạo liên quan tới model/mạng.
     import os
 
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -289,7 +289,6 @@ async def live(args, cases, validation, selection):
                     "web_search_timeout_seconds",
                     "web_search_domains",
                     "web_search_max_results",
-                    "web_search_assessment_seconds",
                 },
             ),
             "input_hashes": {

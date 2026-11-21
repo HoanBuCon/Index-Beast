@@ -16,7 +16,7 @@ Thay pipeline nhiều vai (Agent decision → Tool planner → Assessor, mỗi v
 | `prompts/true_agent.md` (viết lại) | Prompt duy nhất của Agent |
 | `pipeline.py` | Node `agent` thay `agent_decision` + `tool_agent`; bỏ import và phần payload `task_plan` |
 | `budget.py` (mới) | `spend()` (ngân sách lượt gọi) tách khỏi `agent.py` |
-| `web_search.py` | Chỉ còn `merge_evidence` (bỏ `assess`, `Assessment`) |
+| `web_search.py` | Bỏ `assess`, `Assessment`; sau đó xóa cả file (22/11, dọn dead code: `merge_evidence` chỉ còn test dùng) |
 | `entity_spelling.py` | Bỏ `correct_name` (server không tự sửa tên) |
 | **Xóa** | `agent.py`, `tool_agent.py`, `task_plan.py`, prompt `agent.md`, `tools.md`, `assess.md` (prompt chết) |
 

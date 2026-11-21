@@ -1,4 +1,4 @@
-"""Regression from the user's Classes snippet; synthetic gameplay values are not quality labels."""
+"""Hồi quy từ đoạn Classes người dùng gửi; giá trị gameplay tổng hợp không phải nhãn chất lượng."""
 
 import json
 
@@ -47,15 +47,16 @@ def test_cleaning_preserves_table_headers_numbers_negation_and_step_order():
 
 
 def test_blocks_keep_page_order_and_headings_without_keyword_ranking():
-    # 22/11: no server-side relevance ranking; the Agent sees every block (within the budget) and chooses.
+    # 22/11: không xếp hạng độ liên quan phía server; Agent thấy mọi khối (trong ngân sách) và tự chọn.
     history = "Unrelated history. " * 95
     raw = "# Example\n\n" + history + "\n\n" + history + "\n\n## Starting classes\n\nClass list and character creation."
     chunks, _ = select_excerpts(raw)
     assert len(chunks) == 2 and chunks[0].startswith("# Example") and "## Starting classes" in chunks[1]
-    # The second chunk starts with its section heading again, but no heading is repeated inside a chunk.
+    # Chunk thứ hai lại mở đầu bằng tiêu đề mục, nhưng không có tiêu đề nào lặp bên trong một chunk.
     assert chunks[1].startswith("# Example") and all(c.count("# Example") == 1 for c in chunks)
     assert chunks[1].count("## Starting classes") == 1
-    assert select_excerpts(raw, limit=1)[0] == chunks[:1]  # The budget keeps the page start, not a "best" block.
+    # Ngân sách giữ phần đầu trang, không phải một khối "tốt nhất".
+    assert select_excerpts(raw, limit=1)[0] == chunks[:1]
     oversized = "| Stat | Value |\n" + "| INT | 23 |\n" * 400
     chunks, count = select_excerpts(oversized)
     assert chunks == [] and count == 1

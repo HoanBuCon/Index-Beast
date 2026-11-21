@@ -1,4 +1,4 @@
-"""Fake model/download tests: ID selection and association are not visual accuracy measurements."""
+"""Test với model/tải xuống giả: chọn ID và gắn kết không phải là đo độ chính xác hình ảnh."""
 
 import hashlib
 import io
@@ -148,7 +148,7 @@ def test_public_pinned_fetch_cache_and_serving(media, tmp_path, monkeypatch, fau
         module.ssl, "create_default_context", lambda: SimpleNamespace(wrap_socket=lambda sock, server_hostname: sock)
     )
 
-    # HTTPSConnection.__init__ expects SSL context properties; use a tiny compatible fake base.
+    # HTTPSConnection.__init__ cần các thuộc tính SSL context; dùng một lớp cơ sở giả nhỏ tương thích.
     class Connection:
         def __init__(self, host, timeout, context):
             self.host = host
@@ -174,7 +174,7 @@ def test_public_pinned_fetch_cache_and_serving(media, tmp_path, monkeypatch, fau
         assert connected == [("8.8.8.8", 443)]
         assert digest == hashlib.sha256(raw).hexdigest()
         monkeypatch.setattr(module, "CACHE", tmp_path)
-        # Different catalog ID exercises the web cache path rather than original local blob.
+        # Catalog ID khác để chạy đường cache web thay vì blob local gốc.
         buffer = io.BytesIO()
         Image.new("RGB", (5, 6), "blue").save(buffer, "PNG")
         webraw = buffer.getvalue()

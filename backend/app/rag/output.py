@@ -1,4 +1,4 @@
-"""Bounded, whole-response JSON decoding; never repair facts or extract a partial object."""
+"""Giải mã JSON nguyên câu trả lời, có giới hạn; không bao giờ sửa dữ kiện hay lấy một object dở dang."""
 
 import json
 import re
@@ -17,7 +17,7 @@ def _unique_object(pairs):
     result = {}
     for key, value in pairs:
         if key in result:
-            # Never include a provider-controlled key in logs/errors.
+            # Không bao giờ đưa khóa do provider kiểm soát vào log/lỗi.
             raise OutputFormatError({"json_error": "duplicate_key"})
         result[key] = value
     return result
@@ -28,7 +28,7 @@ def _reject_constant(_value):
 
 
 def char_class(text: str, position: int) -> str:
-    """Category of the character at a decode failure. Never the character or surrounding text."""
+    """Nhóm của ký tự tại chỗ giải mã lỗi. Không bao giờ là chính ký tự hay text xung quanh."""
     if position >= len(text):
         return "end_of_text"
     char = text[position]
@@ -44,7 +44,7 @@ def char_class(text: str, position: int) -> str:
 
 
 def decode_output(raw: str) -> tuple[object, str]:
-    """Accept JSON or ONE complete BOM/fenced envelope; reject everything outside it."""
+    """Nhận JSON hoặc MỘT lớp bọc hoàn chỉnh (BOM/code fence); từ chối mọi thứ nằm ngoài nó."""
     shape = {"output_chars": len(raw)}
     if len(raw) > MAX_OUTPUT_CHARS:
         raise OutputFormatError({**shape, "json_error": "output_too_large"})
@@ -58,13 +58,13 @@ def decode_output(raw: str) -> tuple[object, str]:
     wrapper = "bom_fence" if bom and match else "bom" if bom else "fence" if match else "none"
     shape["output_wrapper"] = wrapper
     try:
-        # strict=False accepts raw line breaks/tabs inside strings, a benign model formatting slip.
-        # Schema, citation and quote validation are unchanged.
+        # strict=False chấp nhận xuống dòng/tab thô trong chuỗi, một lỗi định dạng vô hại của model.
+        # Kiểm tra schema, trích dẫn và trích dẫn nguyên văn không đổi.
         return json.loads(
             body, object_pairs_hook=_unique_object, parse_constant=_reject_constant, strict=False
         ), wrapper
     except json.JSONDecodeError as exc:
-        # Coordinates and fixed labels only. str(exc) or exc.doc could leak the answer.
+        # Chỉ tọa độ và nhãn cố định. str(exc) hay exc.doc có thể làm lộ câu trả lời.
         raise OutputFormatError(
             {
                 **shape,

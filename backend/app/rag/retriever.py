@@ -33,7 +33,7 @@ async def rank_with_deadline(reranker, query: str, hits: list[Hit], deadline: fl
 
 
 def hit_to_document(hit: Hit) -> Document:
-    # Namespaced metadata is lossless even if source payload already has id/score fields.
+    # Metadata có namespace nên không mất dữ liệu kể cả khi payload nguồn đã có trường id/score.
     return Document(
         id=hit.id,
         page_content=hit.payload["text"],
@@ -73,7 +73,7 @@ class HybridRetriever(BaseRetriever):
         return [hit_to_document(h) for h in await self._search(query)]
 
     async def retrieve(self, query: str) -> list[Hit]:
-        # Backward-compatible domain API; delegates to the same LangChain retriever.
+        # API miền tương thích ngược; ủy quyền cho cùng retriever LangChain.
         from langsmith import tracing_context
 
         with tracing_context(enabled=False):
@@ -82,13 +82,13 @@ class HybridRetriever(BaseRetriever):
 
     async def _search(self, query: str) -> list[Hit]:
         try:
-            # Retrieval cannot consume the provider's separate fallback budget.
+            # Retrieval không được dùng ngân sách dự phòng riêng của provider.
             async with asyncio.timeout(self.search_timeout_seconds):
-                await self.store.ready()  # Check before any model load/download.
+                await self.store.ready()  # Kiểm trước mọi lần nạp/tải model.
                 vectors = await self.encoder.encode([query], query=True)
                 hits = await self.store.search(vectors[0], limit=self.limit)
-            # Shared boundary for both the legacy graph and Tool Agent's direct ainvoke calls.
-            # Keep the full candidate pool: the Agent still chooses the final evidence.
+            # Ranh giới dùng chung cho cả graph cũ và các lời gọi ainvoke trực tiếp của Tool Agent.
+            # Giữ đủ tập ứng viên: Agent vẫn là bên chọn evidence cuối cùng.
             return await rank_with_deadline(self.reranker, query, hits, self.rerank_deadline)
         except UnavailableError:
             raise

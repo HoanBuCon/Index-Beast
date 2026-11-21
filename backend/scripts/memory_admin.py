@@ -1,4 +1,4 @@
-"""Operator-only memory setup/reindex. Plan-only unless --apply; no corpus writes."""
+"""Thiết lập/reindex bộ nhớ chỉ dành cho người vận hành. Chỉ lập kế hoạch trừ khi có --apply; không ghi corpus."""
 
 import argparse
 import asyncio

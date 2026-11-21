@@ -1,4 +1,4 @@
-"""Bounded real HTTP JSON/SSE diagnostic. Plan-only unless explicitly --execute --allow-llm --allow-web."""
+"""Chẩn đoán HTTP JSON/SSE thật có giới hạn. Chỉ lập kế hoạch trừ khi bật rõ --execute --allow-llm --allow-web."""
 
 import argparse
 import asyncio
@@ -145,7 +145,6 @@ async def execute(args, manifest, cases):
             "llm_max_retries": 0,
             "chat_mode": "rag",
             "rate_limit_per_minute": 1000,
-            "gameplay_knowledge_enabled": True,
         }
     )
     if not (ROOT / settings.rag_models_dir).is_dir() or not settings.web_search_available:
@@ -193,7 +192,6 @@ async def execute(args, manifest, cases):
                 "rag_context_chars",
                 "chat_timeout_seconds",
                 "rag_format_retries",
-                "gameplay_knowledge_enabled",
             },
         ),
         "hashes": {

@@ -94,7 +94,7 @@ async def test_rag_json_retry_wire_contract_with_real_langchain_and_fake_http(th
         if len(requests) == 2:
             assert body["temperature"] == 0
         assert body["stream"] is False and "tools" not in body
-        # Past answers are ordinary display text; the current instruction still requires JSON.
+        # Câu trả lời cũ là text hiển thị bình thường; chỉ dẫn hiện tại vẫn yêu cầu JSON.
         assert body["messages"][-2] == {"role": "assistant", "content": "Câu trả lời cũ dạng text."}
         assert "MUST be JSON" in body["messages"][0]["content"]
         if len(requests) == 1:

@@ -1,6 +1,6 @@
-"""Agent/semantic/durability behavior with scripted decisions, temporary SQL and synthetic vectors.
+"""Hành vi Agent/ngữ nghĩa/lưu bền với quyết định soạn sẵn, SQL tạm và vector tổng hợp.
 
-SQLite compiles the production repository SQL for tests, NOT an asyncpg/Postgres integration test.
+SQLite biên dịch SQL repository production cho test, KHÔNG phải test tích hợp asyncpg/Postgres.
 """
 
 import json
@@ -98,7 +98,6 @@ def settings(**kwargs):
         **{
             "chat_mode": "rag",
             "chat_persistence": "postgres",
-            "gameplay_knowledge_enabled": False,
             **kwargs,
         },
     )
@@ -130,7 +129,7 @@ TRUE_AGENT_INTENTS = {"lore", "acquisition", "mechanics", "build", "route", "que
 
 
 def decision_script(decision, payload, *, web, insufficient):
-    """Turn a decision dict (the former Agent decision shape) into the tool calls the Agent loop makes."""
+    """Đổi một dict quyết định (dạng quyết định Agent cũ) thành các lời gọi tool mà vòng lặp Agent thực hiện."""
     from tests.unit.test_live_chat import fake_agent_language
 
     lang = decision.get("answer_language") or fake_agent_language(payload["question"])
@@ -170,7 +169,7 @@ def decision_script(decision, payload, *, web, insufficient):
                 "request": decision.get("resolved_question") or payload["question"],
                 "intent": intent,
                 "answer_language": lang,
-                "evidence_ids": "seen",  # The evidence the scripted Agent saw (offline_agent_turn fills it in).
+                "evidence_ids": "seen",  # Evidence mà Agent soạn sẵn đã thấy (offline_agent_turn điền vào).
                 "gameplay_advice": bool(decision.get("gameplay_advice")),
             },
         )
@@ -179,7 +178,7 @@ def decision_script(decision, payload, *, web, insufficient):
 
 
 class AgentLLM(FakeLLM):
-    """Scripted Agent: each user turn consumes the next decision dict and plays it as Agent tool calls."""
+    """Agent soạn sẵn: mỗi lượt người dùng lấy dict quyết định kế tiếp và chạy nó thành các lời gọi tool của Agent."""
 
     def __init__(self, decisions=None):
         super().__init__()
@@ -209,7 +208,7 @@ class AgentLLM(FakeLLM):
             if callable(output):
                 output = output(payload)
             if not isinstance(output, dict) or "action" not in output:
-                self.agent_script = [("__text__", None)] * 12  # Never a usable tool call.
+                self.agent_script = [("__text__", None)] * 12  # Không bao giờ là lời gọi tool dùng được.
             else:
                 web = "search_web" in {t["function"]["name"] for t in tools}
                 self.agent_script = decision_script(
@@ -224,7 +223,7 @@ class AgentLLM(FakeLLM):
 
 
 class Encoder:
-    """Synthetic ranking fixture only; no claim about real multilingual semantic recall."""
+    """Chỉ là fixture thứ hạng tổng hợp; không khẳng định gì về recall ngữ nghĩa đa ngôn ngữ thật."""
 
     def __init__(self):
         self.calls = []
@@ -312,7 +311,7 @@ async def test_invalid_model_output_is_provider_failure_not_fake_clarification()
 async def test_budget_is_enforced_before_generation():
     llm = AgentLLM().insufficient()
     live = service(llm=llm, chat_agent_max_calls=1)
-    # The one call is reserved for writing: no Agent step, nothing searched or invented; the writer says so.
+    # Lượt gọi duy nhất dành cho bước viết: không có bước Agent, không tìm hay bịa gì; bước viết nói rõ điều đó.
     result = await live.answer(req())
     assert not result.grounded and result.sources == [] and llm.calls == 1 and len(llm.plans) == 0
     assert live.traces[result.message_id]["tool_stop"] == "model_budget"
@@ -438,7 +437,7 @@ async def test_semantic_revalidates_stale_points_and_rebuild_recovers(repo, memo
     assert counts["indexed"] == 1 and not counts["failed"]
     rows, _ = await memory.recall(scope, "Ranni")
     assert len(rows) == 1
-    # Tombstone the canonical row without touching Qdrant; stale vectors must not authorize recall.
+    # Đánh dấu xóa dòng chuẩn mà không đụng Qdrant; vector cũ không được cho phép recall.
     from sqlalchemy import update
 
     async with repo.sessions() as session, session.begin():
@@ -757,7 +756,7 @@ async def test_clarification_round_budget_prevents_infinite_questions():
         result = await live.answer(
             req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
         )
-    # Past the round limit ask_user is no longer offered: the Agent has to answer instead of asking again.
+    # Quá giới hạn số vòng thì không còn đưa ask_user: Agent phải trả lời thay vì hỏi lại.
     result = await live.answer(
         req("Chưa rõ", conversation_id=result.conversation_id, clarification_id=result.clarification.id)
     )

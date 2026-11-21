@@ -1,4 +1,4 @@
-"""Start API, await health, then start web. Standard library only; no model or application imports."""
+"""Khởi động API, chờ health, rồi khởi động web. Chỉ dùng thư viện chuẩn; không import model hay ứng dụng."""
 
 import argparse
 import json
@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def wait_ready(url, api, timeout):
     deadline = time.monotonic() + timeout
-    # A local readiness probe must not use HTTP_PROXY/HTTPS_PROXY from the developer's shell.
+    # Probe kiểm sẵn sàng ở local không được dùng HTTP_PROXY/HTTPS_PROXY từ shell của lập trình viên.
     opener = build_opener(ProxyHandler({}))
     last_error = "API chưa nhận kết nối"
     print(f"[dev] Đang chờ backend sẵn sàng ({timeout:g}s): {url}", flush=True)
@@ -51,7 +51,7 @@ def start(command, env):
 
 def stop(process):
     if os.name == "nt":
-        # Kill only the make process tree this launcher created, including uvicorn --reload / Vite.
+        # Chỉ kill cây tiến trình make do launcher này tạo, gồm cả uvicorn --reload / Vite.
         if process.poll() is None:
             subprocess.run(
                 ["taskkill", "/PID", str(process.pid), "/T", "/F"],
@@ -76,7 +76,7 @@ def stop(process):
 def run(make, api_port, web_host, timeout):
     processes = []
     env = {**os.environ, "API_PORT": str(api_port), "WEB_HOST": web_host}
-    # Reuse make api/web recipes; retain environment configuration without rewriting .env.
+    # Dùng lại recipe make api/web; giữ cấu hình môi trường mà không ghi lại .env.
     command = [make, "--no-print-directory"]
     try:
         api = start([*command, "api", f"API_PORT={api_port}"], env)

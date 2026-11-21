@@ -1,4 +1,4 @@
-"""Offline replays of observed failures. Parser/selection improvements are not a live quality score."""
+"""Chạy lại offline các lỗi đã gặp. Cải tiến parser/chọn lọc không phải điểm chất lượng live."""
 
 import json
 from contextlib import aclosing

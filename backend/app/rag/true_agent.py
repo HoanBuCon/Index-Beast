@@ -162,7 +162,7 @@ def _preview(hit) -> dict:
 
 
 def _web_results(found) -> list[dict]:
-    """Web blocks grouped by page in page order, with short previews; the Agent opens what it needs."""
+    """Các khối web nhóm theo trang, theo thứ tự trên trang, kèm bản xem trước ngắn; Agent tự mở khối cần."""
     pages: dict[str, dict] = {}
     for h in found:
         page = pages.setdefault(
@@ -173,11 +173,11 @@ def _web_results(found) -> list[dict]:
 
 
 def working_state(state: dict) -> tuple[dict, dict | None]:
-    """The conversation's working state if still valid, and the pending clarification (if any)."""
+    """Working state của hội thoại nếu còn hiệu lực, và câu hỏi lại đang chờ (nếu có)."""
     req = state["req"]
     working = state.get("player") if isinstance(state.get("player"), dict) else {}
     if req.channel == "discord" and (req.external_ref or "").startswith("discord:thread:"):
-        working = {}  # No verified actor identity in the shared-thread transport.
+        working = {}  # Transport dùng chung thread không có danh tính người gửi đã xác minh.
     if time.time() - working.get("updated", 0) > STATE_TTL_SECONDS:
         working = {}
     pending = working.get("pending")
@@ -191,7 +191,7 @@ def working_state(state: dict) -> tuple[dict, dict | None]:
 
 
 async def run_agent(pipe, state: dict) -> dict:
-    """Fill the preparation state: evidence, conditions, clarification or a static reply."""
+    """Điền state chuẩn bị: evidence, điều kiện, câu hỏi lại hoặc một reply tĩnh."""
     from app.rag.pipeline import context_item
 
     p, req = state["prepared"], state["req"]
@@ -201,7 +201,7 @@ async def run_agent(pipe, state: dict) -> dict:
     conditions = {c["key"]: dict(c) for c in working.get("constraints", [])}
     memories = state.get("memory_candidates", [])
     sources = {"current": req.message, **{m["source_id"]: m["text"] for m in memories}}
-    # A memory may be named by its row ID; conditions are stored with the user message it came from.
+    # Một ký ức có thể được gọi bằng row ID; điều kiện được lưu cùng tin nhắn người dùng sinh ra nó.
     aliases = {m["id"]: m["source_id"] for m in memories if m.get("id") and m["id"] != m["source_id"]}
     for row_id, source_id in aliases.items():
         sources.setdefault(row_id, sources[source_id])
@@ -215,13 +215,13 @@ async def run_agent(pipe, state: dict) -> dict:
     can_ask = limit is None or rounds < limit
     web = state["search_mode"] != "off" and pipe.web_search is not None
     hits: dict = {}
-    # The sourced level rule (attributes total = level + 79) is always available to cite; it is never added to
-    # an answer unless the Agent chooses it.
-    rule_hit, _ = level_rule()
+    # Quy tắc level có nguồn (tổng chỉ số = level + 79) luôn sẵn để trích dẫn; nó không bao giờ được thêm vào câu trả
+    # lời trừ khi Agent chọn.
+    rule_hit = level_rule()
     hits[rule_hit.id] = rule_hit
 
     def gathered() -> list[str]:
-        """Evidence the Agent actually found (the built-in rule does not count)."""
+        """Evidence Agent thực sự tìm được (quy tắc dựng sẵn không tính)."""
         return [i for i in hits if i != rule_hit.id]
 
     web_calls = local_ok = local_failed = 0
@@ -229,7 +229,8 @@ async def run_agent(pipe, state: dict) -> dict:
     retired: set[str] = set()
     started = time.perf_counter()
     deadline = state.get("started", started) + pipe.settings.prepare_budget_seconds
-    # Web auto keeps the larger coverage budget; other modes the per-turn Agent budget (one call is for writing).
+    # Web auto giữ ngân sách bao phủ lớn hơn; các chế độ khác dùng ngân sách Agent mỗi lượt (một lượt gọi dành cho bước
+    # viết).
     max_calls = (
         pipe.settings.chat_coverage_max_calls
         if state.get("verify_coverage") or pipe.settings.chat_agent_max_calls is None
@@ -239,7 +240,7 @@ async def run_agent(pipe, state: dict) -> dict:
     trace["web_search"]["status"] = "not_run"
 
     def active_profile() -> dict:
-        """Conditions for this turn, with the keys the Agent only assumed (stated to the player, never stored)."""
+        """Điều kiện của lượt này, kèm các khóa Agent chỉ giả định (đã nói với người chơi, không bao giờ lưu)."""
         profile = {k: c["value"] for k, c in conditions.items()}
         assumed = sorted(k for k, c in conditions.items() if c["source_id"] == ASSUMPTION)
         return {**profile, "assumed": ",".join(assumed)} if assumed else profile
@@ -291,7 +292,7 @@ async def run_agent(pipe, state: dict) -> dict:
 
     async def local(query: str) -> list:
         nonlocal local_ok, local_failed
-        local_failed += 1  # Counted as a success below once the retriever answered.
+        local_failed += 1  # Được tính là thành công ở dưới khi retriever đã trả lời.
         retriever = pipe.retriever.model_copy(
             update={"limit": pipe.settings.rag_prefetch, "search_timeout_seconds": 5, "rerank_deadline": deadline}
         )
@@ -299,7 +300,7 @@ async def run_agent(pipe, state: dict) -> dict:
             docs = await retriever.ainvoke(query)
         local_failed, local_ok = local_failed - 1, local_ok + 1
         found = [document_to_hit(d) for d in docs[: pipe.settings.rag_prefetch]]
-        # Retrieval IDs/scores per local search, for the debugging trace (not a relevance claim).
+        # ID/điểm retrieval cho mỗi lần tìm local, phục vụ trace gỡ lỗi (không phải khẳng định về độ liên quan).
         trace.setdefault("retrieved", []).extend(
             {"id": h.id, "score": h.score, "title": h.payload.get("title"), "url": h.payload.get("url")} for h in found
         )
@@ -307,14 +308,14 @@ async def run_agent(pipe, state: dict) -> dict:
 
     def stated(c: Condition) -> bool:
         if c.source_id == ASSUMPTION:
-            # An assumption fills a gap; it may never replace what the player said.
+            # Giả định lấp chỗ trống; nó không bao giờ được thay lời người chơi đã nói.
             current = conditions.get(c.key)
             return current is None or current["source_id"] == ASSUMPTION
         text = sources.get(c.source_id)
         return text is not None and (contains_text(text, c.value) or contains_name(text, c.value))
 
     async def execute(name: str, raw: dict):
-        """(result for the model, terminal outcome or None)."""
+        """(kết quả cho model, kết cục cuối hoặc None)."""
         nonlocal web_calls
         if name not in TOOLS or (name == "search_web" and not web) or (name == "ask_user" and not can_ask):
             return {"status": "error", "error": f"Tool {name} is not available"}, None
@@ -353,7 +354,7 @@ async def run_agent(pipe, state: dict) -> dict:
                 "evidence": [{**context_item(hits[i], n), "id": i} for n, i in enumerate(args.ids, 1)],
             }, None
         if name == "set_conditions":
-            # Provenance only: each value must appear in the source it names (the player's words or memory).
+            # Chỉ kiểm nguồn gốc: mỗi giá trị phải xuất hiện trong nguồn nó ghi (lời người chơi hoặc ký ức).
             unstated = [c.key for c in args.set if not stated(c)]
             if unstated:
                 return {
@@ -373,12 +374,12 @@ async def run_agent(pipe, state: dict) -> dict:
                 conditions[c.key] = row
             return {"status": "ok", "conditions": list(conditions.values())}, None
         if name == "run_python":
-            # The Agent's own calculation (22/11: replaces the hard-coded build calculator); a separate process.
+            # Phép tính riêng của Agent (22/11: thay calculator build viết cứng); chạy trong tiến trình riêng.
             return await asyncio.to_thread(run_python, args.code), None
         if name == "finish" and state["search_mode"] == "always" and not web_calls and web:
             return {"status": "error", "error": "Web policy is always: call search_web before finish"}, None
         if name == "finish" and not args.evidence_ids and gathered() and not reminded["evidence"]:
-            # 22/11: the server no longer falls back to everything found; the Agent is reminded once to choose.
+            # 22/11: server không còn dự phòng bằng mọi thứ tìm được; Agent được nhắc chọn một lần.
             reminded["evidence"] = True
             return {
                 "status": "error",
@@ -409,12 +410,12 @@ async def run_agent(pipe, state: dict) -> dict:
                 break
             raise UpstreamError("Dịch vụ mô hình đang gặp sự cố. Vui lòng thử lại.") from None
         usage = ai.usage_metadata or {}
-        # Same keys as the generation usage, so token_usage() and the stored trace count the Agent too.
+        # Cùng khóa với usage của bước sinh, để token_usage() và trace đã lưu cũng đếm cả Agent.
         agent_usage = trace["agent"].setdefault("usage", {"prompt_tokens": 0, "completion_tokens": 0})
         agent_usage["prompt_tokens"] += usage.get("input_tokens") or 0
         agent_usage["completion_tokens"] += usage.get("output_tokens") or 0
         messages.append(ai)
-        # A call whose arguments are not valid JSON lands in invalid_tool_calls; every call ID needs a reply.
+        # Lời gọi có tham số không phải JSON hợp lệ rơi vào invalid_tool_calls; mọi call ID đều cần một phản hồi.
         for bad in ai.invalid_tool_calls:
             trace["agent"]["steps"].append({"tool": bad.get("name") or "?", "status": "invalid_arguments"})
             messages.append(
@@ -439,7 +440,7 @@ async def run_agent(pipe, state: dict) -> dict:
                 "ms": round((time.perf_counter() - t0) * 1000),
             }
             if result.get("status") == "error":
-                # The server's own rejection message (no model output), so a failed step can be diagnosed.
+                # Thông báo từ chối của chính server (không có output của model), để chẩn đoán được bước lỗi.
                 step["error"] = str(result.get("error", ""))[:160]
                 if result.get("keys") or result.get("fields"):
                     step["fields"] = result.get("keys") or result.get("fields")
@@ -447,20 +448,21 @@ async def run_agent(pipe, state: dict) -> dict:
             messages.append(ToolMessage(json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
             if terminal is not None:
                 outcome = terminal
-                # Remaining calls of this message get no reply: the loop ends here, nothing is sent after them.
+                # Các lời gọi còn lại của tin nhắn này không có phản hồi: vòng lặp kết thúc ở đây, sau chúng không gửi
+                # gì nữa.
                 break
 
     if outcome is None and calls and not any(s["status"] == "ok" for s in trace["agent"]["steps"]):
-        # The model never made a usable tool call: a provider failure, not an empty "no information" answer.
+        # Model không tạo được lời gọi tool dùng được: lỗi provider, không phải câu trả lời rỗng "không có thông tin".
         trace["agent"]["status"] = "invalid_decision"
         raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
     trace["agent"].update(status="ok" if outcome else "budget", model_calls=calls)
     trace["tool_stop"] = outcome[0] if outcome else "model_budget"
-    # Room for writing the answer: generation, one format repair, the Answer Guard and image selection.
+    # Phần dành cho bước viết câu trả lời: sinh, một lần sửa định dạng, Answer Guard và chọn ảnh.
     p.max_calls = len(trace.get("model_calls", [])) + 4
     name, args = outcome if outcome else ("finish", None)
     if req.options.lang == "auto":
-        # The Agent's declared language; if it never declared one, the conversation's language, else Vietnamese.
+        # Ngôn ngữ Agent khai báo; nếu chưa khai báo thì ngôn ngữ của hội thoại, không thì tiếng Việt.
         lang = getattr(args, "answer_language", None) or working.get("lang") or "vi"
         p.lang = state["answer_language"] = lang
     action = {"ask_user": "clarify", "reply": "respond"}.get(name, "retrieve")
@@ -482,7 +484,7 @@ async def run_agent(pipe, state: dict) -> dict:
     trace["memory"]["selected_ids"] = sorted(
         {c["source_id"] for c in conditions.values() if c["source_id"] not in {"current", "request", ASSUMPTION}}
     )
-    # Assumptions shape this turn's answer only; the stored state (and its fact memories) keeps player facts.
+    # Giả định chỉ ảnh hưởng câu trả lời lượt này; state đã lưu (và ký ức dữ kiện của nó) giữ dữ kiện của người chơi.
     state["turn_profile"] = active_profile()
     p.player_state = {
         "constraints": [c for c in conditions.values() if c["source_id"] != ASSUMPTION],
@@ -517,18 +519,19 @@ async def run_agent(pipe, state: dict) -> dict:
         p.static_answer = args.text
     else:
         p.gameplay_advice = bool(args and args.gameplay_advice)
-        trace["agent"]["gameplay_advice"] = p.gameplay_advice  # Diagnostic only: whether the writer got the policy.
+        # Chỉ để chẩn đoán: bước viết có nhận được chính sách hay không.
+        trace["agent"]["gameplay_advice"] = p.gameplay_advice
         chosen = [i for i in (args.evidence_ids if args else []) if i in hits]
         found = gathered()
         trace["evidence_selection"] = {"method": "model", "ids": chosen}
         state["agent_results"] = args.results if args else ""
         if not found and local_failed and not local_ok and not p.gameplay_advice:
-            # The corpus itself was unavailable: a service error, not an empty "no information" answer.
+            # Chính corpus không dùng được: lỗi dịch vụ, không phải câu trả lời rỗng "không có thông tin".
             raise UnavailableError("Kho tri thức chưa sẵn sàng.")
         if web and state["search_mode"] == "always" and not web_calls and not found:
             raise UnavailableError("Agent chưa hoàn tất tìm web bắt buộc trong ngân sách.")
     if rule_hit.id not in trace.get("evidence_selection", {}).get("ids", []):
-        hits.pop(rule_hit.id, None)  # Not chosen: not part of this turn's evidence.
+        hits.pop(rule_hit.id, None)  # Không được chọn: không thuộc evidence của lượt này.
     state["documents"] = [hit_to_document(h) for h in hits.values() if not isinstance(h, WebHit)]
     state["web_hits"] = [h for h in hits.values() if isinstance(h, WebHit)]
     return state
