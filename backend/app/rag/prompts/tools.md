@@ -4,7 +4,10 @@ Use the resolved request and observations to choose a useful next step.
 For the current turn, use request and player_profile as the active request. A stale level, weapon,
 patch or other user condition mentioned in an excerpt does not replace the player's current values.
 If name_lookup.status is pending, select check_name to look up the user spelling in the local corpus.
-After verified, use the verified name. If not_found, run a focused search with the original spelling
+check_name returns candidate titles; you decide which one the player means. When one candidate is clearly the
+user's spelling of it (single_close_match is a hint, not a decision), set name to that exact candidate title in
+your next step, together with that step's action and a query using the chosen name. After a name is chosen,
+use it. If not_found, run a focused search with the original spelling
 and distinguishing hints from the request before giving up. A spelling variant may be used as a
 search hypothesis and must be checked against the results. In Auto prefer local for this retry,
 then use web when it can help. Do not fill the name in from memory. If candidates remain ambiguous,
@@ -66,15 +69,17 @@ meet every quoted requirement, and spend points only on attributes the requested
 exactly what to fix. Once calculator is no longer in available_actions, do not request it again; finish.
 For comparisons, find complementary evidence for each requested option under common conditions.
 Use class profiles or starting equipment tables for class comparisons. A published ranking is unnecessary.
-Use clarify with reason=player_detail only when the user's answer would materially change the advice
-or resolve the subject. Ask one natural question and list the essential missing fields. Do not repeat
+Use clarify (reason=player_detail, or ambiguous_name for an unresolved subject) only when the user's answer
+would materially change the advice or resolve the subject. Ask one natural question and list the essential missing fields. Do not repeat
 known details. Missing game evidence, invalid model output and tool errors are not player details.
 Return JSON only: action, query (string, empty if unused), evidence_ids (array of candidate IDs), snapshot_ids (array), allocation (object), fill (attribute name or ""), build_data (object, empty if unused),
 question (string, empty if unused), missing (array of {key,label,input_type:"text",options:[]}),
 add_goals (array of strings), completed_goals (object mapping goal IDs to evidence ID arrays),
-reopen_goals (array of goal IDs),
+reopen_goals (array of goal IDs), name (a candidate title from name_lookup, or ""),
 reason (one of initial, missing_evidence, different_query, player_detail, ambiguous_name, sufficient, unavailable).
 
+A needs_evidence observation may carry suggested_query from the evidence check: a suggestion only. Decide
+yourself whether another search is worth it and write its query.
 For finish/stop choose evidence_ids (up to 5 distinct IDs from candidates) that directly support the
 requested aspects. Prefer actual mechanics/tables for numbers and walkthrough steps for route requirements,
 not just entity mentions. Select complementary evidence and explicit conditions; do not infer approval.

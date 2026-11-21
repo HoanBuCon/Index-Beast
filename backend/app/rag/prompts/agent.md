@@ -163,9 +163,13 @@ Return exactly one JSON object with ALL these fields, no Markdown or extra keys:
  "subgoals":[],
  "name_to_check":"",
  "search_hypotheses":[],
+ "gameplay_advice":false,
  "reply":"",
  "reason":"ready|missing_player_details|ambiguous_subject|conversation_control|unrelated"
 }
+Set gameplay_advice=true (retrieve only) when general Elden Ring gameplay know-how may supplement or stand in
+for missing evidence: combat strategy, build or stat priorities, how mechanics play out, which option suits a
+playstyle. Keep it false for lore, NPC or item facts, locations, quest steps and routes, which need evidence.
 Use one allowed value, not a pipe-delimited string. For unused arrays use []. For retrieve reply="".
 For non-retrieval actions, unused resolved_question/search_query may be empty strings, never null.
 Clarify requires nonempty reply and 1-2 missing fields. Other actions require missing=[].

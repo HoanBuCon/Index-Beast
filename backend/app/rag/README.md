@@ -36,7 +36,11 @@ Nhánh compatibility cũ vẫn tồn tại; validation số học/citation khôn
 Chỉ còn một luồng RAG: đã gỡ `CHAT_AGENT_ENABLED`, `CHAT_TOOL_AGENT_ENABLED`, nhánh legacy/workflow và `llm_only`.
 DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification trong một decision call; sau đó Tool Agent
 lặp chọn tool theo observation. Xem [kiểm kê và CLI](../../../docs/api/bounded-tool-agent.md) và
-[handover build, guard, thời gian](../../../docs/handover/2026-11-21_s5-tv3_build-guard-va-thoi-gian.md).
+[handover build, guard, thời gian](../../../docs/handover/2026-11-21_s5-tv3_build-guard-va-thoi-gian.md) và
+[handover giữ câu cho Guard, Agent tự quyết](../../../docs/handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md).
+Từ 22/11 server không quyết thay Agent: Agent chọn tên từ ứng viên của `check_name`, tự quyết tìm web (assessor
+chỉ gợi ý `suggested_query`), tự chọn bằng chứng (không chọn thì bước viết nhận hết), tự đặt cờ `gameplay_advice`;
+không còn fallback về câu gốc.
 Server giữ schema/provenance, quyền truy cập, deadline/budget và citation; calculator chỉ phân bổ chỉ số tham khảo.
 [Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
 không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
@@ -390,8 +394,8 @@ Phần answer có facts vẫn cần citation mỗi đoạn; không ép citation 
 Context bổ sung evidence units có ID: model chọn `quote_id`, backend trích nguyên văn từ chunk đã chọn
 và kiểm citation/evidence-set như cũ. Quote literal vẫn được hỗ trợ; ID không tồn tại bị từ chối.
 Đoạn dài được chia thành các phần evidence giới hạn 2.000 ký tự để chọn quote, không chia lại chunk/index.
-SSE dùng streaming thật, prime trước headers, giữ cancellation/cleanup; lỗi giữa stream hoặc validation cuối
-thất bại trả error, không done thành công. Không gửi evidence JSON hoặc private reasoning trong chat/SSE.
+SSE prime trước headers, giữ cancellation/cleanup. Từ 21/11 mọi câu được giữ tới khi kiểm và Answer Guard xong
+rồi mới gửi một event `token`; validation thất bại sau lượt sửa trả lỗi, không done thành công. Không gửi evidence JSON hoặc private reasoning trong chat/SSE.
 API JSON/SSE/conversation/feedback không đổi; dev endpoint giữ contract reasoning riêng, không log.
 History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa phải persistence production hoặc xác thực.
 

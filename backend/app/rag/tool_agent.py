@@ -18,6 +18,7 @@ from app.adapters.tavily import WebHit, WebSearchError
 from app.api.schemas.chat import Clarification, ClarificationField
 from app.rag.agent import GoalText, contains_superseded, spend
 from app.rag.entity_spelling import correct_name, matching_names
+from app.rag.matching import name_key
 from app.rag.output import OutputFormatError, decode_output
 from app.rag.prompts import prompt, rewrite_prompt
 from app.rag.retriever import document_to_hit, hit_to_document
@@ -48,6 +49,8 @@ class ToolStep(BaseModel):
     fill: Literal["", "vigor", "mind", "endurance", "strength", "dexterity", "intelligence", "faith", "arcane"] = ""
     build_data: dict = Field(default_factory=dict)
     question: str = Field(default="", max_length=1000)
+    # The candidate the player means after check_name; the server never picks one itself.
+    name: str = Field(default="", max_length=100)
     missing: list[ClarificationField] = Field(default_factory=list, max_length=2)
     add_goals: list[GoalText] = Field(default_factory=list, max_length=MAX_GOALS)
     completed_goals: dict[str, Annotated[list[str], Field(max_length=MAX_GOAL_SOURCES)]] = Field(
@@ -113,7 +116,7 @@ async def run_tools(pipe, state):
     seen, observations = set(), []
     raw_name = state.get("name_to_check", "")
     name_status = "pending" if raw_name else ""
-    name_options = []
+    name_options, candidate_hits, chosen_name, strong_match = [], {}, "", False
     source_batches = []
     local_calls, web_calls = 0, 0
     actions = p.trace["tool_actions"] = []
@@ -138,8 +141,9 @@ async def run_tools(pipe, state):
 
     calculator_failures = 0
     calculator_offered = False
+    # A tool decision cut off at max_tokens (long build_data) gets a larger cap on the next step.
+    decision_tokens_boost = False
     stalled = set()
-    followup = None
     web_queries = []
     no_new_web_evidence = 0
     covered_ids = []
@@ -160,25 +164,28 @@ async def run_tools(pipe, state):
         available = ["finish", "stop"]
         if clarification_limit is None or rounds < clarification_limit:
             available.append("clarify")
-        unresolved_name = name_status in {"pending", "ambiguous", "not_found"}
+        unresolved_name = name_status in {"pending", "candidates", "not_found"}
+        # With candidates the Agent may search again, but only after naming the one the player means.
+        searchable_name = not unresolved_name or name_status in {"candidates", "not_found"}
         if (local_limit is None or local_calls < local_limit) and pipe.retriever is not None:
             if name_status == "pending":
                 available.append("check_name")
-            if not unresolved_name or name_status == "not_found":
+            if searchable_name:
                 available.append("local_search")
         if (
             state["search_mode"] != "off"
             and (step_limit is None or not web_calls)
             and pipe.web_search is not None
-            and (not unresolved_name or name_status == "not_found")
+            and searchable_name
             and (not verify_coverage or no_new_web_evidence < 2)
         ):
             available.append("web_search")
         if catalog and not unresolved_name:
             available.append("source_snapshot")
         profile = {c["key"]: c["value"] for c in (p.player_state or {}).get("constraints", [])}
-        if name_status == "verified":
-            profile = {k: correct_name(v, raw_name, name_options[0]) for k, v in profile.items()}
+        if chosen_name:
+            # The Agent's choice, applied to the values the player typed (not a server guess).
+            profile = {k: correct_name(v, raw_name, chosen_name) for k, v in profile.items()}
         # Level is the only player input the arithmetic needs: level accounting and class floors are built-in
         # sourced rules, a missing class becomes Wretch, a missing weapon a suggestion or "not checked".
         targets = build_rules(profile) if not unresolved_name else None
@@ -212,7 +219,16 @@ async def run_tools(pipe, state):
             "observations": observations[-3:],
             "task_plan": task_plan,
             **(
-                {"name_lookup": {"typed": raw_name, "status": name_status, "candidates": name_options}}
+                {
+                    "name_lookup": {
+                        "typed": raw_name,
+                        "status": name_status,
+                        "candidates": name_options,
+                        # A hint from exact/close title matching; the choice stays with the Agent.
+                        "single_close_match": strong_match,
+                        **({"chosen": chosen_name} if chosen_name else {}),
+                    }
+                }
                 if raw_name
                 else {}
             ),
@@ -250,29 +266,51 @@ async def run_tools(pipe, state):
         # Visible in deadline diagnostics if the turn times out inside this step.
         p.trace["tool_step_running"] = {"phase": "tool_decision", "step": len(actions) + 1}
         try:
-            if followup:
-                step = ToolStep(action="web_search", query=followup, reason="missing_evidence")
-                followup = None
-            else:
-                spend(p.trace, "tool_decision", p.max_calls)
-                decision_timeout = pipe.settings.chat_agent_timeout_seconds
-                if verify_coverage:
-                    decision_timeout = min(decision_timeout, prepare_left())
-                async with asyncio.timeout(decision_timeout):
-                    result = await pipe.llm.invoke_chain(
-                        rewrite_prompt()
-                        | pipe.llm.bind_model(
-                            json_output=True,
-                            thinking=False,
-                            temperature=0,
-                            max_tokens=2048 if "calculator" in available else 768,
-                        ),
-                        {"policy": prompt("tools"), "history": [], "question": json.dumps(payload, ensure_ascii=False)},
-                    )
-                data, _ = decode_output(result.content)
-                step = ToolStep.model_validate(data)
-        except LLMError:
-            raise UpstreamError("Bước chọn công cụ của mô hình chưa hợp lệ.") from None
+            spend(p.trace, "tool_decision", p.max_calls)
+            decision_timeout = pipe.settings.chat_agent_timeout_seconds
+            if verify_coverage:
+                decision_timeout = min(decision_timeout, prepare_left())
+            async with asyncio.timeout(decision_timeout):
+                result = await pipe.llm.invoke_chain(
+                    rewrite_prompt()
+                    | pipe.llm.bind_model(
+                        json_output=True,
+                        thinking=False,
+                        temperature=0,
+                        max_tokens=(4096 if decision_tokens_boost else 2048) if "calculator" in available else 768,
+                    ),
+                    {"policy": prompt("tools"), "history": [], "question": json.dumps(payload, ensure_ascii=False)},
+                )
+            data, _ = decode_output(result.content)
+            step = ToolStep.model_validate(data)
+        except LLMError as exc:
+            # Live-11 (Prisoner level 30, Moonveil): one provider/output error here used to end the turn with a 502
+            # and no logged reason. Categories and token counts only, never model output.
+            issue = dict(exc.diagnostics)
+            actions.append({"status": "denied", "reason": "tool_model_error", "issue": issue})
+            logging.getLogger(__name__).warning("Tool decision model error", extra={"data": issue})
+            if "tool_model_error" in stalled:
+                if hits:
+                    # A second failure in a row: answer from the evidence already gathered, not a 502.
+                    stop_reason = "tool_model_error"
+                    break
+                raise UpstreamError("Bước chọn công cụ của mô hình chưa hợp lệ.") from None
+            stalled.add("tool_model_error")
+            truncated = issue.get("reason") == "incomplete_output" and issue.get("finish_reason") == "length"
+            decision_tokens_boost = decision_tokens_boost or truncated
+            observations.append(
+                {
+                    "status": "model_error",
+                    "error": issue.get("reason"),
+                    "fix": (
+                        "Your last reply was cut off before the JSON ended. Keep it short: in build_data quote only "
+                        "the values the calculator needs, with short labels."
+                        if truncated
+                        else "Return one short JSON object with only the documented fields."
+                    ),
+                }
+            )
+            continue
         except ValueError as exc:
             # Category and field names only, never the model output: tells the planner what to fix and lets the
             # trace distinguish broken JSON from a schema mistake (e.g. a malformed build_data).
@@ -325,6 +363,40 @@ async def run_tools(pipe, state):
             )
         )
         identity = key(action, arguments)
+        if step.name and chosen_name and name_key(step.name) == name_key(chosen_name):
+            pass  # Live-13: the Agent repeats its chosen name on later steps; that is not a new choice.
+        elif step.name:
+            pick = next((t for t in name_options if name_key(t) == name_key(step.name)), None)
+            if name_status != "candidates" or pick is None:
+                row["status"] = "denied"
+                observations.append({"action": action, "status": "name_not_in_candidates", "candidates": name_options})
+                continue
+            # The Agent decides which candidate the player meant; the server only checks it was offered.
+            chosen_name, name_status, unresolved_name = pick, "verified", False
+            row["name_choice"] = pick
+            p.trace["verified_name"] = {"typed": raw_name, "canonical": pick, "chosen_by": "agent"}
+            for field in ("resolved_question", "query"):
+                state[field] = correct_name(state[field], raw_name, pick)
+            picked = [h for h in candidate_hits.get(pick, []) if h.id not in hits]
+            for h in picked:
+                hits[h.id] = h
+            if picked:
+                source_batches.append([h.id for h in picked])
+        elif name_status == "candidates" and action in {"local_search", "web_search", "finish"}:
+            row["status"] = "denied"
+            if "choose_name" in stalled:
+                stop_reason = "name_not_chosen"
+                break
+            stalled.add("choose_name")
+            observations.append(
+                {
+                    "action": action,
+                    "status": "choose_name",
+                    "candidates": name_options,
+                    "fix": "Set name to the candidate the player means, or clarify with reason=ambiguous_name.",
+                }
+            )
+            continue
         if action not in available:
             # E.g. calculator withdrawn after two rejections. Asking again with other arguments does not
             # bring it back (live 20/11: three wasted steps), so a second request ends the loop.
@@ -361,16 +433,10 @@ async def run_tools(pipe, state):
             row["status"] = "denied_web_required"
             observations.append({"status": "always_requires_web_before_finish"})
             continue
-        if action == "clarify" and (
-            not step.question.strip()
-            or not step.missing
-            or (
-                step.reason != "player_detail"
-                and not (step.reason == "ambiguous_name" and name_status in {"ambiguous", "not_found"})
-            )
-        ):
+        # Whether to ask is the Agent's call; the server only requires a question and the fields it asks for.
+        if action == "clarify" and (not step.question.strip() or not step.missing):
             row["status"] = "denied"
-            observations.append({"action": action, "status": "requires_missing_player_detail_or_ambiguous_name"})
+            observations.append({"action": action, "status": "clarify_requires_question_and_missing_fields"})
             continue
         if not update_plan(task_plan, step, shown_ids):
             row["status"] = "denied"
@@ -383,7 +449,7 @@ async def run_tools(pipe, state):
                 i not in shown_ids for i in step.evidence_ids
             )
             p.trace["evidence_selection"] = {
-                "method": "model" if not invalid and (step.evidence_ids or action == "stop") else "rank_fallback",
+                "method": "model" if not invalid and (step.evidence_ids or action == "stop") else "unselected",
                 "ids": [] if invalid else step.evidence_ids,
             }
             if invalid:
@@ -444,20 +510,22 @@ async def run_tools(pipe, state):
                 if status == "sufficient" and not web_calls:
                     p.trace["web_search"]["status"] = "local_sufficient"
                 if status not in {"sufficient", "ambiguous"}:
-                    raw_query = assessment.get("followup_query", "").strip()
-                    if not raw_query and not web_calls:
-                        raw_query = state["query"]
-                    if raw_query and no_new_web_evidence < 2:
-                        # The assessor (LLM) writes the follow-up search; no server-side query rewriting.
-                        proposed = raw_query
-                        if key("web_search", proposed) not in seen and not contains_superseded(
-                            proposed, inactive, comparison, profile.values()
-                        ):
-                            followup = proposed
-                    if followup:
+                    suggested = assessment.get("followup_query", "").strip()
+                    if (
+                        suggested
+                        and no_new_web_evidence < 2
+                        and key("web_search", suggested) not in seen
+                        and not contains_superseded(suggested, inactive, comparison, profile.values())
+                    ):
+                        # The assessor only suggests a search; the Agent decides whether and what to search next.
                         row["status"] = "needs_evidence"
                         observations.append(
-                            {"action": action, "status": "needs_evidence", "missing": assessment.get("missing", [])}
+                            {
+                                "action": action,
+                                "status": "needs_evidence",
+                                "missing": assessment.get("missing", []),
+                                "suggested_query": suggested,
+                            }
                         )
                         continue
                     signature = (frozenset(hit.id for hit in evaluated), tuple(web_queries))
@@ -561,16 +629,17 @@ async def run_tools(pipe, state):
                     candidates,
                     contextual_query=step.query if action in {"local_search", "web_search"} else "",
                 )
-                name_options = [title for title, _ in matches][:5]
-                name_status = (
-                    "verified" if can_verify and len(matches) == 1 else "ambiguous" if matches else "not_found"
-                )
-                row["name_status"] = name_status
-                found = matches[0][1] if name_status == "verified" else []
-                if name_status == "verified":
-                    p.trace["verified_name"] = {"typed": raw_name, "canonical": name_options[0]}
-                    for field in ("resolved_question", "query"):
-                        state[field] = correct_name(state[field], raw_name, name_options[0])
+                if not chosen_name:
+                    # Candidates only: the Agent names the one the player means in its next step.
+                    name_options = [title for title, _ in matches][:5]
+                    candidate_hits = {
+                        title: [h for h in group if (state["search_mode"] != "off" if isinstance(h, WebHit) else True)]
+                        for title, group in matches[:5]
+                    }
+                    strong_match = can_verify and len(matches) == 1
+                    name_status = "candidates" if matches else "not_found"
+                    row["name_status"] = name_status
+                    found = []
             admitted, novel = [], False
             for h in found:
                 eligible = (
@@ -633,11 +702,14 @@ async def run_tools(pipe, state):
             p.player_state.pop("plan", None)
         p.trace["task_plan"] = task_plan
     if p.static_answer is None and p.trace.get("evidence_selection", {}).get("method") != "model":
-        completed_ids = [key for item in task_plan for key in item["evidence_ids"][:1] if key in hits]
-        batch_leads = [batch[0] for batch in reversed(source_batches)] if len(source_batches) > 1 else []
-        if completed_ids or batch_leads:
-            ids = list(dict.fromkeys([*completed_ids, *covered_ids, *batch_leads, *hits]))[:5]
-            p.trace["evidence_selection"] = {"method": "rank_fallback", "ids": ids}
+        # No server-side ranking: without the Agent's selection the writer gets every evidence item in the
+        # order it was found (within the context budget) and cites the ones it uses.
+        reason = p.trace.get("evidence_selection", {}).get("reason")
+        p.trace["evidence_selection"] = {
+            "method": "all_evidence",
+            "ids": list(hits),
+            **({"reason": reason} if reason else {}),
+        }
     if raw_name and name_status != "verified" and p.static_answer is None:
         p.gameplay_advice = False
         hits = {}

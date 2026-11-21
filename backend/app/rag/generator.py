@@ -34,10 +34,47 @@ _STREAM_EMITTER: ContextVar[Callable[[str], Awaitable[None]]] = ContextVar("inde
 
 CITATION = re.compile(r"\[(\d+)\]")
 URL = re.compile(r"https?://|www\.", re.IGNORECASE)
-# Payload/protocol field names are not player-facing words; an answer that echoes one is regenerated.
+# Payload/protocol field names are not player-facing words: the Answer Guard rewrites an answer that echoes one,
+# and any name left after that is replaced with plain words (never a reason to drop the answer).
 INTERNAL_FIELD = re.compile(
-    r"\b(?:checked_build|build_check|player_profile|build_allocation|quote_ids?|evidence_units|task_plan)\b"
+    r"`?\b(checked_build|build_check|player_profile|build_allocation|quote_ids?|evidence_units|task_plan)\b`?"
 )
+PLAIN_FIELD_WORDS = {
+    "vi": {
+        "checked_build": "bảng chia điểm đã kiểm",
+        "build_check": "phần kiểm bảng chia điểm",
+        "player_profile": "thông tin bạn đưa ra",
+        "build_allocation": "bảng chia điểm",
+        "quote_id": "trích dẫn",
+        "quote_ids": "trích dẫn",
+        "evidence_units": "nguồn",
+        "task_plan": "kế hoạch tra cứu",
+    },
+    "en": {
+        "checked_build": "the checked allocation",
+        "build_check": "the allocation check",
+        "player_profile": "the details you gave",
+        "build_allocation": "the allocation",
+        "quote_id": "the quote",
+        "quote_ids": "the quotes",
+        "evidence_units": "the sources",
+        "task_plan": "the lookup plan",
+    },
+}
+
+
+def leaked_fields(text: str | None) -> list[str]:
+    return sorted({m.group(1) for m in INTERNAL_FIELD.finditer(text or "")})
+
+
+def plain_field_names(text: str | None, lang: str) -> str | None:
+    """Last safety net after the Answer Guard: swap any internal field name for words a player understands."""
+    if not text:
+        return text
+    words = PLAIN_FIELD_WORDS["vi" if lang == "vi" else "en"]
+    return INTERNAL_FIELD.sub(lambda m: words[m.group(1)], text)
+
+
 SECTION_HEADING = re.compile(r"#{2,3} [^\r\n]+")
 BLOCK_SEPARATOR = re.compile(r"(\r?\n[ \t]*\r?\n(?:[ \t]*\r?\n)*)")
 
@@ -151,7 +188,7 @@ def build_issues(prepared, answer: str) -> list[dict]:
             issues.append({"kind": "missing_table"})  # Not all eight attributes printed (wrong values: "numbers").
         return issues
     rules = build_rules((prepared.values or {}).get("player_profile") or {})
-    table = dict(pairs)
+    table = allocation_table(answer) or dict(pairs)
     if rules and set(table) == set(ATTRIBUTES) and sum(table.values()) != rules["attribute_total"]:
         return [
             {
@@ -178,7 +215,86 @@ def log_stat_mismatch(prepared, wrong, artifact, where):
 
 
 def allocation_label(artifact: dict, lang: str) -> str:
-    """Heading of the rendered allocation, stating every assumption and every unchecked part."""
+    """Heading of the backend-rendered allocation, stating every assumption and every unchecked part."""
+    weapon, vi = artifact.get("weapon"), lang == "vi"
+    notes = assumption_notes(artifact, lang)
+    head = (
+        (f"Gợi ý phân bổ cho {weapon}" if weapon else "Gợi ý phân bổ 8 chỉ số")
+        if vi
+        else (f"Suggested allocation for {weapon}" if weapon else "Suggested eight-attribute allocation")
+    )
+    return head + (f" ({', '.join(notes)})" if notes else "")
+
+
+TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
+CITATION_LINE = re.compile(r"^\s*(?:\[\d+\]\s*)+$")
+
+
+def table_blocks(answer: str) -> list[str]:
+    blocks, current = [], []
+    for line in [*answer.split("\n"), ""]:
+        if TABLE_ROW.match(line):
+            current.append(line)
+        elif current:
+            blocks.append("\n".join(current))
+            current = []
+    return blocks
+
+
+def allocation_table(answer: str) -> dict[str, int]:
+    """The eight numbers of the last complete Markdown allocation table, ignoring stat numbers in the prose.
+
+    Live-11: prose quoting the class starting values ("Vigor 9, Mind 15, …") overrode the table, so a correct
+    229-point table was reported as totalling 85 and sent to the Answer Guard.
+    """
+    from app.rag.build_data import ATTRIBUTES, stat_pairs
+
+    for block in reversed(table_blocks(answer)):
+        table = dict(stat_pairs(block))
+        if set(table) == set(ATTRIBUTES):
+            return table
+    return {}
+
+
+def place_under_table(answer: str, note: str, citations: str) -> str:
+    """Put the assumption note and rule citations directly under the writer's allocation table, not at the end.
+
+    Live-10: a label appended after the closing prose read as detached. The note becomes its own paragraph right
+    after the table (and the citation line the writer put under it); without a table it is appended as before.
+    """
+    from app.rag.build_data import stat_pairs
+
+    lines = answer.split("\n")
+    end = None
+    i = 0
+    while i < len(lines):
+        if TABLE_ROW.match(lines[i]):
+            start = i
+            while i < len(lines) and TABLE_ROW.match(lines[i]):
+                i += 1
+            if len(stat_pairs("\n".join(lines[start:i]))) >= 2:
+                end = i  # Last allocation table wins.
+            continue
+        i += 1
+    text = " ".join(part for part in (note, citations) if part)
+    if end is None:
+        return answer + "\n\n" + text
+    if end < len(lines) and CITATION_LINE.match(lines[end]):
+        if not note:
+            lines[end] = lines[end].rstrip() + citations
+            return "\n".join(lines)
+        end += 1
+    return "\n".join([*lines[:end], "", text, *([""] if end < len(lines) and lines[end].strip() else []), *lines[end:]])
+
+
+def assumption_sentence(artifact: dict, lang: str) -> str:
+    notes = assumption_notes(artifact, lang)
+    if not notes:
+        return ""
+    return ("Ghi chú cho bảng: " if lang == "vi" else "About this table: ") + "; ".join(notes) + "."
+
+
+def assumption_notes(artifact: dict, lang: str) -> list[str]:
     weapon, cls = artifact.get("weapon"), artifact["starting_class"]
     vi = lang == "vi"
     notes = []
@@ -202,12 +318,7 @@ def allocation_label(artifact: dict, lang: str) -> str:
             notes.append(
                 "chưa chọn vũ khí nên chưa kiểm yêu cầu vũ khí" if vi else "no weapon chosen, requirements not checked"
             )
-    head = (
-        (f"Gợi ý phân bổ cho {weapon}" if weapon else "Gợi ý phân bổ 8 chỉ số")
-        if vi
-        else (f"Suggested allocation for {weapon}" if weapon else "Suggested eight-attribute allocation")
-    )
-    return head + (f" ({', '.join(notes)})" if notes else "")
+    return notes
 
 
 def validate_answer(prepared: Prepared, data: dict) -> Generated:
@@ -238,9 +349,13 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
         if URL.search(parsed.answer):
             failure = "model_url"
             raise ValueError("URLs must come from server metadata")
-        if any(INTERNAL_FIELD.search(text or "") for text in (parsed.answer, parsed.limitation, parsed.recommendation)):
-            failure = "internal_field_name"
-            raise ValueError("Internal field names are not player-facing text")
+        lang, guard_done = prepared.lang, prepared.trace.get("guard_done")
+        field_issues = [{"kind": "internal_field_name", "fields": f}] if (f := leaked_fields(parsed.answer)) else []
+        if field_issues:
+            if guard_done:
+                prepared.trace["internal_field_replaced"] = field_issues[0]["fields"]
+            else:
+                prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": field_issues}
         if parsed.advisory:
             failure = "invalid_gameplay_advice"
             if (
@@ -256,7 +371,7 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             ):
                 raise ValueError("Gameplay advice requires an eligible request and uncited qualitative guidance")
             prepared.trace["answer_basis"] = "gameplay_advice"
-            return Generated(parsed.answer)
+            return Generated(plain_field_names(parsed.answer, lang))
         if parsed.insufficient:
             if prepared.checked_build is not None:
                 failure = "invalid_build_allocation"
@@ -266,7 +381,7 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             if used or evidence or parsed.limitation is not None or parsed.recommendation is not None:
                 failure = "insufficient_with_citations"
                 raise ValueError("Insufficient answer must not claim sources")
-            return Generated(parsed.answer)
+            return Generated(plain_field_names(parsed.answer, lang))
         if not used or not used <= set(evidence):
             failure = "citation_evidence_indices"
             # Only numeric protocol metadata, never answer/quote contents or private reasoning.
@@ -301,9 +416,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             ):
                 raise ValueError("A separate recommendation requires eligible gameplay evidence and no citations")
         issues = build_issues(prepared, answer)
-        if issues and not prepared.trace.get("guard_done"):
+        if issues and not guard_done:
             # Presentation problems are not a reason to drop an answer: the Answer Guard rewrites it before display.
-            prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": issues}
+            prepared.trace["guard_request"] = {"answer": parsed.answer, "issues": field_issues + issues}
         if prepared.checked_build is not None:
             from app.rag.build_data import ATTRIBUTES, check
 
@@ -323,8 +438,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             # Assumptions and unchecked parts are always stated. The checked numbers line is added only when the
             # writer's own table is missing or (after the Answer Guard) still differs: nothing is dropped.
             wrong = unchecked_stat_pairs(answer, artifact)
-            answer += "\n\n" + allocation_label(artifact, prepared.lang)
+            rule_citations = "".join(f"[{i}]" for i in sorted(required_indices))
             if any(i["kind"] == "missing_table" for i in issues) or wrong:
+                answer += "\n\n" + allocation_label(artifact, prepared.lang)
                 answer += ": " + " | ".join(f"{k.title()} {artifact['allocation'][k]}" for k in ATTRIBUTES)
                 if wrong:
                     log_stat_mismatch(prepared, wrong, artifact, "final")
@@ -333,9 +449,10 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                         if prepared.lang == "vi"
                         else " (this is the checked table; use these numbers where they differ from the one above)"
                     )
+                answer += " " + rule_citations
             else:
                 prepared.trace["allocation_printed_by_writer"] = True
-            answer += " " + "".join(f"[{i}]" for i in sorted(required_indices))
+                answer = place_under_table(answer, assumption_sentence(artifact, prepared.lang), rule_citations)
         elif parsed.build_allocation is not None:
             # A separate unchecked allocation field is not rendered; numbers the writer put in its own prose
             # are a reference suggestion and stay (their total is checked below).
@@ -382,8 +499,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
             prepared.trace["answer_basis"] = "evidence_with_recommendation"
         if parsed.limitation is not None:
             answer += "\n\n" + parsed.limitation.strip()
-        return Generated(answer, sources, True)
+        return Generated(plain_field_names(answer, lang), sources, True)
     except (ValidationError, ValueError, KeyError, TypeError):
+        prepared.trace.pop("guard_request", None)  # A rejected answer is never sent to the Answer Guard.
         prepared.trace["validation_failure"] = failure
         # Static category only: never log model output, source quotes, prompts or private reasoning.
         logging.getLogger(__name__).warning("RAG validation failed", extra={"data": {"reason": failure}})
@@ -436,7 +554,6 @@ RETRYABLE_REASONS = {
     "citation_evidence_indices",
     "unknown_quote_id",
     "model_url",
-    "internal_field_name",
     "stat_number_mismatch",
     "invalid_limitation",
     "duplicate_evidence_index",
@@ -739,8 +856,8 @@ class Generator:
 
     async def _stream_attempt(self, prepared: Prepared, attempt: int) -> AsyncIterator[str]:
         raw, emitted = "", ""
-        # A build answer may need the Answer Guard, which reads the whole answer: hold it and show it once checked.
-        buffer_until_complete = prepared.checked_build is not None or prepared.agent_decision.get("intent") == "build"
+        # Every answer is held until it is complete and checked (MinhMuc, 21/11): the Answer Guard reads the whole
+        # answer, a retry is still possible, and the player never sees text that is later cut or replaced by an error.
         try:
             spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(
@@ -750,41 +867,10 @@ class Generator:
                     raw += token
                     if len(raw) > MAX_OUTPUT_CHARS:
                         raise UpstreamError("Câu trả lời vượt giới hạn stream.")
-                    if buffer_until_complete:
-                        continue
-                    try:
-                        text = answer_prefix(raw)
-                    except UpstreamError as exc:
-                        if not emitted:
-                            # JSON object keys may arrive in any order. Do not expose
-                            # metadata; decode and validate the bounded response at EOF.
-                            buffer_until_complete = True
-                            continue
-                        raise OutputFormatError(
-                            {
-                                "json_error": "invalid_answer_prefix",
-                                "output_chars": len(raw),
-                                "json_char": getattr(exc, "char_class", "unknown"),
-                            }
-                        ) from None
-                    # Validate complete visible clauses before emission, including citations
-                    # split across provider chunks. Keep an unfinished clause in the buffer.
-                    boundary = max(text.rfind("\n"), text.rfind(". "), text.rfind("! "), text.rfind("? "))
-                    safe = text[: boundary + 1] if boundary >= 0 else ""
-                    self._check_visible(prepared, safe)
-                    if INTERNAL_FIELD.search(safe):
-                        # Before any visible token this is retried like a JSON answer; never shown to the player.
-                        raise RAGValidationError("internal_field_name")
-                    # Uncited paragraphs are no longer dropped, so complete clauses can be shown as they arrive.
-                    if len(safe) > len(emitted):
-                        yield safe[len(emitted) :]
-                        emitted = safe
             data = self._decode(prepared, raw)
             result = await self._finalize(prepared, data)
-            if not result.answer.startswith(emitted):
-                raise UpstreamError("Stream không nhất quán với câu trả lời cuối.")
-            if len(result.answer) > len(emitted):
-                yield result.answer[len(emitted) :]
+            if result.answer:
+                yield result.answer
             prepared.trace["result"] = result
         except RAGValidationError as exc:
             if self._retry(prepared, attempt, {"reason": exc.reason}, emitted=emitted):
@@ -800,9 +886,3 @@ class Generator:
             raise self._failed(prepared, exc.diagnostics) from None
         except ValueError:
             raise self._failed(prepared, {"reason": "generation_value_error"}) from None
-
-    @staticmethod
-    def _check_visible(prepared: Prepared, text: str) -> None:
-        indices = {int(n) for n in CITATION.findall(text)}
-        if URL.search(text) or any(i < 1 or i > len(prepared.hits) for i in indices):
-            raise UpstreamError("Stream chứa nguồn hoặc trích dẫn không hợp lệ.")

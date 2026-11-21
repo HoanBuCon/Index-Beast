@@ -17,7 +17,7 @@ async def test_auto_can_give_general_advice_when_web_is_unavailable():
     query = "Elden Ring general dodge and block practice"
     llm = ToolsLLM(
         [step("local_search", query), step("web_search", query), step("stop")],
-        [plan(intent="mechanics", entities=[], resolved_question=query, search_query=query)],
+        [plan(intent="mechanics", entities=[], resolved_question=query, search_query=query, gameplay_advice=True)],
     )
     llm.data = {
         "answer": "Tập né từng đòn trước khi ghép đòn phản công.",
@@ -61,7 +61,7 @@ def test_continue_case_retries_failed_clarification_in_the_same_conversation(htt
     assert row["restart_offset"] == 2
 
 
-async def test_numbered_item_shorthand_keeps_grounded_names_in_a_validated_fallback():
+async def test_numbered_item_shorthand_is_repaired_by_the_agent_not_replaced_by_the_question():
     from app.rag.agent import contains_entity
     from tests.unit.test_agent_durable import AgentLLM, plan, req, service
 
@@ -79,10 +79,23 @@ async def test_numbered_item_shorthand_keeps_grounded_names_in_a_validated_fallb
         resolved_question="Where to get Smithing Stone [3] and Smithing Stone [4] for Claymore?",
         search_query="Elden Ring Smithing Stone [3] and Smithing Stone [4] locations",
     )
+    from core.errors import UpstreamError
+
+    # The same rejected decision three times: the server no longer substitutes the user's question for it.
     live = service(llm=AgentLLM([model, model, model]), chat_agent_max_calls=None)
+    with pytest.raises(UpstreamError):
+        await live.answer(req(user))
+    assert live.pipeline.retriever.calls == []
+    # A repaired decision that keeps the user's own numbered names is accepted.
+    fixed = plan(
+        intent="acquisition",
+        entities=["Claymore", "Smithing Stone [3]", "Smithing Stone [4]"],
+        resolved_question=user,
+        search_query="Claymore Smithing Stone [3] Smithing Stone [4] locations",
+    )
+    live = service(llm=AgentLLM([model, fixed]), chat_agent_max_calls=None)
     result = await live.answer(req(user))
-    assert result.grounded and live.pipeline.retriever.calls == [(user, True)]
-    assert live.traces[result.message_id]["agent"]["reason"] == "original_query_fallback"
+    assert live.traces[result.message_id]["agent"]["repair_attempts"] == 1
 
 
 @pytest.mark.parametrize("endpoint", ["chat", "chat/stream"])

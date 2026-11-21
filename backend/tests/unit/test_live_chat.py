@@ -121,6 +121,11 @@ def agent_step(policy, question, decision_overrides=None):
         return {"action": "local_search", "query": payload["initial_query"], "reason": "initial"}
     if payload["web_policy"] == "always" and "web_search" in available and "web_search" not in done:
         return {"action": "web_search", "query": payload["initial_query"], "reason": "missing_evidence"}
+    # The Agent (not the server) decides to search the web after the evidence check reports a gap.
+    gap = next((o for o in reversed(payload["observations"]) if o.get("status") == "needs_evidence"), None)
+    if gap and "web_search" in available and "web_search" not in done:
+        query = gap.get("suggested_query") or payload["initial_query"]
+        return {"action": "web_search", "query": query, "reason": "missing_evidence"}
     return {"action": "finish", "evidence_ids": [], "reason": "sufficient"}
 
 
@@ -331,11 +336,12 @@ def rag_tokens(*tail):
     return ['{"answer": "Ranni is an Empyrean [1]. ', *tail, f'", "evidence": {evidence}, "insufficient": false}}']
 
 
-async def test_stream_is_incremental_and_closes_even_before_consumer_starts():
+async def test_stream_is_held_until_checked_and_closes_even_before_consumer_starts():
+    # Every answer is held until complete and validated (21/11): the first visible token is the checked answer.
     llm = FakeLLM(tokens=rag_tokens(*["word "] * 100))
     live = service(llm=llm, retriever=FakeRetriever())
     events = await live.open_stream(ChatRequest(**BODY))
-    assert 0 < llm.produced < len(llm.tokens) and not llm.closed
+    assert llm.produced == len(llm.tokens)
     await events.aclose()
     assert llm.closed
     assert not next(iter(live._conversations.values())).lock.locked()
@@ -356,14 +362,8 @@ async def test_cancelling_inflight_stream_closes_provider_and_does_not_save_turn
 
     llm = BlockingLLM()
     live = service(llm=llm, retriever=FakeRetriever())
-    events = await live.open_stream(ChatRequest(**BODY))
-
-    async def consume():
-        async with aclosing(events):
-            async for _frame in events:
-                pass
-
-    task = asyncio.create_task(consume())
+    # The answer is held until complete, so the request is still opening the stream when it is cancelled.
+    task = asyncio.create_task(live.open_stream(ChatRequest(**BODY)))
     await entered.wait()
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -426,9 +426,9 @@ def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(se
         assert response.status_code == 502 and response.json()["code"] == "upstream_error"
         assert llm.closed
         llm.fail_at = 1
+        # Nothing is visible before the answer is checked, so a later provider failure is also a JSON error.
         response = client.post("/api/v1/chat/stream", json=BODY)
-        assert response.status_code == 200
-        assert "event: error" in response.text and "event: done" not in response.text
+        assert response.status_code == 502 and "event: done" not in response.text
         assert "fake provider failure" not in response.text and llm.closed
         assert not live.traces
 
@@ -685,7 +685,7 @@ def test_malformed_json_stream_logs_reason_and_never_done(client, caplog):
     live = service("rag", llm, FakeRetriever())
     client.app.dependency_overrides[get_chat_service] = lambda: live
     response = client.post("/api/v1/chat/stream", json=BODY)
-    assert "event: error" in response.text and "event: done" not in response.text
+    assert response.status_code == 502 and "event: done" not in response.text
     assert "private-invalid-json" not in response.text and "private-invalid-json" not in caplog.text
     assert any(getattr(r, "data", {}).get("reason") == "invalid_json" for r in caplog.records)
 
@@ -908,7 +908,7 @@ async def test_repeated_insufficient_protocol_errors_still_fail_closed(retries, 
 
 
 @pytest.mark.parametrize("emit_first", [False, True])
-async def test_insufficient_protocol_stream_recovery_only_before_visible_tokens(emit_first):
+async def test_insufficient_protocol_stream_is_recovered_before_anything_is_shown(emit_first):
     class ProtocolStream(FakeLLM):
         attempts = 0
 
@@ -923,20 +923,13 @@ async def test_insufficient_protocol_stream_recovery_only_before_visible_tokens(
 
     llm = ProtocolStream()
     live = service("rag", llm, FakeRetriever())
+    # Nothing is shown before validation, so even an answer with complete clauses can still be recovered.
     stream = await live.open_stream(ChatRequest(**BODY))
-    frames = []
-    if emit_first:
-        with pytest.raises(UpstreamError):
-            async with aclosing(stream):
-                async for frame in stream:
-                    frames.append(frame)
-        assert llm.attempts == 1 and not live.traces and all(name != "done" for name, _ in frames)
-    else:
-        async with aclosing(stream):
-            frames = [frame async for frame in stream]
-        assert llm.attempts == 2 and frames[-1][0] == "done"
-        assert not frames[-1][1].grounded
-        assert "[1]" not in "".join(value.token for name, value in frames if name == "token")
+    async with aclosing(stream):
+        frames = [frame async for frame in stream]
+    assert llm.attempts == 2 and frames[-1][0] == "done"
+    assert not frames[-1][1].grounded
+    assert "[1]" not in "".join(value.token for name, value in frames if name == "token")
 
 
 async def test_wrapped_response_still_cannot_bypass_grounding_checks():
@@ -995,7 +988,7 @@ async def test_stream_retries_only_before_any_visible_token_and_closes_each_atte
     assert frames[-1][0] == "done" and llm.attempts == llm.closed_attempts == 2
 
 
-async def test_stream_never_retries_after_visible_text():
+async def test_broken_stream_is_retried_and_never_shows_partial_text():
     class BrokenStream(FakeLLM):
         attempts = 0
 
@@ -1005,14 +998,9 @@ async def test_stream_never_retries_after_visible_text():
 
     llm = BrokenStream()
     live = service("rag", llm, FakeRetriever())
-    events = await live.open_stream(ChatRequest(**BODY))
-    frames = []
     with pytest.raises(UpstreamError):
-        async with aclosing(events):
-            async for frame in events:
-                frames.append(frame)
-    assert llm.attempts == 1 and any(name == "token" for name, _ in frames)
-    assert not live.traces and all(name != "done" for name, _ in frames)
+        await live.open_stream(ChatRequest(**BODY))
+    assert llm.attempts == 2 and not live.traces
 
 
 @pytest.mark.parametrize(
@@ -1135,8 +1123,7 @@ def test_invalid_limitation_stream_is_error_without_success_done(client):
     live = service("rag", llm, FakeRetriever([build_source()]))
     client.app.dependency_overrides[get_chat_service] = lambda: live
     response = client.post("/api/v1/chat/stream", json={"message": "Suggest an armor build", "channel": "web"})
-    assert response.status_code == 200
-    assert "event: error" in response.text and "event: done" not in response.text
+    assert response.status_code == 502 and "event: done" not in response.text
     assert "This is not a real source" not in response.text
     assert llm.closed
 

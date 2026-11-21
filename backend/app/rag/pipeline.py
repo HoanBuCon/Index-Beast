@@ -329,11 +329,7 @@ class ChatPipeline:
         if decision is None:
             raise UpstreamError("Mô hình chưa trả quyết định hợp lệ. Vui lòng thử lại.")
         p.agent_decision = decision.model_dump()
-        p.gameplay_advice = decision.action == "retrieve" and decision.intent in {
-            "mechanics",
-            "build",
-            "gameplay_comparison",
-        }
+        p.gameplay_advice = decision.action == "retrieve" and decision.gameplay_advice
         if req.options.lang == "auto" and decision.answer_language:
             p.lang = state["answer_language"] = decision.answer_language
         continuing = decision.turn_type != "new" and decision.intent != "cancel"
@@ -378,11 +374,10 @@ class ChatPipeline:
         state["overview"] = decision.action == "retrieve" and decision.intent == "overview"
         if state["overview"]:
             p.trace["request_kind"] = "overview"
-        fallback = p.trace["agent"]["reason"] == "original_query_fallback"
-        p.trace["rewrite_fallback"] = fallback
+        # The Agent's own (possibly repaired) decision; the server never substitutes the original question.
         p.trace["rewrite"] = {
-            "status": "fallback" if fallback else "accepted" if decision.rewrite else "not_run",
-            "reason": "original_query_fallback" if fallback else "agent_decision",
+            "status": "accepted" if decision.rewrite else "not_run",
+            "reason": "agent_decision",
             "model_calls": 0,
         }
         p.trace["rewritten_query"] = state["query"]
@@ -463,7 +458,7 @@ class ChatPipeline:
                 candidates = [by_id[i] for i in ids if i in by_id]
             else:
                 candidates = merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", []))
-                p.trace.setdefault("evidence_selection", {"method": "rank_fallback", "ids": []})
+                p.trace.setdefault("evidence_selection", {"method": "all_evidence", "ids": []})
             p.hits = select_context(
                 candidates,
                 self.settings.rag_top_k,

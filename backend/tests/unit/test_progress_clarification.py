@@ -137,7 +137,7 @@ async def test_tutorial_clarification_resumes_route_without_entity(stream, tool_
     ],
 )
 @pytest.mark.parametrize("repair_succeeds", [True, False])
-async def test_model_repairs_numeric_meaning_or_searches_verbatim(
+async def test_model_repairs_numeric_meaning_or_the_decision_is_rejected(
     original, reply, entity, mistranslated, corrected, repair_succeeds
 ):
     bad = plan(
@@ -157,10 +157,13 @@ async def test_model_repairs_numeric_meaning_or_searches_verbatim(
     result = await decide(
         AgentLLM([bad, repair]), reply, [], {"request_text": original, "pending": {"id": "1"}}, "vi", settings(), trace
     )
-    assert result is not None
-    assert result.search_query == (corrected if repair_succeeds else f"{original}\n{reply}")
+    if not repair_succeeds:
+        # No silent substitution of the original question: the rejected decision stays rejected.
+        assert result is None and trace["agent"]["validation_reason"] == "unsupported_number"
+        return
+    assert result.search_query == corrected
     assert result.turn_type == "clarification_reply"
-    assert trace["agent"]["reason"] == ("ready" if repair_succeeds else "original_query_fallback")
+    assert trace["agent"]["reason"] == "ready"
 
 
 @pytest.mark.parametrize(

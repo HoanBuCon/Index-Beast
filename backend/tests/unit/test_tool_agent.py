@@ -106,22 +106,19 @@ async def test_clarification_is_model_generated_and_resumable():
     assert p.player_state["pending"]["id"] == str(p.clarification.id)
 
 
-async def test_missing_game_evidence_does_not_create_clarification_or_generate_without_sources():
+async def test_clarify_needs_only_a_question_and_fields_not_a_server_approved_reason():
+    # Whether a question is worth asking is the Agent's call (21/11): the reason is no longer filtered.
     llm = ToolsLLM(
         [
             step("local_search", "Ranni identity"),
-            step("clarify", question="Bạn có thông tin nào không?", missing=[{"key": "evidence", "label": "Nguồn"}]),
-            step("stop"),
+            step("clarify", question="", missing=[{"key": "evidence", "label": "Nguồn"}]),
+            step("clarify", question="Bạn đang ở vùng nào?", missing=[{"key": "region", "label": "Vùng"}]),
         ]
     )
-    pipe = pipeline(llm)
-    p = await pipe.prepare(req(), [])
-    result = await pipe.generator.generate(p)
+    p = await pipeline(llm).prepare(req(), [])
     assert p.trace["tool_actions"][1]["status"] == "denied"
-    assert p.trace["evidence_selection"] == {"method": "model", "ids": []}
-    assert p.clarification is None and p.player_state["pending"] is None
-    assert result.answer == "Mình chưa có đủ thông tin để trả lời câu này."
-    assert not result.sources and not result.grounded and llm.calls == 0
+    assert llm.observations[2]["observations"][-1]["status"] == "clarify_requires_question_and_missing_fields"
+    assert p.clarification is not None and p.trace["tool_stop"] == "clarify"
 
 
 @pytest.mark.parametrize("streaming", [False, True])
@@ -130,7 +127,15 @@ async def test_comparison_passes_selected_options_and_keeps_recommendation(strea
 
     query = "Elden Ring starting classes starting gear and playstyle comparison"
     llm = ToolsLLM([step("local_search", query), step("finish", evidence_ids=["1", "2"])])
-    llm.decisions = [plan(intent="gameplay_comparison", entities=[], resolved_question=query, search_query=query)]
+    llm.decisions = [
+        plan(
+            intent="gameplay_comparison",
+            entities=[],
+            resolved_question=query,
+            search_query=query,
+            gameplay_advice=True,
+        )
+    ]
     llm.data = {
         "answer": "A có khiên từ đầu [1]. B có gậy dùng phép [2].",
         "evidence": [{"index": 1, "quote_id": "q0"}, {"index": 2, "quote_id": "q0"}],
@@ -163,7 +168,9 @@ async def test_comparison_passes_selected_options_and_keeps_recommendation(strea
 async def test_gameplay_advice_can_answer_with_empty_retrieval_without_claiming_sources(streaming):
     query = "Elden Ring beginner dodge or block trade-offs"
     llm = ToolsLLM([step("local_search", query), step("stop")])
-    llm.decisions = [plan(intent="mechanics", entities=[], resolved_question=query, search_query=query)]
+    llm.decisions = [
+        plan(intent="mechanics", entities=[], resolved_question=query, search_query=query, gameplay_advice=True)
+    ]
     llm.data = {
         "answer": "Nếu khó canh thời điểm né, hãy tập đỡ những đòn dễ đọc rồi xen kẽ né khi đã quen.",
         "evidence": [],
@@ -385,16 +392,20 @@ async def test_final_evidence_is_model_selected_without_keyword_order():
     assert len(llm.observations[1]["candidates"]) >= 3
 
 
-async def test_evidence_rank_fallback_is_explicit_not_keyword():
+async def test_without_a_selection_the_writer_gets_all_evidence_not_a_server_ranking():
     p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish")])).prepare(req(), [])
-    assert p.trace["evidence_selection"] == {"method": "rank_fallback", "ids": []}
+    assert p.trace["evidence_selection"] == {"method": "all_evidence", "ids": ["1"]}
     assert p.hits
 
 
 @pytest.mark.parametrize("ids", [["fake"], ["1", "1"]])
 async def test_evidence_selector_rejects_invented_or_duplicate_ids(ids):
     p = await pipeline(ToolsLLM([step("local_search", "Ranni"), step("finish", evidence_ids=ids)])).prepare(req(), [])
-    assert p.trace["evidence_selection"] == {"method": "rank_fallback", "ids": [], "reason": "invalid_or_duplicate_id"}
+    assert p.trace["evidence_selection"] == {
+        "method": "all_evidence",
+        "ids": ["1"],
+        "reason": "invalid_or_duplicate_id",
+    }
     assert p.hits and all(h.id != "fake" for h in p.hits)
 
 
@@ -437,6 +448,72 @@ async def test_malformed_tool_steps_are_explained_and_answered_from_evidence():
     assert p.trace["tool_stop"] == "invalid_tool_output" and p.hits
     issue = llm.observations[2]["observations"][-1]["error"]
     assert issue["kind"] == "schema" and issue["fields"][0]["field"] == "reason"
+
+
+class FailingToolsLLM(ToolsLLM):
+    """A tool step may be an LLMError (provider failure, or output cut off at max_tokens)."""
+
+    def __init__(self, actions, decisions=None):
+        super().__init__(actions, decisions)
+        self.max_tokens = []
+
+    def bind_model(self, **kwargs):
+        self.max_tokens.append(kwargs.get("max_tokens"))
+        return super().bind_model(**kwargs)
+
+    async def invoke_chain(self, chain, inputs):
+        if inputs.get("policy", "").startswith("You are IndexBeast's bounded tool"):
+            self.observations.append(json.loads(inputs["question"]))
+            action = next(self.actions)
+            if isinstance(action, Exception):
+                raise action
+            return LLMResponse(json.dumps(action), "fake", 10, 5, "stop")
+        return await super().invoke_chain(chain, inputs)
+
+
+def cut_off():
+    from app.adapters.llm import LLMError
+
+    return LLMError("cut", reason="incomplete_output", finish_reason="length", completion_tokens=2048)
+
+
+async def test_a_tool_step_model_error_is_explained_and_retried(caplog):
+    llm = FailingToolsLLM([step("local_search", "Ranni identity"), cut_off(), step("finish")])
+    p = await pipeline(llm).prepare(req(), [])
+    # Live-11: one cut-off tool step used to end the turn with a 502 and no logged reason.
+    assert p.trace["tool_stop"] == "finish" and p.hits
+    seen = llm.observations[2]["observations"][-1]
+    assert seen["status"] == "model_error" and seen["error"] == "incomplete_output" and "cut off" in seen["fix"]
+    denied = next(a for a in p.trace["tool_actions"] if a.get("reason") == "tool_model_error")
+    assert denied["issue"] == {"reason": "incomplete_output", "finish_reason": "length", "completion_tokens": 2048}
+    assert any(r.getMessage() == "Tool decision model error" for r in caplog.records)
+
+
+async def test_two_tool_step_model_errors_answer_from_evidence_or_fail_without_any():
+    from core.errors import UpstreamError
+
+    llm = FailingToolsLLM([step("local_search", "Ranni identity"), cut_off(), cut_off()])
+    p = await pipeline(llm).prepare(req(), [])
+    assert p.trace["tool_stop"] == "tool_model_error" and p.hits
+    with pytest.raises(UpstreamError):
+        await pipeline(FailingToolsLLM([cut_off(), cut_off()])).prepare(req(), [])
+
+
+async def test_a_cut_off_calculator_step_gets_a_larger_token_cap():
+    level = {"key": "level", "value": "110", "source_id": "current"}
+    decision = plan(
+        intent="build",
+        entities=[],
+        constraints=[level],
+        resolved_question="Faith build level 110",
+        search_query="Faith build level 110",
+    )
+    llm = FailingToolsLLM([step("local_search", "Faith build"), cut_off(), step("finish")], [decision])
+    p = await pipeline(llm, chat_tool_steps=4, chat_agent_max_calls=8).prepare(req("Faith build level 110"), [])
+    assert "calculator" in llm.observations[1]["available_actions"]
+    # Tool steps with the calculator offered: 2048 before the cut-off, 4096 after it.
+    assert [c for c in llm.max_tokens if c in (2048, 4096)][-2:] == [2048, 4096]
+    assert p.trace["tool_stop"] == "finish"
 
 
 async def test_a_withdrawn_tool_requested_twice_ends_the_loop():

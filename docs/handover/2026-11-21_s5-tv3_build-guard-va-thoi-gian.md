@@ -1,6 +1,6 @@
 # TV3 · Phân bổ chỉ số do Agent làm, Answer Guard, hạn thời gian và corpus Origins
 
-Ngày 20–21/11/2026 · Nhánh `fix/s4-tv3-tach-han-thoi-gian` (base `origin/develop` tại `bcbbf4c`). Đã commit: `15c7d72`, `b09a2ac` (rule con số, có [handover riêng](2026-11-20_s4-tv3_agent-rule-con-so.md)) và `0d2f4df` (hạn thời gian). Phần còn lại **chưa commit**; chưa push, chưa có PR.
+Ngày 20–21/11/2026 · Nhánh `fix/s4-tv3-tach-han-thoi-gian` (base `origin/develop` tại `bcbbf4c`). Đã commit: `15c7d72`, `b09a2ac` (rule con số, có [handover riêng](2026-11-20_s4-tv3_agent-rule-con-so.md)) và `0d2f4df` (hạn thời gian). Phần còn lại đã commit và **merge vào `develop` qua PR #124** (`5a18e9c`). Việc tiếp theo: [handover 22/11](2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md).
 
 Liên quan: [bổ sung 11 trang Origins/Attributes vào corpus](2026-11-20_s5-tv2_bo-sung-trang-class.md) (việc TV2), [bỏ tùy chọn spoiler ở web/bot/API](2026-11-21_s5-tv4_bo-tuy-chon-spoiler.md) (việc TV4).
 
