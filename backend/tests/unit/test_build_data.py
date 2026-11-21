@@ -459,36 +459,39 @@ async def test_calculator_rejection_is_fed_back_and_withdrawn_after_two(build):
 
 
 @pytest.mark.parametrize(
-    "answer",
+    ("answer", "fields"),
     [
-        "Chưa có lớp xuất phát hoặc checked_build nên không thể chốt số điểm [1].",
-        "Theo player_profile, ưu tiên Intelligence [1].",
+        ("Chưa có lớp xuất phát hoặc checked_build nên không thể chốt số điểm [1].", ["checked_build"]),
+        ("Theo `player_profile`, ưu tiên Intelligence [1].", ["player_profile"]),
     ],
 )
-def test_answers_that_leak_internal_field_names_are_regenerated(build, answer):
+def test_internal_field_names_go_to_the_guard_and_are_never_shown(build, answer, fields):
     p = Prepared("rag", "vi", [], hits=build[3], values={"player_profile": build[2]})
-    with pytest.raises(RAGValidationError) as error:
-        answer_with(p, answer)
-    assert error.value.reason == "internal_field_name"
-    assert answer_with(p, "Mình chưa kiểm chứng được bảng chia điểm chính xác từ nguồn; ưu tiên Strength [1].")
+    out = answer_with(p, answer)
+    # Not dropped: the Answer Guard is asked to rewrite it, and the fallback answer already reads naturally.
+    assert p.trace["guard_request"]["issues"] == [{"kind": "internal_field_name", "fields": fields}]
+    assert not any(f in out.answer for f in fields) and "`" not in out.answer
+    assert "bảng chia điểm đã kiểm" in out.answer or "thông tin bạn đưa ra" in out.answer
+    clean = Prepared("rag", "vi", [], hits=build[3], values={"player_profile": build[2]})
+    answer_with(clean, "Mình chưa kiểm chứng được bảng chia điểm chính xác từ nguồn; ưu tiên Strength [1].")
+    assert "guard_request" not in clean.trace
 
 
-async def test_stream_never_shows_an_internal_field_name():
+async def test_every_answer_is_held_and_the_guard_rewrites_an_internal_field_name():
     from app.api.schemas.chat import ChatRequest
-    from app.rag.generator import RAGValidationError
     from tests.unit.test_live_chat import BODY, FakeLLM, FakeRetriever, service
 
     evidence = '"evidence": [{"index": 1, "quote": "Ranni is an Empyrean"}], "insufficient": false}'
-    leak = '{"answer": "Thiếu checked_build nên chưa chia điểm [1]. ", ' + evidence
-    live = service(llm=FakeLLM(tokens=[leak]), retriever=FakeRetriever(), rag_format_retries=0)
-    with pytest.raises(RAGValidationError) as error:
-        await live.open_stream(ChatRequest(**BODY))
-    assert error.value.reason == "internal_field_name" and not live.traces
-    # The same answer without the field name streams normally.
-    clean = FakeLLM(tokens=[leak.replace("checked_build", "bảng chia điểm đã kiểm chứng")])
-    live = service(llm=clean, retriever=FakeRetriever(), rag_format_retries=0)
+    leak = '{"answer": "Ranni là Empyrean [1].\\nThiếu checked_build nên chưa chia điểm [1]. ", ' + evidence
+    llm = FakeLLM(tokens=[leak[:30], leak[30:]])
+    llm.data = {"answer": "Ranni là Empyrean [1].\nMình chưa có bảng chia điểm đã kiểm nên chưa chia điểm [1]."}
+    live = service(llm=llm, retriever=FakeRetriever(), rag_format_retries=0)
     async with aclosing(await live.open_stream(ChatRequest(**BODY))) as events:
-        assert [name async for name, _ in events][-1] == "done"
+        frames = [frame async for frame in events]
+    tokens = [p.token for n, p in frames if n == "token"]
+    # Shown once, after the check: nothing visible is cut or replaced by an error afterwards.
+    assert frames[-1][0] == "done" and len(tokens) == 1
+    assert "checked_build" not in tokens[0] and tokens[0].startswith(llm.data["answer"])
 
 
 def test_unchecked_allocation_field_is_dropped_but_prose_numbers_are_a_reference(build):
@@ -572,6 +575,31 @@ def test_writer_prints_the_checked_table_and_the_backend_only_adds_assumptions(b
     assert "| Vigor | 40 |" in out.answer and p.trace["allocation_printed_by_writer"]
     assert "Vigor 40 | Mind 15" not in out.answer  # No duplicate numbers line.
     assert "giả định class Wretch" in out.answer
+
+
+def test_assumption_note_sits_directly_under_the_writer_table(build):
+    p = checked_prepared(build)
+    table = writer_table(build[1])
+    out = answer_with(p, "Dồn Strength cho Greatsword [1].\n\n" + table + "\n\nNâng Vigor trước khi lên boss khó [1].")
+    head, tail = out.answer.split("Ghi chú cho bảng: ", 1)
+    # Table, then the note (own paragraph, with the rule citations), then the writer's closing prose.
+    assert head.rstrip().endswith(table.rstrip()) and "giả định class Wretch" in tail.split("\n")[0]
+    assert tail.split("\n")[0].rstrip().endswith("[1][2][3]") and tail.endswith(
+        "Nâng Vigor trước khi lên boss khó [1]."
+    )
+
+
+def test_class_starting_values_in_the_prose_do_not_count_as_the_table_total():
+    from app.rag.generator import build_issues
+
+    profile = {"level": "150", "starting_class": "Astrologer"}
+    p = Prepared("rag", "vi", [], hits=[], values={"player_profile": profile})
+    table = writer_table(allocation(50, 30, 20, 10, 14, 45, 50, 10))  # 229 = 150 + 79
+    floors = "Astrologer khởi đầu với Vigor 9, Mind 15, Endurance 9, Strength 8, Dexterity 12, Intelligence 16, "
+    answer = table + "\n\n" + floors + "Faith 7, Arcane 9 [1]."
+    assert build_issues(p, answer) == []
+    wrong = writer_table(allocation(50, 30, 20, 10, 14, 45, 50, 11)) + "\n\n" + floors + "Faith 7, Arcane 9 [1]."
+    assert build_issues(p, wrong)[0]["printed_total"] == 230
 
 
 def test_a_wrong_number_in_the_writer_table_requests_the_guard(build):

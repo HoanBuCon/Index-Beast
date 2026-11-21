@@ -2,6 +2,14 @@
 
 TV3 MinhMuc · IndexBeast / 4 Hollows · nhánh `feature/s3-tv3-bounded-tool-agent`.
 
+> **Cập nhật 22/11/2026:** tài liệu này mô tả đợt 06/11. Các cờ `CHAT_AGENT_ENABLED`, `CHAT_TOOL_AGENT_ENABLED` và
+> nhánh legacy/workflow (`gameplay.py`, `coverage_order`, graph retrieval → assess → web cố định) đã bị gỡ; chỉ còn một
+> luồng RAG. Hành vi hiện tại khác bảng dưới ở các điểm: `check_name` chỉ trả ứng viên và Agent chọn tên (`name`);
+> `clarify` chỉ cần câu hỏi và `missing`; assessor (web `auto`) chỉ gợi ý query; không có fallback câu gốc hay
+> `rank_fallback`; `CHAT_TOOL_STEPS` tối đa 4 và web `auto` dùng `CHAT_COVERAGE_*`. Xem
+> [handover 22/11](../handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md) và
+> [handover 21/11](../handover/2026-11-21_s5-tv3_build-guard-va-thoi-gian.md).
+
 ## Runtime và chuyển đổi
 
 `CHAT_MODE=rag`, `CHAT_AGENT_ENABLED=true`, `CHAT_TOOL_AGENT_ENABLED=true` (default code mới):

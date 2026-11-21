@@ -30,12 +30,12 @@ graph TD
     D -->|"retrieve"| T["tool_agent: Agent lặp chọn tool (local/web search, snapshot, inspect, calculator, clarify, finish)"]
     T --> X["context: admission, dedup, top-5, budget"]
     X --> P
-    P --> E["generate: static, JSON hoặc stream (câu build được giữ tới khi kiểm xong)"]
+    P --> E["generate: static, JSON hoặc stream (mọi câu được giữ tới khi kiểm xong mới gửi)"]
     E --> V["validate: JSON, citation, quote, URL; đếm đoạn không trích dẫn"]
     V --> VQ{"Kết quả?"}
-    VQ -->|"Lỗi protocol được sửa, chưa phát token, còn 1 lần"| F["repair: cùng câu hỏi và evidence, non-thinking"]
+    VQ -->|"Lỗi protocol được sửa, còn 1 lần"| F["repair: cùng câu hỏi và evidence, non-thinking"]
     F --> E
-    VQ -->|"Bảng chỉ số sai hoặc thiếu"| G["Answer Guard: một lượt LLM sửa bảng, kiểm lại"]
+    VQ -->|"Bảng chỉ số sai/thiếu hoặc lộ tên trường nội bộ"| G["Answer Guard: một lượt LLM sửa, kiểm lại"]
     G --> Z["finish generation graph"]
     VQ -->|"Thành công"| Z
     VQ -->|"Sai lệch nguồn hoặc hết lượt sửa"| ER["Lỗi có phân loại; không gửi done thành công"]
@@ -46,7 +46,7 @@ graph TD
 ```
 
 Các node `scope` đến `prompt` thuộc `ChatPipeline.prepare_graph`. `generate`, `validate`, `repair`, `finish`
-thuộc `Generator.graph`; Answer Guard chạy trong bước validate khi phát hiện lỗi trình bày của câu build.
+thuộc `Generator.graph`; Answer Guard chạy trong bước validate khi phát hiện lỗi trình bày (bảng chỉ số, tên trường nội bộ).
 Auth, lock, optional images và commit ở service boundary, không giả chúng là graph node.
 
 ## Ký ức được chọn thế nào
@@ -64,7 +64,7 @@ Auth, lock, optional images và commit ở service boundary, không giả chúng
 | Tool Agent | Câu đã resolve, profile người chơi, observation | Chọn tool, tìm evidence, gọi calculator |
 | Evidence assessor | Câu hỏi + context, history rỗng | Kiểm mức đáp ứng của evidence (web `auto`) |
 | RAG generator | Câu đã resolve + numbered evidence, history rỗng | Trả lời và trích dẫn |
-| Answer Guard | Câu trả lời + lỗi bảng chỉ số | Sửa bảng, không thêm dữ kiện hay nguồn |
+| Answer Guard | Câu trả lời + lỗi trình bày (bảng chỉ số, tên trường nội bộ) | Sửa đúng lỗi đó, không thêm dữ kiện hay nguồn |
 
 Memory không biến thành Hit, Document hoặc source index; assistant từng nói sai không thể tự chứng minh đáp án mới.
 Ngôn ngữ trả lời độc lập query retrieval; history không được phép đổi tiếng Việt thành trả lời tiếng Anh.
@@ -101,7 +101,8 @@ không làm chat tự lưu PostgreSQL. Không có migration hoặc collection me
   không gọi lại retrieval/search và vẫn qua validator. Lỗi mạng/quote không nguyên văn không được biến thành đủ bằng chứng.
 - Giới hạn recursion prepare/generation là 24/12; không gắn RetryPolicy tự lặp tool.
 - Một queue bounded và acknowledgement nối graph với SSE: consumer nhận tiếp thì provider mới tiếp tục.
-  Hủy stream sẽ cancel và await tác vụ graph/provider. Sau token hiển thị không chạy lại generation.
+  Hủy stream sẽ cancel và await tác vụ graph/provider. Từ 21/11 câu trả lời chỉ được gửi (một event `token`) sau khi
+  kiểm và Answer Guard xong, nên lỗi sinh câu luôn xảy ra trước token đầu: được sinh lại, hoặc trả lỗi HTTP JSON.
 - `CHAT_TIMEOUT_SECONDS` (45 giây, JSON/Discord) và `CHAT_STREAM_TIMEOUT_SECONDS` (90 giây, web SSE) bao gồm chờ lock,
   preparation (tối đa `CHAT_PREPARE_TIMEOUT_SECONDS`), generation/repair/Answer Guard và ảnh; SSE tiếp tục dùng deadline
   của cùng lượt sau token đầu. Timeout/lỗi không lưu turn thành công hoặc gửi `done`.

@@ -35,13 +35,20 @@ def test_spelling_tolerates_common_keyboard_errors(typed):
     assert not close_spelling("NG+10", "NG+1")
 
 
-async def test_name_mismatch_can_fall_back_to_original_self_contained_query():
+async def test_name_mismatch_is_repaired_by_the_agent_not_replaced_by_the_question():
+    from core.errors import UpstreamError
+
     question = "Who is Ranni?"
-    llm = AgentLLM([plan(search_query="Who is Rennala?")])
+    llm = AgentLLM([plan(search_query="Who is Rennala?"), plan()])
     pipe = ChatPipeline(settings(), llm, FakeRetriever())
     prepared = await pipe.prepare(req(question), [])
-    assert prepared.trace["rewrite_fallback"]
-    assert pipe.retriever.calls == [(question, True)]
+    assert prepared.trace["agent"]["repair_attempts"] == 1
+    assert pipe.retriever.calls == [("Who is Ranni?", True)]
+    # Never repaired: an error, not the original question searched in its place.
+    pipe = ChatPipeline(settings(), AgentLLM([plan(search_query="Who is Rennala?")]), FakeRetriever())
+    with pytest.raises(UpstreamError):
+        await pipe.prepare(req(question), [])
+    assert pipe.retriever.calls == []
 
 
 def spelling_decision():
@@ -54,14 +61,43 @@ def spelling_decision():
     )
 
 
+async def test_the_agent_must_name_an_offered_candidate_before_using_it():
+    llm = ToolsLLM(
+        [
+            step("check_name"),
+            step("finish", name="Moonveil Katana"),  # Not offered: denied.
+            step("finish"),  # No name chosen: reminded once.
+            step("finish"),  # Still none: the loop ends without evidence for an unresolved name.
+        ],
+        [spelling_decision()],
+    )
+    retriever = FakeRetriever([hit(title="Moonveil"), hit(2, title="Ranni")])
+    p = await ChatPipeline(settings(chat_tool_steps=4), llm, retriever).prepare(req("Mooonveil lấy ở đâu?"), [])
+    statuses = [o["observations"][-1]["status"] for o in llm.observations[2:]]
+    assert statuses == ["name_not_in_candidates", "choose_name"]
+    assert p.trace["tool_stop"] == "name_not_chosen" and not p.hits and "verified_name" not in p.trace
+
+
 async def test_unique_corpus_name_replaces_typo_but_preserves_original_message():
-    llm = ToolsLLM([step("check_name"), step("finish", evidence_ids=["1"])], [spelling_decision()])
+    # check_name only offers candidates; the Agent names the one it means (21/11).
+    llm = ToolsLLM(
+        [
+            step("check_name"),
+            step("local_search", "Moonveil location", name="Moonveil"),
+            # Live-13: repeating the chosen name on finish was denied four times in a row.
+            step("finish", name="Moonveil", evidence_ids=["1"]),
+        ],
+        [spelling_decision()],
+    )
     retriever = FakeRetriever([hit(title="Moonveil"), hit(2, title="Ranni")])
     pipe = ChatPipeline(settings(), llm, retriever)
     p = await pipe.prepare(req("Mooonveil lấy ở đâu?"), [])
     payload = json.loads(p.values["payload"])
-    assert retriever.calls == [("Mooonveil", True)]
-    assert llm.observations[1]["name_lookup"]["status"] == "verified"
+    assert retriever.calls[0] == ("Mooonveil", True) and p.trace["tool_stop"] == "finish"
+    lookup = llm.observations[1]["name_lookup"]
+    assert lookup["status"] == "candidates" and lookup["candidates"] == ["Moonveil"] and lookup["single_close_match"]
+    assert p.trace["verified_name"]["chosen_by"] == "agent"
+    assert all(row["status"] != "denied" for row in p.trace["tool_actions"])
     assert payload["question"] == "Where to get Moonveil?"
     assert payload["original_user_message"] == "Mooonveil lấy ở đâu?"
     assert [h.id for h in p.hits] == ["1"]
@@ -83,7 +119,7 @@ async def test_name_lookup_accepts_a_reordered_full_title_or_omitted_possessive(
     decision = plan(
         intent="acquisition", resolved_question=question, search_query=question, name_to_check=typed, entities=[typed]
     )
-    llm = ToolsLLM([step("check_name"), step("finish", evidence_ids=["1"])], [decision])
+    llm = ToolsLLM([step("check_name"), step("finish", name=canonical)], [decision])
     retriever = RankedRetriever(rankings={typed: [hit(title=canonical)]})
     prepared = await ChatPipeline(settings(), llm, retriever).prepare(req(question), [])
     assert prepared.trace["verified_name"]["canonical"] == canonical
@@ -102,7 +138,7 @@ async def test_agent_can_verify_a_full_title_on_contextual_search():
     decision = plan(
         intent="acquisition", resolved_question=question, search_query=question, name_to_check=name, entities=[name]
     )
-    llm = ToolsLLM([step("check_name"), step("local_search", question), step("finish", evidence_ids=["1"])], [decision])
+    llm = ToolsLLM([step("check_name"), step("local_search", question), step("finish", name=title)], [decision])
     retriever = RankedRetriever(rankings={question: [hit(title=title)]})
     prepared = await ChatPipeline(settings(), llm, retriever).prepare(req(question), [])
     assert prepared.trace["verified_name"]["canonical"] == title
@@ -130,7 +166,7 @@ async def test_agent_can_retry_a_name_miss_with_context_and_asks_when_candidates
             missing=[{"key": "character", "label": "Character"}],
         )
         if with_competitor
-        else step("finish", evidence_ids=["1"])
+        else step("finish", name=canonical)
     )
     llm = ToolsLLM([step("check_name"), step("local_search", query), last], [decision])
     retriever = RankedRetriever(rankings={typed: [hit(title="Diallos's Mask")], query: evidence})
@@ -160,7 +196,8 @@ async def test_ambiguous_corpus_name_asks_and_does_not_choose_a_candidate():
     )
     retriever = FakeRetriever([hit(title="Moonveil"), hit(2, title="Moonveil A", aliases=["Moonveil"])])
     p = await ChatPipeline(settings(), llm, retriever).prepare(req("Mooonveil lấy ở đâu?"), [])
-    assert llm.observations[1]["name_lookup"]["status"] == "ambiguous"
+    lookup = llm.observations[1]["name_lookup"]
+    assert lookup["status"] == "candidates" and len(lookup["candidates"]) == 2 and not lookup["single_close_match"]
     assert p.clarification is not None and not p.hits
     assert "verified_name" not in p.trace
 
@@ -335,6 +372,8 @@ async def test_auto_checks_coverage_and_keeps_local_evidence_when_web_fills_a_ga
         [
             step("local_search", question),
             step("finish", evidence_ids=["1"]),
+            # The evidence check only suggests a search; the Agent decides to run it (21/11).
+            step("web_search", "Elden Ring official all ten starting classes"),
             step("finish", evidence_ids=["web:classes"]),
         ],
         [plan(resolved_question=question, search_query=question, entities=[])],
@@ -355,6 +394,7 @@ async def test_auto_checks_coverage_and_keeps_local_evidence_when_web_fills_a_ga
         assert len(search.calls) == 1
         assert search.calls[0].splitlines()[0] == "Elden Ring official all ten starting classes"
         assert p.trace["tool_actions"][1]["status"] == "needs_evidence"
+        assert llm.observations[2]["observations"][-1]["suggested_query"] == search.calls[0].splitlines()[0]
         assert [h.id for h in p.hits] == ["1", "web:classes"]
 
 
@@ -437,7 +477,7 @@ async def test_auto_web_coverage_guides_generator_without_requiring_more_sources
 
     finish = step("finish", evidence_ids=evidence_ids)
     llm = AssessedAgent(
-        [step("web_search", lookup), finish, finish, finish],
+        [step("web_search", lookup), finish, step("web_search", followup), finish, finish],
         [plan(intent="acquisition", resolved_question=question, search_query=lookup, entities=["Moonveil"])],
     )
     llm.data = {

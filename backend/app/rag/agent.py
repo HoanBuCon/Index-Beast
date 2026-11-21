@@ -78,12 +78,17 @@ class AgentDecision(BaseModel):
     subgoals: list[GoalText] = Field(default_factory=list, max_length=4)
     name_to_check: str = Field(default="", max_length=100)
     search_hypotheses: list[SearchName] = Field(default_factory=list, max_length=3)
+    # The Agent's own call that general gameplay know-how may supplement the evidence (formerly a server-side
+    # intent table: mechanics, build, gameplay_comparison).
+    gameplay_advice: bool = False
     reason: Literal["ready", "missing_player_details", "ambiguous_subject", "conversation_control", "unrelated"]
 
     @model_validator(mode="after")
     def coherent(self):
         if self.search_hypotheses and self.action != "retrieve":
             raise ValueError("Search hypotheses require retrieval")
+        if self.gameplay_advice and self.action != "retrieve":
+            raise ValueError("Gameplay advice requires retrieval")
         if self.subgoals and (
             len(self.subgoals) < 2 or len({s.strip().casefold() for s in self.subgoals}) != len(self.subgoals)
         ):
@@ -254,8 +259,9 @@ def check_decision(decision: AgentDecision, question: str, candidates: list[dict
     inactive = inactive_conditions(decision, working, changes)
     inactive_keys = {(item["key"], name_key(item["value"])) for item in inactive}
     for item in decision.constraints:
-        contains_value = contains_name if item.key in {"weapon", "starting_class", "location"} else contains_text
-        if item.source_id not in sources or not contains_value(sources[item.source_id], item.value):
+        # Provenance only: the value must appear in its user source (exact text or the same name), for any key.
+        source = sources.get(item.source_id)
+        if source is None or not (contains_text(source, item.value) or contains_name(source, item.value)):
             raise DecisionError("unverified_constraint", "Constraint not present in its user source")
         if (item.key, name_key(item.value)) in inactive_keys:
             raise DecisionError("superseded_constraint", "Use active conditions or confirm the old value again")
@@ -332,7 +338,6 @@ async def decide(
     spend(trace, "decision", settings.chat_agent_max_calls)
     diagnostic = {"status": "error", "reason": "invalid_decision"}
     trace["agent"] = diagnostic
-    original_query = None
     try:
         payload = {
             "question": question,
@@ -352,36 +357,13 @@ async def decide(
                 try:
                     decision = AgentDecision.model_validate(data)
                     decision, normalized = normalize_sources(decision, candidates, working)
-                    try:
-                        check_decision(decision, question, candidates, working)
-                    except DecisionError as exc:
-                        if decision.rewrite and (
-                            isinstance(exc, QueryNameMismatch) or exc.reason == "unsupported_number"
-                        ):
-                            prior_request = (
-                                working.get("request_text", "") if decision.turn_type == "clarification_reply" else ""
-                            )
-                            if decision.turn_type != "new" and not (prior_request and working.get("pending")):
-                                raise
-                            original = "\n".join(part for part in (prior_request, question) if part)
-                            fallback = decision.model_copy(
-                                update={
-                                    "rewrite": decision.turn_type != "new",
-                                    "resolved_question": original,
-                                    "search_query": original,
-                                    "search_hypotheses": [],
-                                }
-                            )
-                            try:
-                                check_decision(fallback, question, candidates, working)
-                            except DecisionError:
-                                pass  # Keep the original validation failure for model repair.
-                            else:
-                                original_query = (fallback, normalized)
-                        raise
+                    # A rejected decision goes back to the Agent with the reason; the server never substitutes
+                    # the original question for it (former original_query_fallback).
+                    check_decision(decision, question, candidates, working)
                 except ValueError as exc:
                     required = {k for k, v in AgentDecision.model_fields.items() if v.is_required()}
                     condition_error = isinstance(exc, DecisionError) and exc.reason in {
+                        "unsupported_number",
                         "unverified_entity",
                         "superseded_constraint",
                         "invalid_condition_change",
@@ -447,19 +429,6 @@ async def decide(
             else "invalid_decision_schema"
         )
         diagnostic["validation_reason"] = reason
-        if original_query is not None:
-            decision, normalized = original_query
-            diagnostic.update(
-                status="ok",
-                action=decision.action,
-                intent=decision.intent,
-                turn_type=decision.turn_type,
-                rewrite=decision.rewrite,
-                reason="original_query_fallback",
-                selected_memory_ids=decision.selected_memory_ids,
-                normalized_source_refs=normalized,
-            )
-            return decision
         logger.warning(
             "Agent decision rejected",
             extra={"data": {"reason": reason, "repair_attempts": diagnostic.get("repair_attempts", 0)}},
