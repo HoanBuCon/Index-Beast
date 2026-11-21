@@ -1,0 +1,488 @@
+{
+ "note": "rerun after invalid_tool_calls fix replaces the failed questions",
+ "variants": {
+  "A": {
+   "summary": {
+    "success": 10,
+    "grounded": 10,
+    "p50": 11478,
+    "p95": 37169,
+    "max": 37989,
+    "mean": 15524,
+    "over45": 0,
+    "calls_mean": 4.3,
+    "calls_max": 7,
+    "tools_mean": 4.2,
+    "tok_in_mean": 36099,
+    "tok_in_max": 83634,
+    "calculator": {
+     "checked": 2,
+     "with_calc": 2
+    }
+   },
+   "rows": [
+    {
+     "id": "BL-01",
+     "ok": true,
+     "grounded": true,
+     "ms": 15071,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 33382,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-02",
+     "ok": true,
+     "grounded": true,
+     "ms": 5010,
+     "model_calls": 4,
+     "tool_calls": 3,
+     "tok_in": 17878,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-03",
+     "ok": true,
+     "grounded": true,
+     "ms": 3301,
+     "model_calls": 3,
+     "tool_calls": 2,
+     "tok_in": 7877,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "check_name:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-04",
+     "ok": true,
+     "grounded": true,
+     "ms": 17464,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 30816,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-05",
+     "ok": true,
+     "grounded": true,
+     "ms": 37989,
+     "model_calls": 7,
+     "tool_calls": 7,
+     "tok_in": 83634,
+     "stop": "finish",
+     "calc": [
+      "error",
+      "error",
+      "ok"
+     ],
+     "checked": true,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "calculator:error",
+      "calculator:error",
+      "calculator:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-06",
+     "ok": true,
+     "grounded": true,
+     "ms": 36167,
+     "model_calls": 7,
+     "tool_calls": 7,
+     "tok_in": 82705,
+     "stop": "finish",
+     "calc": [
+      "error",
+      "invalid_arguments",
+      "ok"
+     ],
+     "checked": true,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "calculator:error",
+      "calculator:invalid_arguments",
+      "calculator:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-07",
+     "ok": true,
+     "grounded": true,
+     "ms": 12002,
+     "model_calls": 4,
+     "tool_calls": 5,
+     "tok_in": 37969,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "search_corpus:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-08",
+     "ok": true,
+     "grounded": true,
+     "ms": 10955,
+     "model_calls": 3,
+     "tool_calls": 3,
+     "tok_in": 17993,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-09",
+     "ok": true,
+     "grounded": true,
+     "ms": 10707,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 32105,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "finish:ok"
+     ]
+    },
+    {
+     "id": "BL-10",
+     "ok": true,
+     "grounded": true,
+     "ms": 6576,
+     "model_calls": 3,
+     "tool_calls": 3,
+     "tok_in": 16627,
+     "stop": "finish",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "finish:ok"
+     ]
+    }
+   ]
+  },
+  "B": {
+   "summary": {
+    "success": 10,
+    "grounded": 10,
+    "p50": 14226,
+    "p95": 25389,
+    "max": 27158,
+    "mean": 15245,
+    "over45": 0,
+    "calls_mean": 5.8,
+    "calls_max": 10,
+    "tools_mean": 5.9,
+    "tok_in_mean": 82089,
+    "tok_in_max": 165883,
+    "calculator": {
+     "checked": 2,
+     "with_calc": 2
+    }
+   },
+   "rows": [
+    {
+     "id": "BL-01",
+     "ok": true,
+     "grounded": true,
+     "ms": 15711,
+     "model_calls": 5,
+     "tool_calls": 5,
+     "tok_in": 76266,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-02",
+     "ok": true,
+     "grounded": true,
+     "ms": 12304,
+     "model_calls": 7,
+     "tool_calls": 6,
+     "tok_in": 74686,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-03",
+     "ok": true,
+     "grounded": true,
+     "ms": 8594,
+     "model_calls": 5,
+     "tool_calls": 5,
+     "tok_in": 48733,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "check_name:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-04",
+     "ok": true,
+     "grounded": true,
+     "ms": 12741,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 51826,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-05",
+     "ok": true,
+     "grounded": true,
+     "ms": 18814,
+     "model_calls": 6,
+     "tool_calls": 7,
+     "tok_in": 89874,
+     "stop": "final_answer",
+     "calc": [
+      "error",
+      "error",
+      "ok"
+     ],
+     "checked": true,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "calculator:error",
+      "calculator:error",
+      "calculator:ok",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-06",
+     "ok": true,
+     "grounded": true,
+     "ms": 27158,
+     "model_calls": 10,
+     "tool_calls": 10,
+     "tok_in": 165883,
+     "stop": "final_answer",
+     "calc": [
+      "error",
+      "invalid_arguments",
+      "error",
+      "invalid_arguments",
+      "ok"
+     ],
+     "checked": true,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "calculator:error",
+      "calculator:invalid_arguments",
+      "calculator:error",
+      "calculator:invalid_arguments",
+      "calculator:ok",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-07",
+     "ok": true,
+     "grounded": true,
+     "ms": 23228,
+     "model_calls": 8,
+     "tool_calls": 9,
+     "tok_in": 156807,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "open_evidence:ok",
+      "final_answer:error",
+      "final_answer:error",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-08",
+     "ok": true,
+     "grounded": true,
+     "ms": 9445,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 51718,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-09",
+     "ok": true,
+     "grounded": true,
+     "ms": 16117,
+     "model_calls": 5,
+     "tool_calls": 5,
+     "tok_in": 56722,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "check_name:ok",
+      "open_evidence:ok",
+      "final_answer:error",
+      "final_answer:ok"
+     ]
+    },
+    {
+     "id": "BL-10",
+     "ok": true,
+     "grounded": true,
+     "ms": 8342,
+     "model_calls": 4,
+     "tool_calls": 4,
+     "tok_in": 48371,
+     "stop": "final_answer",
+     "calc": [],
+     "checked": false,
+     "guard": null,
+     "clar": false,
+     "tools": [
+      "search_corpus:ok",
+      "search_corpus:ok",
+      "open_evidence:ok",
+      "final_answer:ok"
+     ]
+    }
+   ]
+  }
+ }
+}

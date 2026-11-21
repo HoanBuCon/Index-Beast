@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Spike True Agent bằng DeepSeek function calling (22/11/2026)](2026-11-22_s5-tv3_spike-true-agent.md)
 - [TV3 · Giữ câu cho Answer Guard, gọt prompt build, lỗi G, bỏ chỗ server quyết định thay Agent (22/11/2026)](2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md)
 - [TV3 · Phân bổ chỉ số do Agent làm, Answer Guard, hạn thời gian (21/11/2026)](2026-11-21_s5-tv3_build-guard-va-thoi-gian.md)
 - [TV4 (TV3 làm thay) · Bỏ tùy chọn `spoilers` khỏi web, bot và API (21/11/2026)](2026-11-21_s5-tv4_bo-tuy-chon-spoiler.md)
