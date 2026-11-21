@@ -121,8 +121,9 @@ async def test_multiple_quotes_and_partial_answer_keep_json_sse_contract(streami
 
 
 def test_two_evidence_items_for_one_source_are_merged_not_rejected():
+    prepared = Prepared("rag", "en", [], hits=[hit()])
     result = validate_answer(
-        Prepared("rag", "en", [], hits=[hit()]),
+        prepared,
         {
             "answer": "Ranni is an Empyrean [1].",
             "evidence": [{"index": 1, "quote_id": "q0"}, {"index": 1, "quote_id": "q0"}],
@@ -130,3 +131,4 @@ def test_two_evidence_items_for_one_source_are_merged_not_rejected():
         },
     )
     assert result.grounded and len(result.sources) == 1 and "[…]" not in result.sources[0].text
+    assert prepared.trace["evidence_merged"] == 1  # Chỉ để chẩn đoán khi chạy thật.

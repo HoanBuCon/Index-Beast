@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import aclosing, suppress
 from contextvars import ContextVar
@@ -94,7 +95,7 @@ def cited_blocks(answer: str) -> tuple[str, int]:
 class LLM(Protocol):
     def bind_model(self, **kwargs) -> Runnable: ...
     async def invoke_chain(self, chain: Runnable, inputs) -> LLMResponse: ...
-    def stream_chain(self, chain: Runnable, inputs) -> AsyncIterator[str]: ...
+    def stream_chain(self, chain: Runnable, inputs, usage: dict | None = None) -> AsyncIterator[str]: ...
 
 
 @dataclass
@@ -112,6 +113,9 @@ class Prepared:
     agent_decision: dict = field(default_factory=dict)
     max_calls: int | None = None
     gameplay_advice: bool = False
+    # Agent khai báo câu trả lời cần cân nhắc (nguồn mâu thuẫn, nhiều bước, nhiều tiêu chí); chỉ khi đó bước viết
+    # mới bật thinking, và chỉ khi cấu hình cho phép (23/11).
+    reasoning: bool = False
 
 
 @dataclass
@@ -165,7 +169,9 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
         evidence = {}
         for item in parsed.evidence:
             if item.index > len(prepared.hits):
-                failure = "quote_not_verbatim_or_index"
+                # Số thứ tự nguồn vượt context là lỗi giao thức (như quote ID lạ), sinh lại được; trích dẫn không khớp
+                # nguyên văn vẫn là quote_not_verbatim_or_index và không được thử lại (23/11).
+                failure = "unknown_evidence_index"
                 raise ValueError("Evidence index is outside selected context")
             text = prepared.hits[item.index - 1].payload["text"]
             units = evidence_units(text)
@@ -179,6 +185,8 @@ def validate_answer(prepared: Prepared, data: dict) -> Generated:
                 raise ValueError("Unknown evidence unit ID")
             # Hai evidence cho cùng một nguồn là lỗi trình bày, không phải khẳng định sai: gộp các trích dẫn lại
             # (22/11).
+            if item.index in evidence:
+                prepared.trace["evidence_merged"] = prepared.trace.get("evidence_merged", 0) + 1
             merged = evidence.setdefault(item.index, [])
             merged.extend(q for q in quotes if q not in merged)
         if URL.search(parsed.answer):
@@ -284,6 +292,7 @@ RETRYABLE_REASONS = {
     "insufficient_with_citations",
     "citation_evidence_indices",
     "unknown_quote_id",
+    "unknown_evidence_index",
     "model_url",
     "invalid_limitation",
     "invalid_gameplay_advice",
@@ -375,7 +384,14 @@ class Generator:
 
     def chain(self, prepared: Prepared, *, recovery: bool = False) -> Runnable:
         template = prepared.template or generation_prompt()
-        params = {"json_output": True, "thinking": self.thinking and not recovery}
+        thinking = self.thinking and prepared.reasoning and not recovery
+        if not recovery:
+            prepared.trace["writer_thinking"] = {
+                "allowed": self.thinking,
+                "requested": prepared.reasoning,
+                "used": thinking,
+            }
+        params = {"json_output": True, "thinking": thinking}
         if recovery:
             params["temperature"] = 0
         return template | self.llm.bind_model(**params)
@@ -574,15 +590,28 @@ class Generator:
         raw, emitted = "", ""
         # Mọi câu trả lời được giữ lại tới khi hoàn tất và đã kiểm (MinhMuc, 21/11): Answer Guard đọc toàn bộ câu trả
         # lời, vẫn có thể thử lại, và người chơi không bao giờ thấy chữ bị cắt hay bị thay bằng lỗi về sau.
+        usage: dict = {}
+        started = time.perf_counter()
+        # Chỉ số đo (23/11): thời gian tới chunk đầu của provider và tổng thời gian sinh mỗi lần thử, cùng token.
+        timing = {"attempt": attempt + 1}
+        prepared.trace.setdefault("writer", []).append(timing)
         try:
             spend(prepared.trace, "generation", prepared.max_calls)
             async with aclosing(
-                self.llm.stream_chain(self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt))
+                self.llm.stream_chain(
+                    self.chain(prepared, recovery=attempt > 0), self._inputs(prepared, attempt), usage=usage
+                )
             ) as stream:
                 async for token in stream:
+                    if not raw:
+                        timing["first_chunk_ms"] = round((time.perf_counter() - started) * 1000)
                     raw += token
                     if len(raw) > MAX_OUTPUT_CHARS:
                         raise UpstreamError("Câu trả lời vượt giới hạn stream.")
+            timing.update(generation_ms=round((time.perf_counter() - started) * 1000), output_chars=len(raw))
+            if usage:
+                timing.update(usage)
+                self._usage(prepared, usage)
             data = self._decode(prepared, raw)
             result = await self._finalize(prepared, data)
             if result.answer:

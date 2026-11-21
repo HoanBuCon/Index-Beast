@@ -104,7 +104,7 @@ async def test_rag_json_retry_wire_contract_with_real_langchain_and_fake_http(th
         assert body["messages"][1:] == requests[0]["messages"][1:]
         return httpx.Response(200, json=completion(json.dumps(expected, ensure_ascii=False)))
 
-    prepared = Prepared("rag", "vi", [])
+    prepared = Prepared("rag", "vi", [], reasoning=True)  # Agent đã yêu cầu nghĩ; cấu hình quyết có cho phép.
     prepared.values = {
         "persona": prompt("persona"),
         "lang": "vi",
@@ -414,3 +414,34 @@ async def test_cancel_blocked_provider_stream_closes_response_without_retry():
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, timeout=3)
     assert body.closed and len(requests) == 1
+
+
+async def test_agent_thinking_sends_reasoning_content_back_with_tool_calls():
+    # DeepSeek thinking + tool call: thiếu reasoning_content ở tin nhắn assistant cũ thì provider trả 400 (23/11).
+    from langchain_core.messages import HumanMessage, ToolMessage
+
+    bodies = []
+
+    def handler(request):
+        bodies.append(json.loads(request.content))
+        message = {
+            "role": "assistant",
+            "content": "",
+            "reasoning_content": "private plan",
+            "tool_calls": [
+                {"id": "c1", "type": "function", "function": {"name": "search", "arguments": '{"q": "Ranni"}'}}
+            ],
+        }
+        body = completion()
+        body["choices"][0].update(message=message, finish_reason="tool_calls")
+        return httpx.Response(200, json=body)
+
+    tool = {"type": "function", "function": {"name": "search", "parameters": {"type": "object", "properties": {}}}}
+    async with fake_llm(handler) as llm:
+        bound = llm.model.bind_tools([tool], extra_body={"thinking": {"type": "enabled"}})
+        first = await bound.ainvoke([HumanMessage("Who is Ranni?")])
+        assert first.additional_kwargs["reasoning_content"] == "private plan"
+        await bound.ainvoke([HumanMessage("Who is Ranni?"), first, ToolMessage("{}", tool_call_id="c1")])
+    assistant = [m for m in bodies[1]["messages"] if m["role"] == "assistant"]
+    assert assistant[0]["reasoning_content"] == "private plan" and assistant[0]["tool_calls"]
+    assert all("reasoning_content" not in m for m in bodies[0]["messages"])

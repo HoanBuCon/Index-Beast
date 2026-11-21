@@ -311,10 +311,12 @@ async def test_invalid_model_output_is_provider_failure_not_fake_clarification()
 async def test_budget_is_enforced_before_generation():
     llm = AgentLLM().insufficient()
     live = service(llm=llm, chat_agent_max_calls=1)
-    # Lượt gọi duy nhất dành cho bước viết: không có bước Agent, không tìm hay bịa gì; bước viết nói rõ điều đó.
+    # Lượt Agent duy nhất là lượt finish bắt buộc (23/11): không tìm hay bịa gì; bước viết nói rõ điều đó.
     result = await live.answer(req())
-    assert not result.grounded and result.sources == [] and llm.calls == 1 and len(llm.plans) == 0
-    assert live.traces[result.message_id]["tool_stop"] == "model_budget"
+    assert not result.grounded and result.sources == [] and llm.calls == 1 and len(llm.plans) == 1
+    trace = live.traces[result.message_id]
+    assert trace["agent"]["forced_finish"] and trace["agent"]["model_calls"] == 1
+    assert not live.pipeline.retriever.calls
 
 
 async def test_restart_capability_replay_and_scope(repo, memory):

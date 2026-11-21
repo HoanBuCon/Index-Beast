@@ -1,0 +1,8 @@
+[
+  {"id": "HR-01", "level": "nguồn có thể mâu thuẫn", "lang": "auto", "question": "Có người bảo Malenia kháng bleed, có người bảo vẫn dính bleed bình thường, rốt cuộc thế nào?", "replies": []},
+  {"id": "HR-02", "level": "phụ thuộc điều kiện (một tay/hai tay)", "lang": "auto", "question": "Cầm hai tay thì Strength được tính thế nào, có áp dụng cho mọi loại vũ khí không?", "replies": []},
+  {"id": "HR-03", "level": "quest dài nhiều bước", "lang": "auto", "question": "Questline của Millicent gồm những bước nào, theo đúng thứ tự?", "replies": []},
+  {"id": "HR-04", "level": "quest có nhánh", "lang": "auto", "question": "Questline của Sellen có những nhánh nào, chọn nhánh nào thì mất gì?", "replies": []},
+  {"id": "HR-05", "level": "so sánh nhiều tiêu chí", "lang": "auto", "question": "So sánh Nagakiba, Uchigatana và Wing of Astel về yêu cầu chỉ số, scaling và skill mặc định.", "replies": []},
+  {"id": "HR-06", "level": "phụ thuộc patch", "lang": "auto", "question": "Mimic Tear có bị nerf qua các bản patch không, giờ còn đáng dùng không?", "replies": []}
+]

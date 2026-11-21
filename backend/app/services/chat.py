@@ -9,7 +9,7 @@ import secrets
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import aclosing
+from contextlib import aclosing, suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -17,7 +17,16 @@ from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel
 
-from app.api.schemas.chat import ChatImage, ChatRequest, ChatResponse, DoneEvent, SourcesEvent, StatusEvent, TokenEvent
+from app.api.schemas.chat import (
+    ChatImage,
+    ChatRequest,
+    ChatResponse,
+    DoneEvent,
+    Source,
+    SourcesEvent,
+    StatusEvent,
+    TokenEvent,
+)
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
@@ -290,13 +299,53 @@ class LiveChatService:
             if remaining <= 1:
                 prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
                 return []
+            t0 = time.perf_counter()
             async with asyncio.timeout(min(6, remaining - 1)):
-                return await resolve(self, req, prepared, result)
+                images = await resolve(self, req, prepared, result)
+            if isinstance(prepared.trace.get("images"), dict):
+                prepared.trace["images"]["ms"] = round((time.perf_counter() - t0) * 1000)
+            return images
         except Exception:
             # Images are optional. Never swallow task cancellation or leak paths/data through errors.
             prepared.trace["images"] = {"returned": 0, "excluded": {"resolver_unavailable": 1}}
             logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
             return []
+
+    def _start_images(self, req, prepared, started, limit=None) -> asyncio.Task | None:
+        """Chọn ảnh song song với bước viết (23/11), trên evidence Agent đã chọn; sau đó chỉ giữ ảnh của nguồn được
+        trích dẫn. Số thứ tự nguồn trùng với số trích dẫn [n] vì cả hai đều theo thứ tự prepared.hits."""
+        if self.image_catalog is None or prepared.mode != "rag" or prepared.static_answer is not None:
+            return None
+        sources = [
+            Source(index=i, title=h.payload.get("title") or "", url=h.payload["url"], section=h.payload.get("section"))
+            for i, h in enumerate(prepared.hits, 1)
+            if h.payload.get("url")
+        ]
+        if not sources:
+            return None
+        return asyncio.create_task(self._images(req, prepared, Generated("", sources, True), started, limit))
+
+    async def _finish_images(self, task, req, prepared, result, started=None, limit=None) -> list[ChatImage]:
+        if task is None:
+            return await self._images(req, prepared, result, started, limit)
+        if not result.grounded or not result.sources:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+            prepared.trace.pop("images", None)
+            return []
+        cited = {source.index for source in result.sources}
+        images = [image for image in await task if cited & set(image.source_indices or [])]
+        if not images:
+            # Ảnh chọn sớm đều thuộc nguồn không được trích dẫn: chọn lại một lần trên nguồn được trích dẫn (như trước).
+            prepared.trace.pop("images", None)
+            images = await self._images(req, prepared, result, started, limit)
+            if isinstance(prepared.trace.get("images"), dict):
+                prepared.trace["images"]["parallel"] = "fallback"
+            return images
+        if isinstance(prepared.trace.get("images"), dict):
+            prepared.trace["images"].update(returned=len(images), parallel=True)
+        return images
 
     async def _prepare(self, req, state, started=None, trace=None):
         kwargs = {"player": state.player, "started": started}
@@ -406,10 +455,15 @@ class LiveChatService:
                         return replay
                     stage = "prepare"
                     prepared, player = await self._prepare(req, state, started, trace)
-                    stage = "generate"
-                    result = await self.pipeline.generator.generate(prepared)
-                    stage = "images_and_save"
-                    images = await self._images(req, prepared, result, started)
+                    early = self._start_images(req, prepared, started)
+                    try:
+                        stage = "generate"
+                        result = await self.pipeline.generator.generate(prepared)
+                        stage = "images_and_save"
+                        images = await self._finish_images(early, req, prepared, result, started)
+                    finally:
+                        if early is not None and not early.done():
+                            early.cancel()
                     return await self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
             log_deadline(stage, trace, started, limit)
@@ -425,6 +479,7 @@ class LiveChatService:
         trace, stage = {}, "wait_conversation"
         owns_lock = False
         tokens = None
+        early = None
         try:
             async with asyncio.timeout_at(deadline):
                 state = await self._load_state(req)
@@ -445,10 +500,13 @@ class LiveChatService:
                 else:
                     stage = "prepare"
                     prepared, player = await self._prepare(req, state, started, trace)
+                    early = self._start_images(req, prepared, started, limit)
                     stage = "first_token"
                     tokens = self.pipeline.generator.stream(prepared)
                     first = await anext(tokens)
         except BaseException as exc:
+            if early is not None:
+                early.cancel()
             try:
                 if tokens is not None:
                     await tokens.aclose()
@@ -479,7 +537,7 @@ class LiveChatService:
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
-                    images = await self._images(req, prepared, result, started, limit)
+                    images = await self._finish_images(early, req, prepared, result, started, limit)
                     response = replay or await self._save(req, state, prepared, result, started, images, player)
                     yield (
                         "sources",
@@ -492,6 +550,8 @@ class LiveChatService:
                 log_deadline("stream", prepared.trace, started, limit)
                 raise TimeoutAppError() from None
             finally:
+                if early is not None and not early.done():
+                    early.cancel()
                 await cleanup()
 
         return ManagedEvents(events(), cleanup)
