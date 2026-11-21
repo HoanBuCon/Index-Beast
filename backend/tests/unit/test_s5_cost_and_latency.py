@@ -34,6 +34,15 @@ def test_web_search_calls_prefers_agent_actions_then_pipeline_status():
     assert llm_cost.web_search_calls(None) == 0
 
 
+def test_web_search_calls_count_search_web_steps_of_the_agent_loop():
+    loop = {"agent": {"steps": [{"tool": "search_corpus"}, {"tool": "search_web"}, {"tool": "search_web"}]}}
+    assert llm_cost.web_search_calls({**loop, "web_search": {"status": "ok"}}) == 2
+    # No web step in the loop: falls back to the web status, as for old traces.
+    assert (
+        llm_cost.web_search_calls({"agent": {"steps": [{"tool": "finish"}]}, "web_search": {"status": "not_run"}}) == 0
+    )
+
+
 def test_aggregate_groups_by_utc_day_and_ignores_missing_tokens():
     utc_plus7 = datetime(2026, 11, 2, 8, tzinfo=timezone(timedelta(hours=7)))  # = 01:00 ngày 2 theo UTC
     rows = [
@@ -107,7 +116,12 @@ class FakeSession:
 
 def test_cost_fetch_rows_maps_database_rows():
     row = SimpleNamespace(
-        created_at=at(1), tokens_in=10, tokens_out=5, tool_actions=[{"action": "web_search"}], web_search=None
+        created_at=at(1),
+        tokens_in=10,
+        tokens_out=5,
+        agent=None,
+        tool_actions=[{"action": "web_search"}],
+        web_search=None,
     )
     session = FakeSession([row])
     rows = asyncio.run(llm_cost.fetch_rows(lambda: session, at(1), at(2)))
@@ -144,6 +158,22 @@ def test_step_timings_extracts_every_step():
         "retrieval": 80.0,
         "tool:web_search": 1000.0,
     }
+
+
+def test_step_timings_read_the_agent_loop():
+    trace = {
+        "prepare_ms": 3000.0,
+        "node_ms": {"agent": 2800.0},
+        "agent": {
+            "steps": [
+                {"tool": "search_corpus", "ms": 400},
+                {"tool": "search_corpus", "ms": 100},
+                {"tool": "finish", "ms": 0},
+            ]
+        },
+    }
+    steps = trace_latency.step_timings(5000.0, trace)
+    assert steps["agent"] == 2800.0 and steps["tool:search_corpus"] == 500.0 and steps["tool:finish"] == 0.0
 
 
 def test_step_timings_tolerates_missing_truncated_or_dirty_traces():

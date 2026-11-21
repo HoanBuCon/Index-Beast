@@ -1,0 +1,6 @@
+[
+  {"id": "WEB-3", "level": "cần web (tin mới), Agent chọn khối trang", "lang": "auto", "question": "Tin tức mới nhất về Elden Ring trong tháng này là gì?", "replies": []},
+  {"id": "WEB-4", "level": "cần web (cộng đồng)", "lang": "auto", "question": "Hiện nay cộng đồng đánh giá build nào mạnh nhất trong Shadow of the Erdtree?", "replies": ["PvE"]},
+  {"id": "LANG-EN", "level": "tiếng Anh viết thường", "lang": "auto", "question": "where do i find the black knife armor", "replies": []},
+  {"id": "LANG-VI", "level": "tiếng Việt không dấu", "lang": "auto", "question": "Lam sao de vao duoc Haligtree?", "replies": []}
+]

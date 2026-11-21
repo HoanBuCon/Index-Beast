@@ -15,53 +15,10 @@ from app.rag.evidence import evidence_units
 from app.rag.generator import Prepared, RAGValidationError, validate_answer
 from app.rag.pipeline import select_context
 from app.rag.prompts import prompt
-from app.rag.web_search import Assessment, assess
-from tests.unit.rag_fakes import ScriptedLLM
 from tests.unit.test_live_chat import FakeLLM, FakeRetriever, SequenceLLM, hit, service
 from tests.unit.test_web_search import web_hit
 
 FIXTURE = json.loads((Path(__file__).parents[1] / "fixtures/golden_guard_replays.json").read_text(encoding="utf-8"))
-
-
-@pytest.mark.parametrize("row", FIXTURE["assessments"], ids=lambda r: r["id"])
-async def test_observed_assessor_outputs_have_lossless_evidence_contract(row):
-    data = json.loads(row["output"])
-    result, trace = await assess(ScriptedLLM(row["output"]), row["question"], [], row["context"], 1)
-    assert result == data["status"] and trace["reason"] == "assessed"
-    assert trace["decision"] == "local_" + data["status"]
-    assert Assessment.model_validate(data).evidence == data["evidence"]
-
-
-@pytest.mark.parametrize("evidence", [{"1": "q0"}, {"1": ["q0"]}, {"1": ["q1", "q2"]}])
-async def test_legacy_and_multiple_assessment_references_are_preserved(evidence):
-    data = {"status": "sufficient", "covered": ["effect"], "missing": [], "evidence": evidence}
-    context = [{"index": 1, "evidence_units": {"q0": "whole", "q1": "first", "q2": "second"}}]
-    result, _ = await assess(ScriptedLLM(data), "effect?", [], context, 1)
-    assert result == "sufficient"
-    expected = [evidence["1"]] if isinstance(evidence["1"], str) else evidence["1"]
-    assert Assessment.model_validate(data).evidence["1"] == expected
-
-
-@pytest.mark.parametrize(
-    "changes",
-    [
-        {"evidence": {"1": []}},
-        {"evidence": {"1": ["q0", "q0"]}},
-        {"evidence": {"1": ["q99"]}},
-        {"evidence": {"2": ["q0"]}},
-        {"evidence": {"1": True}},
-        {"evidence": {"1": [0]}},
-        {"evidence": {"1": ["q0", "q1", "q2", "q3"]}},
-        {"evidence": {}},
-        {"covered": []},
-        {"covered": [" "]},
-        {"missing": ["requested amount"]},
-    ],
-)
-async def test_bad_coverage_never_becomes_sufficient(changes):
-    data = {"status": "sufficient", "covered": ["effect"], "missing": [], "evidence": {"1": ["q0"]}, **changes}
-    result, trace = await assess(ScriptedLLM(data), "effect?", [], [{"index": 1, "evidence_units": {"q0": "text"}}], 1)
-    assert result == "error" and trace["decision"] == "assessment_error"
 
 
 @pytest.mark.parametrize(

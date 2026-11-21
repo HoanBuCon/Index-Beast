@@ -1,0 +1,115 @@
+[
+ {
+  "id": "BL-01",
+  "level": "lore",
+  "lang": "auto",
+  "question": "Ranni là ai và vì sao cô ấy từ bỏ thân xác?",
+  "replies": []
+ },
+ {
+  "id": "BL-02",
+  "level": "acquisition",
+  "lang": "auto",
+  "question": "Lấy Rivers of Blood ở đâu?",
+  "replies": []
+ },
+ {
+  "id": "BL-03",
+  "level": "tên gõ sai",
+  "lang": "auto",
+  "question": "Mooonveil lấy ở đâu?",
+  "replies": []
+ },
+ {
+  "id": "BL-04",
+  "level": "tên mơ hồ",
+  "lang": "auto",
+  "question": "Godfrey đánh thế nào cho dễ?",
+  "replies": [
+   "Godfrey, First Elden Lord ở Leyndell"
+  ]
+ },
+ {
+  "id": "BL-05",
+  "level": "build có level (calculator)",
+  "lang": "auto",
+  "question": "Build Strength to cho PvE ở level 125, chia 8 chỉ số giúp mình.",
+  "replies": [
+   "class nào cũng được, vũ khí bạn chọn giúp"
+  ]
+ },
+ {
+  "id": "BL-06",
+  "level": "build có vũ khí, level thấp",
+  "lang": "auto",
+  "question": "Prisoner level 30 muốn cầm Moonveil thì cộng 8 chỉ số thế nào?",
+  "replies": [
+   "PvE, cầm 1 tay"
+  ]
+ },
+ {
+  "id": "BL-07",
+  "level": "so sánh",
+  "lang": "auto",
+  "question": "Uchigatana hay Rivers of Blood hợp cho người mới hơn?",
+  "replies": [
+   "PvE"
+  ]
+ },
+ {
+  "id": "BL-08",
+  "level": "chiến thuật boss",
+  "lang": "auto",
+  "question": "Làm sao né Waterfowl Dance của Malenia?",
+  "replies": []
+ },
+ {
+  "id": "BL-09",
+  "level": "quest/route",
+  "lang": "auto",
+  "question": "Questline của Ranni bắt đầu ở đâu và bước tiếp theo là gì?",
+  "replies": []
+ },
+ {
+  "id": "BL-10",
+  "level": "tiếng Anh, tổng quan DLC",
+  "lang": "auto",
+  "question": "What are the main regions in Shadow of the Erdtree?",
+  "replies": []
+ },
+ {
+  "id": "MT-1",
+  "level": "sửa level giữa hội thoại",
+  "lang": "auto",
+  "question": "Build Dexterity level 80, chia 8 chỉ số giúp mình",
+  "replies": [
+   "PvE, class nào cũng được"
+  ],
+  "followups": [
+   "À nhầm, level 100 nhé"
+  ]
+ },
+ {
+  "id": "MT-2",
+  "level": "trả lời câu hỏi lại",
+  "lang": "auto",
+  "question": "Mình nên chia điểm thế nào?",
+  "replies": [
+   "Level 90, build Faith"
+  ]
+ },
+ {
+  "id": "WEB-1",
+  "level": "cần thông tin mới (web)",
+  "lang": "auto",
+  "question": "Bản cập nhật mới nhất của Elden Ring thay đổi những gì?",
+  "replies": []
+ },
+ {
+  "id": "WEB-2",
+  "level": "kinh nghiệm cộng đồng (web)",
+  "lang": "auto",
+  "question": "Chỗ farm rune nhanh nhất cho nhân vật level 50 là ở đâu?",
+  "replies": []
+ }
+]

@@ -37,13 +37,10 @@ def log_deadline(stage: str, trace: dict, started: float, limit: float) -> None:
         "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
         "current_node": trace.get("current_node"),
         "node_ms": trace.get("node_ms"),
-        "tool_step_running": trace.get("tool_step_running"),
-        "tool_actions": [
-            {k: row.get(k) for k in ("action", "status", "decision_ms", "elapsed_ms")}
-            for row in trace.get("tool_actions", [])
+        "agent_steps": [
+            {k: row.get(k) for k in ("tool", "status", "ms")} for row in (trace.get("agent") or {}).get("steps", [])
         ],
         "model_calls": [call.get("phase") for call in trace.get("model_calls", [])],
-        "agent_repairs": (trace.get("agent") or {}).get("repair_attempts"),
         "generation_retries": trace.get("generation_retries"),
     }
     logging.getLogger(__name__).warning("Chat deadline exceeded", extra={"data": data})

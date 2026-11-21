@@ -5,8 +5,8 @@
 
 Nguồn số liệu: bảng `messages` (tin nhắn assistant): `tokens_in`/`tokens_out` là tổng token mọi lượt gọi LLM của
 câu trả lời (sinh câu, agent, viết lại truy vấn: xem app/rag/trace.py::token_usage). Số lần tìm web đếm từ
-`rag_trace`: số bước `tool_actions` có action = web_search; nếu không có thì 1 khi `web_search.status` là ok/error
-(pipeline không dùng agent).
+`rag_trace`: số bước `agent.steps` có tool = search_web (vòng lặp Agent, từ 22/11); trace cũ: số bước `tool_actions`
+có action = web_search; nếu không có thì 1 khi `web_search.status` là ok/error.
 Câu trả lời không gọi LLM (trả lời có sẵn, ngoài phạm vi) có token NULL, tính 0 token nhưng vẫn tính là một câu hỏi.
 Ngày tính theo UTC. Tiền = token * giá / 1.000.000 (+ số lần tìm web * giá mỗi lần).
 
@@ -51,6 +51,14 @@ def web_search_calls(rag_trace: dict[str, Any] | None) -> int:
     """Số lần gọi Tavily ước tính từ trace (xem docstring đầu file)."""
     if not isinstance(rag_trace, dict):
         return 0
+    agent = rag_trace.get("agent")
+    steps = agent.get("steps") if isinstance(agent, dict) else None
+    if isinstance(steps, list):
+        # Each call reaches Tavily, even one that failed there; a step refused before running ("error" with no
+        # call) cannot be told apart in the trace, so every search_web step counts (upper bound).
+        from_loop = sum(1 for s in steps if isinstance(s, dict) and s.get("tool") == "search_web")
+        if from_loop:
+            return from_loop
     actions = rag_trace.get("tool_actions")
     if isinstance(actions, list):
         from_agent = sum(1 for a in actions if isinstance(a, dict) and a.get("action") == "web_search")
@@ -181,6 +189,7 @@ async def fetch_rows(
             Message.created_at,
             Message.tokens_in,
             Message.tokens_out,
+            Message.rag_trace["agent"].label("agent"),
             Message.rag_trace["tool_actions"].label("tool_actions"),
             Message.rag_trace["web_search"].label("web_search"),
         )
@@ -195,7 +204,7 @@ async def fetch_rows(
             r.created_at,
             r.tokens_in,
             r.tokens_out,
-            web_search_calls({"tool_actions": r.tool_actions, "web_search": r.web_search}),
+            web_search_calls({"agent": r.agent, "tool_actions": r.tool_actions, "web_search": r.web_search}),
         )
         for r in result
     ]

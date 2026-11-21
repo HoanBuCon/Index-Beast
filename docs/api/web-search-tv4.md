@@ -38,8 +38,9 @@ Không dịch/đoán tên entity mới. Query thực dùng chỉ lưu trong trac
 Extract cũng nhận query và chunks_per_source=3; không chỉ lấy đầu trang.
 
 Backend làm sạch Markdown: bỏ image markup, giữ nhãn của link, bỏ menu trước H1 khi có dấu hiệu
-wiki skin; giữ heading, bảng, số liệu và thứ tự bước trong excerpt. Các nhóm block nguyên vẹn
-được xếp theo lexical overlap, không phải semantic reranker hoặc chứng minh đủ bằng chứng.
+wiki skin; giữ heading, bảng, số liệu và thứ tự bước trong excerpt. Từ 22/11 các nhóm block nguyên vẹn
+giữ đúng thứ tự trong trang (tối đa 6 khối/trang, không chấm điểm theo từ khóa); vòng lặp Agent thấy xem trước
+từng khối và tự mở khối cần đọc ([ADR 006](../adr/006-true-agent.md)).
 Block quá lớn vẫn có thống kê loại. Chưa hỗ trợ chia lại bảng lớn hoặc khôi phục phần provider bỏ sót.
 
 Số Source trong response là số nguồn thật sự được mô hình trích, không phải số kết quả Search.

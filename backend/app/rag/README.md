@@ -14,7 +14,7 @@ Provider chỉ xếp hạng lại phần đầu danh sách; phần đuôi giữ 
 retriever dùng lại toàn bộ thứ tự RRF ban đầu. Điểm và payload của `Hit` được giữ nguyên; reranker không tự chọn bằng chứng
 cuối cùng, Agent vẫn chọn tối đa 5 evidence cho context. Retrieval có timeout riêng.
 
-Reranker được gắn một lần vào `HybridRetriever`, dùng chung cho local search của Tool Agent và đường compatibility cũ.
+Reranker được gắn một lần vào `HybridRetriever`, dùng chung cho mọi `search_corpus`/`check_name` của vòng lặp Agent.
 Đường compatibility hợp nhất truy vấn bằng RRF trước khi gọi reranker một lần. Deadline rerank lấy từ thời gian còn lại của lượt chat;
 timeout giữ thứ tự retrieval và cancellation vẫn được truyền tiếp. HTTP client thuộc lifespan của API và được đóng khi ứng dụng tắt.
 Log outcome ghi provider/model, candidate/ranked count, trạng thái, nhóm nguyên nhân và thời gian đã trôi qua;
@@ -31,16 +31,15 @@ Xem [contract, kiểm kê rule và lệnh benchmark](../../../docs/api/evidence-
 Nhánh compatibility cũ vẫn tồn tại; validation số học/citation không phải human review hay chứng minh entailment.
 
 
-## Tool Agent — cập nhật 21/11/2026
+## Vòng lặp Agent — cập nhật 22/11/2026
 
-Chỉ còn một luồng RAG: đã gỡ `CHAT_AGENT_ENABLED`, `CHAT_TOOL_AGENT_ENABLED`, nhánh legacy/workflow và `llm_only`.
-DeepSeek nhận intent, chọn rewrite, memory liên quan và clarification trong một decision call; sau đó Tool Agent
-lặp chọn tool theo observation. Xem [kiểm kê và CLI](../../../docs/api/bounded-tool-agent.md) và
-[handover build, guard, thời gian](../../../docs/handover/2026-11-21_s5-tv3_build-guard-va-thoi-gian.md) và
-[handover giữ câu cho Guard, Agent tự quyết](../../../docs/handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md).
-Từ 22/11 server không quyết thay Agent: Agent chọn tên từ ứng viên của `check_name`, tự quyết tìm web (assessor
-chỉ gợi ý `suggested_query`), tự chọn bằng chứng (không chọn thì bước viết nhận hết), tự đặt cờ `gameplay_advice`;
-không còn fallback về câu gốc.
+Chỉ còn một luồng RAG: một vòng lặp Agent dùng native tool calling của DeepSeek ([true_agent.py](true_agent.py),
+[prompt](prompts/true_agent.md), [ADR 006](../../../docs/adr/006-true-agent.md)) thay Agent decision, Tool Agent và
+assessor cũ. Agent tự hiểu yêu cầu, ghi điều kiện người chơi (`set_conditions`), chọn tên từ ứng viên `check_name`,
+tìm corpus/web, chọn bằng chứng, hỏi lại (`ask_user`) và kết thúc bằng `finish`; Generator + Answer Guard viết câu
+trả lời. Lỗi tool trả lại cho Agent tự sửa. Xem [handover GĐ2](../../../docs/handover/2026-11-22_s5-tv3_true-agent-gd2.md),
+[handover giữ câu cho Guard](../../../docs/handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md) và
+[đo qua API](../../../docs/testing/2026-11-22_true-agent-gd2/README.md).
 Server giữ schema/provenance, quyền truy cập, deadline/budget và citation; calculator chỉ phân bổ chỉ số tham khảo.
 [Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
 không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
@@ -265,7 +264,7 @@ Biến giữ nguyên: `RAG_PREFETCH=30`, `RAG_TOP_K=5`, `RAG_CONTEXT_CHARS=12000
 Model lấy từ Settings, không thay tên model theo ví dụ. Không còn biến rewrite: Agent tự viết query.
 `RAG_ENCODER_THREADS=2` là mặc định code (giới hạn 1–32); máy thử dùng 4 thread, batch 8 và cache
 `models/notebook-fastembed`. `RAG_THINKING_ENABLED=false` mặc định; máy thử bật `true` sau khi phát hiện
-non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi các lượt Agent/Tool Agent hay dev test.
+non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi các lượt của vòng lặp Agent hay dev test.
 Thinking có thể tăng token/độ trễ; private reasoning không được gửi qua chat/SSE hoặc lưu báo cáo.
 Lượt kiểm thử cuối dùng `LLM_MAX_TOKENS=4096`; budget ảnh hưởng cả chi phí và khả năng hoàn tất JSON.
 
@@ -381,8 +380,8 @@ Không dùng history làm evidence.
 Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; rewrite JSON có Pydantic validation/fallback câu gốc;
 NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
 ChatDeepSeek/client dùng lifespan; usage thiếu là null, không bịa 0. Remote tracing tắt tại entry points.
-Prompt phân biệt [persona](prompts/persona.md), [agent](prompts/agent.md), [tools](prompts/tools.md),
-[assess](prompts/assess.md), [answer](prompts/answer.md), [overview](prompts/overview.md),
+Prompt phân biệt [persona](prompts/persona.md), [true_agent](prompts/true_agent.md), [answer](prompts/answer.md),
+[guard](prompts/guard.md), [overview](prompts/overview.md),
 [gameplay_advice](prompts/gameplay_advice.md), [format_retry](prompts/format_retry.md) và [language](prompts/language.md).
 
 Validation yêu cầu citation khớp index/evidence, quote nguyên văn, URL/title từ metadata server,
@@ -404,8 +403,8 @@ History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa
 ### Câu hỏi tổng quan, danh sách và query VI → EN
 
 Cập nhật 21/11/2026: đã gỡ heuristic `RAG_OVERVIEW_ENABLED` và các biến `RAG_REWRITE_*`, `RAG_QUERY_MODE`.
-Agent decision tự nhận ra câu tổng quan và tự viết query tìm kiếm (thường bằng English, giữ tên riêng và điều kiện gốc).
-Tool Agent có thể gọi `local_search` nhiều lần với query khác nhau trong giới hạn `CHAT_COVERAGE_STEPS`/`CHAT_COVERAGE_MAX_CALLS`.
+Agent tự nhận ra câu tổng quan (`finish.intent=overview`) và tự viết query tìm kiếm (thường bằng English, giữ tên riêng và
+điều kiện gốc), có thể gọi `search_corpus` nhiều lần trong ngân sách `CHAT_AGENT_MAX_CALLS`/`CHAT_COVERAGE_MAX_CALLS`.
 Ngôn ngữ trả lời vẫn lấy từ request, không lấy từ query. Context vẫn top-5 sau dedup; không tạo kiến thức taxonomy từ query.
 Tài liệu [overview routing](../../../docs/testing/2026-10-31_overview-routing.md) và
 [VI–EN retrieval](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md) chỉ còn giá trị lịch sử.

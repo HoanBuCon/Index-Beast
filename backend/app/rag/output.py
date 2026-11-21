@@ -79,20 +79,3 @@ def decode_output(raw: str) -> tuple[object, str]:
         raise OutputFormatError({**shape, "json_error": "nesting_too_deep"}) from None
     except OutputFormatError as exc:
         raise OutputFormatError({**shape, **exc.diagnostics}) from None
-
-
-def stream_body_prefix(raw: str) -> str:
-    """Remove only the allowed opening envelope while receiving fragmented tokens.
-
-    Closing fence/trailing data are checked by decode_output when the stream ends.
-    """
-    body = raw.lstrip(" \t\r\n")
-    if body.startswith("\ufeff"):
-        body = body[1:].lstrip(" \t\r\n")
-    if body.startswith("`"):
-        if any(opening.startswith(body.lower()) for opening in ("```json\n", "```json\r\n", "```\n", "```\r\n")):
-            return ""
-        opening = re.match(r"\A```(?:json)?[ \t]*\r?\n", body, re.IGNORECASE)
-        if opening:
-            return body[opening.end() :]
-    return body

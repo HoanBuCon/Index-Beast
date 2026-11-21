@@ -12,7 +12,7 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, AIMessageChunk, convert_to_openai_messages
+from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, convert_to_openai_messages
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.retrievers import BaseRetriever
@@ -21,7 +21,7 @@ from pydantic import Field
 from app.adapters.llm import DeepSeekLLM, LLMError, LLMResponse, track_provider_stream
 from app.api.schemas.chat import ChatRequest
 from app.main import create_app
-from app.rag.generator import Generated, Prepared, answer_prefix, validate_answer
+from app.rag.generator import Generated, Prepared, validate_answer
 from app.rag.pipeline import ChatPipeline, select_context
 from app.rag.retriever import hit_to_document
 from app.services.chat import LiveChatService
@@ -61,7 +61,15 @@ class FakeChatModel(BaseChatModel):
     def _generate(self, *args, **kwargs):
         raise RuntimeError("Use async fake model")
 
+    def bind_tools(self, tools, **kwargs):
+        return self.bind(tools=tools, **kwargs)
+
     async def _agenerate(self, messages, stop=None, run_manager=None, **kwargs):
+        if kwargs.get("tools"):
+            # The Agent loop (native tool calling): scripted per test, or the neutral offline Agent.
+            return ChatResult(
+                generations=[ChatGeneration(message=await self.owner.agent_turn(messages, kwargs["tools"]))]
+            )
         payload = convert_to_openai_messages(messages)
         if kwargs.get("response_format"):
             data = await self.owner.complete_json(payload)
@@ -87,6 +95,48 @@ class FakeChatModel(BaseChatModel):
             async for token in tokens:
                 yield ChatGenerationChunk(message=AIMessageChunk(content=token))
         yield ChatGenerationChunk(message=AIMessageChunk(content="", response_metadata={"finish_reason": "stop"}))
+
+
+def fake_agent_language(text: str) -> str:
+    """The offline Agent's own language choice (Vietnamese diacritics), standing in for the model's decision."""
+    import unicodedata
+
+    normalized = unicodedata.normalize("NFD", text.lower())
+    return "vi" if any(unicodedata.combining(c) for c in normalized) or "đ" in text.lower() else "en"
+
+
+def offline_agent_turn(messages, tools, script=None):
+    """Offline Agent: search the player's message once (web too when policy is always), then finish with
+    all evidence. A test may pass `script`, a list of (tool name, args) consumed one per model call."""
+    names = {t["function"]["name"] for t in tools}
+    payload = json.loads(next(m.content for m in messages if isinstance(m, HumanMessage)))
+    called = [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
+    if script:
+        name, args = script.pop(0)
+        if name == "__invalid__":  # A call whose arguments are not valid JSON.
+            bad = {"name": "calculator", "args": "{broken", "id": f"call_{len(called) + 1}", "error": "bad json"}
+            return AIMessage(content="", invalid_tool_calls=[bad])
+    elif "search_corpus" not in called:
+        name, args = "search_corpus", {"query": payload["player_message"]}
+    elif payload["web_policy"] == "always" and "search_web" in names and "search_web" not in called:
+        name, args = "search_web", {"query": payload["player_message"]}
+    else:
+        lang = payload["requested_language"]
+        lang = fake_agent_language(payload["player_message"]) if lang == "auto" else lang
+        name, args = (
+            "finish",
+            {
+                "request": payload["player_message"],
+                "intent": "other",
+                "answer_language": lang,
+                "evidence_ids": [],
+            },
+        )
+    return AIMessage(
+        content="",
+        tool_calls=[{"name": name, "args": args, "id": f"call_{len(called) + 1}"}],
+        usage_metadata={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+    )
 
 
 AGENT_POLICY = "IndexBeast's request decision component"
@@ -150,13 +200,17 @@ class FakeLLM(DeepSeekLLM):
         self.tokens = tokens or ["Ranni is an Empyrean. ", "She is a lunar princess."]
         self.fail_at = fail_at
         self.calls, self.seen, self.produced, self.closed = 0, [], 0, False
-        self.agent_calls, self.decision = 0, {}
+        self.agent_calls, self.decision, self.agent_script = 0, {}, []
         self.data = {
             "answer": "Ranni is an Empyrean [1].",
             "evidence": [{"index": 1, "quote": "Ranni is an Empyrean"}],
             "insufficient": False,
         }
         super().__init__(Settings(_env_file=None, environment="test"), model=FakeChatModel(owner=self))
+
+    async def agent_turn(self, messages, tools):
+        self.agent_calls += 1
+        return offline_agent_turn(messages, tools, self.agent_script)
 
     async def complete(self, messages, **kwargs):
         self.calls += 1
@@ -476,8 +530,8 @@ async def test_timeout_logs_the_stage_and_step_timings_without_content(caplog):
         await live.open_stream(ChatRequest(**BODY))
     record = next(r for r in caplog.records if r.getMessage() == "Chat deadline exceeded")
     assert record.data["stage"] == "first_token"
-    assert {"scope", "agent_decision", "tool_agent", "prompt"} <= set(record.data["node_ms"])
-    assert record.data["tool_actions"][0]["action"] == "local_search"
+    assert {"scope", "agent", "prompt"} <= set(record.data["node_ms"])
+    assert record.data["agent_steps"][0]["tool"] == "search_corpus"
     assert "generation" in record.data["model_calls"]
     assert "Ranni" not in json.dumps(record.data)
 
@@ -520,13 +574,6 @@ async def test_rag_stream_buffered_json_still_requires_valid_output(kind):
     with pytest.raises(UpstreamError):
         await live.open_stream(ChatRequest(**BODY))
     assert not live.traces
-
-
-def test_json_stream_unicode_and_split_escape_boundaries():
-    raw = json.dumps({"answer": 'Tiếng Việt: "Ranni"\nCô ấy.'}, ensure_ascii=True)
-    decoded = [answer_prefix(raw[:i]) for i in range(1, len(raw) + 1)]
-    assert decoded[-1] == 'Tiếng Việt: "Ranni"\nCô ấy.'
-    assert all(decoded[i].startswith(decoded[i - 1]) for i in range(1, len(decoded)))
 
 
 def test_unused_evidence_is_dropped_but_a_citation_still_needs_evidence():

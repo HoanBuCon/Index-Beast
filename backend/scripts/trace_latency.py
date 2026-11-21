@@ -6,8 +6,10 @@
 Các bước (đều là mili giây, lấy từ `messages.rag_trace` và cột `latency_ms`):
   total            cột latency_ms: cả câu trả lời
   prepare          trace.prepare_ms: mọi thứ trước khi sinh câu trả lời
-  agent_decision   trace.agent.elapsed_ms: quyết định của agent
-  tool:<action>    tổng trace.tool_actions[].elapsed_ms theo action (local_search, web_search, calculator…)
+  agent            trace.node_ms.agent: cả vòng lặp Agent (từ 22/11, gồm mọi lượt gọi Agent và tool)
+  tool:<tool>      tổng trace.agent.steps[].ms theo tool (search_corpus, search_web, calculator…)
+  agent_decision   trace cũ: trace.agent.elapsed_ms (quyết định của agent trước 22/11)
+  tool:<action>    trace cũ: tổng trace.tool_actions[].elapsed_ms theo action (local_search, web_search…)
   rewrite, retrieval  chỉ có ở trace cũ trước khi bỏ nhánh legacy (trace.rewrite.elapsed_ms, trace.retrieval_queries)
   generate_rest    total - prepare: sinh câu trả lời + hậu xử lý (suy ra, không đo trực tiếp)
 Các bước có thể chồng lên nhau (rewrite nằm trong prepare), nên không cộng được. Trace bị cắt (`truncated`) mất chi
@@ -70,6 +72,19 @@ def step_timings(latency_ms: float | None, trace: dict[str, Any] | None) -> dict
     steps.update(retrieval)
     for action, elapsed in _sum_ms(trace.get("tool_actions")).items():
         steps[f"tool:{action}"] = elapsed
+    # Agent loop (22/11): the node time and each tool's own time; model thinking time is the difference.
+    nodes = trace.get("node_ms")
+    agent_ms = _ms(nodes.get("agent")) if isinstance(nodes, dict) else None
+    if agent_ms is not None:
+        steps["agent"] = agent_ms
+    agent = trace.get("agent")
+    loop_steps = agent.get("steps") if isinstance(agent, dict) else None
+    totals: dict[str, float] = defaultdict(float)
+    for step in loop_steps if isinstance(loop_steps, list) else []:
+        elapsed = _ms(step.get("ms")) if isinstance(step, dict) else None
+        if elapsed is not None:
+            totals[f"tool:{step.get('tool') or 'unknown'}"] += elapsed
+    steps.update(totals)
     return steps
 
 

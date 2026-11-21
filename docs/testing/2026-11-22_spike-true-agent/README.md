@@ -61,10 +61,4 @@ Số liệu từng câu: [summary.json](summary.json).
 
 ## Chạy lại
 
-Hướng dẫn, chưa tự chạy thêm: từ `D:\Index-Beastackend` (gọi API thật, tốn phí; cần PostgreSQL/Qdrant/Redis và `.env`):
-
-```powershell
-.venv/Scripts/python.exe -X utf8 -m scripts.spike_true_agent generator data/research_runs/spike-moi --manifest ../docs/testing/2026-11-22_spike-true-agent/manifest.json
-```
-
-Đổi `generator` thành `final_answer` cho biến thể B; thêm `--only BL-05,BL-06` để chạy vài câu. Script không ghi đè kết quả đã có. Kết quả thô lần này (câu trả lời, trace) ở `backend/data/research_runs/2026-11-22-spike/` (gitignored).
+Script `scripts/spike_true_agent.py` và hàm `run_true_agent` của spike đã được thay ở GĐ2 (vòng lặp Agent nối vào pipeline, xem [ADR 006](../../adr/006-true-agent.md)). Để đo lại cùng bộ câu qua API, dùng `scripts/run_live_manifest.py` như trong [báo cáo GĐ2](../2026-11-22_true-agent-gd2/README.md).

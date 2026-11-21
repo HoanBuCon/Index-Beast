@@ -87,13 +87,10 @@ class Settings(BaseSettings):
 
     # --- Chat/RAG (TV3): mock mặc định để giữ hợp đồng thử giao diện ---
     chat_mode: Literal["mock", "rag"] = "mock"
-    chat_tool_steps: int | None = Field(default=3, ge=1, le=4)
-    chat_tool_queries: int | None = Field(default=2, ge=1, le=3)
     chat_clarification_max_rounds: int | None = Field(default=3, ge=1)
     chat_agent_timeout_seconds: float = Field(default=12, gt=0, le=30)
     chat_agent_max_calls: int | None = Field(default=6, ge=1, le=8)
-    # Web auto (kiểm độ phủ bằng chứng): vẫn giới hạn số bước công cụ và lượt gọi mô hình.
-    chat_coverage_steps: int = Field(default=6, ge=1, le=12)
+    # Web auto: ngân sách lượt gọi mô hình của vòng lặp Agent; calculator được thử lại sau tối đa số lần lỗi này.
     chat_coverage_max_calls: int = Field(default=12, ge=2, le=24)
     chat_calculator_max_failures: int = Field(default=2, ge=1, le=5)
     chat_persistence: Literal["memory", "postgres"] = "memory"
