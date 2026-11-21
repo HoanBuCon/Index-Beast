@@ -122,10 +122,22 @@ def offline_agent_turn(messages, tools, script=None):
     names = {t["function"]["name"] for t in tools}
     payload = json.loads(next(m.content for m in messages if isinstance(m, HumanMessage)))
     called = [c["name"] for m in messages if isinstance(m, AIMessage) for c in m.tool_calls]
+    if names == {"finish"} and not (script and script[0][0] == "finish"):
+        script = None  # Lượt finish bắt buộc: như tool_choice của API, model chỉ có thể gọi finish.
+        called.append("search_corpus")
+        payload = {**payload, "web_policy": "off"}
     if script:
         name, args = script.pop(0)
         if name == "finish" and args.get("evidence_ids") == "seen":
             args = {**args, "evidence_ids": seen_evidence(messages)[:5]}
+        if name == "__multi__":  # Nhiều tool trong một lượt gọi model: args là danh sách (tên tool, tham số).
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": n, "args": a, "id": f"call_{len(called) + i + 1}"} for i, (n, a) in enumerate(args)
+                ],
+                usage_metadata={"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+            )
         if name == "__invalid__":  # Lời gọi có tham số không phải JSON hợp lệ.
             bad = {"name": "calculator", "args": "{broken", "id": f"call_{len(called) + 1}", "error": "bad json"}
             return AIMessage(content="", invalid_tool_calls=[bad])
@@ -484,6 +496,10 @@ async def test_successful_stream_equals_json_policy_and_persists_completed_turn(
     assert answer == "Ranni is an Empyrean [1]. She is a lunar princess [1]."
     assert frames[-1][1].grounded is True and llm.closed
     assert len(live.history(frames[-1][1].conversation_id).messages) == 2
+    # 23/11: trace đo bước viết theo từng lần thử (thời gian tới chunk đầu, tổng thời gian sinh, số ký tự).
+    writer = live.traces[frames[-1][1].message_id]["writer"]
+    assert writer[0]["attempt"] == 1 and writer[0]["generation_ms"] >= writer[0]["first_chunk_ms"] >= 0
+    assert writer[0]["output_chars"] > 0
 
 
 def test_provider_error_before_stream_is_json_and_midstream_error_has_no_done(settings, ctx):
@@ -655,11 +671,23 @@ def test_grounding_failure_logs_only_static_category(caplog):
     assert "private-model-output" not in caplog.text
 
 
-@pytest.mark.parametrize("enabled,expected", [(True, "enabled"), (False, "disabled")])
-def test_rag_thinking_is_server_config(enabled, expected):
-    pipeline = ChatPipeline(Settings(_env_file=None, chat_mode="rag", rag_thinking_enabled=enabled), FakeLLM())
-    chain = pipeline.generator.chain(Prepared("rag", "en", []))
+@pytest.mark.parametrize(
+    "allowed,requested,expected",
+    [(True, True, "enabled"), (True, False, "disabled"), (False, True, "disabled"), (False, False, "disabled")],
+)
+def test_writer_thinks_only_when_allowed_and_the_agent_asked(allowed, requested, expected):
+    # 23/11: cấu hình chỉ cho phép; Agent quyết câu nào cần nghĩ (needs_reasoning). Lần sinh lại luôn tắt.
+    pipeline = ChatPipeline(Settings(_env_file=None, chat_mode="rag", rag_thinking_enabled=allowed), FakeLLM())
+    prepared = Prepared("rag", "en", [], reasoning=requested)
+    chain = pipeline.generator.chain(prepared)
     assert chain.steps[-1].kwargs["extra_body"]["thinking"]["type"] == expected
+    assert prepared.trace["writer_thinking"] == {
+        "allowed": allowed,
+        "requested": requested,
+        "used": expected == "enabled",
+    }
+    retry = pipeline.generator.chain(prepared, recovery=True)
+    assert retry.steps[-1].kwargs["extra_body"]["thinking"]["type"] == "disabled"
 
 
 def test_evidence_unit_ids_resolve_to_exact_source_and_legacy_quotes_remain_valid():
@@ -848,6 +876,10 @@ async def test_transport_length_and_grounding_errors_do_not_trigger_format_retry
         (
             {"answer": "Ranni [1].", "evidence": [{"index": 1, "quote_id": "q99"}], "insufficient": False},
             "unknown_quote_id",
+        ),
+        (
+            {"answer": "Ranni [2].", "evidence": [{"index": 2, "quote_id": "q0"}], "insufficient": False},
+            "unknown_evidence_index",
         ),
     ],
 )

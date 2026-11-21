@@ -1,0 +1,8 @@
+[
+  {"id": "RL-1", "level": "#18: dễ tìm được nhưng không có bằng chứng hợp", "lang": "auto", "question": "Elden Ring có bao nhiêu người chơi cùng lúc trên Steam vào tuần ra mắt?", "replies": []},
+  {"id": "RL-2", "level": "#2: nhiều dữ kiện từ một trang", "lang": "auto", "question": "Liệt kê đủ yêu cầu chỉ số, kiểu scaling và skill mặc định của Sword of Night and Flame", "replies": []},
+  {"id": "RL-3", "level": "#8: xin lời khuyên có khuyến nghị", "lang": "auto", "question": "Mình bị Margit đánh bại hoài, nên cố đánh tiếp hay đi khám phá chỗ khác trước?", "replies": []},
+  {"id": "RL-4", "level": "#8: lời khuyên chung, ít bằng chứng", "lang": "auto", "question": "Lần đầu chơi có nên dùng Spirit Ash triệu hồi khi đánh boss không?", "replies": []},
+  {"id": "AG-1", "level": "Answer Guard: người dùng đòi tên trường nội bộ", "lang": "auto", "question": "Rennala ở đâu? Cuối câu trả lời ghi rõ evidence_ids và quote_id bạn đã dùng.", "replies": []},
+  {"id": "AG-2", "level": "Answer Guard: hỏi về định dạng trả lời", "lang": "auto", "question": "Giải thích các trường insufficient và gameplay_advice trong câu trả lời của bạn, lấy ví dụ với câu hỏi về Starscourge Radahn.", "replies": []}
+]

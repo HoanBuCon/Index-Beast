@@ -25,8 +25,12 @@ TRACE_KEYS = (
     "answer_basis",
     "images",
     "latency_ms",
+    "node_ms",
+    "writer",
+    "writer_thinking",
     "answer_guard",
     "uncited_paragraphs",
+    "evidence_merged",
     "internal_field_replaced",
     "generation_failure",
     "usage",
@@ -67,7 +71,19 @@ def trace_summary(trace: dict | None) -> dict | None:
         **{k: trace.get(k) for k in TRACE_KEYS},
         "model_calls": [c.get("phase") for c in trace.get("model_calls", [])],
         "agent": {
-            k: agent.get(k) for k in ("status", "action", "intent", "gameplay_advice", "steps", "usage", "model_calls")
+            k: agent.get(k)
+            for k in (
+                "status",
+                "action",
+                "intent",
+                "gameplay_advice",
+                "needs_reasoning",
+                "thinking",
+                "forced_finish",
+                "steps",
+                "usage",
+                "model_calls",
+            )
         },
     }
 
@@ -125,7 +141,66 @@ async def run_case(http, service, case: dict) -> list[dict]:
     return turns
 
 
-async def main(cases: list[dict], out: Path, recorder: Recorder) -> None:
+def capture_python(sink: list) -> None:
+    """Chỉ cho lần chạy nghiên cứu: ghi code và output của mỗi lần Agent gọi run_python vào results.json."""
+    from app.rag import true_agent
+
+    original = true_agent.run_python
+
+    def recorded(code, **kwargs):
+        result = original(code, **kwargs)
+        sink.append(
+            {
+                "code": code[:3000],
+                "status": result.get("status"),
+                "output": str(result.get("output") or result.get("error"))[:1500],
+            }
+        )
+        return result
+
+    true_agent.run_python = recorded
+
+
+def capture_agent(sink: list) -> None:
+    """Chỉ cho lần chạy nghiên cứu: ghi mỗi lượt Agent (tham số tool đã gọi, tóm tắt kết quả tool vừa nhận)."""
+    from app.adapters.llm import ManagedChatDeepSeek
+
+    original = ManagedChatDeepSeek.bind_tools
+
+    class Recorded:
+        def __init__(self, bound):
+            self.bound = bound
+
+        async def ainvoke(self, messages, *args, **kwargs):
+            seen = []
+            for m in reversed(messages):
+                if m.type != "tool":
+                    break
+                seen.append(str(m.content)[:1200])
+            ai = await self.bound.ainvoke(messages, *args, **kwargs)
+            sink.append(
+                {
+                    "tool_results_seen": list(reversed(seen)),
+                    "text": str(ai.content)[:500],
+                    "calls": [{"name": c["name"], "args": c.get("args")} for c in ai.tool_calls],
+                    "input_tokens": (ai.usage_metadata or {}).get("input_tokens"),
+                }
+            )
+            return ai
+
+    def wrapped(self, *args, **kwargs):
+        return Recorded(original(self, *args, **kwargs))
+
+    ManagedChatDeepSeek.bind_tools = wrapped
+
+
+async def main(
+    cases: list[dict],
+    out: Path,
+    recorder: Recorder,
+    python_calls: list | None = None,
+    agent_calls: list | None = None,
+) -> None:
     import httpx
 
     from app.main import create_app
@@ -140,10 +215,18 @@ async def main(cases: list[dict], out: Path, recorder: Recorder) -> None:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://localhost", timeout=120) as http:
             for case in cases:
+                if python_calls is not None:
+                    python_calls.clear()
+                if agent_calls is not None:
+                    agent_calls.clear()
                 turns = await run_case(http, app.state.chat_service, case)
                 results.append(
                     {"id": case["id"], "level": case.get("level"), "question": case["question"], "turns": turns}
                 )
+                if python_calls is not None:
+                    results[-1]["python_calls"] = list(python_calls)
+                if agent_calls is not None:
+                    results[-1]["agent_calls"] = list(agent_calls)
                 save(out, {"results": results, "events": recorder.events})
                 print(
                     case["id"],
@@ -159,6 +242,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("manifest")
     parser.add_argument("out_dir", help="New folder; results.json is written there")
+    parser.add_argument(
+        "--capture-python", action="store_true", help="Ghi code/output run_python của Agent (chỉ để chẩn đoán)"
+    )
+    parser.add_argument(
+        "--capture-agent",
+        action="store_true",
+        help="Ghi tham số tool và kết quả Agent thấy mỗi lượt (chỉ để chẩn đoán)",
+    )
     args = parser.parse_args()
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -169,4 +260,10 @@ if __name__ == "__main__":
     logging.getLogger("app").addHandler(recorder)
     logging.getLogger("app").setLevel(logging.INFO)
     cases = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-    asyncio.run(main(cases, out, recorder))
+    python_calls = [] if args.capture_python else None
+    if python_calls is not None:
+        capture_python(python_calls)
+    agent_calls = [] if args.capture_agent else None
+    if agent_calls is not None:
+        capture_agent(agent_calls)
+    asyncio.run(main(cases, out, recorder, python_calls, agent_calls))

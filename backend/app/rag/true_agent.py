@@ -105,8 +105,16 @@ class FinishArgs(_Args):
     request: str = Field(min_length=1, max_length=1000, description="The player's request as one standalone question")
     intent: INTENTS
     answer_language: Literal["vi", "en"]
-    evidence_ids: list[str] = Field(default_factory=list, max_length=5, description="Evidence supporting the answer")
+    evidence_ids: list[str] = Field(
+        default_factory=list, max_length=5, description="Up to 5 evidence IDs that best support the answer"
+    )
     gameplay_advice: bool = Field(default=False, description="General gameplay know-how may supplement evidence")
+    needs_reasoning: bool = Field(
+        default=False,
+        description="The writer must weigh things before answering: sources disagree or depend on conditions "
+        "(patch, NG+, one- vs two-handed), several options compared on several criteria, or a quest/route whose "
+        "steps must be ordered. False for a single fact, single-source lore, or a build already computed in results",
+    )
     results: str = Field(
         default="",
         max_length=3000,
@@ -229,8 +237,8 @@ async def run_agent(pipe, state: dict) -> dict:
     retired: set[str] = set()
     started = time.perf_counter()
     deadline = state.get("started", started) + pipe.settings.prepare_budget_seconds
-    # Web auto giữ ngân sách bao phủ lớn hơn; các chế độ khác dùng ngân sách Agent mỗi lượt (một lượt gọi dành cho bước
-    # viết).
+    # Web auto giữ ngân sách lớn hơn; các chế độ khác dùng ngân sách Agent mỗi lượt. Đếm lượt gọi model (không đếm số
+    # tool trong một lượt); lượt cuối chỉ cho finish để Agent luôn tự chọn evidence và kết quả (23/11).
     max_calls = (
         pipe.settings.chat_coverage_max_calls
         if state.get("verify_coverage") or pipe.settings.chat_agent_max_calls is None
@@ -267,14 +275,21 @@ async def run_agent(pipe, state: dict) -> dict:
             {"id": rule_hit.id, "title": rule_hit.payload.get("title"), "text": rule_hit.payload["text"]}
         ],
         "can_ask_user": can_ask,
+        "model_calls": max_calls,
     }
     messages = [SystemMessage(prompt("true_agent")), HumanMessage(json.dumps(payload, ensure_ascii=False))]
+    # Thử nghiệm thinking cho Agent (23/11, mặc định tắt): DeepSeek không dùng temperature khi thinking, và
+    # reasoning_content được adapter gửi lại ở mọi lượt sau.
+    agent_thinking = pipe.settings.chat_agent_thinking
+    trace["agent"]["thinking"] = agent_thinking
     bound = pipe.llm.model.bind_tools(
         tool_specs(web=web, ask=can_ask),
         tool_choice="auto",
-        max_tokens=4096,
-        temperature=0,
-        extra_body={"thinking": {"type": "disabled"}},
+        **(
+            {"max_tokens": 8192, "reasoning_effort": "low", "extra_body": {"thinking": {"type": "enabled"}}}
+            if agent_thinking
+            else {"max_tokens": 4096, "temperature": 0, "extra_body": {"thinking": {"type": "disabled"}}}
+        ),
     )
 
     def admit(found) -> list:
@@ -317,7 +332,12 @@ async def run_agent(pipe, state: dict) -> dict:
     async def execute(name: str, raw: dict):
         """(kết quả cho model, kết cục cuối hoặc None)."""
         nonlocal web_calls
-        if name not in TOOLS or (name == "search_web" and not web) or (name == "ask_user" and not can_ask):
+        if (
+            name not in TOOLS
+            or (name == "search_web" and not web)
+            or (name == "ask_user" and not can_ask)
+            or (forced and name != "finish")
+        ):
             return {"status": "error", "error": f"Tool {name} is not available"}, None
         try:
             args = TOOLS[name][0].model_validate(raw)
@@ -355,14 +375,22 @@ async def run_agent(pipe, state: dict) -> dict:
             }, None
         if name == "set_conditions":
             # Chỉ kiểm nguồn gốc: mỗi giá trị phải xuất hiện trong nguồn nó ghi (lời người chơi hoặc ký ức).
-            unstated = [c.key for c in args.set if not stated(c)]
-            if unstated:
-                return {
-                    "status": "error",
-                    "error": "Values must be the player's own words from the named source; an assumption cannot "
-                    "replace a condition the player stated",
-                    "keys": unstated,
-                }, None
+            rejected = [c for c in args.set if not stated(c)]
+            if rejected:
+                # Hai lỗi khác nhau, nói riêng từng lỗi để Agent sửa đúng ngay lần sau (23/11).
+                over = [c.key for c in rejected if c.source_id == ASSUMPTION]
+                unquoted = [c.key for c in rejected if c.source_id != ASSUMPTION]
+                problems = []
+                if unquoted:
+                    problems.append(
+                        f"{', '.join(unquoted)}: the value must appear word for word in the named source (copy the "
+                        "player's exact words, or leave the key out)"
+                    )
+                if over:
+                    problems.append(
+                        f"{', '.join(over)}: the player already stated this; an assumption cannot replace it"
+                    )
+                return {"status": "error", "error": "; ".join(problems), "keys": [c.key for c in rejected]}, None
             for key in args.retire:
                 if conditions.pop(key, None) is not None:
                     retired.add(key)
@@ -390,30 +418,25 @@ async def run_agent(pipe, state: dict) -> dict:
 
     outcome = None
     calls = 0
-    while outcome is None:
-        if calls >= max_calls - 1 or len(trace["agent"]["steps"]) >= max_calls:
-            break
-        if time.perf_counter() > deadline and calls:
-            messages.append(HumanMessage("Time budget exhausted: call finish now with what you have."))
+    forced = False
+
+    async def call_model(model):
+        nonlocal calls
         calls += 1
         trace.setdefault("model_calls", []).append({"phase": "agent"})
-        try:
-            async with asyncio.timeout(pipe.settings.chat_agent_timeout_seconds):
-                ai = await bound.ainvoke(messages)
-        except TimeoutError:
-            if gathered():
-                break
-            raise UnavailableError("Bước Agent vượt thời gian xử lý.") from None
-        except Exception as exc:  # noqa: BLE001 - provider failure; answer from evidence when there is some
-            logger.warning("Agent model error", extra={"data": {"error": type(exc).__name__}})
-            if gathered():
-                break
-            raise UpstreamError("Dịch vụ mô hình đang gặp sự cố. Vui lòng thử lại.") from None
+        async with asyncio.timeout(pipe.settings.chat_agent_timeout_seconds):
+            return await model.ainvoke(messages)
+
+    async def handle(ai):
+        """Ghi usage và chạy các tool của một lượt; trả về kết cục cuối hoặc None."""
         usage = ai.usage_metadata or {}
         # Cùng khóa với usage của bước sinh, để token_usage() và trace đã lưu cũng đếm cả Agent.
         agent_usage = trace["agent"].setdefault("usage", {"prompt_tokens": 0, "completion_tokens": 0})
         agent_usage["prompt_tokens"] += usage.get("input_tokens") or 0
         agent_usage["completion_tokens"] += usage.get("output_tokens") or 0
+        reasoning = (usage.get("output_token_details") or {}).get("reasoning") or 0
+        if reasoning:
+            agent_usage["reasoning_tokens"] = agent_usage.get("reasoning_tokens", 0) + reasoning
         messages.append(ai)
         # Lời gọi có tham số không phải JSON hợp lệ rơi vào invalid_tool_calls; mọi call ID đều cần một phản hồi.
         for bad in ai.invalid_tool_calls:
@@ -427,7 +450,7 @@ async def run_agent(pipe, state: dict) -> dict:
         if not ai.tool_calls:
             if not ai.invalid_tool_calls:
                 messages.append(HumanMessage("Call a tool; end with finish, ask_user or reply, not plain text."))
-            continue
+            return None
         for call in ai.tool_calls:
             t0 = time.perf_counter()
             try:
@@ -447,10 +470,55 @@ async def run_agent(pipe, state: dict) -> dict:
             trace["agent"]["steps"].append(step)
             messages.append(ToolMessage(json.dumps(result, ensure_ascii=False), tool_call_id=call["id"]))
             if terminal is not None:
-                outcome = terminal
                 # Các lời gọi còn lại của tin nhắn này không có phản hồi: vòng lặp kết thúc ở đây, sau chúng không gửi
                 # gì nữa.
+                return terminal
+        return None
+
+    while outcome is None:
+        if calls >= max_calls - 1 or (time.perf_counter() > deadline and calls):
+            # Hết lượt tìm hoặc hết thời gian: lượt cuối (bên dưới) chỉ cho finish.
+            forced = True
+            break
+        left = max_calls - calls
+        if calls > 0 and left <= 3:
+            messages.append(
+                HumanMessage(
+                    f"{left} model calls left; the last one only allows finish. Stop searching: compute what you "
+                    "still need, then call finish with the evidence and results you have."
+                )
+            )
+        try:
+            ai = await call_model(bound)
+        except TimeoutError:
+            if gathered():
                 break
+            raise UnavailableError("Bước Agent vượt thời gian xử lý.") from None
+        except Exception as exc:  # noqa: BLE001 - provider failure; answer from evidence when there is some
+            logger.warning("Agent model error", extra={"data": {"error": type(exc).__name__}})
+            if gathered():
+                break
+            raise UpstreamError("Dịch vụ mô hình đang gặp sự cố. Vui lòng thử lại.") from None
+        outcome = await handle(ai)
+
+    if outcome is None and forced:
+        # Lượt cuối chỉ có finish: Agent tự chọn evidence và ghi kết quả đã tính, thay vì mất hết những gì đã làm.
+        reminded["evidence"] = True
+        messages.append(
+            HumanMessage("Budget exhausted: call finish now with the evidence IDs and results you already have.")
+        )
+        trace["agent"]["forced_finish"] = True
+        try:
+            final = pipe.llm.model.bind_tools(
+                [s for s in tool_specs(web=web, ask=False) if s["function"]["name"] == "finish"],
+                tool_choice="finish",
+                max_tokens=4096,
+                temperature=0,
+                extra_body={"thinking": {"type": "disabled"}},
+            )
+            outcome = await handle(await call_model(final))
+        except Exception as exc:  # noqa: BLE001 - như lượt thường: không có finish thì trả lời từ những gì có
+            logger.warning("Agent final finish error", extra={"data": {"error": type(exc).__name__}})
 
     if outcome is None and calls and not any(s["status"] == "ok" for s in trace["agent"]["steps"]):
         # Model không tạo được lời gọi tool dùng được: lỗi provider, không phải câu trả lời rỗng "không có thông tin".
@@ -521,6 +589,8 @@ async def run_agent(pipe, state: dict) -> dict:
         p.gameplay_advice = bool(args and args.gameplay_advice)
         # Chỉ để chẩn đoán: bước viết có nhận được chính sách hay không.
         trace["agent"]["gameplay_advice"] = p.gameplay_advice
+        p.reasoning = bool(args and args.needs_reasoning)
+        trace["agent"]["needs_reasoning"] = p.reasoning
         chosen = [i for i in (args.evidence_ids if args else []) if i in hits]
         found = gathered()
         trace["evidence_selection"] = {"method": "model", "ids": chosen}

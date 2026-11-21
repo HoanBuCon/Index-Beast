@@ -19,10 +19,11 @@ class RecordingLLM(FakeLLM):
 
     def __init__(self, script):
         super().__init__()
-        self.agent_script, self.agent_seen = list(script), []
+        self.agent_script, self.agent_seen, self.offered = list(script), [], []
 
     async def agent_turn(self, messages, tools):
         self.agent_seen.append(list(messages))
+        self.offered.append({t["function"]["name"] for t in tools})
         return await super().agent_turn(messages, tools)
 
     def tool_result(self, turn):
@@ -71,6 +72,7 @@ async def test_conditions_need_the_players_words_and_persist_in_working_state():
     )
     p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req("Build Strength level 60 giúp mình"), [])
     assert llm.tool_result(1)["status"] == "error" and llm.tool_result(1)["keys"] == ["level"]
+    assert "word for word" in llm.tool_result(1)["error"] and "assumption" not in llm.tool_result(1)["error"]
     assert p.player_state["constraints"] == [{"key": "level", "value": "60", "source_id": "current"}]
     # Lượt sau: điều kiện được hiện lại và giữ nguyên trừ khi Agent bỏ hoặc thay nó.
     llm2 = RecordingLLM([("set_conditions", {"retire": ["level"]}), finish()])
@@ -211,6 +213,7 @@ async def test_an_assumed_level_serves_this_turn_but_is_never_stored_as_a_player
     )
     p2 = await ChatPipeline(settings(), llm2, FakeRetriever()).prepare(req("Build Strength level 60"), [])
     assert llm2.tool_result(2)["status"] == "error" and p2.player_state["constraints"][0]["value"] == "60"
+    assert "cannot replace" in llm2.tool_result(2)["error"] and "word for word" not in llm2.tool_result(2)["error"]
 
 
 async def test_finish_without_evidence_is_reminded_once_and_never_filled_in_by_the_server():
@@ -241,3 +244,58 @@ def test_gameplay_advice_may_carry_a_recommendation_but_never_a_citation_or_url(
             validate_answer(advice, {**data, "recommendation": bad})
     with pytest.raises(RAGValidationError):  # Cờ này là quyết định của Agent.
         validate_answer(Prepared("rag", "vi", []), data)
+
+
+async def test_budget_counts_model_calls_not_tools():
+    # 23/11: bốn tool trong một lượt không còn ăn vào ngân sách lượt gọi model (trước đây trần 12 bước cắt sớm).
+    searches = [("search_corpus", {"query": f"q{i}"}) for i in range(4)]
+    llm = RecordingLLM([("__multi__", searches), finish(evidence_ids="seen")])
+    p = await ChatPipeline(settings(chat_agent_max_calls=3), llm, FakeRetriever()).prepare(req(), [])
+    agent = p.trace["agent"]
+    assert agent["status"] == "ok" and agent["model_calls"] == 2 and len(agent["steps"]) == 5
+    assert "forced_finish" not in agent and p.hits
+
+
+async def test_the_last_call_only_allows_finish_so_found_evidence_is_kept():
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni"}), ("search_corpus", {"query": "Ranni quest"})] * 3)
+    p = await ChatPipeline(settings(chat_agent_max_calls=3), llm, FakeRetriever()).prepare(req(), [])
+    agent = p.trace["agent"]
+    assert agent["model_calls"] == 3 and agent["forced_finish"] and p.trace["tool_stop"] == "finish"
+    # Agent biết ngân sách từ đầu, được nhắc khi gần hết, và lượt cuối chỉ có finish.
+    assert llm.payload()["model_calls"] == 3
+    assert any("model calls left" in m.content for m in llm.agent_seen[1] if isinstance(m, HumanMessage))
+    assert llm.offered[-1] == {"finish"} and "search_corpus" in llm.offered[0]
+    assert p.hits  # Evidence Agent đã tìm vẫn tới bước viết, do chính Agent chọn ở lượt finish.
+
+
+async def test_the_agent_decides_when_the_writer_needs_reasoning():
+    llm = RecordingLLM([finish(intent="comparison", needs_reasoning=True)])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req(), [])
+    assert p.reasoning and p.trace["agent"]["needs_reasoning"] is True
+    llm = RecordingLLM([finish()])
+    p = await ChatPipeline(settings(), llm, FakeRetriever()).prepare(req(), [])
+    assert not p.reasoning and p.trace["agent"]["needs_reasoning"] is False
+
+
+@pytest.mark.parametrize("thinking", [False, True])
+async def test_agent_thinking_is_an_opt_in_and_the_forced_finish_never_thinks(thinking, monkeypatch):
+    from tests.unit.test_live_chat import FakeChatModel
+
+    bound = []
+    original = FakeChatModel.bind_tools
+
+    def spy(self, tools, **kwargs):
+        bound.append(kwargs)
+        return original(self, tools, **kwargs)
+
+    monkeypatch.setattr(FakeChatModel, "bind_tools", spy)
+    llm = RecordingLLM([("search_corpus", {"query": "Ranni"})] * 3)
+    p = await ChatPipeline(
+        settings(chat_agent_max_calls=2, chat_agent_thinking=thinking), llm, FakeRetriever()
+    ).prepare(req(), [])
+    assert p.trace["agent"]["thinking"] is thinking and p.trace["agent"]["forced_finish"]
+    loop, final = bound[0], bound[-1]
+    assert loop["extra_body"]["thinking"]["type"] == ("enabled" if thinking else "disabled")
+    # DeepSeek bỏ qua temperature khi thinking; không gửi để khỏi hiểu nhầm.
+    assert ("temperature" in loop) is not thinking
+    assert final["tool_choice"] == "finish" and final["extra_body"]["thinking"]["type"] == "disabled"

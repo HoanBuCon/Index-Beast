@@ -265,7 +265,11 @@ Biến giữ nguyên: `RAG_PREFETCH=30`, `RAG_TOP_K=5`, `RAG_CONTEXT_CHARS=12000
 Model lấy từ Settings, không thay tên model theo ví dụ. Không còn biến rewrite: Agent tự viết query.
 `RAG_ENCODER_THREADS=2` là mặc định code (giới hạn 1–32); máy thử dùng 4 thread, batch 8 và cache
 `models/notebook-fastembed`. `RAG_THINKING_ENABLED=false` mặc định; máy thử bật `true` sau khi phát hiện
-non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi các lượt của vòng lặp Agent hay dev test.
+non-thinking có lỗi JSON/citation. Từ 23/11 flag chỉ là công tắc **cho phép**: bước viết chỉ nghĩ khi Agent khai báo
+`needs_reasoning=true` ở `finish` (nguồn mâu thuẫn hoặc phụ thuộc điều kiện, so sánh nhiều tiêu chí, quest/route nhiều
+bước); trace `writer_thinking` ghi `allowed`/`requested`/`used`. `CHAT_AGENT_THINKING=false` (thử nghiệm) bật thinking
+cho các lượt Agent; adapter gửi lại `reasoning_content` theo yêu cầu của DeepSeek khi có tool, lượt `finish` bắt buộc
+luôn tắt. Answer Guard, lần sinh lại, chọn ảnh luôn tắt.
 Thinking có thể tăng token/độ trễ; private reasoning không được gửi qua chat/SSE hoặc lưu báo cáo.
 Lượt kiểm thử cuối dùng `LLM_MAX_TOKENS=4096`; budget ảnh hưởng cả chi phí và khả năng hoàn tất JSON.
 
@@ -425,7 +429,7 @@ và độ trễ. Đặt `0` để tắt; chỉ backend quyết định, API clie
 Đây là retry định dạng, khác `LLM_MAX_RETRIES` xử lý lỗi transport của SDK; không nhân định dạng retry
 cho lỗi mạng, hết token, schema hoặc quote sai. Citation mismatch thông thường vẫn bị chặn;
 chỉ lỗi protocol `insufficient_with_citations` được phục hồi cùng ngân sách format (không cộng thêm lượt riêng).
-Lượt đầu giữ thinking theo cấu hình; lượt phục hồi dùng non-thinking, temperature=0, JSON mode vẫn bật.
+Lượt đầu nghĩ khi cấu hình cho phép và Agent yêu cầu; lượt phục hồi dùng non-thinking, temperature=0, JSON mode vẫn bật.
 Mọi output mới vẫn vượt validator đầy đủ. Không sửa/cắt bỏ citation từ answer lỗi rồi công bố answer đó.
 
 Parser dùng chung cho JSON/SSE chỉ chấp nhận toàn bộ JSON, có thể bỏ một BOM hoặc một code fence hoàn chỉnh.

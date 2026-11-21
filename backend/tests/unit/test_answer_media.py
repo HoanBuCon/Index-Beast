@@ -12,7 +12,7 @@ from PIL import Image
 
 from app.adapters.llm import LLMResponse
 from app.adapters.tavily import WebHit
-from app.api.schemas.chat import ChatRequest, Source
+from app.api.schemas.chat import ChatImage, ChatRequest, Source
 from app.rag.generator import Generated, Prepared
 from app.services import answer_media as module
 from tests.unit.test_images import media as media
@@ -225,3 +225,60 @@ async def test_image_selection_cancellation_propagates(media):
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
+
+
+def image(index):
+    digest = hashlib.sha256(str(index).encode()).hexdigest()
+    return ChatImage(id=digest, url=f"/api/v1/images/{digest}", source_url="https://x", source_indices=[index])
+
+
+@pytest.mark.parametrize("grounded", [True, False])
+async def test_parallel_image_selection_keeps_only_images_of_cited_sources(media, grounded):
+    # 23/11: ảnh được chọn song song với bước viết trên evidence Agent đã chọn, sau đó lọc theo nguồn được trích dẫn.
+    import asyncio
+
+    from app.services.chat import LiveChatService
+
+    svc = LiveChatService.__new__(LiveChatService)
+    svc.image_catalog = media.catalog
+    seen = {}
+
+    async def fake_images(req, prepared, result, started=None, limit=None):
+        seen["sources"] = [s.index for s in result.sources]
+        await asyncio.sleep(0)
+        prepared.trace["images"] = {"returned": 2, "selection": "model_metadata"}
+        return [image(1), image(2)]
+
+    svc._images = fake_images
+    p = Prepared("rag", "vi", [], hits=media.hits[:1] * 2)
+    req = ChatRequest(message="Ranni", channel="web")
+    task = svc._start_images(req, p, None)
+    cited = [Source(index=2, title="Ranni", url="https://x")] if grounded else []
+    images = await svc._finish_images(task, req, p, Generated("Ranni [2].", sources=cited, grounded=grounded))
+    if grounded:
+        assert seen["sources"] == [1, 2] and [i.source_indices for i in images] == [[2]]
+        assert p.trace["images"] == {"returned": 1, "selection": "model_metadata", "parallel": True}
+    else:
+        assert images == [] and task.done() and "images" not in p.trace
+
+
+async def test_parallel_selection_falls_back_to_cited_sources_when_nothing_is_left(media):
+    from app.services.chat import LiveChatService
+
+    svc = LiveChatService.__new__(LiveChatService)
+    svc.image_catalog = media.catalog
+    calls = []
+
+    async def fake_images(req, prepared, result, started=None, limit=None):
+        calls.append([s.index for s in result.sources])
+        prepared.trace["images"] = {"returned": 1, "selection": "model_metadata"}
+        return [image(1)] if len(calls) == 1 else [image(2)]
+
+    svc._images = fake_images
+    p = Prepared("rag", "vi", [], hits=media.hits[:1] * 2)
+    req = ChatRequest(message="Ranni", channel="web")
+    task = svc._start_images(req, p, None)
+    result = Generated("Ranni [2].", sources=[Source(index=2, title="Ranni", url="https://x")], grounded=True)
+    images = await svc._finish_images(task, req, p, result)
+    assert calls == [[1, 2], [2]] and [i.source_indices for i in images] == [[2]]
+    assert p.trace["images"]["parallel"] == "fallback"

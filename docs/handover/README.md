@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Đo lại chất lượng sau `run_python`, ngân sách Agent, tối ưu bước viết, thinking có chọn lọc (23/11/2026)](2026-11-23_s5-tv3_do-lai-chat-luong-va-thinking.md)
 - [TV3 · True Agent GĐ2: một vòng lặp Agent thay Agent decision, Tool Agent và Assessor (22/11/2026)](2026-11-22_s5-tv3_true-agent-gd2.md)
 - [TV3 · Spike True Agent bằng DeepSeek function calling (22/11/2026)](2026-11-22_s5-tv3_spike-true-agent.md)
 - [TV3 · Giữ câu cho Answer Guard, gọt prompt build, lỗi G, bỏ chỗ server quyết định thay Agent (22/11/2026)](2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md)

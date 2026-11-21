@@ -1,0 +1,3268 @@
+{
+  "baseline": {
+    "summary": {
+      "questions": 10,
+      "success": 10,
+      "grounded": 9,
+      "p50": 17578,
+      "p95": 36536,
+      "max": 38430,
+      "mean": 18978,
+      "over45": 0,
+      "calls_mean": 6.5,
+      "calls_max": 11,
+      "agent_calls_mean": 4.5,
+      "tok_in_mean": 31833,
+      "tok_in_max": 91216,
+      "step_errors": 1
+    },
+    "rows": [
+      {
+        "id": "BL-01",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 18401,
+        "max_turn_ms": 18401,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17334,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 682,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": false,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-02",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 10951,
+        "max_turn_ms": 10951,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 20205,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 290,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-03",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 7762,
+        "max_turn_ms": 7762,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 15419,
+        "steps": 4,
+        "tools": {
+          "check_name": 1,
+          "search_corpus": 1,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 1,
+        "answer_chars": 164,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-04",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 19394,
+        "max_turn_ms": 19394,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 16895,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 1291,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-05",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 34221,
+        "max_turn_ms": 34221,
+        "calls": 11,
+        "agent_calls": 9,
+        "tok_in": 91216,
+        "steps": 12,
+        "tools": {
+          "search_corpus": 5,
+          "open_evidence": 2,
+          "set_conditions": 2,
+          "run_python": 3
+        },
+        "step_errors": [
+          {
+            "tool": "set_conditions",
+            "status": "error",
+            "error": "Values must be the player's own words from the named source; an assumption cannot replace a condition the player stated"
+          }
+        ],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 297,
+        "err": null,
+        "tool_stop": "model_budget",
+        "gameplay_advice": false,
+        "agent_status": "budget",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-06",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 38430,
+        "max_turn_ms": 38430,
+        "calls": 11,
+        "agent_calls": 9,
+        "tok_in": 70265,
+        "steps": 11,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 6,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 1001,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-07",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 21111,
+        "max_turn_ms": 21111,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 38063,
+        "steps": 7,
+        "tools": {
+          "search_corpus": 4,
+          "open_evidence": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1009,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-08",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 16754,
+        "max_turn_ms": 16754,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 15712,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 844,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-09",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 9933,
+        "max_turn_ms": 9933,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17444,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 718,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-10",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 12824,
+        "max_turn_ms": 12824,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 15780,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 1,
+        "answer_chars": 564,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "build": {
+    "summary": {
+      "questions": 4,
+      "success": 3,
+      "grounded": 1,
+      "p50": 29486,
+      "p95": 36612,
+      "max": 37565,
+      "mean": 29238,
+      "over45": 0,
+      "calls_mean": 6.2,
+      "calls_max": 9,
+      "agent_calls_mean": 5,
+      "tok_in_mean": 46248,
+      "tok_in_max": 69952,
+      "step_errors": 0
+    },
+    "rows": [
+      {
+        "id": "BUILD-2",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 20412,
+        "max_turn_ms": 20412,
+        "calls": 7,
+        "agent_calls": 6,
+        "tok_in": 59136,
+        "steps": 12,
+        "tools": {
+          "search_corpus": 9,
+          "open_evidence": 3
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 184,
+        "err": null,
+        "tool_stop": "model_budget",
+        "gameplay_advice": false,
+        "agent_status": "budget",
+        "web": "not_run"
+      },
+      {
+        "id": "BUILD-3",
+        "ok": false,
+        "grounded": null,
+        "turns": 1,
+        "ms": 27763,
+        "max_turn_ms": 27763,
+        "calls": 0,
+        "agent_calls": 0,
+        "tok_in": 0,
+        "steps": 0,
+        "tools": {},
+        "step_errors": [],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 0,
+        "err": {
+          "code": "upstream_error",
+          "message": "Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ.",
+          "request_id": "6920b9ea130f4082"
+        }
+      },
+      {
+        "id": "PY-1",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 37565,
+        "max_turn_ms": 37565,
+        "calls": 9,
+        "agent_calls": 7,
+        "tok_in": 69952,
+        "steps": 12,
+        "tools": {
+          "search_corpus": 7,
+          "open_evidence": 3,
+          "set_conditions": 1,
+          "run_python": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 1287,
+        "err": null,
+        "tool_stop": "model_budget",
+        "gameplay_advice": false,
+        "agent_status": "budget",
+        "web": "not_run"
+      },
+      {
+        "id": "PY-2",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 31210,
+        "max_turn_ms": 31210,
+        "calls": 9,
+        "agent_calls": 7,
+        "tok_in": 55906,
+        "steps": 9,
+        "tools": {
+          "search_corpus": 3,
+          "open_evidence": 2,
+          "set_conditions": 1,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1173,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "rule-guard": {
+    "summary": {
+      "questions": 6,
+      "success": 6,
+      "grounded": 5,
+      "p50": 17616,
+      "p95": 23648,
+      "max": 24728,
+      "mean": 16169,
+      "over45": 0,
+      "calls_mean": 4.8,
+      "calls_max": 7,
+      "agent_calls_mean": 3.2,
+      "tok_in_mean": 19508,
+      "tok_in_max": 40610,
+      "step_errors": 0
+    },
+    "rows": [
+      {
+        "id": "RL-1",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 20406,
+        "max_turn_ms": 20406,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 15995,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 1,
+          "search_web": 1,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 268,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": false,
+        "agent_status": "ok",
+        "web": "ok"
+      },
+      {
+        "id": "RL-2",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 16662,
+        "max_turn_ms": 16662,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 14189,
+        "steps": 3,
+        "tools": {
+          "search_corpus": 1,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 522,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "RL-3",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 24728,
+        "max_turn_ms": 24728,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 40610,
+        "steps": 8,
+        "tools": {
+          "search_corpus": 5,
+          "open_evidence": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 740,
+        "err": null,
+        "answer_basis": "evidence_with_recommendation",
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "RL-4",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 18569,
+        "max_turn_ms": 18569,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 25942,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 3,
+          "open_evidence": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1026,
+        "err": null,
+        "answer_basis": "evidence_with_recommendation",
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "AG-1",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 10270,
+        "max_turn_ms": 10270,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17005,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 1,
+          "check_name": 1,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 221,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "AG-2",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 6379,
+        "max_turn_ms": 6379,
+        "calls": 1,
+        "agent_calls": 1,
+        "tok_in": 3309,
+        "steps": 1,
+        "tools": {
+          "reply": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 1824,
+        "err": null,
+        "tool_stop": "reply",
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "compare_baseline": {
+    "baseline_22_11": {
+      "success": 10,
+      "grounded": 10,
+      "p50": 17620,
+      "p95": 36386,
+      "calls_mean": 7.8
+    },
+    "gd2_22_11": {
+      "success": 10,
+      "grounded": 10,
+      "p50": 16564,
+      "p95": 29109,
+      "calls_mean": 6.0,
+      "agent_calls_mean": 4,
+      "tok_in_mean": 23061
+    },
+    "now": {
+      "questions": 10,
+      "success": 10,
+      "grounded": 9,
+      "p50": 17578,
+      "p95": 36536,
+      "max": 38430,
+      "mean": 18978,
+      "over45": 0,
+      "calls_mean": 6.5,
+      "calls_max": 11,
+      "agent_calls_mean": 4.5,
+      "tok_in_mean": 31833,
+      "tok_in_max": 91216,
+      "step_errors": 1
+    },
+    "after_fix_A_E": {
+      "questions": 10,
+      "success": 10,
+      "grounded": 10,
+      "p50": 16117,
+      "p95": 22775,
+      "max": 25759,
+      "mean": 15328,
+      "over45": 0,
+      "calls_mean": 5.8,
+      "calls_max": 8,
+      "agent_calls_mean": 3.8,
+      "tok_in_mean": 24416,
+      "tok_in_max": 52754,
+      "step_errors": 1
+    }
+  },
+  "chan_doan_build": {
+    "summary": {
+      "questions": 5,
+      "success": 5,
+      "grounded": 3,
+      "p50": 31864,
+      "p95": 38002,
+      "max": 38005,
+      "mean": 31641,
+      "over45": 0,
+      "calls_mean": 8,
+      "calls_max": 9,
+      "agent_calls_mean": 6.4,
+      "tok_in_mean": 57588,
+      "tok_in_max": 70100,
+      "step_errors": 2
+    },
+    "rows": [
+      {
+        "id": "BUILD-2",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 24689,
+        "max_turn_ms": 24689,
+        "calls": 8,
+        "agent_calls": 7,
+        "tok_in": 70100,
+        "steps": 12,
+        "tools": {
+          "search_corpus": 7,
+          "open_evidence": 2,
+          "set_conditions": 1,
+          "run_python": 2
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 427,
+        "err": null,
+        "tool_stop": "model_budget",
+        "gameplay_advice": false,
+        "agent_status": "budget",
+        "web": "not_run"
+      },
+      {
+        "id": "BUILD-3",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 38005,
+        "max_turn_ms": 38005,
+        "calls": 9,
+        "agent_calls": 7,
+        "tok_in": 63058,
+        "steps": 10,
+        "tools": {
+          "search_corpus": 3,
+          "open_evidence": 2,
+          "set_conditions": 2,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [
+          {
+            "tool": "set_conditions",
+            "status": "error",
+            "error": "Values must be the player's own words from the named source; an assumption cannot replace a condition the player stated"
+          }
+        ],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1744,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "PY-1",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 37990,
+        "max_turn_ms": 37990,
+        "calls": 9,
+        "agent_calls": 7,
+        "tok_in": 65203,
+        "steps": 11,
+        "tools": {
+          "search_corpus": 5,
+          "open_evidence": 2,
+          "set_conditions": 1,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 1571,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-05",
+        "ok": true,
+        "grounded": false,
+        "turns": 1,
+        "ms": 31864,
+        "max_turn_ms": 31864,
+        "calls": 8,
+        "agent_calls": 7,
+        "tok_in": 64873,
+        "steps": 12,
+        "tools": {
+          "search_corpus": 5,
+          "open_evidence": 2,
+          "set_conditions": 2,
+          "run_python": 3
+        },
+        "step_errors": [
+          {
+            "tool": "set_conditions",
+            "status": "error",
+            "error": "Values must be the player's own words from the named source; an assumption cannot replace a condition the player stated"
+          }
+        ],
+        "clarified": false,
+        "sources": 0,
+        "answer_chars": 812,
+        "err": null,
+        "tool_stop": "model_budget",
+        "gameplay_advice": false,
+        "agent_status": "budget",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-06",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 25656,
+        "max_turn_ms": 25656,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24704,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 1015,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "sau_sua_build": {
+    "summary": {
+      "questions": 5,
+      "success": 5,
+      "grounded": 5,
+      "p50": 32932,
+      "p95": 35687,
+      "max": 36035,
+      "mean": 30161,
+      "over45": 0,
+      "calls_mean": 6.6,
+      "calls_max": 7,
+      "agent_calls_mean": 4.6,
+      "tok_in_mean": 29350,
+      "tok_in_max": 33997,
+      "step_errors": 1
+    },
+    "rows": [
+      {
+        "id": "BUILD-2",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 34297,
+        "max_turn_ms": 34297,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24442,
+        "steps": 6,
+        "tools": {
+          "set_conditions": 1,
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 810,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BUILD-3",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 36035,
+        "max_turn_ms": 36035,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 33997,
+        "steps": 7,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 2,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [
+          {
+            "tool": "set_conditions",
+            "status": "error",
+            "error": "goal: the value must appear word for word in the named source (copy the player's exact words, or leave the key out)"
+          }
+        ],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 1649,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "PY-1",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 32932,
+        "max_turn_ms": 32932,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 32590,
+        "steps": 7,
+        "tools": {
+          "set_conditions": 1,
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1648,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-05",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 21848,
+        "max_turn_ms": 21848,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24823,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 1156,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-06",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 25692,
+        "max_turn_ms": 25692,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 30899,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 913,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "sau_sua_baseline": {
+    "summary": {
+      "questions": 10,
+      "success": 10,
+      "grounded": 10,
+      "p50": 16117,
+      "p95": 22775,
+      "max": 25759,
+      "mean": 15328,
+      "over45": 0,
+      "calls_mean": 5.8,
+      "calls_max": 8,
+      "agent_calls_mean": 3.8,
+      "tok_in_mean": 24416,
+      "tok_in_max": 52754,
+      "step_errors": 1
+    },
+    "rows": [
+      {
+        "id": "BL-01",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 19127,
+        "max_turn_ms": 19127,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17759,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 879,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": false,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-02",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 8945,
+        "max_turn_ms": 8945,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 14075,
+        "steps": 3,
+        "tools": {
+          "search_corpus": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 393,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-03",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 5699,
+        "max_turn_ms": 5699,
+        "calls": 4,
+        "agent_calls": 2,
+        "tok_in": 9292,
+        "steps": 3,
+        "tools": {
+          "check_name": 1,
+          "search_corpus": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 1,
+        "answer_chars": 117,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-04",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 15948,
+        "max_turn_ms": 15948,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17842,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 1194,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-05",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 25759,
+        "max_turn_ms": 25759,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 32018,
+        "steps": 7,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 1095,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-06",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 16286,
+        "max_turn_ms": 16286,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 30812,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 1003,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-07",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 17460,
+        "max_turn_ms": 17460,
+        "calls": 8,
+        "agent_calls": 6,
+        "tok_in": 52754,
+        "steps": 9,
+        "tools": {
+          "search_corpus": 5,
+          "open_evidence": 2,
+          "finish": 2
+        },
+        "step_errors": [
+          {
+            "tool": "finish",
+            "status": "error",
+            "error": "Invalid arguments"
+          }
+        ],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 509,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-08",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 13532,
+        "max_turn_ms": 13532,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 35205,
+        "steps": 7,
+        "tools": {
+          "search_corpus": 4,
+          "open_evidence": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 657,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-09",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 14227,
+        "max_turn_ms": 14227,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 18015,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 737,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "BL-10",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 16293,
+        "max_turn_ms": 16293,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 16392,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 668,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "cau_moi": {
+    "summary": {
+      "questions": 14,
+      "success": 14,
+      "grounded": 14,
+      "p50": 18880,
+      "p95": 38497,
+      "max": 56138,
+      "mean": 20914,
+      "over45": 1,
+      "calls_mean": 6.3,
+      "calls_max": 10,
+      "agent_calls_mean": 4.2,
+      "tok_in_mean": 28931,
+      "tok_in_max": 92329,
+      "step_errors": 0
+    },
+    "rows": [
+      {
+        "id": "NB-01",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 13235,
+        "max_turn_ms": 13235,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 17898,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 423,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": false,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-02",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 5726,
+        "max_turn_ms": 5726,
+        "calls": 4,
+        "agent_calls": 2,
+        "tok_in": 8187,
+        "steps": 2,
+        "tools": {
+          "search_corpus": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 339,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-03",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 11004,
+        "max_turn_ms": 11004,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 20554,
+        "steps": 4,
+        "tools": {
+          "check_name": 1,
+          "search_corpus": 1,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 3,
+        "answer_chars": 661,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-04",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 26876,
+        "max_turn_ms": 26876,
+        "calls": 10,
+        "agent_calls": 8,
+        "tok_in": 92329,
+        "steps": 14,
+        "tools": {
+          "search_corpus": 10,
+          "open_evidence": 2,
+          "search_web": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1552,
+        "err": null,
+        "answer_basis": "evidence_with_recommendation",
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "ok"
+      },
+      {
+        "id": "NB-05",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 18690,
+        "max_turn_ms": 18690,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24015,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 879,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-06",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 20360,
+        "max_turn_ms": 20360,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 23954,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 1094,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-07",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 19069,
+        "max_turn_ms": 19069,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 25720,
+        "steps": 5,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 1198,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-08",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 27441,
+        "max_turn_ms": 27441,
+        "calls": 8,
+        "agent_calls": 5,
+        "tok_in": 35325,
+        "steps": 7,
+        "tools": {
+          "search_corpus": 3,
+          "search_web": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 1,
+        "answer_chars": 676,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "ok"
+      },
+      {
+        "id": "NB-09",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 14447,
+        "max_turn_ms": 14447,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 15995,
+        "steps": 4,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 1,
+        "answer_chars": 636,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-10",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 13541,
+        "max_turn_ms": 13541,
+        "calls": 5,
+        "agent_calls": 3,
+        "tok_in": 16911,
+        "steps": 5,
+        "tools": {
+          "search_corpus": 3,
+          "open_evidence": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 5,
+        "answer_chars": 495,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-11",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 28998,
+        "max_turn_ms": 28998,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24284,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 1301,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-12",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 56138,
+        "max_turn_ms": 56138,
+        "calls": 8,
+        "agent_calls": 6,
+        "tok_in": 43903,
+        "steps": 9,
+        "tools": {
+          "search_corpus": 3,
+          "open_evidence": 2,
+          "set_conditions": 1,
+          "run_python": 2,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 4,
+        "answer_chars": 1795,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-13",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 15848,
+        "max_turn_ms": 15848,
+        "calls": 7,
+        "agent_calls": 5,
+        "tok_in": 31719,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 1421,
+        "err": null,
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      },
+      {
+        "id": "NB-14",
+        "ok": true,
+        "grounded": true,
+        "turns": 1,
+        "ms": 21422,
+        "max_turn_ms": 21422,
+        "calls": 6,
+        "agent_calls": 4,
+        "tok_in": 24246,
+        "steps": 6,
+        "tools": {
+          "search_corpus": 2,
+          "open_evidence": 1,
+          "set_conditions": 1,
+          "run_python": 1,
+          "finish": 1
+        },
+        "step_errors": [],
+        "clarified": false,
+        "sources": 2,
+        "answer_chars": 1776,
+        "err": null,
+        "answer_basis": "evidence_with_recommendation",
+        "tool_stop": "finish",
+        "gameplay_advice": true,
+        "agent_status": "ok",
+        "web": "not_run"
+      }
+    ]
+  },
+  "ep_finish": [
+    {
+      "id": "BUILD-2",
+      "grounded": true,
+      "forced_finish": true,
+      "sources": 5
+    },
+    {
+      "id": "BL-05",
+      "grounded": true,
+      "forced_finish": true,
+      "sources": 4
+    }
+  ],
+  "toi_uu_viet": [
+    {
+      "id": "NB-01",
+      "ms": 15379,
+      "grounded": true,
+      "answer_chars": 647,
+      "sources": 2,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 7786,
+          "generation_ms": 8993,
+          "output_chars": 758,
+          "prompt_tokens": 4371,
+          "completion_tokens": 994
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 8,
+        "ms": 3406,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.07,
+        "memory": 17.78,
+        "agent": 6194.58,
+        "context": 2.34,
+        "prompt": 1.13
+      }
+    },
+    {
+      "id": "NB-02",
+      "ms": 5164,
+      "grounded": true,
+      "answer_chars": 282,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 2022,
+          "generation_ms": 2673,
+          "output_chars": 391,
+          "prompt_tokens": 3276,
+          "completion_tokens": 298
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 6,
+        "ms": 743,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 10.94,
+        "agent": 2392.38,
+        "context": 1.32,
+        "prompt": 1.11
+      }
+    },
+    {
+      "id": "NB-03",
+      "ms": 9754,
+      "grounded": true,
+      "answer_chars": 535,
+      "sources": 3,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 3497,
+          "generation_ms": 4409,
+          "output_chars": 680,
+          "prompt_tokens": 3170,
+          "completion_tokens": 770
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 16,
+        "ms": 954,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 10.26,
+        "agent": 5261.63,
+        "context": 2.15,
+        "prompt": 1.25
+      }
+    },
+    {
+      "id": "NB-04",
+      "ms": 31517,
+      "grounded": true,
+      "answer_chars": 494,
+      "sources": 5,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 8987,
+          "generation_ms": 9968,
+          "output_chars": 698,
+          "prompt_tokens": 3875,
+          "completion_tokens": 1514
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 4,
+        "ms": 862,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.75,
+        "agent": 21461.57,
+        "context": 5.14,
+        "prompt": 1.02
+      }
+    },
+    {
+      "id": "NB-05",
+      "ms": 14049,
+      "grounded": true,
+      "answer_chars": 837,
+      "sources": 2,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 3186,
+          "generation_ms": 5134,
+          "output_chars": 961,
+          "prompt_tokens": 3673,
+          "completion_tokens": 726
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 4,
+        "ms": 1140,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.57,
+        "agent": 8779.18,
+        "context": 1.79,
+        "prompt": 0.89
+      }
+    },
+    {
+      "id": "NB-06",
+      "ms": 21014,
+      "grounded": true,
+      "answer_chars": 723,
+      "sources": 2,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 10355,
+          "generation_ms": 11797,
+          "output_chars": 847,
+          "prompt_tokens": 3650,
+          "completion_tokens": 1726
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 6,
+        "ms": 1090,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.92,
+        "agent": 9040.26,
+        "context": 2.48,
+        "prompt": 1.12
+      }
+    },
+    {
+      "id": "NB-07",
+      "ms": 19505,
+      "grounded": true,
+      "answer_chars": 1180,
+      "sources": 5,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 10547,
+          "generation_ms": 12862,
+          "output_chars": 1386,
+          "prompt_tokens": 4318,
+          "completion_tokens": 2081
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 13,
+        "ms": 1200,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.73,
+        "agent": 6562.17,
+        "context": 4.37,
+        "prompt": 1.04
+      }
+    },
+    {
+      "id": "NB-08",
+      "ms": 24691,
+      "grounded": true,
+      "answer_chars": 275,
+      "sources": 1,
+      "images": 0,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 3743,
+          "generation_ms": 4248,
+          "output_chars": 353,
+          "prompt_tokens": 4811,
+          "completion_tokens": 599
+        }
+      ],
+      "images_trace": {
+        "returned": 0,
+        "selection": "model_metadata",
+        "candidates": 16,
+        "ms": 1070,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 10.14,
+        "agent": 20355.72,
+        "context": 2.48,
+        "prompt": 0.97
+      }
+    },
+    {
+      "id": "NB-09",
+      "ms": 7753,
+      "grounded": true,
+      "answer_chars": 283,
+      "sources": 1,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 2320,
+          "generation_ms": 2692,
+          "output_chars": 361,
+          "prompt_tokens": 3794,
+          "completion_tokens": 429
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 8,
+        "ms": 656,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.48,
+        "agent": 4979.8,
+        "context": 2.06,
+        "prompt": 1.03
+      }
+    },
+    {
+      "id": "NB-10",
+      "ms": 14254,
+      "grounded": true,
+      "answer_chars": 777,
+      "sources": 4,
+      "images": 0,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 6529,
+          "generation_ms": 7537,
+          "output_chars": 956,
+          "prompt_tokens": 4035,
+          "completion_tokens": 1157
+        }
+      ],
+      "images_trace": {
+        "returned": 0,
+        "selection": "model_metadata",
+        "candidates": 56,
+        "ms": 1340,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.35,
+        "agent": 6631.73,
+        "context": 5.37,
+        "prompt": 1.09
+      }
+    },
+    {
+      "id": "NB-11",
+      "ms": 21923,
+      "grounded": true,
+      "answer_chars": 913,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 12565,
+          "generation_ms": 14254,
+          "output_chars": 1037,
+          "prompt_tokens": 3580,
+          "completion_tokens": 2288
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 5,
+        "ms": 659,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.09,
+        "agent": 7558.12,
+        "context": 2.44,
+        "prompt": 1.11
+      }
+    },
+    {
+      "id": "NB-12",
+      "ms": 23679,
+      "grounded": true,
+      "answer_chars": 865,
+      "sources": 2,
+      "images": 0,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 9045,
+          "generation_ms": 10521,
+          "output_chars": 991,
+          "prompt_tokens": 3780,
+          "completion_tokens": 1758
+        }
+      ],
+      "images_trace": {
+        "returned": 0,
+        "selection": "model_metadata",
+        "candidates": 3,
+        "ms": 788,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 10.07,
+        "agent": 13040.43,
+        "context": 3.85,
+        "prompt": 1.13
+      }
+    },
+    {
+      "id": "NB-13",
+      "ms": 17808,
+      "grounded": true,
+      "answer_chars": 734,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 5262,
+          "generation_ms": 6777,
+          "output_chars": 860,
+          "prompt_tokens": 3724,
+          "completion_tokens": 934
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 3,
+        "ms": 1053,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 8.81,
+        "agent": 10913.79,
+        "context": 2.5,
+        "prompt": 1.13
+      }
+    },
+    {
+      "id": "NB-14",
+      "ms": 17334,
+      "grounded": true,
+      "answer_chars": 727,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 7787,
+          "generation_ms": 8983,
+          "output_chars": 851,
+          "prompt_tokens": 3626,
+          "completion_tokens": 1360
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 5,
+        "ms": 690,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 10.57,
+        "agent": 8202.71,
+        "context": 2.06,
+        "prompt": 0.94
+      }
+    }
+  ],
+  "viet_khong_thinking": [
+    {
+      "id": "NB-01",
+      "ms": 12351,
+      "grounded": true,
+      "answer_chars": 1036,
+      "sources": 4,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 2798,
+          "generation_ms": 5649,
+          "output_chars": 1213,
+          "prompt_tokens": 4346,
+          "completion_tokens": 507
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 8,
+        "ms": 3246,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.05,
+        "memory": 15.9,
+        "agent": 6523.79,
+        "context": 1.64,
+        "prompt": 1.04
+      }
+    },
+    {
+      "id": "NB-02",
+      "ms": 4572,
+      "grounded": true,
+      "answer_chars": 513,
+      "sources": 3,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 660,
+          "generation_ms": 1918,
+          "output_chars": 659,
+          "prompt_tokens": 3247,
+          "completion_tokens": 246
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 6,
+        "ms": 633,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.81,
+        "agent": 2569.52,
+        "context": 1.4,
+        "prompt": 1.18
+      }
+    },
+    {
+      "id": "NB-03",
+      "ms": 6454,
+      "grounded": true,
+      "answer_chars": 604,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 407,
+          "generation_ms": 1722,
+          "output_chars": 718,
+          "prompt_tokens": 3145,
+          "completion_tokens": 277
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 16,
+        "ms": 711,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.34,
+        "agent": 4647.77,
+        "context": 2.4,
+        "prompt": 1.13
+      }
+    },
+    {
+      "id": "NB-04",
+      "ms": 16718,
+      "grounded": true,
+      "answer_chars": 699,
+      "sources": 5,
+      "images": 3,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 724,
+          "generation_ms": 2709,
+          "output_chars": 907,
+          "prompt_tokens": 3839,
+          "completion_tokens": 349
+        }
+      ],
+      "images_trace": {
+        "returned": 3,
+        "selection": "model_metadata",
+        "candidates": 4,
+        "ms": 932,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.81,
+        "agent": 13921.86,
+        "context": 5.63,
+        "prompt": 1.03
+      }
+    },
+    {
+      "id": "NB-05",
+      "ms": 15157,
+      "grounded": true,
+      "answer_chars": 709,
+      "sources": 2,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 406,
+          "generation_ms": 2031,
+          "output_chars": 835,
+          "prompt_tokens": 3675,
+          "completion_tokens": 347
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 4,
+        "ms": 777,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 8.92,
+        "agent": 12980.65,
+        "context": 2.0,
+        "prompt": 1.05
+      }
+    },
+    {
+      "id": "NB-06",
+      "ms": 20107,
+      "grounded": true,
+      "answer_chars": 748,
+      "sources": 3,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 402,
+          "generation_ms": 2226,
+          "output_chars": 905,
+          "prompt_tokens": 4096,
+          "completion_tokens": 360
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 6,
+        "ms": 858,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 9.99,
+        "agent": 17718.73,
+        "context": 1.86,
+        "prompt": 0.9
+      }
+    },
+    {
+      "id": "NB-07",
+      "ms": 7689,
+      "grounded": true,
+      "answer_chars": 1008,
+      "sources": 5,
+      "images": 2,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 443,
+          "generation_ms": 3087,
+          "output_chars": 1216,
+          "prompt_tokens": 4534,
+          "completion_tokens": 484
+        }
+      ],
+      "images_trace": {
+        "returned": 2,
+        "selection": "model_metadata",
+        "candidates": 13,
+        "ms": 916,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.26,
+        "agent": 4527.14,
+        "context": 1.88,
+        "prompt": 0.87
+      }
+    },
+    {
+      "id": "NB-08",
+      "ms": 17839,
+      "grounded": true,
+      "answer_chars": 532,
+      "sources": 1,
+      "images": 0,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 518,
+          "generation_ms": 2365,
+          "output_chars": 614,
+          "prompt_tokens": 4889,
+          "completion_tokens": 262
+        }
+      ],
+      "images_trace": {
+        "returned": 0,
+        "selection": "model_metadata",
+        "candidates": 8,
+        "ms": 1005,
+        "parallel": "fallback"
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 10.0,
+        "agent": 14389.01,
+        "context": 2.1,
+        "prompt": 0.97
+      }
+    },
+    {
+      "id": "NB-09",
+      "ms": 6834,
+      "grounded": true,
+      "answer_chars": 760,
+      "sources": 4,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 471,
+          "generation_ms": 2222,
+          "output_chars": 943,
+          "prompt_tokens": 3918,
+          "completion_tokens": 370
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 9,
+        "ms": 1015,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 8.88,
+        "agent": 4532.64,
+        "context": 1.79,
+        "prompt": 0.92
+      }
+    },
+    {
+      "id": "NB-10",
+      "ms": 13539,
+      "grounded": true,
+      "answer_chars": 494,
+      "sources": 4,
+      "images": 3,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 402,
+          "generation_ms": 1454,
+          "output_chars": 673,
+          "prompt_tokens": 4010,
+          "completion_tokens": 209
+        }
+      ],
+      "images_trace": {
+        "returned": 3,
+        "selection": "model_metadata",
+        "candidates": 35,
+        "ms": 1342,
+        "parallel": "fallback"
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 8.84,
+        "agent": 10663.53,
+        "context": 5.97,
+        "prompt": 1.01
+      }
+    },
+    {
+      "id": "NB-11",
+      "ms": 12925,
+      "grounded": true,
+      "answer_chars": 841,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 709,
+          "generation_ms": 2672,
+          "output_chars": 965,
+          "prompt_tokens": 4201,
+          "completion_tokens": 387
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 10,
+        "ms": 661,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.03,
+        "memory": 9.62,
+        "agent": 10147.93,
+        "context": 2.05,
+        "prompt": 0.87
+      }
+    },
+    {
+      "id": "NB-12",
+      "ms": 14348,
+      "grounded": true,
+      "answer_chars": 967,
+      "sources": 4,
+      "images": 0,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 700,
+          "generation_ms": 3063,
+          "output_chars": 1157,
+          "prompt_tokens": 4209,
+          "completion_tokens": 449
+        }
+      ],
+      "images_trace": {
+        "returned": 0,
+        "selection": "model_metadata",
+        "candidates": 3,
+        "ms": 818,
+        "parallel": "fallback"
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 8.59,
+        "agent": 10359.6,
+        "context": 2.41,
+        "prompt": 1.04
+      }
+    },
+    {
+      "id": "NB-13",
+      "ms": 10999,
+      "grounded": true,
+      "answer_chars": 809,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 485,
+          "generation_ms": 2520,
+          "output_chars": 935,
+          "prompt_tokens": 3613,
+          "completion_tokens": 376
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 3,
+        "ms": 888,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 10.26,
+        "agent": 8370.28,
+        "context": 2.37,
+        "prompt": 0.94
+      }
+    },
+    {
+      "id": "NB-14",
+      "ms": 9637,
+      "grounded": true,
+      "answer_chars": 696,
+      "sources": 2,
+      "images": 1,
+      "writer": [
+        {
+          "attempt": 1,
+          "first_chunk_ms": 420,
+          "generation_ms": 1941,
+          "output_chars": 820,
+          "prompt_tokens": 3580,
+          "completion_tokens": 328
+        }
+      ],
+      "images_trace": {
+        "returned": 1,
+        "selection": "model_metadata",
+        "candidates": 5,
+        "ms": 913,
+        "parallel": true
+      },
+      "node_ms": {
+        "scope": 0.02,
+        "memory": 8.69,
+        "agent": 7567.66,
+        "context": 2.11,
+        "prompt": 0.95
+      }
+    }
+  ],
+  "thinking_a_cau_moi": [
+    {
+      "id": "NB-01",
+      "ms": 13567,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 5291,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 18766,
+      "agent_completion_tokens": 452,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 4,
+      "answer_chars": 704
+    },
+    {
+      "id": "NB-02",
+      "ms": 4319,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 1755,
+      "agent_model_calls": 2,
+      "agent_prompt_tokens": 8563,
+      "agent_completion_tokens": 238,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 518
+    },
+    {
+      "id": "NB-03",
+      "ms": 12000,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 789,
+      "generation_ms": 6433,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 21406,
+      "agent_completion_tokens": 432,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 606
+    },
+    {
+      "id": "NB-04",
+      "ms": 18279,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 3292,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 41461,
+      "agent_completion_tokens": 716,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 2,
+      "answer_chars": 1051
+    },
+    {
+      "id": "NB-05",
+      "ms": 13398,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2380,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 33192,
+      "agent_completion_tokens": 1576,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 3,
+      "sources": 3,
+      "answer_chars": 758
+    },
+    {
+      "id": "NB-06",
+      "ms": 10036,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2224,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 24950,
+      "agent_completion_tokens": 1085,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 3,
+      "answer_chars": 683
+    },
+    {
+      "id": "NB-07",
+      "ms": 21112,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1656,
+      "generation_ms": 12663,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 43446,
+      "agent_completion_tokens": 767,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 1242
+    },
+    {
+      "id": "NB-08",
+      "ms": 21326,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 206,
+      "generation_ms": 3864,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 55053,
+      "agent_completion_tokens": 712,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 1,
+      "answer_chars": 621
+    },
+    {
+      "id": "NB-09",
+      "ms": 9582,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 550,
+      "generation_ms": 4529,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 16865,
+      "agent_completion_tokens": 433,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 2,
+      "answer_chars": 448
+    },
+    {
+      "id": "NB-10",
+      "ms": 11150,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 1522,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 43236,
+      "agent_completion_tokens": 618,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 5,
+      "answer_chars": 518
+    },
+    {
+      "id": "NB-11",
+      "ms": 11574,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2571,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 32659,
+      "agent_completion_tokens": 1275,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 3,
+      "sources": 4,
+      "answer_chars": 801
+    },
+    {
+      "id": "NB-12",
+      "ms": 14896,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2736,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 43568,
+      "agent_completion_tokens": 1665,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 2,
+      "sources": 4,
+      "answer_chars": 846
+    },
+    {
+      "id": "NB-13",
+      "ms": 20072,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2438,
+      "agent_model_calls": 9,
+      "agent_prompt_tokens": 71540,
+      "agent_completion_tokens": 2959,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 3,
+      "sources": 3,
+      "answer_chars": 869
+    },
+    {
+      "id": "NB-14",
+      "ms": 10315,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2185,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 24928,
+      "agent_completion_tokens": 1025,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 2,
+      "sources": 1,
+      "answer_chars": 627
+    }
+  ],
+  "thinking_a_cau_kho": [
+    {
+      "id": "HR-01",
+      "ms": 15173,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 383,
+      "generation_ms": 6317,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 27048,
+      "agent_completion_tokens": 415,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 2,
+      "answer_chars": 321
+    },
+    {
+      "id": "HR-02",
+      "ms": 19687,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1896,
+      "generation_ms": 12614,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 29522,
+      "agent_completion_tokens": 639,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 464
+    },
+    {
+      "id": "HR-03",
+      "ms": 15006,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 690,
+      "generation_ms": 8346,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 36255,
+      "agent_completion_tokens": 557,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 2,
+      "answer_chars": 1386
+    },
+    {
+      "id": "HR-04",
+      "ms": 23584,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1776,
+      "generation_ms": 12483,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 57103,
+      "agent_completion_tokens": 821,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 815
+    },
+    {
+      "id": "HR-05",
+      "ms": 19091,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1705,
+      "generation_ms": 13001,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 31685,
+      "agent_completion_tokens": 604,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 4,
+      "answer_chars": 731
+    },
+    {
+      "id": "HR-06",
+      "ms": 26713,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1576,
+      "generation_ms": 12484,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 31695,
+      "agent_completion_tokens": 626,
+      "agent_reasoning_tokens": null,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 936
+    }
+  ],
+  "thinking_b_cau_moi": [
+    {
+      "id": "NB-01",
+      "ms": 14245,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 6241,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 18990,
+      "agent_completion_tokens": 662,
+      "agent_reasoning_tokens": 168,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 957
+    },
+    {
+      "id": "NB-02",
+      "ms": 4743,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2195,
+      "agent_model_calls": 2,
+      "agent_prompt_tokens": 8629,
+      "agent_completion_tokens": 255,
+      "agent_reasoning_tokens": 15,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 515
+    },
+    {
+      "id": "NB-03",
+      "ms": 9369,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 415,
+      "generation_ms": 4337,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 16427,
+      "agent_completion_tokens": 493,
+      "agent_reasoning_tokens": 77,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 629
+    },
+    {
+      "id": "NB-04",
+      "ms": 41888,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1329,
+      "generation_ms": 12055,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 57866,
+      "agent_completion_tokens": 1606,
+      "agent_reasoning_tokens": 518,
+      "forced_finish": true,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 1184
+    },
+    {
+      "id": "NB-05",
+      "ms": 17652,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2275,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 33956,
+      "agent_completion_tokens": 2132,
+      "agent_reasoning_tokens": 772,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 3,
+      "answer_chars": 653
+    },
+    {
+      "id": "NB-06",
+      "ms": 17503,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2266,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 26383,
+      "agent_completion_tokens": 2433,
+      "agent_reasoning_tokens": 1000,
+      "forced_finish": false,
+      "uncited_paragraphs": 2,
+      "sources": 3,
+      "answer_chars": 634
+    },
+    {
+      "id": "NB-07",
+      "ms": 27194,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1270,
+      "generation_ms": 10933,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 57517,
+      "agent_completion_tokens": 2016,
+      "agent_reasoning_tokens": 644,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 1054
+    },
+    {
+      "id": "NB-08",
+      "ms": 28044,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2888,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 40558,
+      "agent_completion_tokens": 1374,
+      "agent_reasoning_tokens": 470,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 2,
+      "answer_chars": 742
+    },
+    {
+      "id": "NB-09",
+      "ms": 10934,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 656,
+      "generation_ms": 5573,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 16995,
+      "agent_completion_tokens": 532,
+      "agent_reasoning_tokens": 95,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 2,
+      "answer_chars": 584
+    },
+    {
+      "id": "NB-10",
+      "ms": 17736,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 1459,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 53095,
+      "agent_completion_tokens": 1766,
+      "agent_reasoning_tokens": 1124,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 5,
+      "answer_chars": 460
+    },
+    {
+      "id": "NB-11",
+      "ms": 17299,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2665,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 27396,
+      "agent_completion_tokens": 2232,
+      "agent_reasoning_tokens": 954,
+      "forced_finish": false,
+      "uncited_paragraphs": 1,
+      "sources": 3,
+      "answer_chars": 823
+    },
+    {
+      "id": "NB-12",
+      "ms": 26218,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2701,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 56599,
+      "agent_completion_tokens": 3662,
+      "agent_reasoning_tokens": 1394,
+      "forced_finish": false,
+      "uncited_paragraphs": 2,
+      "sources": 3,
+      "answer_chars": 803
+    },
+    {
+      "id": "NB-13",
+      "ms": 24406,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2315,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 28751,
+      "agent_completion_tokens": 3480,
+      "agent_reasoning_tokens": 2236,
+      "forced_finish": false,
+      "uncited_paragraphs": 3,
+      "sources": 2,
+      "answer_chars": 761
+    },
+    {
+      "id": "NB-14",
+      "ms": 19467,
+      "grounded": true,
+      "needs_reasoning": false,
+      "writer_thinking_used": false,
+      "writer_reasoning_tokens": null,
+      "generation_ms": 2028,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 26913,
+      "agent_completion_tokens": 2801,
+      "agent_reasoning_tokens": 1521,
+      "forced_finish": false,
+      "uncited_paragraphs": 2,
+      "sources": 3,
+      "answer_chars": 633
+    }
+  ],
+  "thinking_b_cau_kho": [
+    {
+      "id": "HR-01",
+      "ms": 38612,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 159,
+      "generation_ms": 5919,
+      "agent_model_calls": 6,
+      "agent_prompt_tokens": 54727,
+      "agent_completion_tokens": 1955,
+      "agent_reasoning_tokens": 1288,
+      "forced_finish": true,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 554
+    },
+    {
+      "id": "HR-02",
+      "ms": 45233,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1782,
+      "generation_ms": 13692,
+      "agent_model_calls": 7,
+      "agent_prompt_tokens": 73776,
+      "agent_completion_tokens": 2668,
+      "agent_reasoning_tokens": 1861,
+      "forced_finish": true,
+      "uncited_paragraphs": 0,
+      "sources": 4,
+      "answer_chars": 638
+    },
+    {
+      "id": "HR-03",
+      "ms": 29756,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1408,
+      "generation_ms": 11917,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 48495,
+      "agent_completion_tokens": 1817,
+      "agent_reasoning_tokens": 1121,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 1691
+    },
+    {
+      "id": "HR-04",
+      "ms": 30889,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 2176,
+      "generation_ms": 15502,
+      "agent_model_calls": 4,
+      "agent_prompt_tokens": 32477,
+      "agent_completion_tokens": 1929,
+      "agent_reasoning_tokens": 1254,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 4,
+      "answer_chars": 905
+    },
+    {
+      "id": "HR-05",
+      "ms": 24132,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1405,
+      "generation_ms": 11401,
+      "agent_model_calls": 5,
+      "agent_prompt_tokens": 45145,
+      "agent_completion_tokens": 1588,
+      "agent_reasoning_tokens": 415,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 5,
+      "answer_chars": 1042
+    },
+    {
+      "id": "HR-06",
+      "ms": 33106,
+      "grounded": true,
+      "needs_reasoning": true,
+      "writer_thinking_used": true,
+      "writer_reasoning_tokens": 1759,
+      "generation_ms": 13754,
+      "agent_model_calls": 3,
+      "agent_prompt_tokens": 16456,
+      "agent_completion_tokens": 1272,
+      "agent_reasoning_tokens": 407,
+      "forced_finish": false,
+      "uncited_paragraphs": 0,
+      "sources": 3,
+      "answer_chars": 897
+    }
+  ]
+}
