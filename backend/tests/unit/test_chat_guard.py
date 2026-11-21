@@ -115,10 +115,10 @@ async def test_same_external_ref_reuses_conversation_and_history():
 
     assert second.conversation_id == first.conversation_id
     assert other.conversation_id != first.conversation_id
-    # The Agent recalls only the earlier USER turn of the same thread, never the assistant's answer.
+    # Agent chỉ nhớ lại lượt NGƯỜI DÙNG trước đó của cùng thread, không bao giờ câu trả lời của trợ lý.
     assert chat.traces[second.message_id]["memory"]["candidates"] == 1
     assert chat.traces[other.message_id]["memory"]["candidates"] == 0
-    # Generation never receives earlier turns as chat history.
+    # Bước sinh không bao giờ nhận các lượt trước làm lịch sử chat.
     assert all(m["role"] != "assistant" for m in llm.seen[1])
 
 

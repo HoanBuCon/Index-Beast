@@ -1,7 +1,7 @@
-"""Read-only corpus census and deterministic evidence samples; no model loading or client construction.
+"""Thống kê corpus chỉ đọc và mẫu evidence tất định; không nạp model hay tạo client.
 
-Run from backend: python -m scripts.audit_corpus_capabilities --output ../docs/testing/corpus-capabilities.json
-Signals are literal text occurrences, NOT verified capability coverage or retrieval results.
+Chạy từ backend: python -m scripts.audit_corpus_capabilities --output ../docs/testing/corpus-capabilities.json
+Tín hiệu là số lần xuất hiện của text, KHÔNG phải mức bao phủ năng lực đã kiểm hay kết quả retrieval.
 """
 
 import argparse
@@ -87,7 +87,7 @@ def audit(chunk_dir: Path, clean_dir: Path) -> dict:
         if item is not None:
             item["selected_chunks"] += 1
             item["sections"][row.get("section", "<missing>")] += 1
-            # First occurrence in artifact order for each distinct section, bounded to eight.
+            # Lần xuất hiện đầu tiên theo thứ tự artifact cho mỗi mục khác nhau, tối đa tám.
             if len(item["samples"]) < 8 and not any(s["section"] == row["section"] for s in item["samples"]):
                 item["samples"].append(sample(line, row))
     clean_review = clean_dir / "review.csv"

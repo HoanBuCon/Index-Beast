@@ -1,4 +1,4 @@
-"""Benchmark guards and counters with synthetic vectors; never runs real inference or a server."""
+"""Chặn và bộ đếm của benchmark với vector tổng hợp; không bao giờ chạy inference thật hay server."""
 
 from types import SimpleNamespace
 from uuid import UUID

@@ -1,4 +1,4 @@
-"""Plan-only agent benchmark; opt-in execution/resume on isolated test resources."""
+"""Benchmark agent chỉ lập kế hoạch; chạy/tiếp tục chỉ khi bật, trên tài nguyên test cô lập."""
 
 import argparse
 import asyncio

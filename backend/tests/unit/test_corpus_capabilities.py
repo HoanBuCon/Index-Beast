@@ -1,4 +1,4 @@
-"""Audit fixtures stay local; counters and samples must not imply semantic coverage."""
+"""Fixture kiểm tra chỉ ở local; bộ đếm và mẫu không được ngụ ý mức bao phủ ngữ nghĩa."""
 
 import csv
 import json

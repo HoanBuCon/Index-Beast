@@ -1,6 +1,6 @@
-"""Local pack authoring: source chunks and checked fields, no original-data/index writes.
+"""Soạn pack local: chunk nguồn và các trường đã kiểm, không ghi dữ liệu gốc/index.
 
-`--rules-only` refreshes the curated rule snapshots in the existing pack without the chunk artifact.
+`--rules-only` làm mới ảnh chụp rule đã tuyển chọn trong pack hiện có mà không cần artifact chunk.
 """
 
 import hashlib
@@ -23,8 +23,7 @@ RULE_ALIASES = [
     "tổng",
 ]
 
-# (title, url, text, rule_kind, rule_data, checked). rule_data is a structured copy of the numbers in text,
-# read by the build calculator; tests keep both in sync.
+# (title, url, text, rule_kind, checked).
 RULES = [
     (
         "Attribute point accounting",
@@ -35,11 +34,10 @@ RULES = [
             "stamina and equip load. Arithmetic does not establish optimality."
         ),
         "level_rule",
-        {"level_offset": 79},
         "2026-11-05",
     ),
-    # Starting-class values are no longer curated here: all ten origin pages are in the corpus (S5 add-on,
-    # 20/11/2026) and the agent quotes the class Infobox itself.
+    # Chỉ số class khởi đầu không còn tuyển chọn ở đây: cả mười trang origin đã có trong corpus (bổ sung S5, 20/11/2026)
+    # và agent tự trích Infobox của class.
     (
         "Moonveil requirements",
         "https://eldenring.wiki.gg/wiki/Moonveil",
@@ -49,7 +47,6 @@ RULES = [
             "establish latest-patch damage."
         ),
         "weapon_rule",
-        None,
         "2026-11-05",
     ),
     (
@@ -61,7 +58,6 @@ RULES = [
             "available attribute points must be spent."
         ),
         "respec_rule",
-        None,
         "2026-11-05",
     ),
 ]
@@ -69,7 +65,7 @@ RULES = [
 
 def curated_rule_hits() -> list[dict]:
     hits = []
-    for title, url, text, kind, rule_data, checked in RULES:
+    for title, url, text, kind, checked in RULES:
         payload = dict(
             text=text,
             title=title,
@@ -86,22 +82,20 @@ def curated_rule_hits() -> list[dict]:
             rule_kind=kind,
             image_ids=[],
         )
-        if rule_data is not None:
-            payload["rule_data"] = rule_data
         point_id = "curated:" + hashlib.sha256((url + text).encode()).hexdigest()
         hits.append(dict(id=point_id, payload=payload, text_sha256=hashlib.sha256(text.encode()).hexdigest()))
     return hits
 
 
 def with_rules(groups: list[dict], rule_hits: list[dict]) -> list[dict]:
-    """Corpus groups, then the Moonveil requirement snapshot and the shared rule group."""
+    """Các nhóm corpus, rồi ảnh chụp yêu cầu chỉ số của Moonveil và nhóm rule dùng chung."""
     moonveil = next(h for h in rule_hits if h["payload"]["rule_kind"] == "weapon_rule")
     return [*groups, {"aliases": ["Moonveil"], "hits": [moonveil]}, {"aliases": RULE_ALIASES, "hits": rule_hits}]
 
 
 def write(pack: dict) -> None:
     PACK.parent.mkdir(parents=True, exist_ok=True)
-    # Bytes, not write_text: keep LF line endings on Windows too.
+    # Ghi byte, không dùng write_text: giữ xuống dòng LF cả trên Windows.
     PACK.write_bytes((json.dumps(pack, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
 
 

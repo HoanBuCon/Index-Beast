@@ -1,4 +1,4 @@
-"""Fixed 20-turn live diagnostic. Plan-only by default; isolated PostgreSQL DB/memory collection."""
+"""Chẩn đoán live cố định 20 lượt. Mặc định chỉ lập kế hoạch; DB PostgreSQL/collection bộ nhớ cô lập."""
 
 import argparse
 import asyncio
@@ -50,7 +50,7 @@ def save(directory, report, secrets=()):
 
 
 def replace_checkpoint(temporary, destination):
-    # On Windows a concurrent reader or file scanner can briefly block replacement.
+    # Trên Windows, một tiến trình đọc đồng thời hoặc trình quét file có thể chặn việc thay file trong chốc lát.
     for attempt in range(5):
         try:
             temporary.replace(destination)
@@ -158,7 +158,7 @@ def continuation_case(case, row, group):
     )
     if prior:
         if not group.get("conversation_id") or not group.get("conversation_token"):
-            # Older case reports did not persist credentials for ungrouped scenarios.
+            # Báo cáo ca cũ không lưu credential cho các kịch bản không nhóm.
             row["restart_offset"] = len(row["http_turns"])
             return case, {}
         group = {**group, "clarification_id": prior["id"]}
@@ -182,7 +182,7 @@ def pending_case(case, row, group, reply):
 
 
 async def execute(args, manifest, cases):
-    # Set before importing model-related modules; no missing-cache downloads are allowed.
+    # Đặt trước khi import các module liên quan tới model; không cho tải phần cache còn thiếu.
     os.environ["HF_HUB_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
     os.environ["LANGSMITH_TRACING"] = "false"
@@ -272,7 +272,7 @@ async def execute(args, manifest, cases):
     try:
         if not base.deepseek_api_key or not base.web_search_available or not (ROOT / base.rag_models_dir).is_dir():
             raise ValueError("Configured model/search and local model cache required")
-        # Read-only probes precede resource creation and any paid call.
+        # Các probe chỉ đọc chạy trước khi tạo tài nguyên và trước mọi lời gọi tốn phí.
         stage = "PostgreSQL"
         conn = await asyncpg.connect(
             host=base.postgres_host,
@@ -333,16 +333,12 @@ async def execute(args, manifest, cases):
         vectors = MemoryVectors(client, collection, base.rag_collection)
         await vectors.setup()
         ctx = build_context(settings)
-        # ASGI client address below gives rate-limit keys a unique test-only namespace.
+        # Địa chỉ client ASGI bên dưới cho khóa rate-limit một namespace riêng chỉ dùng cho test.
 
         class CountedAgent(CountedLLM):
             def start(self, inputs, streaming=False):
                 row = super().start(inputs, streaming)
-                if inputs.get("policy", "").startswith("You are IndexBeast's request decision"):
-                    row["phase"] = "decision"
-                elif inputs.get("policy", "").startswith("You are IndexBeast's bounded tool"):
-                    row["phase"] = "tool_decision"
-                elif inputs.get("policy", "").startswith("Select images"):
+                if inputs.get("policy", "").startswith("Select images"):
                     row["phase"] = "image_selection"
                 return row
 
@@ -386,7 +382,7 @@ async def execute(args, manifest, cases):
                 timeout=90,
             ) as http,
         ):
-            # Warm only the cached encoder; this is not a hidden model/API diagnostic question.
+            # Chỉ làm ấm encoder đã cache; đây không phải câu hỏi chẩn đoán model/API ẩn.
             await app.state.chat_service.pipeline.retriever.encoder.encode_dense(["Ranni"], query=True)
             report["status"] = "running"
             unfinished = (
@@ -409,7 +405,7 @@ async def execute(args, manifest, cases):
                     )
                     previous_row.pop("response", None)
                 elif previous_row is not None and previous_row["status"] == "error":
-                    # Use the exact failed message, and the last accepted clarification when present.
+                    # Dùng đúng tin nhắn bị lỗi, và câu hỏi lại được chấp nhận gần nhất nếu có.
                     case, group = continuation_case(case, previous_row, groups.get(case["id"], group))
                 elif previous_row is not None:
                     previous_row["restart_offset"] = len(previous_row["http_turns"])
@@ -495,7 +491,7 @@ async def execute(args, manifest, cases):
                         row["trace"] = {k: v for k, v in prepared.trace.items() if k != "result"}
                         row["resolved_question"] = json.loads(prepared.values["payload"])["question"]
                         row["evidence_ids"] = [h.id for h in prepared.hits]
-                        row["checked_build"] = prepared.checked_build
+                        row["agent_results"] = prepared.trace.get("agent", {}).get("steps")
                 except Exception as exc:
                     row.update(status="error", error_type=type(exc).__name__)
                 finally:

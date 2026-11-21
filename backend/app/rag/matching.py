@@ -1,6 +1,6 @@
-"""Provenance text matching only: does a user-supplied surface/number appear in a text?
+"""Chỉ khớp text để kiểm nguồn gốc: chữ/số người dùng đưa có xuất hiện trong một đoạn text không?
 
-No keyword lists, entity dictionaries, intent rules or NER. Semantic decisions belong to the Agent.
+Không danh sách từ khóa, từ điển thực thể, rule intent hay NER. Quyết định ngữ nghĩa thuộc về Agent.
 """
 
 import re
@@ -17,12 +17,12 @@ _NUMBER_TOKEN = r"(?<!\w)[+-]?\d+(?:[.,]\d+)*(?!\w)"
 
 
 def numbers_in(text: str) -> list[str]:
-    """Numeric literals as written (level, stat, upgrade, patch); no unit or meaning is inferred."""
+    """Các số đúng như được viết (level, chỉ số, nâng cấp, patch); không suy ra đơn vị hay ý nghĩa."""
     return re.findall(_NUMBER_TOKEN, text)
 
 
 def preserves_numbers(question: str, query: str) -> bool:
-    """Every numeric literal of the first text remains in the second."""
+    """Mọi số trong text thứ nhất đều còn trong text thứ hai."""
     expected = Counter(numbers_in(question))
     actual = Counter(numbers_in(query))
     return all(actual[number] >= count for number, count in expected.items())

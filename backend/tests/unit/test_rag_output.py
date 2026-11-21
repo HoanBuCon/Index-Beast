@@ -1,4 +1,4 @@
-"""Strict whole-output parsing; all cases are local strings, never model calls."""
+"""Parse chặt toàn bộ output; mọi ca đều là chuỗi local, không bao giờ gọi model."""
 
 import json
 

@@ -1,4 +1,4 @@
-"""Offline checks that reranking reaches real retrieval, including the Agent tool path."""
+"""Kiểm offline rằng rerank đi tới retrieval thật, kể cả đường tool của Agent."""
 
 import asyncio
 from types import SimpleNamespace

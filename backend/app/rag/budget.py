@@ -1,4 +1,4 @@
-"""Per-turn model-call budget shared by the Agent loop, the generator, the Answer Guard and image selection."""
+"""Ngân sách lượt gọi model mỗi lượt chat, dùng chung cho vòng lặp Agent, generator, Answer Guard và bước chọn ảnh."""
 
 from core.errors import UnavailableError
 

@@ -40,7 +40,8 @@ tìm corpus/web, chọn bằng chứng, hỏi lại (`ask_user`) và kết thúc
 trả lời. Lỗi tool trả lại cho Agent tự sửa. Xem [handover GĐ2](../../../docs/handover/2026-11-22_s5-tv3_true-agent-gd2.md),
 [handover giữ câu cho Guard](../../../docs/handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md) và
 [đo qua API](../../../docs/testing/2026-11-22_true-agent-gd2/README.md).
-Server giữ schema/provenance, quyền truy cập, deadline/budget và citation; calculator chỉ phân bổ chỉ số tham khảo.
+Server giữ schema/provenance, quyền truy cập, deadline/budget và citation. Từ 22/11 không còn calculator: Agent tự tính
+phân bổ chỉ số bằng `run_python` ([python_sandbox.py](python_sandbox.py)) và tự kiểm; server không kiểm lại số build.
 [Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
 không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
 
@@ -81,7 +82,7 @@ Xem [hướng dẫn và sơ đồ graph](../../../docs/api/langgraph-memory.md) 
 
 Đã có player state/pending clarification, API JSON/SSE additive và form web tối thiểu.
 Luồng trả lời nối chủ thể với thông tin bổ sung; history bị cắt không làm mất các slot đang giữ.
-Memory vẫn RAM/TTL 30 phút, không giả persistence sau restart. Discord trả lời text, luôn auto.
+Memory vẫn RAM/TTL 30 phút, không giả persistence sau restart. Discord trả lời text, web theo giá trị bot gửi (auto).
 Nguồn local bổ sung nhỏ từ snapshot giúp một số quest/route/weapon; không reindex, không gán approved.
 Build số có bộ kiểm tính khả thi cho Samurai/Moonveil một tay, chưa phải optimizer hoặc damage calculator.
 Xem [contract/cách demo](../../../docs/api/gameplay-clarification-tv4.md),
@@ -120,7 +121,7 @@ và [handover](../../../docs/handover/2026-11-05_s3-tv3_rag-evidence-guards.md).
 
 Đã thêm Tavily Search → Extract async và assessment coverage trong RAG. Web có nút
 **Web: OFF → ON → ALWAYS → OFF**: off/auto/always tương ứng; mặc định ON (auto).
-Discord luôn auto (backend cưỡng chế).
+Discord dùng giá trị bot gửi (hiện là auto); backend không ép từ 22/11.
 Có key và CHAT_MODE=rag thì tự khả dụng trừ khi operator tắt công tắc tổng; không phải
 sửa .env mỗi lần dùng nút. Request cũ/missing key giữ local. Không reindex corpus.
 Xem [contract, budget, giới hạn và smoke test](../../../docs/api/web-search-tv4.md).

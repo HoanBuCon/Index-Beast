@@ -88,8 +88,8 @@ Ví dụ request web:
 
 ## Discord
 
-Bot gửi `options.web_search=auto`. Backend ép mọi request `channel=discord` về auto,
-kể cả client gửi off/always. Service token và rate limit hiện có vẫn áp dụng.
+Bot gửi `options.web_search=auto`. Từ 22/11 backend không còn ép `channel=discord` về auto: dùng giá trị
+client gửi (không gửi thì mặc định `WEB_SEARCH_MODE`), Agent tự quyết khi nào tìm web. Bot hiện tại không đổi hành vi. Service token và rate limit hiện có vẫn áp dụng.
 Không thêm slash command hoặc yêu cầu thành viên TV4 giữ Tavily key. Key chỉ ở backend TV3.
 
 ## Server và tương thích

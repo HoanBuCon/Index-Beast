@@ -1,4 +1,4 @@
-"""Offline verification of measurement boundaries, percentile math and explicit inference guard."""
+"""Kiểm offline ranh giới đo, phép tính percentile và chặn inference tường minh."""
 
 from types import SimpleNamespace
 

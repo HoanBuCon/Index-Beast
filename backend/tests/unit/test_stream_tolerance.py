@@ -1,4 +1,4 @@
-"""Final JSON tolerance and content-free failure categories."""
+"""Dung sai JSON cuối và các nhóm lỗi không chứa nội dung."""
 
 import pytest
 

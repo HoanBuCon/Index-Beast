@@ -85,7 +85,6 @@ async def stack(db_url: str):  # noqa: F811
         environment="test",
         chat_mode="rag",
         chat_persistence="postgres",
-        gameplay_knowledge_enabled=False,
         rag_collection=f"ib_e2e_{uuid4().hex[:8]}",
     )
     client = AsyncQdrantClient(url=settings.qdrant_url)

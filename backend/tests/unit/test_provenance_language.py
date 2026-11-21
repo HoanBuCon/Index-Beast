@@ -1,4 +1,4 @@
-"""The generator writes in the server-chosen language while retrieval stays in English."""
+"""Generator viết bằng ngôn ngữ server chọn trong khi retrieval vẫn bằng tiếng Anh."""
 
 import json
 
@@ -41,7 +41,7 @@ async def test_json_and_sse_use_server_language_with_english_retrieval(lang, tar
     system = llm.seen[0][0]["content"]
     assert f"Language: {lang}" in system and f"Write all explanatory prose in {target}" in system
     assert "Who is Ranni?" in llm.seen[0][-1]["content"]
-    # Recovery must keep the same authoritative target and evidence, not translate/retrieve again.
+    # Phục hồi phải giữ cùng ngôn ngữ đích và evidence có thẩm quyền, không dịch/retrieve lại.
     recovery = generator._inputs(p, 1)
     assert recovery["lang"] == lang and target in recovery["policy"]
     assert recovery["payload"] == p.values["payload"] and p.values["lang"] != lang

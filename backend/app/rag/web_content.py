@@ -1,4 +1,4 @@
-"""Conservative Markdown cleaning and page-order block splitting. No new gameplay facts, no ranking."""
+"""Làm sạch Markdown thận trọng và tách khối theo thứ tự trang. Không thêm dữ kiện gameplay, không xếp hạng."""
 
 import re
 
@@ -15,8 +15,8 @@ NOISE = re.compile(
 
 def clean_markdown(raw: str) -> tuple[str, dict]:
     stats = {"image_markup_removed": 0, "link_markup_removed": 0, "navigation_lines_removed": 0}
-    # Tavily returns Markdown, not the display-escaped copy sometimes pasted from a UI.
-    # Do not unescape arbitrary gameplay text or parse JSON inside source content.
+    # Tavily trả về Markdown, không phải bản đã escape để hiển thị đôi khi được dán từ UI.
+    # Không unescape text gameplay tùy ý hay parse JSON bên trong nội dung nguồn.
     text, stats["image_markup_removed"] = IMAGE.subn("", raw)
     text, stats["link_markup_removed"] = LINK.subn(lambda match: match[1], text)
     text = REFERENCE.sub("", text)
@@ -27,7 +27,7 @@ def clean_markdown(raw: str) -> tuple[str, dict]:
         stats["navigation_lines_removed"] += len(text[: inline_heading.start()].splitlines())
         text = text[inline_heading.start() :]
     lines = text.splitlines()
-    # Known wiki skin navigation before the first article H1, with a clear marker.
+    # Thanh điều hướng đã biết của giao diện wiki nằm trước H1 đầu tiên của bài, có dấu mốc rõ ràng.
     first_heading = next((i for i, line in enumerate(lines) if re.match(r"^#\s+\S", line)), None)
     if first_heading is not None and any(
         re.search(r"navigation|sign in|recent changes|fextralife|mediawiki", line, re.I)
@@ -47,27 +47,27 @@ def clean_markdown(raw: str) -> tuple[str, dict]:
 
 
 def select_excerpts(text: str, *, limit: int = 6) -> tuple[list[str], int]:
-    """Split a page into blocks in page order; no ranking (22/11: the Agent chooses which blocks to open).
+    """Tách trang thành các khối theo thứ tự trang; không xếp hạng (22/11: Agent chọn mở khối nào).
 
-    Blocks keep their section heading and are packed up to ~3,500 characters without reordering, so quest steps
-    and tables stay intact. `limit` is a size budget per page (the first blocks of the page), not a relevance
-    claim. Returns the blocks and how many oversized blocks were excluded rather than silently cut.
+    Khối giữ tiêu đề mục và được gom tới khoảng 3.500 ký tự mà không đổi thứ tự, để các bước quest
+    và bảng còn nguyên. `limit` là ngân sách kích thước mỗi trang (các khối đầu trang), không phải khẳng định
+    về độ liên quan. Trả về các khối và số khối quá cỡ bị loại thay vì bị cắt lặng lẽ.
     """
     blocks, heading, excluded, current = [], "", 0, ""
     for raw in re.split(r"\n\s*\n", text):
         lines = raw.splitlines()
-        # Keep section context attached to content blocks, without copying unrelated navigation.
+        # Giữ ngữ cảnh mục gắn với khối nội dung, không chép điều hướng không liên quan.
         headings = [line for line in lines if re.match(r"^#{1,6}\s+\S", line)]
         if headings:
             heading = headings[-1]
         block = raw.strip()
         if not block or len(block) < 8:
             continue
-        # A block that starts a new packed chunk carries its section heading; inside a chunk it is already there.
+        # Khối mở đầu một chunk gom mới mang theo tiêu đề mục; bên trong chunk thì tiêu đề đã có sẵn.
         headed = heading + "\n\n" + block if heading and heading not in block else block
         if len(headed) > 3500:
             excluded += 1
-            continue  # Do not silently cut a table or a gameplay condition.
+            continue  # Không lặng lẽ cắt bảng hay điều kiện gameplay.
         if current and len(current) + len(block) + 2 > 3500:
             blocks.append(current)
             current = ""

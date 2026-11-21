@@ -101,7 +101,7 @@ async def test_qdrant_hybrid_uses_both_vectors_rrf_and_filters_every_query_branc
         conditions = {c.key: c for c in filters.must}
         assert conditions["game_scope"].match.value == "base"
         assert conditions["review_status"].match.value == "approved"
-        assert "spoiler_level" not in conditions  # Spoiler filtering was removed.
+        assert "spoiler_level" not in conditions  # Đã bỏ lọc spoiler.
 
 
 def test_unknown_metadata_is_rejected_without_changing_source(tmp_path):
@@ -247,7 +247,7 @@ async def test_direct_indexing_cannot_bypass_review_and_duplicate_checks():
 
 
 async def test_real_query_api_with_synthetic_vectors_is_idempotent_and_filters_metadata():
-    # Qdrant local memory only. Vectors are explicit numbers, not model embeddings.
+    # Chỉ Qdrant bộ nhớ local. Vector là số viết tay, không phải embedding của model.
     client = AsyncQdrantClient(location=":memory:")
     encoder, store = SyntheticEncoder(), QdrantStore(client, "synthetic_only")
     try:
@@ -260,10 +260,10 @@ async def test_real_query_api_with_synthetic_vectors_is_idempotent_and_filters_m
         assert (await client.count("synthetic_only", exact=True)).count == 2
         retriever = HybridRetriever(encoder, store, limit=5)
         results = await retriever.retrieve("Ranni")
-        # A labelled spoiler chunk is no longer filtered out.
+        # Chunk gắn nhãn spoiler không còn bị lọc bỏ.
         assert {r.id for r in results} == {str(c.point_uuid) for c in chunks}
         assert encoder.calls[-1] == (["Ranni"], True)
-        # Bypass index adapter to confirm search still refuses non-base/unapproved payloads.
+        # Bỏ qua adapter index để xác nhận search vẫn từ chối payload không phải base/chưa duyệt.
         await client.upsert(
             "synthetic_only",
             points=[

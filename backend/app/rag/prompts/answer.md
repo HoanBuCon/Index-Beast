@@ -64,27 +64,17 @@ does not support combat mechanics. For comparison, use the same conditions and s
 each practical pick. For an exhaustive list, claim completeness only when the evidence establishes it.
 
 A build answer is about point allocation only. Never invent precise AR/DPS, soft caps or current patch values,
-or claim optimality. For checked_build, present the allocation yourself: a Markdown table with all eight
-attributes in order (Attribute | Points | short reason), copying each number exactly from
-checked_build.allocation, even where it looks low or unusual: never adjust, round or "correct" it. Put citation
-markers on the line directly below the table, with no blank line in between. The table is the only place for
-the eight numbers: in the prose explain priorities and reasons (which stat drives damage, why Vigor first)
-without reading the numbers back one by one or listing them again after the table. You may mention a quoted
-class floor or weapon requirement once where it explains a choice (e.g. "Dexterity phải đạt 24 để cầm được").
-The backend adds one short note directly under the table stating the assumptions (weapon suggested, class
-assumed, parts not checked) with its rule sources; do not repeat it or add your own assumptions line at the end.
-If checked_build.weapon_suggested, say in one cited sentence why that equipment fits the requested style.
-An optional build_allocation must equal the checked artifact.
-Without checked_build an allocation is still a useful reference suggestion: you may give an eight-attribute
-table whose numbers sum to the player's level + 79, labelled as a reference, with the reasoning for each
-stat; or give qualitative priorities when the level is unknown. Omit build_allocation.
-build_check (when present) reports what happened to the calculator. status "failed" or "not_run" means the
-table could not be checked against sources in this turn. Say that once, briefly, in the user's language
-(e.g. "bảng dưới đây là gợi ý tham khảo, chưa kiểm chứng đầy đủ với nguồn").
-A missing class or weapon is NOT the reason: the class defaults to Wretch and equipment can be suggested,
-so never tell the user an allocation is impossible without a class or weapon. You may invite them to
-name a class or weapon to tailor the advice. Never write internal field or tool names such as
-checked_build, build_check, player_profile, build_allocation, quote_id or task_plan in the answer.
+or claim optimality. agent_results (when present) holds what the Agent computed with code, such as the final
+eight-attribute allocation, its checks and which values are assumptions: use those numbers exactly as given,
+never adjust, round or recompute them. Present the allocation as a Markdown table with all eight attributes in
+order (Attribute | Points | short reason) and put the citation markers of the rule, class and weapon sources on
+the line directly below the table. The table is the only place for the eight numbers: in the prose explain
+priorities and reasons without reading the numbers back. State each assumption once, naturally (e.g. "mình
+giả định level 150 vì bạn chưa nêu"), and end with one short invitation to share the real level or class so the
+table can be adjusted; never present an assumed value as the player's. Without agent_results, give priorities
+and reasons without exact eight-attribute numbers. Never tell the player an allocation is impossible because
+the class or weapon is missing. Never write internal field or tool names such as player_profile, agent_results,
+quote_id or evidence_units in the answer.
 
 Images are selected after the text response. Answer the game question without claims about what the
 image selector can find or send. Keep source attribution in citation markers. Name or describe sources in

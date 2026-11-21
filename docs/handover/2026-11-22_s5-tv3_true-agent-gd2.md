@@ -16,7 +16,7 @@ Thay pipeline nhiều vai (Agent decision → Tool planner → Assessor, mỗi v
 | `prompts/true_agent.md` (viết lại) | Prompt duy nhất của Agent |
 | `pipeline.py` | Node `agent` thay `agent_decision` + `tool_agent`; bỏ import và phần payload `task_plan` |
 | `budget.py` (mới) | `spend()` (ngân sách lượt gọi) tách khỏi `agent.py` |
-| `web_search.py` | Chỉ còn `merge_evidence` (bỏ `assess`, `Assessment`) |
+| `web_search.py` | Bỏ `assess`, `Assessment`; sau đó xóa cả file (22/11, dọn dead code: `merge_evidence` chỉ còn test dùng) |
 | `entity_spelling.py` | Bỏ `correct_name` (server không tự sửa tên) |
 | **Xóa** | `agent.py`, `tool_agent.py`, `task_plan.py`, prompt `agent.md`, `tools.md`, `assess.md` (prompt chết) |
 
@@ -48,6 +48,27 @@ Bỏ `CHAT_TOOL_STEPS`, `CHAT_TOOL_QUERIES`, `CHAT_COVERAGE_STEPS` (Settings dù
 - Test thật 4 câu mới (chế độ RAM): 4/4 ([báo cáo](../testing/2026-11-22_true-agent-gd2/README.md)).
 - **Chế độ PostgreSQL (lần đầu chạy thật, 22/11)**: DB local nâng 0002 → 0005, `memory_admin setup --apply`, `.env` máy dev đổi `CHAT_PERSISTENCE=postgres`. 2 hội thoại mới, restart app giữa hai lượt: 2/2 đúng (hỏi lại câu trước, hiểu "phép đó"); token và ký ức chủ đề lưu đúng.
 
+### Build linh động: trả lời trước với giả định rõ ràng (22/11)
+
+- **Vấn đề**: xin build mà không nêu level/class thì IndexBeast hỏi lại. Nguồn: prompt Agent dặn hỏi level khi muốn số, calculator chỉ nhận level do người chơi nêu, prompt viết câu chỉ cho định tính khi thiếu level.
+- **Sửa**: `set_conditions` nhận nguồn `assumption` (Agent tự chọn giả định theo ngữ cảnh). Server: giả định không được đè điều kiện người chơi đã nêu, **không lưu vào working state** (nên không thành ký ức "fact"), chỉ dùng cho lượt này qua `state["turn_profile"]`; hồ sơ có khóa `assumed` (vd `level`), calculator vẫn kiểm đủ. Ghi chú dưới bảng tự nêu "giả định level 150 vì bạn chưa nêu"; `answer.md` dặn mời người chơi cho số thật một lần. Agent chỉ hỏi level khi người chơi đòi bảng chính xác cho nhân vật của họ.
+- Trace: `agent.steps[]` có thêm `error` (thông báo từ chối của server, ≤160 ký tự) và `fields` khi bước bị từ chối.
+- Test thật 4 câu build mới: không câu nào bị hỏi lại sai; 2/4 có bảng đã kiểm, 2/4 hết ngân sách vì tìm kiếm quá nhiều trước khi chia điểm ([báo cáo](../testing/2026-11-22_true-agent-gd2/README.md)).
+
+### Agent tự tính bằng Python, bỏ calculator và kiểm tra build cứng (22/11)
+
+- **Lý do** (MinhMuc): mỗi lần test lại ra lỗi mới ở calculator; gốc là rule cứng phía server (schema `build_data`, nhãn/quote bắt buộc cho từng số, LLM phải tự cộng cho khớp).
+- **Thay**: tool `run_python` (`app/rag/python_sandbox.py`): Agent tự viết code chia điểm và tự kiểm (tổng = level + 79, sàn class, yêu cầu vũ khí lấy từ nguồn đã mở), đưa kết quả qua `finish.results` → Generator nhận `agent_results`. Sandbox: kiểm cú pháp chỉ cho tập con Python (không import, không `_…`, không `format`/`eval`/`exec`/`open`…), builtins giới hạn, tiến trình con `-I -S` môi trường rỗng, timeout 3 s, đầu ra ≤4.000 ký tự, giới hạn bộ nhớ 256 MB trên POSIX. **Chưa phải sandbox cấp hệ điều hành**: production nên chạy trong container riêng không mạng.
+- **Xóa**: `app/rag/build_data.py` (calculator, schema, kiểm nhãn), `checked_build` (Prepared, pipeline, generator), kiểm bảng chỉ số và ghi chú giả định do server viết, issue bảng của Answer Guard, `build_allocation`, cấu hình `CHAT_CALCULATOR_MAX_FAILURES`; `level_rule` chuyển sang `gameplay_knowledge.py` và được đưa sẵn cho Agent làm nguồn (`built_in_sources`). Prompt `true_agent.md`, `answer.md`, `guard.md`, `gameplay_advice.md` viết lại tương ứng. Test: xóa `test_build_data.py`, thêm `test_python_sandbox.py` (16 test, có chặn code độc) và `test_answer_guard.py`.
+- **Rủi ro đã chấp nhận**: server không kiểm lại số build; Agent quên chạy code hoặc tính sai thì số sai tới người chơi.
+- Test thật 4 câu build mới: 4/4 có bảng, tổng và sàn class đúng khi tính lại tay ([báo cáo](../testing/2026-11-22_true-agent-gd2/README.md)).
+- **Rà soát toàn bộ rule cứng còn lại** (27 mục): giữ 22 (guard nguồn, bảo mật, quyền riêng tư, ngân sách), MinhMuc duyệt thay 5:
+  1. Hai evidence cùng nguồn: gộp quote thay vì bắt sinh lại (bỏ lý do `duplicate_evidence_index`).
+  2. Lời khuyên gameplay (`advisory`) được kèm `recommendation`/`limitation`; vẫn cấm trích dẫn, URL và vẫn cần cờ `gameplay_advice` của Agent.
+  3. Bỏ câu tĩnh "Mình chưa có đủ thông tin…" của server: không có bằng chứng thì bước viết trả `insufficient` (thêm 1 lượt gọi model cho trường hợp này).
+  4. Bỏ fallback `all_evidence`: `finish` rỗng khi đã tìm được bằng chứng thì server nhắc Agent chọn một lần; vẫn rỗng hoặc hết budget thì không có bằng chứng. Trace luôn `evidence_selection.method = model`.
+  5. Discord không còn bị ép web `auto`: dùng giá trị client gửi (bot hiện gửi `auto`, hành vi không đổi).
+
 ## Ảnh hưởng tới web, bot và thành viên khác
 
 - API JSON/SSE **không đổi** (OpenAPI `--check` đạt).
@@ -57,7 +78,7 @@ Bỏ `CHAT_TOOL_STEPS`, `CHAT_TOOL_QUERIES`, `CHAT_COVERAGE_STEPS` (Settings dù
 
 ## Kiểm tra
 
-- Backend `pytest -q` (sau cả mục 13, 14 và rà soát cuối): **973 passed, 20 skipped, 46 deselected** (bớt test của code chết, thêm test `recent_turns`) (bỏ khoảng 170 test chỉ kiểm dây chuyền cũ: `test_tool_agent.py`, `test_adaptive_agent.py`, `test_superseded_conditions.py`, `test_progress_clarification.py`, `test_agent_media_regressions.py`, các test `assess` và decision schema; hành vi còn giá trị được viết lại trong `test_true_agent.py`, `test_agent_durable.py`, `test_build_data.py`, `test_reranker_wiring.py`, `test_gameplay_multi_source.py`). Ruff, pre-commit, OpenAPI check đạt. Fixture `golden_guard_replays.json` bỏ phần `assessments`, `rewrites` không còn dùng.
+- Backend `pytest -q` (sau cả mục 13, 14, rà soát cuối, build linh động và `run_python`): **932 passed, 20 skipped, 46 deselected** (bỏ test calculator, thêm test sandbox) (bỏ khoảng 170 test chỉ kiểm dây chuyền cũ: `test_tool_agent.py`, `test_adaptive_agent.py`, `test_superseded_conditions.py`, `test_progress_clarification.py`, `test_agent_media_regressions.py`, các test `assess` và decision schema; hành vi còn giá trị được viết lại trong `test_true_agent.py`, `test_agent_durable.py`, `test_build_data.py`, `test_reranker_wiring.py`, `test_gameplay_multi_source.py`). Ruff, pre-commit, OpenAPI check đạt. Fixture `golden_guard_replays.json` bỏ phần `assessments`, `rewrites` không còn dùng.
 - Test thật qua API SSE (đã chạy, 14 câu + 2 thử): [báo cáo](../testing/2026-11-22_true-agent-gd2/README.md).
 
 | | Baseline | GĐ2 |

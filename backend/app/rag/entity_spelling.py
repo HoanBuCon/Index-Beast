@@ -1,4 +1,4 @@
-"""Conservative typo matching against names returned by retrieval."""
+"""Khớp lỗi chính tả một cách thận trọng với các tên do retrieval trả về."""
 
 import re
 import unicodedata
@@ -48,7 +48,7 @@ def matching_names(raw, hits, *, contextual_query=""):
         aliases = hit.payload.get("aliases")
         forms = [title, *aliases] if isinstance(aliases, list) else [title]
         names = [s for s in forms if isinstance(s, str)]
-        # A comma can delimit a character's epithet in the source title.
+        # Dấu phẩy có thể ngăn cách biệt danh của nhân vật trong tiêu đề nguồn.
         lead, separator, _ = title.partition(",")
         if separator and close_spelling(raw, lead):
             names.append(lead)
@@ -71,7 +71,7 @@ def matching_names(raw, hits, *, contextual_query=""):
             and name_key(title).startswith(name_key(raw) + " ")
             and contains_name(contextual_query, title)
         ):
-            # A more specific search may recover the full title of a shortened name.
+            # Tìm kiếm cụ thể hơn có thể lấy lại tiêu đề đầy đủ của một tên viết tắt.
             close.setdefault(name_key(title), (title, []))[1].append(hit)
         elif (
             contextual_query
@@ -89,5 +89,5 @@ def matching_names(raw, hits, *, contextual_query=""):
             close.setdefault(name_key(title), (title, []))[1].append(hit)
         elif len(typed_words) >= 2 and all(word in name_key(title).split() for word in typed_words):
             partial.setdefault(name_key(title), (title, []))[1].append(hit)
-    # A partial title provides options for clarification, never grounds an automatic correction.
+    # Tiêu đề khớp một phần chỉ cho ra lựa chọn để hỏi lại, không bao giờ là căn cứ để tự sửa.
     return list((exact or close or partial).values()), bool(exact or close)

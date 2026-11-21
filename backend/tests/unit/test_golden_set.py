@@ -1,4 +1,4 @@
-"""Golden-set draft integrity and review gate; no corpus download, inference or HTTP requests."""
+"""Tính toàn vẹn của bản nháp golden set và cổng review; không tải corpus, không inference hay request HTTP."""
 
 import json
 from pathlib import Path
@@ -18,7 +18,7 @@ def test_sprint2_adds_thirty_cases_with_vi_sote_negatives_and_honest_review_gate
     assert sum(r["category"] == "out_of_scope" for r in new) == 6
     assert result["total"] >= 60 and result["vi_ratio"] >= 0.5 and result["sote_cases"] >= 10
     assert result["author_evidence_cases"] >= 24
-    # Gate follows actual review records; later human approval must not break this test.
+    # Cổng đi theo bản ghi review thực tế; việc người duyệt sau này không được làm hỏng test này.
     reviews = [
         json.loads(s) for s in (ROOT / "reviews/s2-golden-set-review.jsonl").read_text(encoding="utf-8").splitlines()
     ]

@@ -1,4 +1,4 @@
-"""Pilot admission and indexing preflight. Only synthetic artifacts/vectors; no external services."""
+"""Nhận vào thử nghiệm và kiểm trước khi index. Chỉ artifact/vector tổng hợp; không dịch vụ bên ngoài."""
 
 import hashlib
 import json
@@ -179,7 +179,7 @@ def test_cli_dry_run_and_invalid_real_run_cannot_construct_clients(tmp_path, mon
     assert report["excluded_by_reason"] == {"language_not_selected": 1}
     assert path.read_bytes() == before
     path = artifact(tmp_path, [record(), record(2, text=" ")])
-    assert main(["index", "--input", str(path)]) == 2  # invalid preflight stops even without --dry-run
+    assert main(["index", "--input", str(path)]) == 2  # preflight không hợp lệ thì dừng kể cả khi không có --dry-run
     report = json.loads(capsys.readouterr().out)
     assert report["accepted"] == 1 and report["invalid"][0]["line"] == 2
 
@@ -235,7 +235,7 @@ async def test_pilot_index_retrieve_context_share_policy_ids_and_provenance():
         assert "review_status" not in retrieved.payload
         assert retrieved.payload["custom"] == original["custom"]
         assert document_to_hit(hit_to_document(retrieved)) == retrieved
-        # Spoiler filtering was removed: a labelled spoiler chunk is retrieved like any other.
+        # Đã bỏ lọc spoiler: chunk gắn nhãn spoiler được lấy ra như mọi chunk khác.
         everything = await HybridRetriever(SyntheticEncoder(), store).retrieve("Ranni")
         assert {h.id for h in everything} == {str(c.point_uuid) for c in chunks}
         with pytest.raises(ValueError):
@@ -266,7 +266,7 @@ async def test_pilot_rrf_filters_all_branches_and_rechecks_payload_policy():
 
 
 def test_direct_pipeline_rejects_policy_mismatch():
-    store = QdrantStore(AsyncMock(), "existing")  # reviewed policy
+    store = QdrantStore(AsyncMock(), "existing")  # chính sách đã review
     with pytest.raises(ValueError, match="same corpus policy"):
         ChatPipeline(Settings(_env_file=None, chat_mode="rag"), None, HybridRetriever(SyntheticEncoder(), store))
 

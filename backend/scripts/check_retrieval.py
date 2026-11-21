@@ -1,4 +1,4 @@
-"""Manual retrieval diagnostic. Running this command embeds a query and reads Qdrant; no LLM/index writes."""
+"""Chẩn đoán retrieval thủ công. Lệnh này embed một câu truy vấn và đọc Qdrant; không LLM/không ghi index."""
 
 import argparse
 import asyncio

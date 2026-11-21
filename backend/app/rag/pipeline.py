@@ -24,7 +24,6 @@ from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
 from app.rag.prompts import generation_prompt, prompt
 from app.rag.retriever import document_to_hit
-from app.rag.web_search import merge_evidence
 from core.config import Settings
 from core.corpus import CorpusPolicy
 from core.errors import AppError, UnavailableError
@@ -37,7 +36,7 @@ class PreparationState(TypedDict, total=False):
     history: list[dict]
     original_question: str
     resolved_question: str
-    query: str  # Retrieval query; never used to change the answer language.
+    query: str  # Câu truy vấn retrieval; không bao giờ dùng để đổi ngôn ngữ trả lời.
     answer_language: str
     started: float
     prepared: Prepared
@@ -52,13 +51,15 @@ class PreparationState(TypedDict, total=False):
     memory_scope: object
     memory_candidates: list[dict]
     recent_turns: list[dict]
+    turn_profile: dict
+    agent_results: str
     name_to_check: str
     verify_coverage: bool
 
 
 def content_key(hit: Hit) -> str | None:
     p = hit.payload
-    # Do not collapse unknown provenance or different sections, conditions/releases/images.
+    # Không gộp nguồn gốc không rõ hoặc khác mục, khác điều kiện/bản phát hành/ảnh.
     if not p.get("source_id") or not p.get("revision_id"):
         return None
     keys = (
@@ -98,7 +99,7 @@ def select_context(
     *,
     policy: CorpusPolicy | None = None,
 ) -> list[Hit]:
-    """Admission, dedup and budget only. Order is the Agent's (or retrieval's) order, never re-ranked here."""
+    """Chỉ nhận vào, khử trùng và ngân sách. Thứ tự là của Agent (hoặc của retrieval), không bao giờ xếp lại ở đây."""
     admission = policy or CorpusPolicy()
     selected, seen, seen_content, used = [], set(), set(), 0
     for hit in hits:
@@ -114,7 +115,7 @@ def select_context(
             continue
         size = len(json.dumps(context_item(hit, len(selected) + 1), ensure_ascii=False)) + 2
         if used + size > budget:
-            continue  # Whole chunks only: do not silently cut dialogue/conditions.
+            continue  # Chỉ lấy nguyên chunk: không lặng lẽ cắt hội thoại/điều kiện.
         selected.append(hit)
         seen.add(hit.id)
         if key is not None:
@@ -137,7 +138,7 @@ def context_item(hit: Hit, index: int) -> dict:
         "origin": "web" if isinstance(hit, WebHit) else "corpus",
         "text": p["text"],
     }
-    # Preserve provided unknown/null values, without fabricating absent metadata or wasting budget on it.
+    # Giữ nguyên giá trị unknown/null được cung cấp, không bịa metadata còn thiếu hay tốn ngân sách cho nó.
     for key in (
         "source_type_evidence",
         "source",
@@ -212,7 +213,7 @@ class ChatPipeline:
         )
         graph.add_edge("context", "prompt")
         graph.add_edge("prompt", END)
-        # Invocation-local state, overwrite semantics, no MessagesState/append reducer or shared checkpointer.
+        # State riêng cho mỗi lần gọi, ghi đè; không dùng MessagesState/append reducer hay checkpointer dùng chung.
         self.prepare_graph = graph.compile(name="indexbeast_prepare")
 
     @staticmethod
@@ -220,7 +221,7 @@ class ChatPipeline:
         async def run(state: PreparationState):
             started = time.perf_counter()
             if (trace := state.get("trace")) is not None:
-                # Read by deadline diagnostics when the turn is cancelled inside this node.
+                # Phần chẩn đoán hạn chót đọc giá trị này khi lượt bị hủy giữa node.
                 trace["current_node"] = name
             try:
                 result = node(state)
@@ -249,7 +250,7 @@ class ChatPipeline:
         started: float | None = None,
         trace: dict | None = None,
     ) -> Prepared:
-        """`trace` is the caller's dict for the turn trace, so diagnostics survive a cancelled turn."""
+        """`trace` là dict của bên gọi cho trace của lượt, để thông tin chẩn đoán còn lại khi lượt bị hủy."""
         state = {
             "req": req,
             "history": history,
@@ -270,7 +271,7 @@ class ChatPipeline:
         if self.llm is None:
             raise UnavailableError("Chưa cấu hình DeepSeek API key.")
         mode = self.settings.chat_mode
-        # No guessing from the message (22/11): the player's choice, else the Agent's declared language (default vi).
+        # Không đoán từ tin nhắn (22/11): lựa chọn của người chơi, nếu không thì ngôn ngữ Agent khai báo (mặc định vi).
         lang = req.options.lang if req.options.lang != "auto" else "vi"
         trace = state.get("trace")
         if trace is None:
@@ -278,7 +279,8 @@ class ChatPipeline:
         trace.update(mode=mode, rewrite_fallback=False)
         prepared = Prepared(mode, lang, [], trace=trace)
         state.update(prepared=prepared, query=req.message, documents=[], answer_language=lang)
-        requested = "auto" if req.channel == "discord" else (req.options.web_search or self.settings.web_search_mode)
+        # Cùng mặc định trên mọi kênh (22/11: Discord không còn bị ép auto); Agent tự quyết khi nào tìm kiếm.
+        requested = req.options.web_search or self.settings.web_search_mode
         state["search_mode"] = requested if self.settings.web_search_available else "off"
         prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
         state["verify_coverage"] = self.web_search is not None and state["search_mode"] == "auto"
@@ -292,7 +294,7 @@ class ChatPipeline:
         return await run_agent(self, state)
 
     def _bounded(self, rows: list[dict]) -> list[dict]:
-        # Candidate count and chars are budgets, not semantic relevance decisions.
+        # Số ứng viên và số ký tự là ngân sách, không phải quyết định về độ liên quan ngữ nghĩa.
         bounded, used = [], 0
         for row in rows[: self.settings.chat_history_messages]:
             text = row.get("text", row.get("content", ""))
@@ -302,10 +304,10 @@ class ChatPipeline:
         return bounded
 
     def _recent_turns(self, history: list[dict]) -> list[dict]:
-        """The last turns of this conversation (player and assistant), within the history budget.
+        """Các lượt gần nhất của hội thoại này (người chơi và trợ lý), trong ngân sách lịch sử.
 
-        Lets the Agent answer questions about the conversation itself ("what did I just ask?"). Never evidence
-        about the game: the Agent only quotes them back in a reply. Older turns are dropped first.
+        Giúp Agent trả lời câu hỏi về chính cuộc hội thoại ("tôi vừa hỏi gì?"). Không bao giờ là evidence
+        về game: Agent chỉ nhắc lại chúng trong reply. Lượt cũ hơn bị bỏ trước.
         """
         rows, used = [], 0
         for msg in reversed(history[-self.settings.chat_history_messages :]):
@@ -325,7 +327,7 @@ class ChatPipeline:
         if self.memory is not None and state.get("memory_scope") is not None:
             rows, diagnostic = await self.memory.recall(state["memory_scope"], req.message)
         else:
-            # RAM mode has no claim of durable/semantic memory. Supply only two user anchors.
+            # Chế độ RAM không tuyên bố có bộ nhớ bền/ngữ nghĩa. Chỉ đưa hai mốc là câu của người dùng.
             users = [r for r in state["history"] if r.get("role") == "user"][-2:]
             rows = [
                 {
@@ -353,17 +355,10 @@ class ChatPipeline:
     def _context(self, state: dict) -> dict:
         p = state["prepared"]
         if p.static_answer is None:
-            original_candidates = [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])
-            selection = p.trace.get("evidence_selection", {})
-            ids = selection.get("ids", [])
-            if p.checked_build is not None:
-                ids = list(dict.fromkeys([*p.checked_build["sources"], *ids]))[:5]
-            if ids or selection.get("method") == "model":
-                by_id = {h.id: h for h in original_candidates}
-                candidates = [by_id[i] for i in ids if i in by_id]
-            else:
-                candidates = merge_evidence([document_to_hit(d) for d in state["documents"]], state.get("web_hits", []))
-                p.trace.setdefault("evidence_selection", {"method": "all_evidence", "ids": []})
+            # Chỉ evidence Agent đã chọn (22/11: server không còn dự phòng bằng mọi thứ tìm được).
+            by_id = {h.id: h for h in [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])}
+            p.trace.setdefault("evidence_selection", {"method": "model", "ids": []})
+            candidates = [by_id[i] for i in p.trace["evidence_selection"]["ids"] if i in by_id]
             p.hits = select_context(
                 candidates,
                 self.settings.rag_top_k,
@@ -371,18 +366,17 @@ class ChatPipeline:
                 policy=self.policy,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            if not p.hits and not p.gameplay_advice:
-                p.static_answer = (
-                    "Mình chưa có đủ thông tin để trả lời câu này."
-                    if p.lang == "vi"
-                    else "I don't have enough information to answer this question."
-                )
+            # Không có evidence: bước viết nói rõ còn thiếu gì (câu trả lời insufficient), không phải một câu cố định
+            # của server.
         return state
 
     def _prompt(self, state: dict) -> Prepared:
         p, req = state["prepared"], state["req"]
         player = state.get("next_player")
-        profile = {c["key"]: c["value"] for c in player.get("constraints", [])} if isinstance(player, dict) else {}
+        # Điều kiện của lượt này, gồm cả các giả định Agent đã nêu (không lưu vào player).
+        profile = state.get("turn_profile")
+        if profile is None:
+            profile = {c["key"]: c["value"] for c in player.get("constraints", [])} if isinstance(player, dict) else {}
         p.template = self.template
         p.values = {
             "persona": prompt("persona"),
@@ -390,7 +384,7 @@ class ChatPipeline:
             "policy": prompt("answer")
             + ("\n" + prompt("gameplay_advice") if p.gameplay_advice else "")
             + ("\n" + prompt("overview") if state.get("overview") else ""),
-            # Old turns cannot bias generation or masquerade as new evidence.
+            # Lượt cũ không thể làm lệch phần sinh câu trả lời hay giả làm evidence mới.
             "history": [],
             "payload": json.dumps(
                 {
@@ -398,9 +392,9 @@ class ChatPipeline:
                     "original_user_message": req.message,
                     "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
                     "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
-                    "checked_build": p.checked_build,
                     **({"player_profile": profile} if profile else {}),
-                    **({"build_check": p.trace["build_check"]} if p.trace.get("build_check") else {}),
+                    # Các số Agent tính bằng run_python (ví dụ phân bổ build); dùng nguyên như vậy.
+                    **({"agent_results": state["agent_results"]} if state.get("agent_results") else {}),
                 },
                 ensure_ascii=False,
             ),

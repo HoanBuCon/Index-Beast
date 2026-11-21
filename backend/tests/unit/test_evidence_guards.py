@@ -1,4 +1,4 @@
-"""Offline replays of observed failures. Parser/selection improvements are not a live quality score."""
+"""Chạy lại offline các lỗi đã gặp. Cải tiến parser/chọn lọc không phải điểm chất lượng live."""
 
 import json
 from contextlib import aclosing
@@ -120,14 +120,13 @@ async def test_multiple_quotes_and_partial_answer_keep_json_sse_contract(streami
     assert len(sources) == 1 and sources[0].text == "\n[…]\n".join(units[q] for q in ids)
 
 
-def test_duplicate_evidence_source_is_rejected_instead_of_silent_overwrite():
-    with pytest.raises(RAGValidationError) as failure:
-        validate_answer(
-            Prepared("rag", "en", [], hits=[hit()]),
-            {
-                "answer": "Ranni is an Empyrean [1].",
-                "evidence": [{"index": 1, "quote_id": "q0"}, {"index": 1, "quote_id": "q0"}],
-                "insufficient": False,
-            },
-        )
-    assert failure.value.reason == "duplicate_evidence_index"
+def test_two_evidence_items_for_one_source_are_merged_not_rejected():
+    result = validate_answer(
+        Prepared("rag", "en", [], hits=[hit()]),
+        {
+            "answer": "Ranni is an Empyrean [1].",
+            "evidence": [{"index": 1, "quote_id": "q0"}, {"index": 1, "quote_id": "q0"}],
+            "insufficient": False,
+        },
+    )
+    assert result.grounded and len(result.sources) == 1 and "[…]" not in result.sources[0].text

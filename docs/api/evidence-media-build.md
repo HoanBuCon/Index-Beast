@@ -15,9 +15,9 @@ Không cần đổi `.env` nếu đã bật ba cấu hình này. Đợt triển 
 | Câu trả lời | Generator diễn đạt theo ngôn ngữ yêu cầu | JSON, citation, quote, server-render allocation, SSE lifecycle |
 
 Đường tool-agent không gọi `coverage_order` để xếp ưu tiên quest/stat/section theo keyword.
-`evidence_ids` thiếu, lặp hoặc ngoài tập đã cung cấp → từ 22/11 server không tự xếp hạng nữa: trace
-`evidence_selection.method = all_evidence`, bước viết nhận mọi bằng chứng đã tìm (theo thứ tự tìm được, trong ngân sách
-context) và tự chọn qua trích dẫn (trước đây là `rank_fallback`). Nếu hết step budget trước finish, cũng vậy.
+`evidence_ids` rỗng khi đã tìm được bằng chứng → server nhắc Agent chọn một lần; Agent vẫn gửi rỗng (hoặc hết budget
+trước finish) thì không có bằng chứng, bước viết trả `insufficient` nói rõ thiếu gì. Từ 22/11 (sau) bỏ fallback
+`all_evidence` và câu tĩnh "chưa có đủ thông tin"; trace luôn `evidence_selection.method = model`.
 Selector không sửa text/metadata.
 Preview tối đa 30 candidate, 1.000 ký tự/candidate và metadata điều kiện; top-5 hiện tại có text/quote units đầy đủ.
 

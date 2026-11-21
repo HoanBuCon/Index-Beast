@@ -609,10 +609,7 @@
             "lang": "en",
             "review_status": "pending",
             "rule_kind": "level_rule",
-            "image_ids": [],
-            "rule_data": {
-              "level_offset": 79
-            }
+            "image_ids": []
           },
           "text_sha256": "c061243a5a74ad31b277c907b676cf961c4af98dbef5f9b536272716e6a444c1"
         },

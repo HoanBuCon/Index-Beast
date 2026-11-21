@@ -1,4 +1,4 @@
-"""Provider schema failures: bounded regeneration without weakening evidence validation."""
+"""Lỗi schema của provider: sinh lại có giới hạn mà không nới việc kiểm evidence."""
 
 import json
 from contextlib import aclosing
@@ -87,9 +87,9 @@ def test_direct_style_keeps_evidence_contract():
 
 
 async def test_empty_context_is_normal_response_without_retrieval_narration():
-    llm = FakeLLM()
+    llm = FakeLLM().insufficient("Mình chưa rõ về điều này.")
     result = await service("rag", llm, FakeRetriever([])).answer(ChatRequest(**BODY))
-    assert not result.grounded and not result.sources and llm.calls == 0
+    assert not result.grounded and not result.sources and llm.calls == 1
     assert "nguồn" not in result.answer and "tìm được" not in result.answer
 
 
@@ -102,7 +102,7 @@ async def test_katana_question_with_unrelated_context_is_insufficient_not_502(st
         "insufficient": True,
     }
     llm.tokens = list(json.dumps(llm.data))
-    # Ranni context intentionally does not establish a katana build.
+    # Context của Ranni cố ý không đủ căn cứ cho một build katana.
     live = service("rag", llm, FakeRetriever())
     request = ChatRequest(message="huong dan build katana", channel="web")
     if streaming:

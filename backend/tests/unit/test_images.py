@@ -1,4 +1,4 @@
-"""Local image fixtures and fake RAG; no LLM, embedding, server DB or downloads."""
+"""Fixture ảnh local và RAG giả; không LLM, embedding, DB server hay tải xuống."""
 
 import asyncio
 import csv
@@ -166,7 +166,7 @@ async def test_never_borrows_same_hash_from_wrong_provenance(media, change):
 
 
 async def test_image_selection_ignores_spoiler_labels(media):
-    # Spoiler filtering was removed: an unknown or non-zero spoiler label no longer hides an image.
+    # Đã bỏ lọc spoiler: nhãn spoiler không rõ hoặc khác 0 không còn ẩn ảnh.
     media.hits[0].payload["spoiler_level"] = 2
     assert len((await media.catalog.resolve(media.hits, [1])).images) == 1
 
@@ -265,7 +265,7 @@ def test_json_sse_history_and_both_modes_remain_compatible(client, media):
     assert "event: images" not in response.text
     assert all("images" not in p for event, p in frames if event == "event: token")
     client.app.dependency_overrides.clear()
-    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []  # Fixture app defaults mock.
+    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []  # Mặc định của app fixture là mock.
 
 
 def test_generation_failure_and_no_evidence_never_resolve_images(client, media, monkeypatch):
@@ -392,7 +392,7 @@ def test_hash_matching_but_truncated_jpeg_is_not_served(media):
     buffer = io.BytesIO()
     Image.new("RGB", (64, 64), "blue").save(buffer, format="JPEG")
     data = buffer.getvalue()[:-20]
-    # Headers can still be parsed, so hash/MIME/header checks alone are insufficient.
+    # Header vẫn parse được, nên chỉ kiểm hash/MIME/header là không đủ.
     with Image.open(io.BytesIO(data)) as image:
         assert image.format == "JPEG"
     digest = hashlib.sha256(data).hexdigest()

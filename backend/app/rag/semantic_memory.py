@@ -1,4 +1,4 @@
-"""Scoped dense recall; PostgreSQL validates every vector hit and owns the plaintext."""
+"""Recall dense theo phạm vi; PostgreSQL kiểm từng hit vector và giữ bản plaintext."""
 
 import asyncio
 from dataclasses import dataclass
@@ -107,7 +107,7 @@ class SemanticMemory:
     async def recall(self, scope: MemoryScope, question: str):
         try:
             async with asyncio.timeout(self.settings.chat_memory_timeout_seconds):
-                # Missing/mismatched collection fails before model initialization.
+                # Collection thiếu/không khớp thì lỗi trước khi khởi tạo model.
                 await self.vectors.validate()
                 recent = await self.repository.memories(scope.conversation_id, recent=True, owner=scope.owner)
                 if not recent:
@@ -129,7 +129,7 @@ class SemanticMemory:
                     row = canonical.get(str(hit.id))
                     if row and row["revision"] == (hit.payload or {}).get("revision"):
                         rows.append({**row, "cosine": hit.score})
-                # Keep scores separate; recent anchors are labelled, not assigned synthetic similarity.
+                # Giữ điểm riêng; mốc gần đây được gắn nhãn, không gán độ tương đồng giả.
                 seen = {row["id"] for row in rows}
                 rows.extend({**row, "recent": True} for row in recent if row["id"] not in seen)
                 used, bounded = 0, []
