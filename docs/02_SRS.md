@@ -206,7 +206,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 
 | ID | Yêu cầu | Ưu tiên | Ổn định | Sprint | Trạng thái |
 |---|---|---|---|---|---|
-| FR-EVAL-01 | Golden set ≥ 100 câu (≥ 50% tiếng Việt) có đáp án tham chiếu & URL nguồn đúng cho câu hỏi lore và gameplay Elden Ring (base game + Shadow of the Erdtree), gồm cả câu ngoài phạm vi và thiếu bằng chứng. | M | Volatile | S1–S4 | In Progress — 100 câu (64 VI/36 EN), chưa câu nào được TV2 duyệt |
+| FR-EVAL-01 | Golden set ≥ 100 câu (≥ 50% tiếng Việt) có đáp án tham chiếu & URL nguồn đúng cho câu hỏi lore và gameplay Elden Ring (base game + Shadow of the Erdtree), gồm cả câu ngoài phạm vi và thiếu bằng chứng. | M | Volatile | S1–S4 | Done (24/11) — 200 câu IB-GS-101–300 (110 VI/90 EN; dễ 60, trung bình 90, khó 50), 200/200 `approved` (TV2 duyệt, Claude duyệt thay theo ủy quyền), gate `--require-reviewed` đạt; 49 câu gõ nhầm (sai chính tả, không dấu, Telex, viết tắt). Xem `docs/evaluation/2026-11-24_golden-200-duyet.md` |
 | FR-EVAL-02 | Script đánh giá retrieval: Recall@5, Recall@10, MRR. | M | Stable | S3 | In Progress — có script, chưa có Recall@k/MRR chính thức |
 | FR-EVAL-03 | Script đánh giá câu trả lời: faithfulness, correctness (LLM-as-judge + kiểm tra tay mẫu). | M | Volatile | S4 | In Progress — có bộ chẩn đoán 25 câu, chưa có LLM-as-judge |
 | FR-EVAL-04 | Lưu kết quả mỗi lần chạy eval (cấu hình, điểm) để so sánh giữa các sprint. | S | Stable | S4 | Proposed — bảng `eval_runs` có, chưa ghi |
@@ -233,7 +233,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | NFR-PERF-01 | Hiệu năng | Token đầu tiên p95 ≤ 3.5 s; câu trả lời hoàn chỉnh p95 ≤ 10 s với ≤ 20 người dùng đồng thời | M | S5 | Chưa đạt: p95 25 câu tuần tự = 12,4 s (> 10 s); token đầu chưa đo. Đã có kịch bản Locust và báo cáo p95 từng bước (`backend/loadtest`, `scripts.trace_latency`), chưa chạy |
 | NFR-PERF-02 | Hiệu năng | Retrieval + rerank p95 ≤ 1 s | S | S3 | Có số đo S2 (`docs/testing/2026-10-31_retrieval-latency.md`); chưa đo lại sau khi thêm agent |
 | NFR-CAP-01 | Tải | Chịu 50 người dùng đồng thời không lỗi (có thể xếp hàng) | M | S5 | Chưa đo: kịch bản Locust 20/50 người dùng đã có (`backend/loadtest`, kế hoạch `docs/testing/s5-load-test-plan.md`), chờ TV1 duyệt chạy |
-| NFR-QUAL-01 | Chất lượng | Recall@5 ≥ 0.80 trên golden set | M | S4 | Chưa đo (chưa có golden set được duyệt) |
+| NFR-QUAL-01 | Chất lượng | Recall@5 ≥ 0.80 trên golden set | M | S4 | Chưa đo trên bản đã duyệt 24/11 (S4 14/11 đo trên bản nháp: Hybrid Recall@5 86,4%, câu gốc); cần chạy lại với luồng Agent |
 | NFR-QUAL-02 | Chất lượng | Correctness ≥ 70%, faithfulness ≥ 85% trên golden set | M | S4–S5 | Chưa đo |
 | NFR-AVL-01 | Sẵn sàng | Uptime ≥ 99% trong giai đoạn demo; tự khởi động lại container khi lỗi | S | S5 | In Progress: `restart: unless-stopped`; chưa có VPS |
 | NFR-SEC-01 | Bảo mật | Không commit secret; dùng `.env`/Docker secrets; HTTPS bắt buộc | M | S1, S5 | In Progress: `ENVIRONMENT=prod` từ chối `change-me`; HTTPS staging mới kiểm cú pháp |
@@ -356,7 +356,7 @@ Corpus (4.164 trang, 23.765 chunk; 18.368 chunk tiếng Anh được index) lưu
 | TBD-07 | Giấy phép và điều khoản của domain trong allowlist tìm web (eldenring.wiki.fextralife.com, en.bandainamcoent.eu) | Trước production | Đoạn trích hiển thị cho người dùng kèm link; chưa có quyết định pháp lý |
 | TBD-08 | Trang About còn ghi "Phạm vi hiện tại không gồm DLC hoặc Nightreign" | S4 | Trái với phạm vi đã chốt (có SotE); TV4 sửa |
 | TBD-09 | Feedback 👍/👎: nút đã gỡ khỏi web (05/11) và `/feedback` chưa lưu dữ liệu | S4 | Quyết định giữ hay bỏ FR-WEB-04, FR-BOT-05 và kịch bản demo 9 |
-| TBD-10 | Số đo chất lượng chính thức | S4 | Cần TV2 duyệt golden set 100 câu rồi chạy Recall@k/MRR và correctness; hiện chưa có |
+| TBD-10 | Số đo chất lượng chính thức | S4 | Golden set 200 câu đã duyệt (24/11); còn chạy Recall@k/MRR và correctness trên luồng Agent hiện tại |
 
 ## 9. Quản lý thay đổi yêu cầu
 

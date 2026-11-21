@@ -265,6 +265,22 @@ async def test_pilot_rrf_filters_all_branches_and_rechecks_payload_policy():
         assert "review_status" not in fields
 
 
+@pytest.mark.parametrize("mode", ["dense", "bm25"])
+async def test_single_retriever_ablation_modes_keep_the_policy_filter(mode):
+    from types import SimpleNamespace
+
+    client = AsyncMock()
+    client.query_points.return_value = SimpleNamespace(points=[])
+    store = QdrantStore(client, "existing", PILOT, mode=mode)
+    await store.search(Encoded([0.5] * 384, [7], [1.0]), limit=30)
+    query = client.query_points.call_args.kwargs
+    assert query["using"] == mode and "prefetch" not in query
+    assert (query["query"] == [0.5] * 384) if mode == "dense" else (query["query"].indices == [7])
+    assert {c.key for c in query["query_filter"].must} >= {"game_scope", "lang", ADMISSION_KEY}
+    with pytest.raises(ValueError):
+        QdrantStore(client, "existing", PILOT, mode="rrf-off")
+
+
 def test_direct_pipeline_rejects_policy_mismatch():
     store = QdrantStore(AsyncMock(), "existing")  # chính sách đã review
     with pytest.raises(ValueError, match="same corpus policy"):

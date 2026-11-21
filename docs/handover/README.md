@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 (làm thay TV2) · Duyệt golden set 200 câu, bổ sung câu gõ nhầm (24/11/2026)](2026-11-24_s5-tv3_duyet-golden-200.md)
 - [TV3 · Rà soát rule cứng còn lại, dọn code chết, prompt và docs cũ (24/11/2026)](2026-11-24_s5-tv3_ra-soat-rule-va-don-dep.md)
 - [TV3 · Đo lại chất lượng sau `run_python`, ngân sách Agent, tối ưu bước viết, thinking có chọn lọc (23/11/2026)](2026-11-23_s5-tv3_do-lai-chat-luong-va-thinking.md)
 - [TV3 · True Agent GĐ2: một vòng lặp Agent thay Agent decision, Tool Agent và Assessor (22/11/2026)](2026-11-22_s5-tv3_true-agent-gd2.md)
