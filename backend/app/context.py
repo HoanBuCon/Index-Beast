@@ -121,6 +121,8 @@ def build_context(settings: Settings) -> AppContext:
             timeout_seconds=settings.rag_reranker_timeout_seconds,
             max_candidates=settings.rag_reranker_max_candidates,
             client=client,
+            tokens_per_minute=settings.rag_reranker_tokens_per_minute,
+            max_wait_seconds=settings.rag_reranker_max_wait_seconds,
         )
         ctx.register("reranker", close=client.aclose)
     elif settings.chat_mode == "rag" and settings.rag_reranker_enabled:

@@ -107,12 +107,18 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(default=5, ge=1, le=5)
     rag_context_chars: int = Field(default=12000, ge=256, le=64000)
     rag_retrieval_timeout_seconds: float = Field(default=20, gt=0, le=120)
+    # Chỉ để đo ablation (24/11): "hybrid" = E5 + BM25 gộp RRF (chạy thật); "dense" = E5-only; "bm25" = BM25-only.
+    rag_retrieval_mode: Literal["hybrid", "dense", "bm25"] = "hybrid"
     # Jina reranker chỉ khả dụng khi bật cờ và có API key thật; thiếu key thì runtime dùng NoReranker.
     rag_reranker_enabled: bool = False
     jina_api_key: SecretStr | None = None
     rag_reranker_model: str = Field(default="jina-reranker-v2-base-multilingual", min_length=1)
     rag_reranker_timeout_seconds: float = Field(default=3, gt=0, le=10)
     rag_reranker_max_candidates: int = Field(default=30, ge=2, le=200)
+    # Hạn mức token/phút của key Jina (gói free 100k). Gần chạm thì chờ tối đa max_wait giây rồi mới gọi; chờ lâu
+    # hơn thì giữ thứ tự RRF thay vì để Jina trả 429. 0 = không tự giới hạn.
+    rag_reranker_tokens_per_minute: int = Field(default=100_000, ge=0)
+    rag_reranker_max_wait_seconds: float = Field(default=5, ge=0, le=60)
     rag_thinking_enabled: bool = False
     # One additional generation on malformed/blank RAG output, not a grounding bypass.
     rag_format_retries: int = Field(default=1, ge=0, le=1)

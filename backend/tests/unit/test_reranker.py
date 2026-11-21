@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from time import monotonic
 
 import httpx
 import pytest
@@ -198,3 +199,64 @@ async def test_zero_or_one_hit_does_not_call_api():
         assert await reranker.rank("q", []) == []
         hits = [Hit("a", 1.0)]
         assert await reranker.rank("q", hits) == hits
+
+
+class FakeClock:
+    def __init__(self):
+        self.now = 1000.0
+        self.waits = []
+
+    def __call__(self):
+        return self.now
+
+    async def sleep(self, seconds):
+        self.waits.append(seconds)
+        self.now += seconds
+
+
+async def test_token_budget_waits_for_the_window_then_refuses_long_waits():
+    from app.rag.reranker import TokenBudget
+
+    clock = FakeClock()
+    budget = TokenBudget(100, clock=clock, sleep=clock.sleep)
+    first = await budget.acquire(60, max_wait_seconds=5)
+    clock.now += 50
+    budget.settle(first, 80)  # Jina's real count replaces the estimate
+    assert await budget.acquire(30, max_wait_seconds=5) is None  # 80 + 30 > 100 for another 10 s
+    assert await budget.acquire(30, max_wait_seconds=15) is not None and clock.waits == [10]
+    budget.block(20)
+    assert await budget.acquire(1, max_wait_seconds=5) is None
+
+
+async def test_reranker_keeps_rrf_order_without_calling_when_the_budget_is_spent(caplog):
+    hits = [Hit("a", 0.8, {"text": "x" * 300}), Hit("b", 0.7, {"text": "y" * 300})]
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "usage": {"total_tokens": 900},
+                "results": [{"index": 1, "relevance_score": 0.9}, {"index": 0, "relevance_score": 0.2}],
+            },
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        reranker = JinaReranker("secret", client=client, tokens_per_minute=1000, max_wait_seconds=0)
+        assert await reranker.rank("q", hits) == [hits[1], hits[0]]
+        with caplog.at_level(logging.INFO):
+            assert await reranker.rank("q", hits) == hits
+    assert len(calls) == 1
+    outcome = [r for r in caplog.records if getattr(r, "event", None) == "jina_reranker_outcome"][-1]
+    assert (outcome.status, outcome.reason_category) == ("fallback", "rate_budget")
+
+
+async def test_rate_limited_response_blocks_the_budget_for_retry_after():
+    hits = [Hit("a", 0.8, {"text": "a"}), Hit("b", 0.7, {"text": "b"})]
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(lambda _: httpx.Response(429, headers={"retry-after": "30"}))
+    ) as client:
+        reranker = JinaReranker("secret", client=client, tokens_per_minute=100_000, max_wait_seconds=5)
+        assert await reranker.rank("q", hits) == hits
+    assert reranker.budget.blocked_until - monotonic() > 25

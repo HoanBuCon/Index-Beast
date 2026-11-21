@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import time
+from collections import Counter
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -38,13 +39,18 @@ TRACE_KEYS = (
 
 
 class Recorder(logging.Handler):
-    """Cảnh báo từ app (chỉ nhóm lỗi, như trong log), cho báo cáo lần chạy."""
+    """Cảnh báo từ app (chỉ nhóm lỗi, như trong log), cho báo cáo lần chạy; đếm kết quả Jina của ca đang chạy."""
 
     def __init__(self):
         super().__init__()
         self.events = []
+        self.rerank = []
 
     def emit(self, record):
+        if getattr(record, "event", None) == "jina_reranker_outcome":
+            reason = getattr(record, "reason_category", None)
+            code = getattr(record, "provider_status_code", None)
+            self.rerank.append(record.status if record.status == "ok" else f"{record.status}:{reason}:{code or ''}")
         if record.levelno >= logging.WARNING and record.name.startswith("app"):
             data = getattr(record, "data", None)
             self.events.append(
@@ -92,7 +98,7 @@ def save(out: Path, data: dict) -> None:
     out.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-async def run_case(http, service, case: dict) -> list[dict]:
+async def run_case(http, service, case: dict, web: str = "auto") -> list[dict]:
     replies, followups = iter(case.get("replies", [])), iter(case.get("followups", []))
     cont, message, turns = {}, case["question"], []
     while message is not None:
@@ -100,7 +106,7 @@ async def run_case(http, service, case: dict) -> list[dict]:
             "message": message,
             "channel": "web",
             "turn_id": str(uuid4()),
-            "options": {"web_search": "auto", "lang": case["lang"]},
+            "options": {"web_search": web, "lang": case["lang"]},
             **cont,
         }
         started = time.perf_counter()
@@ -122,7 +128,10 @@ async def run_case(http, service, case: dict) -> list[dict]:
             last_event=names[-1] if names else None,
             answer="".join(v["token"] for n, v in frames if n == "token"),
             error_frame=next((v for n, v in frames if n == "error"), None),
-            sources=[{k: s.get(k) for k in ("index", "title", "url", "origin")} for s in src.get("sources", [])],
+            sources=[
+                {**{k: s.get(k) for k in ("index", "title", "url", "origin")}, "text": (s.get("text") or "")[:1500]}
+                for s in src.get("sources", [])
+            ],
             images=len(src.get("images") or []),
             clarification=src.get("clarification"),
             grounded=done.get("grounded") if done else None,
@@ -200,6 +209,8 @@ async def main(
     recorder: Recorder,
     python_calls: list | None = None,
     agent_calls: list | None = None,
+    web: str = "auto",
+    previous: list | None = None,
 ) -> None:
     import httpx
 
@@ -210,24 +221,44 @@ async def main(
     if settings.chat_mode != "rag":
         raise SystemExit("CHAT_MODE must be rag for a live run")
     app = create_app(settings)
-    results = []
+    results = list(previous or [])
+    done = {r["id"] for r in results}
+    # Cấu hình thật của lượt chạy (không có secret), để so các lượt ablation.
+    config = {
+        "web_search": web,
+        "retrieval_mode": settings.rag_retrieval_mode,
+        "reranker": settings.reranker_available,
+        "thinking": settings.rag_thinking_enabled,
+        "agent_thinking": settings.chat_agent_thinking,
+        "persistence": settings.chat_persistence,
+        "model": settings.llm_model,
+    }
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://localhost", timeout=120) as http:
             for case in cases:
+                if case["id"] in done:
+                    continue
+                recorder.rerank.clear()
                 if python_calls is not None:
                     python_calls.clear()
                 if agent_calls is not None:
                     agent_calls.clear()
-                turns = await run_case(http, app.state.chat_service, case)
+                turns = await run_case(http, app.state.chat_service, case, web)
                 results.append(
-                    {"id": case["id"], "level": case.get("level"), "question": case["question"], "turns": turns}
+                    {
+                        "id": case["id"],
+                        "level": case.get("level"),
+                        "question": case["question"],
+                        "turns": turns,
+                        "rerank": dict(Counter(recorder.rerank)),
+                    }
                 )
                 if python_calls is not None:
                     results[-1]["python_calls"] = list(python_calls)
                 if agent_calls is not None:
                     results[-1]["agent_calls"] = list(agent_calls)
-                save(out, {"results": results, "events": recorder.events})
+                save(out, {"config": config, "results": results, "events": recorder.events})
                 print(
                     case["id"],
                     turns[-1].get("http_status"),
@@ -245,6 +276,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--capture-python", action="store_true", help="Ghi code/output run_python của Agent (chỉ để chẩn đoán)"
     )
+    parser.add_argument("--web", choices=("off", "auto", "always"), default="auto", help="options.web_search mỗi câu")
+    parser.add_argument("--resume", action="store_true", help="Tiếp tục results.json đã có, bỏ qua ca đã chạy")
     parser.add_argument(
         "--capture-agent",
         action="store_true",
@@ -254,8 +287,8 @@ if __name__ == "__main__":
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / "results.json"
-    if out.exists():
-        raise SystemExit(f"{out} already exists; use a new folder")
+    if out.exists() and not args.resume:
+        raise SystemExit(f"{out} already exists; use a new folder or --resume")
     recorder = Recorder()
     logging.getLogger("app").addHandler(recorder)
     logging.getLogger("app").setLevel(logging.INFO)
@@ -266,4 +299,5 @@ if __name__ == "__main__":
     agent_calls = [] if args.capture_agent else None
     if agent_calls is not None:
         capture_agent(agent_calls)
-    asyncio.run(main(cases, out, recorder, python_calls, agent_calls))
+    previous = json.loads(out.read_text(encoding="utf-8"))["results"] if out.exists() else []
+    asyncio.run(main(cases, out, recorder, python_calls, agent_calls, args.web, previous))

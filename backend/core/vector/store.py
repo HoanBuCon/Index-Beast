@@ -1,4 +1,4 @@
-"""Qdrant hybrid RRF and idempotent batches; source metadata is never invented.
+"""Qdrant hybrid RRF (or one retriever for ablation) and idempotent batches; source metadata is never invented.
 
 Phụ trách: TV3 · [S2] Module retrieval hybrid
 """
@@ -10,12 +10,18 @@ from core.errors import UnavailableError
 from core.types import ChunkRecord, Encoded, Hit
 from core.vector.schema import ensure_collection
 
+RETRIEVAL_MODES = ("hybrid", "dense", "bm25")
+
 
 class QdrantStore:
-    def __init__(self, client, collection: str, policy: CorpusPolicy | None = None):
+    def __init__(self, client, collection: str, policy: CorpusPolicy | None = None, *, mode: str = "hybrid"):
+        if mode not in RETRIEVAL_MODES:
+            raise ValueError(f"Unknown retrieval mode {mode!r}")
         self.client = client
         self.collection = collection
         self.policy = policy or CorpusPolicy()
+        # "hybrid" (E5 + BM25, RRF) là cấu hình chạy thật; "dense"/"bm25" chỉ để đo ablation (24/11).
+        self.mode = mode
 
     async def ready(self) -> None:
         info = await ensure_collection(self.client, self.collection)
@@ -41,18 +47,21 @@ class QdrantStore:
 
     async def search(self, vector: Encoded, *, limit: int) -> list[Hit]:
         filters = self.policy.query_filter()
+        dense = vector.dense
+        sparse = models.SparseVector(indices=vector.sparse_indices, values=vector.sparse_values)
+        if self.mode == "hybrid":
+            query = {
+                "prefetch": [
+                    models.Prefetch(query=dense, using="dense", limit=limit, filter=filters),
+                    models.Prefetch(query=sparse, using="bm25", limit=limit, filter=filters),
+                ],
+                "query": models.FusionQuery(fusion=models.Fusion.RRF),
+            }
+        else:
+            query = {"query": dense if self.mode == "dense" else sparse, "using": self.mode}
         result = await self.client.query_points(
             self.collection,
-            prefetch=[
-                models.Prefetch(query=vector.dense, using="dense", limit=limit, filter=filters),
-                models.Prefetch(
-                    query=models.SparseVector(indices=vector.sparse_indices, values=vector.sparse_values),
-                    using="bm25",
-                    limit=limit,
-                    filter=filters,
-                ),
-            ],
-            query=models.FusionQuery(fusion=models.Fusion.RRF),
+            **query,
             query_filter=filters,
             limit=limit,
             with_payload=True,

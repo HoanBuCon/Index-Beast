@@ -13,7 +13,23 @@ Câu hỏi bao phủ trang bị, cơ chế, nhân vật, sự kiện, tuyến đ
 
 [Rubric Sprint 4](../../docs/evaluation/s4-rubric.md) quy định cách chấm đáp án, hành vi, lượt bổ sung, trích dẫn và chỉ số truy xuất.
 
-[Phiếu review S4](reviews/s4-golden-set-review.jsonl) giữ quote nguyên văn, ID đoạn, URL và hash của nguồn S4 cho các ca có dữ kiện. Trường `case_tags` đánh dấu ca gõ sai, không dấu và hỏi bổ sung. `followup` lưu câu bổ sung, kết quả kỳ vọng và bằng chứng cho lượt cuối. `variant_pair` nhóm các biến thể cùng ý. Khi chia tập hoặc tính độ bất định, giữ các biến thể cùng ý trong cùng nhóm. Trường `assistant_review` giữ lượt rà Codex ngày 14/11. [Lượt rà thay TV2 ngày 16/11](../../docs/evaluation/2026-11-16_s4-tv2-local-review.md) ghi 198 `approved`, 2 `changes_requested` (IB-GS-265/279); `delegated_review` nêu rõ Codex thực hiện theo ủy quyền TV2 được TV3 cung cấp, không phải kiểm tra trực tiếp của con người. Bằng chứng bổ sung nằm riêng, không đổi `author_evidence`/đầu vào benchmark. Gate `--require-reviewed` chưa đạt.
+[Phiếu review S4](reviews/s4-golden-set-review.jsonl) giữ quote nguyên văn, ID đoạn, URL và hash của nguồn S4 cho các ca có dữ kiện. `followup` lưu câu bổ sung, kết quả kỳ vọng và bằng chứng cho lượt cuối. `variant_pair` nhóm các biến thể cùng ý; khi chia tập hoặc tính độ bất định, giữ các biến thể cùng ý trong cùng nhóm. `assistant_review` giữ lượt rà Codex ngày 14/11.
+
+**Trạng thái duyệt (24/11/2026): 200/200 `approved`, gate `--require-reviewed` đạt.** TV2 đã duyệt và bàn giao; theo yêu cầu của TV3, Claude duyệt thay và đánh dấu (`delegated_review.performed_by`, `human_direct_review=false`). Lượt 24/11 sửa IB-GS-265 (câu hỏi) và IB-GS-279 (câu bổ sung) theo đề xuất ngày 16/11, đổi cách gõ của 23 câu để phủ lỗi người chơi hay gặp; câu cũ lưu ở `delegated_review.revision.previous`. Xem [biên bản duyệt 24/11](../../docs/evaluation/2026-11-24_golden-200-duyet.md) và [lượt rà 16/11](../../docs/evaluation/2026-11-16_s4-tv2-local-review.md).
+
+`case_tags` đánh dấu kiểu đầu vào:
+
+| Nhãn | Nghĩa | Số câu |
+| --- | --- | ---: |
+| `typo` | Gõ sai tên riêng hoặc từ (Golden Sead, Gurrank, Death Night) | 37 |
+| `vi_no_diacritics` | Tiếng Việt không dấu | 10 |
+| `abbreviation` | Viết tắt, teencode (k, j, z, bn, thg, coop) | 5 |
+| `telex` | Sót phím Telex (awn, giuwps, muoons) | 3 |
+| `casual_case` | Viết thường, không dấu câu | 3 |
+| `clarification`, `multi_turn` | Phải hỏi lại, có lượt bổ sung | 11 |
+| `out_of_scope` | Ngoài Elden Ring | 6 |
+
+Một câu có thể mang nhiều nhãn; 49 câu có ít nhất một nhãn gõ nhầm (dễ 18, trung bình 23, khó 8; 42 VI, 7 EN). Câu gõ nhầm vẫn đủ rõ để trả lời thẳng, không phải ca hỏi lại. Điểm các báo cáo trước 24/11 đo trên câu cũ của 25 ca đã sửa, nên không so trực tiếp từng ca.
 
 Từ thư mục backend, xác thực bộ mặc định và bằng chứng trong bản dữ liệu đã nạp.
 
