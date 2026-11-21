@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV3 · Reranker chạy trên máy (MiniLM-L12) thay API Jina, chống tràn RAM (24/11/2026)](2026-11-24_s5-tv3_reranker-cuc-bo.md)
 - [TV3 (làm thay TV2) · Duyệt golden set 200 câu, bổ sung câu gõ nhầm (24/11/2026)](2026-11-24_s5-tv3_duyet-golden-200.md)
 - [TV3 · Rà soát rule cứng còn lại, dọn code chết, prompt và docs cũ (24/11/2026)](2026-11-24_s5-tv3_ra-soat-rule-va-don-dep.md)
 - [TV3 · Đo lại chất lượng sau `run_python`, ngân sách Agent, tối ưu bước viết, thinking có chọn lọc (23/11/2026)](2026-11-23_s5-tv3_do-lai-chat-luong-va-thinking.md)

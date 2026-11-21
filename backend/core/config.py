@@ -119,6 +119,15 @@ class Settings(BaseSettings):
     # hơn thì giữ thứ tự RRF thay vì để Jina trả 429. 0 = không tự giới hạn.
     rag_reranker_tokens_per_minute: int = Field(default=100_000, ge=0)
     rag_reranker_max_wait_seconds: float = Field(default=5, ge=0, le=60)
+    # local: cross-encoder chạy trên máy (FastEmbed, tải vào rag_models_dir), không cần JINA_API_KEY; jina: gọi API.
+    # MiniLM-L12 (120 MB, Apache-2.0, đo 24/11: Recall@5 83,1% -> 86,6%, ~0,75 s/lượt CPU, +0,35 GB RAM). Model
+    # train tiếng Anh, hợp vì corpus và truy vấn Agent gửi đi đều tiếng Anh.
+    rag_reranker_provider: Literal["jina", "local"] = "jina"
+    rag_reranker_local_model: str = Field(default="Xenova/ms-marco-MiniLM-L-12-v2", min_length=1)
+    rag_reranker_local_threads: int = Field(default=2, ge=1, le=16)
+    rag_reranker_local_max_candidates: int = Field(default=20, ge=2, le=50)
+    rag_reranker_local_max_chars: int = Field(default=600, ge=100, le=2000)
+    rag_reranker_local_batch_size: int = Field(default=8, ge=1, le=32)
     rag_thinking_enabled: bool = False
     # One additional generation on malformed/blank RAG output, not a grounding bypass.
     rag_format_retries: int = Field(default=1, ge=0, le=1)
@@ -202,6 +211,8 @@ class Settings(BaseSettings):
 
     @property
     def reranker_available(self) -> bool:
+        if self.rag_reranker_provider == "local":
+            return self.rag_reranker_enabled
         secret = self.jina_api_key.get_secret_value().strip() if self.jina_api_key else ""
         return self.rag_reranker_enabled and bool(secret) and secret != PLACEHOLDER
 

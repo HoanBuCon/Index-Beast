@@ -107,7 +107,11 @@ def build_context(settings: Settings) -> AppContext:
         ),
     )
     register_infra(ctx)
-    if settings.chat_mode == "rag" and settings.reranker_available:
+    if settings.chat_mode == "rag" and settings.reranker_available and settings.rag_reranker_provider == "local":
+        from app.rag.reranker import local_reranker
+
+        ctx.reranker = local_reranker(settings)
+    elif settings.chat_mode == "rag" and settings.reranker_available:
         import httpx
 
         from app.rag.reranker import JinaReranker

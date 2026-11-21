@@ -27,7 +27,7 @@ class OutcomeLog(logging.Handler):
         self.rows = []
 
     def emit(self, record):
-        if getattr(record, "event", None) == "jina_reranker_outcome":
+        if getattr(record, "event", None) == "reranker_outcome":
             self.rows.append(
                 {"status": record.status, "reason": record.reason_category, "elapsed_ms": record.elapsed_ms}
             )
@@ -129,7 +129,7 @@ async def run(manifest, output, mode, rerank, throttle=False):
 
     settings = Settings()
     if rerank and not settings.reranker_available:
-        raise SystemExit("--rerank needs RAG_RERANKER_ENABLED=true and a real JINA_API_KEY")
+        raise SystemExit("--rerank needs RAG_RERANKER_ENABLED=true (and a real JINA_API_KEY for provider jina)")
     client = AsyncQdrantClient(url=settings.qdrant_url, check_compatibility=False)
     http = httpx.AsyncClient(timeout=settings.rag_reranker_timeout_seconds, follow_redirects=False, trust_env=False)
     outcomes = None
@@ -138,7 +138,12 @@ async def run(manifest, output, mode, rerank, throttle=False):
         encoder = FastEmbedEncoder(BACKEND_ROOT / settings.rag_models_dir, threads=settings.rag_encoder_threads)
         store = QdrantStore(client, settings.rag_collection, policy, mode=mode)
         reranker = None
-        if rerank:
+        if rerank and settings.rag_reranker_provider == "local":
+            from app.rag.reranker import local_reranker
+
+            reranker = local_reranker(settings)
+            await reranker.warm()
+        elif rerank:
             reranker = JinaReranker(
                 settings.jina_api_key.get_secret_value().strip(),
                 model=settings.rag_reranker_model,
@@ -149,6 +154,7 @@ async def run(manifest, output, mode, rerank, throttle=False):
                 # --throttle: chờ đủ hạn mức để mọi câu đều được Jina xếp lại (đo tác dụng thật, bỏ qua độ trễ).
                 max_wait_seconds=60 if throttle else settings.rag_reranker_max_wait_seconds,
             )
+        if rerank:
             outcomes = OutcomeLog()
             logging.getLogger("app.rag.reranker").addHandler(outcomes)
             logging.getLogger("app.rag.reranker").setLevel(logging.INFO)
@@ -169,7 +175,15 @@ async def run(manifest, output, mode, rerank, throttle=False):
             "mode": mode,
             "rerank": rerank,
             "throttle": throttle,
-            "reranker_model": settings.rag_reranker_model if rerank else None,
+            "reranker_model": (
+                (
+                    settings.rag_reranker_local_model
+                    if settings.rag_reranker_provider == "local"
+                    else settings.rag_reranker_model
+                )
+                if rerank
+                else None
+            ),
             "rerank_outcomes": dict(Counter(f"{o['status']}:{o['reason']}" for o in outcomes.rows))
             if outcomes
             else None,
@@ -197,7 +211,11 @@ def main():
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--mode", choices=("hybrid", "dense", "bm25", "dense-only"), default="hybrid")
-    parser.add_argument("--rerank", action="store_true", help="Add the Jina reranker (calls the Jina API)")
+    parser.add_argument(
+        "--rerank",
+        action="store_true",
+        help="Add the reranker of RAG_RERANKER_PROVIDER (jina: API, local: this machine)",
+    )
     parser.add_argument("--throttle", action="store_true", help="Wait and retry when Jina returns 429 (rate limit)")
     args = parser.parse_args()
     if args.output.exists():
