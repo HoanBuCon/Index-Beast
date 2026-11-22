@@ -1,7 +1,7 @@
 """Measure page-level retrieval on raw questions with labeled source pages.
 
 Modes: hybrid (E5 + BM25 fused with RRF; production), dense (E5-only), bm25 (BM25-only). --rerank adds the Jina
-reranker on top (calls the Jina API, no LLM). From backend/:
+reranker on top (local cross-encoder or the Jina API, per RAG_RERANKER_PROVIDER; no LLM). From backend/:
   python -X utf8 -m eval.measure_retrieval --manifest <cases.json> --output <new.json> --mode hybrid --rerank
 """
 
@@ -20,7 +20,7 @@ NOISY = {"typo", "vi_no_diacritics", "telex", "abbreviation", "casual_case"}
 
 
 class OutcomeLog(logging.Handler):
-    """Kết quả mỗi lần gọi Jina (ok/timeout/lỗi): không nhầm reranker lặng lẽ bỏ qua với reranker vô tác dụng."""
+    """Kết quả mỗi lần rerank (ok/timeout/lỗi): không nhầm reranker lặng lẽ bỏ qua với reranker vô tác dụng."""
 
     def __init__(self):
         super().__init__()
@@ -58,6 +58,7 @@ def score(expected_urls, ranked_urls):
     ranked = list(dict.fromkeys(page(url) for url in ranked_urls))[:5]
     relevant = set(ranked) & expected
     return {
+        "precision_at5": len(relevant) / 5,
         "recall_at5": len(relevant) / len(expected),
         "mrr_at5": next((1 / rank for rank, url in enumerate(ranked, 1) if url in expected), 0.0),
         "hit_at5": bool(relevant),
@@ -104,7 +105,10 @@ def summarize(rows):
         return {"n": 0}
     return {
         "n": len(rows),
-        **{metric: mean(row[metric] for row in rows) for metric in ("recall_at5", "mrr_at5", "hit_at5")},
+        **{
+            metric: mean(row[metric] for row in rows)
+            for metric in ("precision_at5", "recall_at5", "mrr_at5", "hit_at5")
+        },
         "latency_ms_mean": mean(row["latency_ms"] for row in rows),
     }
 
@@ -187,7 +191,7 @@ async def run(manifest, output, mode, rerank, throttle=False):
             "rerank_outcomes": dict(Counter(f"{o['status']}:{o['reason']}" for o in outcomes.rows))
             if outcomes
             else None,
-            "method": f"Raw question, Qdrant {mode}{' + Jina rerank' if rerank else ''}, top five distinct pages",
+            "method": f"Raw question, Qdrant {mode}{' + rerank' if rerank else ''}, top five distinct pages",
             "summary": summarize(rows),
             **{
                 name: {
