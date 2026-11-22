@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Deploy production lần đầu tại tarnished.liemdai.io.vn, sửa access log có IP và log reranker (22/11/2026)](2026-11-22_s5-tv1_deploy-production.md)
 - [TV1 · Sửa review hệ thống: vận hành, restore an toàn, deploy, cổng 18000, reranker trong compose (22/11/2026)](2026-11-22_s5-tv1_sua-review-ops.md)
 - [TV1 · Sửa review hệ thống: quyền đọc lịch sử chế độ memory, xóa tài khoản gọi lại được (22/11/2026)](2026-11-22_s5-tv1_sua-review-rieng-tu.md)
 - [TV1 · Sửa review hệ thống: chính sách domain web, catalog ảnh, phân lớp adapter, schema Qdrant (22/11/2026)](2026-11-22_s5-tv1_sua-review-rag-config.md)
