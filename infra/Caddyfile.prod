@@ -4,6 +4,22 @@
 # (xin lại quá nhiều lần sẽ chạm giới hạn của Let's Encrypt).
 # Caddy không ghi access log mặc định, nên IP người dùng không bị lưu lại (NFR-PRIV-01).
 # Phần proxy /api và web tĩnh dùng chung ở infra/caddy/snippets.caddy (COPY vào image, xem infra/caddy.Dockerfile).
+
+# Chống giữ kết nối lâu (slowloris) và header khổng lồ. Caddy mặc định không có read timeout: một máy mở hàng nghìn
+# kết nối chậm là đủ giữ hết bộ nhớ (sự cố 22/11/2026, Caddy treo ở trần 64 MB). KHÔNG đặt `write`: SSE /chat/stream
+# trả token tới 90 giây (CHAT_STREAM_TIMEOUT_SECONDS). Giới hạn số request mỗi IP nằm ở api (RATE_LIMIT_API_PER_MINUTE)
+# và iptables (docs/production.md mục Chống DoS): Caddy bản chuẩn không có module rate limit.
+{
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 30s
+			idle 2m
+		}
+		max_header_size 32KB
+	}
+}
+
 import /etc/caddy/snippets.caddy
 
 {$DOMAIN:tarnished.liemdai.io.vn} {
