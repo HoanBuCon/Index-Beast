@@ -22,6 +22,7 @@ from app.middleware import install_middleware
 from app.services.factory import build_chat_service
 from app.services.images import ImageCatalog
 from app.services.mock_chat import MockChatService
+from app.services.quota import ChatQuota
 from core.config import Settings, ensure_safe_for_environment, get_settings
 from core.logging import setup_logging
 
@@ -41,6 +42,8 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
         app.state.ctx = ctx
         if settings.chat_mode != "mock":
             app.state.chat_service = build_chat_service(ctx, image_catalog=app.state.image_catalog)
+            if hasattr(app.state.chat_service, "usage_sink"):
+                app.state.chat_service.usage_sink = ChatQuota(ctx.redis, settings).charge
         warm = getattr(ctx.reranker, "warm", None)
         if warm is not None:  # nạp model reranker cục bộ ở nền, API nhận request ngay (chưa nạp xong thì giữ RRF)
             app.state.reranker_warm = asyncio.create_task(warm())

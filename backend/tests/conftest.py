@@ -90,8 +90,10 @@ class FakeRedis(FakeResource):
 
 
 class _FakePipeline:
+    """Ghi lại lệnh rồi chạy khi execute(), trả kết quả từng lệnh như redis-py (incr/incrby: giá trị mới)."""
+
     def __init__(self, redis: FakeRedis) -> None:
-        self.redis, self.key = redis, ""
+        self.redis, self.ops = redis, []
 
     async def __aenter__(self) -> "_FakePipeline":
         return self
@@ -100,16 +102,33 @@ class _FakePipeline:
         return False
 
     def incr(self, key: str) -> "_FakePipeline":
-        self.key = key
+        return self.incrby(key, 1)
+
+    def incrby(self, key: str, amount: int) -> "_FakePipeline":
+        self.ops.append(("incrby", key, amount))
+        return self
+
+    def get(self, key: str) -> "_FakePipeline":
+        self.ops.append(("get", key, None))
         return self
 
     def expire(self, key: str, seconds: int) -> "_FakePipeline":
+        self.ops.append(("expire", key, seconds))
         return self
 
     async def execute(self) -> list:
         await self.redis._respond()
-        self.redis.counts[self.key] = self.redis.counts.get(self.key, 0) + 1
-        return [self.redis.counts[self.key], True]
+        counts, results = self.redis.counts, []
+        for op, key, value in self.ops:
+            if op == "incrby":
+                counts[key] = counts.get(key, 0) + value
+                results.append(counts[key])
+            elif op == "get":
+                results.append(counts.get(key))
+            else:
+                results.append(True)
+        self.ops = []
+        return results
 
 
 class FakeQdrant(FakeResource):

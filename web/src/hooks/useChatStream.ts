@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Conversation } from "../api/types";
-import { ApiError } from "../api/client";
+import { ApiError, describeApiError } from "../api/client";
 import { replyEvents } from "../api/chat";
 import type { ChatOptions } from "../api/chat";
 import { createUuid } from "../lib/uuid.ts";
@@ -84,8 +84,7 @@ export function useChatStream(update: (conversation: Conversation) => void, iden
       if (abort.signal.aborted) setError("Đã dừng. Câu trả lời chưa hoàn tất.");
       else if (cause instanceof Error && cause.name === "TimeoutError")
         setError("API phản hồi quá lâu. Vui lòng thử lại.");
-      else if (cause instanceof ApiError)
-        setError(cause.message + (cause.retryAfter ? ` Thử lại sau ${cause.retryAfter}.` : ""));
+      else if (cause instanceof ApiError) setError(describeApiError(cause));
       else
         setError(
           cause instanceof Error && cause.message !== "Failed to fetch"

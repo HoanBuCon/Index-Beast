@@ -82,6 +82,13 @@ class Settings(BaseSettings):
     # Trần chung mọi request /api/* mỗi IP mỗi phút (chống dội request); bot có service token và /health không tính.
     # 0 = tắt. Một lượt tải trang web gọi ~5 request, nên 240 vẫn rộng cho cả nhóm người dùng chung một IP (NAT).
     rate_limit_api_per_minute: int = Field(default=240, ge=0, le=100000)
+    # Hạn mức hỏi đáp mỗi ngày (giờ VN) khi CHAT_MODE=rag; 0 = không giới hạn. Admin (AUTH_ADMIN_DISCORD_IDS) không bị
+    # tính. Token = vào + ra của mọi lượt gọi LLM trong một câu trả lời (~5-15 nghìn/câu khi đo 22/11/2026).
+    chat_guest_daily_questions: int = Field(default=5, ge=0, le=100000)  # khách, theo IP
+    chat_user_daily_questions: int = Field(default=30, ge=0, le=100000)  # tài khoản đăng nhập
+    chat_guest_daily_tokens: int = Field(default=100_000, ge=0)
+    chat_user_daily_tokens: int = Field(default=500_000, ge=0)
+    chat_daily_token_budget: int = Field(default=5_000_000, ge=0)  # trần chung mọi người trừ admin, kể cả bot
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
     # Hạn riêng của SSE web (tính cả chờ token đầu); web không có giới hạn 60 s như bot. JSON/Discord giữ 45 s.
     chat_stream_timeout_seconds: float = Field(default=90, gt=0, le=300)

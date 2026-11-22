@@ -10,11 +10,30 @@ import { readClarification } from "./clarification.ts";
 export class ApiError extends Error {
   status: number;
   retryAfter?: string;
-  constructor(message: string, status: number, retryAfter?: string) {
+  code?: string;
+  constructor(message: string, status: number, retryAfter?: string, code?: string) {
     super(message);
     this.status = status;
     this.retryAfter = retryAfter;
+    this.code = code;
   }
+}
+// Hạn mức ngày (quota_exceeded): backend trả sẵn thông điệp tiếng Việt cho người dùng; đọc an toàn, lỗi parse thì bỏ qua.
+async function readQuotaError(response: Response): Promise<{ code: string; message: string } | undefined> {
+  try {
+    const data: unknown = await response.clone().json();
+    if (!data || typeof data !== "object") return undefined;
+    const { code, message } = data as Record<string, unknown>;
+    if (code === "quota_exceeded" && typeof message === "string" && message.trim()) return { code, message };
+  } catch {
+    // Body không phải JSON: dùng thông điệp mặc định.
+  }
+  return undefined;
+}
+// Thông điệp hiển thị cho ApiError; hạn mức ngày không kèm "Thử lại sau" vì Retry-After là giây tới 0 giờ.
+export function describeApiError(error: ApiError): string {
+  if (error.code === "quota_exceeded" || !error.retryAfter) return error.message;
+  return /^\d+$/.test(error.retryAfter) ? `${error.message} Thử lại sau ${error.retryAfter} giây.` : error.message;
 }
 async function request(path: string, init: RequestInit = {}) {
   const response = await fetch(`/api/v1${path}`, {
@@ -23,8 +42,10 @@ async function request(path: string, init: RequestInit = {}) {
     headers: { "Content-Type": "application/json", "X-Request-ID": createUuid(), ...init.headers },
   });
   if (!response.ok) {
-    const message =
-      response.status === 429
+    const quota = response.status === 429 ? await readQuotaError(response) : undefined;
+    const message = quota
+      ? quota.message
+      : response.status === 429
         ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
         : response.status === 404
           ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
@@ -37,7 +58,7 @@ async function request(path: string, init: RequestInit = {}) {
                 : response.status === 502
                   ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
                   : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
-    throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
+    throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined, quota?.code);
   }
   return response;
 }
