@@ -1,4 +1,5 @@
-"""Bảng ORM theo SRS §6: documents, chunks, entities, conversations, messages, feedback, ingestion_jobs, eval_runs.
+"""Bảng ORM theo SRS §6: documents, chunks, entities, conversations, messages, feedback, ingestion_jobs, eval_runs,
+users, auth_sessions (đăng nhập, ADR-005), discord_guild_channels (`/setup` của bot).
 Đổi schema → sửa file này rồi `alembic revision --autogenerate -m "..."`, đọc lại file sinh ra trước khi commit.
 
 Quy ước: khóa chính UUID (documents/chunks dùng id ổn định do ingest sinh để upsert idempotent); thời gian là
@@ -12,6 +13,7 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -128,18 +130,34 @@ class Conversation(Base):
     __table_args__ = (
         CheckConstraint(_in("channel", CHANNELS), name="channel"),
         Index("ix_conversations_channel_external_ref", "channel", "external_ref"),
+        Index("ix_conversations_guild_id", "guild_id"),  # /discord/guilds/{id}/memory/clear tìm theo server
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     channel: Mapped[str] = mapped_column(Text)
     external_ref: Mapped[str | None] = mapped_column(Text)  # vd. discord:thread:<id>
     client_user_ref: Mapped[str | None] = mapped_column(Text)  # chỉ lưu bản băm (NFR-PRIV-01)
-    guild_id: Mapped[str | None] = mapped_column(Text)
+    guild_id: Mapped[str | None] = mapped_column(Text)  # server Discord; chỉ ghi khi bot gửi guild_id kèm service token
+    # Chủ sở hữu đã đăng nhập (ADR-005); null với hội thoại khách và Discord
+    user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
 
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation", cascade="all, delete-orphan", order_by="Message.created_at"
     )
+
+
+class DiscordGuildChannel(Base):
+    """Kênh được `/setup` bật trong một server Discord: bot trả lời mọi tin nhắn ở đây mà không cần `/ask`.
+
+    ID Discord (snowflake) là định danh công khai của server/kênh, không phải dữ liệu người dùng (NFR-PRIV-01).
+    """
+
+    __tablename__ = "discord_guild_channels"
+
+    guild_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    channel_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
 
 
 class Message(Base):
@@ -159,12 +177,42 @@ class Message(Base):
     latency_ms: Mapped[float | None] = mapped_column(Float)
     tokens_in: Mapped[int | None] = mapped_column(Integer)
     tokens_out: Mapped[int | None] = mapped_column(Integer)
-    trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # dấu vết RAG cho trang admin (S5)
+    trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # ảnh và câu hỏi lại, nạp lại cùng lịch sử mỗi lượt
+    # Dấu vết RAG (tới 64 KB): deferred để nạp lịch sử không kéo theo, chỉ nạp khi xem trace (undefer)
+    rag_trace: Mapped[dict[str, Any] | None] = mapped_column(JSONB, deferred=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.clock_timestamp()
     )  # không dùng now(): trong một transaction mọi tin sẽ trùng giờ, mất thứ tự
 
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
+
+
+class ConversationRuntime(Base):
+    """Optimistic revision and user-confirmed working state; not a graph checkpoint."""
+
+    __tablename__ = "conversation_runtime"
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("conversations.id", ondelete="CASCADE"), primary_key=True
+    )
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    state: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict)
+
+
+class ConversationMemory(Base):
+    __tablename__ = "conversation_memories"
+    __table_args__ = (Index("ix_conversation_memories_scope_status", "conversation_id", "status"),)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+    source_message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(Text)
+    key: Mapped[str | None] = mapped_column(Text)
+    content: Mapped[str] = mapped_column(Text)
+    embedding_text: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, default="active")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    indexed_revision: Mapped[int] = mapped_column(Integer, default=0)
+    index_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Feedback(Base):
@@ -202,3 +250,36 @@ class EvalRun(Base):
     config: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     metrics: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+
+
+class User(Base):
+    """Người dùng đăng nhập (ADR-005). Chỉ lưu băm HMAC của Discord ID (NFR-PRIV-01), không lưu ID thô.
+
+    Quyền admin không lưu ở đây: suy ra từ AUTH_ADMIN_DISCORD_IDS mỗi request, nên thu hồi có hiệu lực ngay.
+    """
+
+    __tablename__ = "users"
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_hash"),
+        CheckConstraint(_in("provider", ("discord",)), name="provider"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    provider: Mapped[str] = mapped_column(Text, default="discord", server_default="discord")
+    provider_user_hash: Mapped[str] = mapped_column(Text)
+    display_name: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AuthSession(Base):
+    """Phiên đăng nhập. Cookie giữ token ngẫu nhiên; ở đây chỉ có SHA-256 của token."""
+
+    __tablename__ = "auth_sessions"
+    __table_args__ = (Index("ix_auth_sessions_expires_at", "expires_at"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(Text, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=_now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

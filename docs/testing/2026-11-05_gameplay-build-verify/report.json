@@ -1,0 +1,932 @@
+{
+  "created_at": "2026-11-04T18:47:43.256826+00:00",
+  "status": "complete",
+  "manifest": {
+    "version": 1,
+    "notice": "25 user prompts, plus 5 preselected paired-off repeats = at most 30 HTTP chat requests. Not the whole 100-question golden set.",
+    "standalone_ids": [
+      "IB-GS-001",
+      "IB-GS-003",
+      "IB-GS-035",
+      "IB-GS-041",
+      "IB-GS-044",
+      "IB-GS-050",
+      "IB-GS-061",
+      "IB-GS-063",
+      "IB-GS-065",
+      "IB-GS-067",
+      "IB-GS-069",
+      "IB-GS-070",
+      "IB-GS-071",
+      "IB-GS-075",
+      "IB-GS-078",
+      "IB-GS-091",
+      "IB-GS-092",
+      "IB-GS-099"
+    ],
+    "scenario_ids": [
+      "GP-01",
+      "GP-02",
+      "GP-03"
+    ],
+    "paired_off_ids": [
+      "IB-GS-001",
+      "IB-GS-035",
+      "IB-GS-044",
+      "IB-GS-050",
+      "IB-GS-061"
+    ],
+    "sse_ids": [
+      "IB-GS-075",
+      "GP-01:3"
+    ],
+    "discord_ids": [
+      "IB-GS-069"
+    ],
+    "max_llm_calls": 150,
+    "max_tavily_requests": 60
+  },
+  "rows": [
+    {
+      "id": "GP-01:1",
+      "question": "Chia chỉ số Moonveil",
+      "lang": "vi",
+      "mode": "auto",
+      "group": "GP-01",
+      "expected_behavior": "Ask level/class then goal; resume original Moonveil request. Never search only PvE.",
+      "endpoint": "chat",
+      "channel": "web",
+      "status": "ok",
+      "http_status": 200,
+      "response": {
+        "conversation_id": "cbf272e7-c381-4d4b-8273-03d4c9ea4cc6",
+        "message_id": "8c1b5173-db43-4e55-b3be-f01a6d78d7ba",
+        "answer": "Level mục tiêu của bạn là bao nhiêu? Bạn chọn class khởi đầu nào?",
+        "sources": [],
+        "grounded": false,
+        "latency_ms": 5.8,
+        "images": [],
+        "clarification": {
+          "id": "ebc72cfb-69e6-4be4-b0a1-623732b7ca7c",
+          "status": "pending",
+          "question": "Level mục tiêu của bạn là bao nhiêu? Bạn chọn class khởi đầu nào?",
+          "fields": [
+            {
+              "key": "level",
+              "label": "Level mục tiêu của bạn là bao nhiêu?",
+              "input_type": "number",
+              "options": []
+            },
+            {
+              "key": "starting_class",
+              "label": "Bạn chọn class khởi đầu nào?",
+              "input_type": "choice",
+              "options": [
+                "Samurai",
+                "Wretch",
+                "Vagabond",
+                "Warrior",
+                "Hero",
+                "Bandit",
+                "Astrologer",
+                "Prophet",
+                "Prisoner",
+                "Confessor"
+              ]
+            }
+          ],
+          "expires_at": "2026-11-04T19:17:43.556178+00:00"
+        }
+      },
+      "outcome": "clarification",
+      "trace": {
+        "gameplay": {
+          "status": "pending",
+          "tool_calls": 0
+        },
+        "latency_ms": 5.8
+      },
+      "latency_ms": 22.53,
+      "model_outputs": [],
+      "tavily": []
+    },
+    {
+      "id": "GP-01:2",
+      "question": "100, Samurai",
+      "lang": "vi",
+      "mode": "auto",
+      "group": "GP-01",
+      "expected_behavior": "Ask level/class then goal; resume original Moonveil request. Never search only PvE.",
+      "endpoint": "chat",
+      "channel": "web",
+      "status": "ok",
+      "http_status": 200,
+      "response": {
+        "conversation_id": "cbf272e7-c381-4d4b-8273-03d4c9ea4cc6",
+        "message_id": "5063e125-7b57-4bf7-af79-a468f716cb29",
+        "answer": "Bạn chơi PvE hay PvP?",
+        "sources": [],
+        "grounded": false,
+        "latency_ms": 0.8,
+        "images": [],
+        "clarification": {
+          "id": "c3ca311c-6447-429e-922e-87aeb6f9218f",
+          "status": "pending",
+          "question": "Bạn chơi PvE hay PvP?",
+          "fields": [
+            {
+              "key": "goal",
+              "label": "Bạn chơi PvE hay PvP?",
+              "input_type": "choice",
+              "options": [
+                "PvE",
+                "PvP"
+              ]
+            }
+          ],
+          "expires_at": "2026-11-04T19:17:43.569504+00:00"
+        }
+      },
+      "outcome": "clarification",
+      "trace": {
+        "gameplay": {
+          "status": "pending",
+          "tool_calls": 0
+        },
+        "latency_ms": 0.8
+      },
+      "latency_ms": 5.5,
+      "model_outputs": [],
+      "tavily": []
+    },
+    {
+      "id": "GP-01:3",
+      "question": "PvE",
+      "lang": "vi",
+      "mode": "auto",
+      "group": "GP-01",
+      "expected_behavior": "Ask level/class then goal; resume original Moonveil request. Never search only PvE.",
+      "endpoint": "chat/stream",
+      "channel": "web",
+      "status": "ok",
+      "http_status": 200,
+      "sse_events": [
+        "status",
+        "token",
+        "token",
+        "token",
+        "token",
+        "token",
+        "sources",
+        "done"
+      ],
+      "response": {
+        "conversation_id": "cbf272e7-c381-4d4b-8273-03d4c9ea4cc6",
+        "message_id": "33ff3758-1d5c-43be-be5d-71fb18307c05",
+        "grounded": true,
+        "latency_ms": 13043.31,
+        "sources": [
+          {
+            "index": 1,
+            "title": "Moonveil requirements",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil",
+            "text": "Moonveil's listed one-handed requirements are Strength 12, Dexterity 18 and Intelligence 23. Requirements are distinct from scaling, recommended stats and damage; this does not establish latest-patch damage.",
+            "origin": "corpus"
+          },
+          {
+            "index": 2,
+            "title": "Attribute point accounting",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wikidot.com/stats",
+            "text": "A character's level equals the sum of the eight primary attributes minus 79. Thus the target attribute sum is level + 79. Vigor affects HP; Mind affects FP; Endurance affects stamina and equip load. Arithmetic does not establish optimality.",
+            "origin": "corpus"
+          },
+          {
+            "index": 3,
+            "title": "Samurai starting attributes",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://wiki.eso-ui.com/index.php/Elden_Ring:Samurai",
+            "text": "Samurai starts at level 9 with Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8. These are starting values, not a recommended final build.",
+            "origin": "corpus"
+          },
+          {
+            "index": 4,
+            "title": "Respec baseline constraints",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eip.gg/elden-ring/guides/how-to-respec/",
+            "text": "Respec redistributes available attributes without lowering character level. Attributes determined by the starting class cannot be reduced below their original values. All available attribute points must be spent.",
+            "origin": "corpus"
+          },
+          {
+            "index": 5,
+            "title": "Moonveil",
+            "section": "Notes",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil#Notes",
+            "text": "The Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "origin": "corpus"
+          }
+        ],
+        "images": [
+          {
+            "id": "7a71153edfa4ea6c2e4b6a6fc13249306bea1c479ac7cdff0c18eceb9a204b23",
+            "url": "/api/v1/images/7a71153edfa4ea6c2e4b6a6fc13249306bea1c479ac7cdff0c18eceb9a204b23",
+            "caption": null,
+            "alt": "Notes",
+            "source_url": "https://eldenring.wiki.gg/wiki/Moonveil#Notes",
+            "source_indices": [
+              5
+            ],
+            "attribution": null,
+            "license": null,
+            "license_status": "unknown_review_required",
+            "file_page_url": "https://eldenring.wiki.gg/wiki/File:ER_Main_Menu_Icon_Messages.png",
+            "game_scope": "elden_ring",
+            "release_scope": "base_candidate"
+          }
+        ],
+        "clarification": null,
+        "answer": "Moonveil cần Strength 12, Dexterity 18 và Intelligence 23 để dùng một tay [1]. Với Samurai (bắt đầu level 9: Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8) [3], lên level 100 nghĩa là tổng tám chỉ số phải bằng 179 [2], và vì respec không thể hạ chỉ số dưới mức gốc của class, mọi phân bổ đều phải tôn trọng các mức sàn đó [4].\n\nMột ví dụ khả thi cho PvE thuần Moonveil (đây là gợi ý, không phải tối ưu đã kiểm chứng): ưu tiên Intelligence và Dexterity vì Moonveil là vũ khí lai Int/Dex, dồn phần còn lại cho Vigor/Mind/Endurance để sống sót và đủ FP dùng skill. Chỉ số cụ thể ở khối phân bổ bên dưới; bạn có thể chỉnh lại tùy theo việc bạn spam Transient Moonlight nhiều hay đánh cận chiến nhiều hơn [5].\n\nVí dụ phân bổ hợp lệ về điểm/requirements, chưa xác minh tối ưu:\nVigor 43 | Mind 18 | Endurance 20 | Strength 12 | Dexterity 24 | Intelligence 46 | Faith 8 | Arcane 8 [1][2][3][4]\n\nĐây là một ví dụ hợp lệ về mặt số học và yêu cầu vũ khí, không phải build tối ưu; mình chưa thể xác nhận các mốc soft cap hay hiệu suất theo patch hiện tại."
+      },
+      "outcome": "grounded",
+      "trace": {
+        "mode": "rag",
+        "rewrite_fallback": false,
+        "web_search": {
+          "requested": "auto",
+          "mode": "auto",
+          "status": "ok",
+          "trigger": "local_partial",
+          "query_kind": "domain_anchor",
+          "query": "Elden Ring\nMoonveil stat distribution for level 100 Samurai in PvE",
+          "selected_urls": 3,
+          "failed_extracts": 0,
+          "excluded": 0,
+          "image_markup_removed": 0,
+          "link_markup_removed": 0,
+          "navigation_lines_removed": 0
+        },
+        "rewrite": {
+          "status": "accepted",
+          "reason": "ok",
+          "model_calls": 1,
+          "usage": {
+            "prompt_tokens": 672,
+            "completion_tokens": 54
+          },
+          "elapsed_ms": 1210.99
+        },
+        "retrieval_queries": [
+          {
+            "kind": "rewritten_en",
+            "query": "Moonveil stat distribution for level 100 Samurai in PvE",
+            "status": "ok",
+            "candidates": 30,
+            "elapsed_ms": 1525.74
+          }
+        ],
+        "retrieved": [
+          {
+            "id": "d31634c8-8dc4-52f5-9e4a-749d005392c4",
+            "score": 0.5833334,
+            "chunk_id": "dd912472-1981-5abe-ac82-16a77225570c",
+            "title": "Unique Skill: Transient Moonlight",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Transient_Moonlight#Notes"
+          },
+          {
+            "id": "a3709c63-046e-5bd5-9f5b-c8890e3e6740",
+            "score": 0.5588235,
+            "chunk_id": "a96f3fea-0dff-528b-87e8-ffc687b35f43",
+            "title": "Unique Skill: Transient Moonlight",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Transient_Moonlight#Notes"
+          },
+          {
+            "id": "c8b6f80c-e227-5f55-ae58-7108b867e392",
+            "score": 0.5,
+            "chunk_id": "dc638708-4ff4-5134-adbf-1dcdc496fa0a",
+            "title": "Samurai",
+            "url": "https://eldenring.wiki.gg/wiki/Samurai#Build_Optimization"
+          },
+          {
+            "id": "1557dca8-f99f-567b-95e5-bbb6de82df2d",
+            "score": 0.33333334,
+            "chunk_id": "19444c6d-2d77-5f5c-b9ce-aafe3db44da0",
+            "title": "Lord's Divine Fortification",
+            "url": "https://eldenring.wiki.gg/wiki/Lord%27s_Divine_Fortification#Notes"
+          },
+          {
+            "id": "de2351f4-b9fd-57f9-8fb3-c04fb5187e16",
+            "score": 0.25,
+            "chunk_id": "243df6b0-0262-5b4d-b030-eb19e8f5f3ec",
+            "title": "Unique Skill: Moonlight Greatsword",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Moonlight_Greatsword#Notes"
+          },
+          {
+            "id": "8546bb58-82e6-57b3-a0b9-84239ed996bb",
+            "score": 0.2,
+            "chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "title": "Moonveil",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil#Notes"
+          },
+          {
+            "id": "1134f537-bc4f-581f-b6dc-d9dc65f1b278",
+            "score": 0.2,
+            "chunk_id": "9d2683e4-ee7e-501b-bbf5-58070b2082ea",
+            "title": "Zweihander",
+            "url": "https://eldenring.wiki.gg/wiki/Zweihander#Notes"
+          },
+          {
+            "id": "e99a612a-7094-5ec7-ae94-7e4101789c27",
+            "score": 0.16666667,
+            "chunk_id": "14fadd89-ff29-58a3-bc16-64dba0615b6e",
+            "title": "Flame, Protect Me",
+            "url": "https://eldenring.wiki.gg/wiki/Flame%2C_Protect_Me#Notes"
+          },
+          {
+            "id": "93624385-cd4a-511e-85ef-13a268350a5e",
+            "score": 0.16666667,
+            "chunk_id": "b820d676-b0dc-5e4a-a364-50afe9eca6e2",
+            "title": "Unique Skill: Moonlight Greatsword",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Moonlight_Greatsword#Notes"
+          },
+          {
+            "id": "e1366aa7-c866-5daf-b81c-aa31723e05aa",
+            "score": 0.14285715,
+            "chunk_id": "7d9c54ba-0d71-5d1f-b61b-e0f373be3164",
+            "title": "Unique Skill: Transient Moonlight",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Transient_Moonlight#Notes"
+          },
+          {
+            "id": "35bd97ba-d5c9-5733-bd13-799a918fd7de",
+            "score": 0.14285715,
+            "chunk_id": "e06fcf60-7880-568c-b39c-eca707e27ada",
+            "title": "Golden Halberd",
+            "url": "https://eldenring.wiki.gg/wiki/Golden_Halberd#Notes"
+          },
+          {
+            "id": "199c8712-19f7-5516-be42-6148d2d2bb20",
+            "score": 0.125,
+            "chunk_id": "652482f4-02d9-5e74-afec-2da961246dd9",
+            "title": "Skill: Vacuum Slice",
+            "url": "https://eldenring.wiki.gg/wiki/Skill%3A_Vacuum_Slice#Notes"
+          },
+          {
+            "id": "d7fc6c64-92b1-53c7-beef-71ebdc4c3d0b",
+            "score": 0.125,
+            "chunk_id": "a491edfe-1db2-5f6e-9a16-131dffb94ed4",
+            "title": "Unique Skill: Wave of Gold",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Wave_of_Gold#Notes"
+          },
+          {
+            "id": "1a4a6403-62a4-5620-a98e-0ea85301b54c",
+            "score": 0.11111111,
+            "chunk_id": "51d680f3-0d08-5def-a0e4-fc7ccbc6dfa2",
+            "title": "Regalia of Eochaid",
+            "url": "https://eldenring.wiki.gg/wiki/Regalia_of_Eochaid#Notes"
+          },
+          {
+            "id": "4c3bbc85-cd36-5c46-96b4-99c2964a445d",
+            "score": 0.11111111,
+            "chunk_id": "4404870a-2e05-54f8-b154-656d319ad778",
+            "title": "Adula's Moonblade",
+            "url": "https://eldenring.wiki.gg/wiki/Adula%27s_Moonblade#Notes"
+          },
+          {
+            "id": "cbdcd0c0-c2c2-58be-975a-a4c8c4161e07",
+            "score": 0.1,
+            "chunk_id": "fddbcc60-d05e-5d6e-8342-66b54b2fab03",
+            "title": "Moonveil",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil"
+          },
+          {
+            "id": "29f323d6-f0fe-5f18-afc2-716e4870a9b3",
+            "score": 0.1,
+            "chunk_id": "a74a87f7-5c65-51a4-9afd-7a1cde05c4c2",
+            "title": "Chilling Perfume Bottle",
+            "url": "https://eldenring.wiki.gg/wiki/Chilling_Perfume_Bottle#Notes"
+          },
+          {
+            "id": "b6ea7429-39e3-55b4-9e6a-44bd3fa2a8e2",
+            "score": 0.09090909,
+            "chunk_id": "82c48bfd-77ae-5b72-8fa2-b2d7b03db661",
+            "title": "Unique Skill: Moon-and-Fire Stance",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Moon-and-Fire_Stance#Notes"
+          },
+          {
+            "id": "e33b7e96-7faf-510c-97be-1c4a58d2b65c",
+            "score": 0.09090909,
+            "chunk_id": "fb5890b8-8f44-56c5-a396-35b00b3124d3",
+            "title": "Unique Skill: Ordovis's Vortex",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Ordovis%27s_Vortex#Notes"
+          },
+          {
+            "id": "31819370-a058-510e-be8d-9d092d46c551",
+            "score": 0.083333336,
+            "chunk_id": "c780dd78-561b-5ada-8272-aa405652127b",
+            "title": "Unique Skill: Darkness",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Darkness#Notes"
+          },
+          {
+            "id": "6a3f2e2c-1224-5c29-b555-c9e1800679b0",
+            "score": 0.083333336,
+            "chunk_id": "0928fd75-7b3c-5aba-90b6-3a28dc8de377",
+            "title": "Unique Skill: Radahn's Rain",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Radahn%27s_Rain#Notes"
+          },
+          {
+            "id": "0c771c95-a789-51bc-947f-fc1b89265a88",
+            "score": 0.07692308,
+            "chunk_id": "cfbb701c-4acc-5767-a62a-de280bc20a26",
+            "title": "Skill: Rain of Arrows",
+            "url": "https://eldenring.wiki.gg/wiki/Skill%3A_Rain_of_Arrows#Notes"
+          },
+          {
+            "id": "f50301ee-ed0f-58a3-8c9d-b2ebaeecc55c",
+            "score": 0.07692308,
+            "chunk_id": "ac7f667e-9125-51bb-ad93-7c0a83d8d579",
+            "title": "Unique Skill: Blade of Gold",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Blade_of_Gold#Notes"
+          },
+          {
+            "id": "ae569876-30fc-5efc-8793-1f25d5443e2c",
+            "score": 0.071428575,
+            "chunk_id": "af3f93e2-2893-56e9-903f-9aab42b17ee6",
+            "title": "Unique Skill: Oracular Bubble",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Oracular_Bubble#Notes"
+          },
+          {
+            "id": "3b13a778-fd2c-5a30-b778-037647e27102",
+            "score": 0.071428575,
+            "chunk_id": "c99cfa4d-72a5-55db-b102-4adc32198581",
+            "title": "Unique Skill: Blade of Death",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Blade_of_Death#Notes"
+          },
+          {
+            "id": "7a95c491-bd54-5adc-8051-5aa3a47ca45a",
+            "score": 0.06666667,
+            "chunk_id": "6feb4f2a-4a08-566f-8e4d-5e293294da40",
+            "title": "Unique Skill: Reduvia Blood Blade",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Reduvia_Blood_Blade#Notes"
+          },
+          {
+            "id": "e9a7552f-4ba1-5df6-9f4d-acfff20f72e2",
+            "score": 0.06666667,
+            "chunk_id": "a09cfe18-896a-5fc2-9435-fd7bc2e568e2",
+            "title": "Unique Skill: Shadow Sunflower Headbutt",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Shadow_Sunflower_Headbutt#Notes"
+          },
+          {
+            "id": "8c2d61a0-c6f5-5e08-886a-6e69eddc70be",
+            "score": 0.0625,
+            "chunk_id": "6de48c21-cf82-5f32-9c40-303a005a7b7a",
+            "title": "Unique Skill: Great Oracular Bubble",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_Great_Oracular_Bubble#Notes"
+          },
+          {
+            "id": "13f5bc6e-273a-5252-887f-7fa82a674fb8",
+            "score": 0.0625,
+            "chunk_id": "ff438927-405c-548c-bbf0-68ba4efa4930",
+            "title": "Dragon Halberd",
+            "url": "https://eldenring.wiki.gg/wiki/Dragon_Halberd#Notes"
+          },
+          {
+            "id": "30d1d0a8-5b06-59bb-85f8-b731a3026332",
+            "score": 0.05882353,
+            "chunk_id": "db4358bc-2422-5d22-9388-71cc66d45e56",
+            "title": "Unique Skill: I Command Thee, Kneel!",
+            "url": "https://eldenring.wiki.gg/wiki/Unique_Skill%3A_I_Command_Thee%2C_Kneel%21#Notes"
+          }
+        ],
+        "curated_supplements": [
+          "8546bb58-82e6-57b3-a0b9-84239ed996bb",
+          "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+          "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+          "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+          "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7"
+        ],
+        "local_evidence_context": [
+          {
+            "index": 1,
+            "point_id": "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+            "chunk_id": "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+            "title": "Moonveil requirements",
+            "section": "Verified fields / arithmetic constraints",
+            "source_type": "wiki_prose",
+            "origin": "corpus",
+            "text": "Moonveil's listed one-handed requirements are Strength 12, Dexterity 18 and Intelligence 23. Requirements are distinct from scaling, recommended stats and damage; this does not establish latest-patch damage.",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "source": "curated_gameplay_snapshot",
+            "lang": "en",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "review_status": "pending",
+            "patch_version": "unknown",
+            "local_candidate_origin": "curated_source_snapshot",
+            "rule_kind": "weapon_rule",
+            "evidence_units": {
+              "q0": "entire source text above"
+            }
+          },
+          {
+            "index": 2,
+            "point_id": "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+            "chunk_id": "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+            "title": "Attribute point accounting",
+            "section": "Verified fields / arithmetic constraints",
+            "source_type": "wiki_prose",
+            "origin": "corpus",
+            "text": "A character's level equals the sum of the eight primary attributes minus 79. Thus the target attribute sum is level + 79. Vigor affects HP; Mind affects FP; Endurance affects stamina and equip load. Arithmetic does not establish optimality.",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "source": "curated_gameplay_snapshot",
+            "lang": "en",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "review_status": "pending",
+            "patch_version": "unknown",
+            "local_candidate_origin": "curated_source_snapshot",
+            "rule_kind": "level_rule",
+            "evidence_units": {
+              "q0": "entire source text above"
+            }
+          },
+          {
+            "index": 3,
+            "point_id": "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+            "chunk_id": "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+            "title": "Samurai starting attributes",
+            "section": "Verified fields / arithmetic constraints",
+            "source_type": "wiki_prose",
+            "origin": "corpus",
+            "text": "Samurai starts at level 9 with Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8. These are starting values, not a recommended final build.",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "source": "curated_gameplay_snapshot",
+            "lang": "en",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "review_status": "pending",
+            "patch_version": "unknown",
+            "local_candidate_origin": "curated_source_snapshot",
+            "rule_kind": "class_rule",
+            "evidence_units": {
+              "q0": "entire source text above"
+            }
+          },
+          {
+            "index": 4,
+            "point_id": "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7",
+            "chunk_id": "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7",
+            "title": "Respec baseline constraints",
+            "section": "Verified fields / arithmetic constraints",
+            "source_type": "wiki_prose",
+            "origin": "corpus",
+            "text": "Respec redistributes available attributes without lowering character level. Attributes determined by the starting class cannot be reduced below their original values. All available attribute points must be spent.",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "source": "curated_gameplay_snapshot",
+            "lang": "en",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "review_status": "pending",
+            "patch_version": "unknown",
+            "local_candidate_origin": "curated_source_snapshot",
+            "rule_kind": "respec_rule",
+            "evidence_units": {
+              "q0": "entire source text above"
+            }
+          },
+          {
+            "index": 5,
+            "point_id": "8546bb58-82e6-57b3-a0b9-84239ed996bb",
+            "chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "title": "Moonveil",
+            "section": "Notes",
+            "source_type": "wiki_prose",
+            "origin": "corpus",
+            "text": "The Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "source_type_evidence": "wiki_article_structure",
+            "source": "wikigg",
+            "lang": "en",
+            "game_scope": "elden_ring",
+            "release_scope": "base_candidate",
+            "source_updated_at": null,
+            "trigger": null,
+            "speaker": null,
+            "variant_context": null,
+            "unit_kind": "prose",
+            "local_candidate_origin": "curated_source_snapshot",
+            "evidence_units": {
+              "q0": "entire source text above"
+            }
+          }
+        ],
+        "evidence_assessment": {
+          "status": "partial",
+          "reason": "assessed",
+          "decision": "local_partial"
+        },
+        "selected_ids": [
+          "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+          "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+          "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+          "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7",
+          "8546bb58-82e6-57b3-a0b9-84239ed996bb"
+        ],
+        "prepare_ms": 5351.98,
+        "gameplay": {
+          "status": "resumed",
+          "confirmed_slots": {
+            "weapon": "Moonveil",
+            "starting_class": "Samurai",
+            "level": "100",
+            "goal": "PvE"
+          }
+        },
+        "build_check": {
+          "target_level": 100,
+          "attribute_total": 179,
+          "feasible": true,
+          "optimality_verified": false
+        },
+        "images": {
+          "returned": 1,
+          "excluded": {
+            "chunk_not_admitted_or_linked": 4
+          }
+        },
+        "latency_ms": 13043.31
+      },
+      "context": [
+        {
+          "index": 1,
+          "id": "curated:ae6214ec96be8d4136c8a14e3a3c43a7a579a1777d0c86622f725482af7a15ae",
+          "payload": {
+            "text": "Moonveil's listed one-handed requirements are Strength 12, Dexterity 18 and Intelligence 23. Requirements are distinct from scaling, recommended stats and damage; this does not establish latest-patch damage.",
+            "title": "Moonveil requirements",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "weapon_rule",
+            "image_ids": [],
+            "local_candidate_origin": "curated_source_snapshot"
+          }
+        },
+        {
+          "index": 2,
+          "id": "curated:ba65849e047b19b9d362892b846d96d8f2a3b2aff567957125575b34d23649cb",
+          "payload": {
+            "text": "A character's level equals the sum of the eight primary attributes minus 79. Thus the target attribute sum is level + 79. Vigor affects HP; Mind affects FP; Endurance affects stamina and equip load. Arithmetic does not establish optimality.",
+            "title": "Attribute point accounting",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eldenring.wikidot.com/stats",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "level_rule",
+            "image_ids": [],
+            "local_candidate_origin": "curated_source_snapshot"
+          }
+        },
+        {
+          "index": 3,
+          "id": "curated:414949f0b3eceb3f0fa824bebdd0eb9abed112f8c6e3e5e5b9826be5c8c46882",
+          "payload": {
+            "text": "Samurai starts at level 9 with Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8. These are starting values, not a recommended final build.",
+            "title": "Samurai starting attributes",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://wiki.eso-ui.com/index.php/Elden_Ring:Samurai",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "class_rule",
+            "image_ids": [],
+            "local_candidate_origin": "curated_source_snapshot"
+          }
+        },
+        {
+          "index": 4,
+          "id": "curated:5a1300b2fbda1fef62b087c1a922c5071f776e1f97da322a20b0c87e7c3248f7",
+          "payload": {
+            "text": "Respec redistributes available attributes without lowering character level. Attributes determined by the starting class cannot be reduced below their original values. All available attribute points must be spent.",
+            "title": "Respec baseline constraints",
+            "section": "Verified fields / arithmetic constraints",
+            "url": "https://eip.gg/elden-ring/guides/how-to-respec/",
+            "source": "curated_gameplay_snapshot",
+            "source_type": "wiki_prose",
+            "source_type_evidence": "manual_field_check_2026-11-05_not_cross_review",
+            "game_scope": "elden_ring",
+            "release_scope": "base",
+            "patch_version": "unknown",
+            "lang": "en",
+            "review_status": "pending",
+            "rule_kind": "respec_rule",
+            "image_ids": [],
+            "local_candidate_origin": "curated_source_snapshot"
+          }
+        },
+        {
+          "index": 5,
+          "id": "8546bb58-82e6-57b3-a0b9-84239ed996bb",
+          "payload": {
+            "chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "source": "wikigg",
+            "source_id": "9267",
+            "title": "Moonveil",
+            "section": "Notes",
+            "text": "The Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "embedding_text": "passage: Moonveil\nNotes\nLanguage: en\nThe Unique Skill: Transient Moonlight is the regular Skill: Unsheathe but with added projectiles: a short-ranged one for the light attack sweep and a mid-ranged one for the heavy attack overhead slash.\nThe skill is useful in roughly the same ways that Unsheathe is, meaning that the light attack follow-up is generally slightly quicker and much wider in exchange for being slightly weaker, while the heavy attack follow-up hits a single target slightly harder and is slightly more difficult to roll directly away from.\nOne stark difference is that the different attacks are much less dissimilar, with the light attack follow-up having less of a damage difference (22% less for Unsheathe, 10% less for Transient Moonlight) and much less of a Stance damage difference (50% less for Unsheathe, 8% less for Transient Moonlight).\nWhile this does give the weapon some more reach (though mostly with the heavy attack follow-up), the skill is still the most effective at melee range since that means both the weapon and the magic waves can hit the target.\nThe skill's heavy attack follow-up has a weird interaction with jumping players and deals a lot less damage against them for some reason.\nWhile a hybrid Intelligence/Dexterity build gains the highest total Attack Power a pure Intelligence build only loses about 2% total Attack Power in exchange for the skill's projectiles getting 13% higher Attack Power, making the latter generally preferable.",
+            "url": "https://eldenring.wiki.gg/wiki/Moonveil#Notes",
+            "game_scope": "elden_ring",
+            "source_type": "wiki_prose",
+            "lang": "en",
+            "token_count": 335,
+            "chunking_version": "s2-full-chunk-1.0",
+            "cleaning_version": "s2-full-clean-1.0",
+            "doc_id": "f62bee2c-240a-5848-902a-0d2f05783fa8",
+            "end_char": 1444,
+            "fetched_at": "2026-10-28T16:08:24.152245+00:00",
+            "image_association": "section",
+            "image_ids": [
+              "7a71153edfa4ea6c2e4b6a6fc13249306bea1c479ac7cdff0c18eceb9a204b23"
+            ],
+            "ordinal": 4,
+            "release_scope": "base_candidate",
+            "revision_id": 100429,
+            "section_anchor": "Notes",
+            "section_record_id": "1b02725f-379f-54f1-bcc3-c04fc5798bb0",
+            "source_locations": [
+              "dom:356:li",
+              "dom:365:li"
+            ],
+            "source_snapshot": "D:\\Index-Beast\\backend\\data\\raw\\wikigg\\snapshots\\9267\\100429-9840ceab349cec7c4b9eb9dfc628c5207b5955f13354143295d902a0a788f7dc.json",
+            "source_type_evidence": "wiki_article_structure",
+            "source_updated_at": null,
+            "speaker": null,
+            "start_char": 0,
+            "text_hash": "0cc496841e24e4aedb4db3712ad5f66057b8e607ac4b2f17eda56552fa5d36f0",
+            "trigger": null,
+            "unit_key": "blocks:0-1",
+            "unit_kind": "prose",
+            "unit_ordinal": 0,
+            "updated_at": "2026-10-29T03:47:43.051560+00:00",
+            "variant_context": null,
+            "document_id": "f62bee2c-240a-5848-902a-0d2f05783fa8",
+            "artifact_chunk_id": "83116d42-5bdf-52e1-94b1-8c504222e5dc",
+            "point_id_mapping": "artifact-point-v1",
+            "local_candidate_origin": "curated_source_snapshot"
+          }
+        }
+      ],
+      "latency_ms": 13049.09,
+      "model_outputs": [
+        {
+          "phase": "rewrite",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"standalone_query_en\":\"Moonveil stat distribution for level 100 Samurai in PvE\",\"lang\":\"vi\",\"entities\":[\"Moonveil\",\"Samurai\",\"100\",\"PvE\"],\"out_of_scope\":false,\"ambiguous\":false}",
+          "prompt_tokens": 672,
+          "completion_tokens": 54,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "assessment",
+          "streaming": false,
+          "status": "ok",
+          "content": "{\"status\":\"partial\",\"covered\":[\"Moonveil one-handed requirements (Str 12, Dex 18, Int 23)\",\"Samurai starting attributes\",\"level-to-attribute-sum accounting rule\",\"respec baseline constraints\",\"Moonveil skill behavior and Int/Dex vs pure Int scaling note\"],\"missing\":[\"specific level-100 stat allocation for PvE\",\"PvE-specific conditional advice (e.g., Vigor/Mind/Endurance targets)\"],\"evidence\":{\"1\":[\"q0\"],\"2\":[\"q0\"],\"3\":[\"q0\"],\"4\":[\"q0\"],\"5\":[\"q0\"]}}",
+          "prompt_tokens": 2301,
+          "completion_tokens": 133,
+          "finish_reason": "stop"
+        },
+        {
+          "phase": "generation",
+          "streaming": true,
+          "status": "ok",
+          "content": "{\"answer\":\"Moonveil cần Strength 12, Dexterity 18 và Intelligence 23 để dùng một tay [1]. Với Samurai (bắt đầu level 9: Vigor 12, Mind 11, Endurance 13, Strength 12, Dexterity 15, Intelligence 9, Faith 8, Arcane 8) [3], lên level 100 nghĩa là tổng tám chỉ số phải bằng 179 [2], và vì respec không thể hạ chỉ số dưới mức gốc của class, mọi phân bổ đều phải tôn trọng các mức sàn đó [4].\\n\\nMột ví dụ khả thi cho PvE thuần Moonveil (đây là gợi ý, không phải tối ưu đã kiểm chứng): ưu tiên Intelligence và Dexterity vì Moonveil là vũ khí lai Int/Dex, dồn phần còn lại cho Vigor/Mind/Endurance để sống sót và đủ FP dùng skill. Chỉ số cụ thể ở khối phân bổ bên dưới; bạn có thể chỉnh lại tùy theo việc bạn spam Transient Moonlight nhiều hay đánh cận chiến nhiều hơn [5].\",\"evidence\":[{\"index\":1,\"quote_ids\":[\"q0\"]},{\"index\":2,\"quote_ids\":[\"q0\"]},{\"index\":3,\"quote_ids\":[\"q0\"]},{\"index\":4,\"quote_ids\":[\"q0\"]},{\"index\":5,\"quote_ids\":[\"q0\"]}],\"insufficient\":false,\"build_allocation\":{\"vigor\":43,\"mind\":18,\"endurance\":20,\"strength\":12,\"dexterity\":24,\"intelligence\":46,\"faith\":8,\"arcane\":8},\"limitation\":\"Đây là một ví dụ hợp lệ về mặt số học và yêu cầu vũ khí, không phải build tối ưu; mình chưa thể xác nhận các mốc soft cap hay hiệu suất theo patch hiện tại.\"}",
+          "prompt_tokens": null,
+          "completion_tokens": null
+        }
+      ],
+      "tavily": [
+        {
+          "endpoint": "search",
+          "status": "ok"
+        },
+        {
+          "endpoint": "extract",
+          "status": "ok"
+        }
+      ]
+    }
+  ],
+  "snapshot": {
+    "llm_model": "deepseek-flash",
+    "llm_temperature": 0.2,
+    "llm_max_tokens": 4096,
+    "chat_timeout_seconds": 45.0,
+    "gameplay_clarification_enabled": true,
+    "gameplay_knowledge_enabled": true,
+    "rag_collection": "indexbeast_tv3_integration_20261029_c1871afc",
+    "rag_corpus_policy": "pilot",
+    "rag_languages": [
+      "en"
+    ],
+    "rag_prefetch": 30,
+    "rag_top_k": 5,
+    "rag_context_chars": 12000,
+    "rag_rewrite_enabled": true,
+    "rag_thinking_enabled": true,
+    "rag_format_retries": 1
+  },
+  "hashes": {
+    "backend\\eval\\golden_set.jsonl": "11f66a6030f8097ff6dcdff87fb7183e90a6452b9574ad204566ba1233a005b7",
+    "backend\\eval\\gameplay_diagnostic_25.json": "8cfda837979eb834ef10ce58fa32b8d01f46ee32d3e81d482c05e0f581438924",
+    "backend\\app\\rag\\knowledge\\gameplay.json": "9417e62ba1d031fd10bc75258fe9fbba9adac1b4a70b60c33e1b041ee45be2ce",
+    "backend\\app\\rag\\prompts\\answer.md": "d3e404cb13e63d4b369fe1645f7f039b1eefb8f051895d09811f4edc418106f9",
+    "backend\\app\\rag\\prompts\\assess.md": "9bc41aa85a2eedf3edd1b055a6134dd2eb80e02084c5f24d082848b0189268c0",
+    "backend\\app\\rag\\prompts\\llm_only.md": "7f3aee8f5603b63a98316736d637943f4d9cc0ab2708e7eb8e19bac3d831d09d",
+    "backend\\app\\rag\\prompts\\overview.md": "93b8f4cc22aa63fd55e551499838aa63ccc8ccc4a911e35b1a52be5eca2a1571",
+    "backend\\app\\rag\\prompts\\persona.md": "7e0b64fd9e46d502b6f7587ffb9cd9a7dafa8fd2bfd8adcb8f585ff5e5c84aac",
+    "backend\\app\\rag\\prompts\\rewrite.md": "71598091a673d591e819ed9c151efd0c655789eb0f2b6a1aafc9085d6be4f8f6",
+    "backend\\app\\rag\\__init__.py": "752a21f6d0d15e9d01ad6bb8f22872f26f0a706cff3c7680ca7ee8ff71dfd7f0",
+    "backend\\app\\rag\\build_math.py": "36283cf01fe0f9c2cea03eed1d0f0a4ab2d707b5f16b187aee3ccd635b5db924",
+    "backend\\app\\rag\\context_policy.py": "be75a0b54b423efa014fd3b8760819d99183845fa084bded5bc29878d70c60fb",
+    "backend\\app\\rag\\evidence.py": "fe66c4658e9d53641971e3aba744f32aba8e4d8cda05dd126d85a947071d01c4",
+    "backend\\app\\rag\\gameplay_knowledge.py": "b5b438c15162ba9ffc726c5c77790fc74638dd88a339ad2add9dcf8f7cc5d92e",
+    "backend\\app\\rag\\generator.py": "94d1389a12218d80330c9b29128727b932db445895c7f1262fe4f192a53aac34",
+    "backend\\app\\rag\\output.py": "d78bdac40e50a3033a54046496d6113c3a5ce7eb49b047dc70d798314c3a3705",
+    "backend\\app\\rag\\overview.py": "fea2eecd0f0cd003a8842c84b6f2417c11708e7e6086d16edba92bc0542f0695",
+    "backend\\app\\rag\\pipeline.py": "bcce87eec74c4358c9cc340a6826ef66ee8cce86532f074313a8e973f2fcf1bb",
+    "backend\\app\\rag\\query_plan.py": "13b88c766b4c33cedb75eac586e106f81940ee419ed9b45bcd9e9509267c8b83",
+    "backend\\app\\rag\\reranker.py": "9c619a7856073e4b21418cb7b9ccb94e7243943eb9d03fa90e798b6e795e7f4d",
+    "backend\\app\\rag\\retriever.py": "debb629a0776c9cff66d1957a85f3558014bec864eb77a1d4521f223368b0f9d",
+    "backend\\app\\rag\\rewrite.py": "d891cfb749be1f689540c68c24344023603af9dd6c5392898c89e6113d71081a",
+    "backend\\app\\rag\\trace.py": "5cf61f0788009711a3d71edf530422548ea9fee6557642d7a7f6d9eec099b857",
+    "backend\\app\\rag\\web_content.py": "08bb80708f36c7442d2d488410dafffb2164304254df99699ae811db895482d9",
+    "backend\\app\\rag\\web_fallback.py": "bf3ebf141c8deded8f7b73998a3bc3d82186b40e030b595e3a754861ce87eca9",
+    "backend\\app\\rag\\web_query.py": "b1445b34d97010c2381d5f82f6c9643c6a9e6662fc8f1f8fc8faeec9e0f7a0c9",
+    "backend\\app\\rag\\web_search.py": "54fa2b19068392c55b5131d7fd15490498aba85741d13624e00fe6761087ea09",
+    "backend\\app\\services\\__init__.py": "2b24f6386ba7d68d5db3ff8d7d8e69506f1efd736810e813743e8440637707b7",
+    "backend\\app\\services\\chat.py": "8fe3fa124e4b856e03f53c455cec121866d382ea74deec4ee273fa19c10b5cc7",
+    "backend\\app\\services\\chat_service.py": "3984cd2a83c70ab68f460325b3e9723b421cc9205eb37fa861b09d5466949636",
+    "backend\\app\\services\\factory.py": "162156d99eba67cb6412028cc93b3ee4b7101d205b32604b3c5c57302059016a",
+    "backend\\app\\services\\feedback_service.py": "1fd3f56e3ec5fafab764685f9856b4bee7145b2cf2dbe4719ae77edbc8bca483",
+    "backend\\app\\services\\gameplay.py": "4e44a4ed2c831fc6bb9368a345b130ef6046a2fcc00871905daec5ac22e7a19a",
+    "backend\\app\\services\\images.py": "1cb08f58a07b4f23ae00c5e1400f137e48be766580bd8fae4a76ab1543f7c699",
+    "backend\\app\\services\\mock_chat.py": "375d00e729ae4d45cc7e83d39906f2c1cf131060cc0a376aff28dc893b6e5b6e"
+  },
+  "overrides": {
+    "transport_retries": 0,
+    "rate_limit_per_minute": 1000,
+    "bind": "loopback only; separate diagnostic server"
+  },
+  "limitations": [
+    "Development cases, draft author labels",
+    "No production DB writes or corpus reindex",
+    "No persistent conversation state after restart",
+    "Unknown usage for SSE/failed calls",
+    "No independent human review"
+  ],
+  "collection_points_before": 18368,
+  "summary": {
+    "planned_prompts": 3,
+    "planned_http_requests": 3,
+    "recorded_cases": 3,
+    "http_responses": 3,
+    "valid_responses": 3,
+    "errors_or_skipped": 0,
+    "outcomes": {
+      "clarification": 2,
+      "grounded": 1
+    },
+    "web_status": {
+      "not_run": 2,
+      "ok": 1
+    },
+    "logical_llm_calls": 3,
+    "tavily_requests": 2,
+    "prompt_tokens_known": 2973,
+    "completion_tokens_known": 187,
+    "unknown_usage_calls": 1,
+    "p50_ms": 22.53,
+    "p95_ms": 13049.09,
+    "correctness": null,
+    "faithfulness": null,
+    "notice": "Valid/grounded protocol is not correctness; SSE usage and failed request billing may be unknown."
+  },
+  "collection_points_after": 18368
+}

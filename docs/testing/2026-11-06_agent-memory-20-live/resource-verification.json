@@ -1,0 +1,75 @@
+{
+  "verified_at": "2026-11-05T19:24:48.985623+00:00",
+  "databases": {
+    "indexbeast": {
+      "revision": "0002",
+      "counts": {
+        "conversations": 0,
+        "messages": 0,
+        "conversation_runtime": 0,
+        "conversation_memories": 0,
+        "documents": 0,
+        "chunks": 0
+      },
+      "memory_status": [],
+      "active_unindexed": 0
+    },
+    "indexbeast_agent_test_70e67916e0": {
+      "revision": "0002",
+      "counts": {
+        "conversations": 12,
+        "messages": 40,
+        "conversation_runtime": 12,
+        "conversation_memories": 22,
+        "documents": 0,
+        "chunks": 0
+      },
+      "memory_status": [
+        {
+          "status": "active",
+          "count": 21
+        },
+        {
+          "status": "superseded",
+          "count": 1
+        }
+      ],
+      "active_unindexed": 0
+    }
+  },
+  "collections": {
+    "indexbeast_tv3_integration_20261029_c1871afc": {
+      "points": 18368,
+      "payload_indexes": [
+        "document_id",
+        "game_scope",
+        "indexbeast_admission",
+        "lang",
+        "review_status",
+        "source_type",
+        "spoiler_level"
+      ]
+    },
+    "conversation_memories": {
+      "points": 0,
+      "payload_indexes": [
+        "conversation_id",
+        "embedding_model",
+        "embedding_version",
+        "owner",
+        "status"
+      ]
+    },
+    "ib_agent_test_70e67916e0": {
+      "points": 21,
+      "payload_indexes": [
+        "conversation_id",
+        "embedding_model",
+        "embedding_version",
+        "owner",
+        "status"
+      ]
+    }
+  },
+  "effective_chat_persistence": "memory"
+}

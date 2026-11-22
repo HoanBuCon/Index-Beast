@@ -50,7 +50,7 @@ class CorpusPolicy:
     def stamp(self) -> str:
         return f"{self.mode}-v1"
 
-    def exclusion_reason(self, payload: dict, *, spoilers: bool = True) -> str | None:
+    def exclusion_reason(self, payload: dict) -> str | None:
         for key in (
             "game_scope",
             "source_type",
@@ -83,9 +83,7 @@ class CorpusPolicy:
             return "source_type_not_supported"
         if payload.get("lang") not in self.languages:
             return "language_not_selected"
-        level = payload.get("spoiler_level")
-        if not spoilers and (type(level) not in (int, float) or level != 0):
-            return "spoiler_safety_unknown_or_spoiler"
+        # No spoiler filtering (removed 20/11/2026): `spoiler_level` stays as chunk metadata only.
         return None
 
     def index_payload(self, payload: dict) -> dict:
@@ -97,7 +95,7 @@ class CorpusPolicy:
         # Operational provenance only. Does not overwrite review_status or source metadata.
         return {**payload, ADMISSION_KEY: self.stamp}
 
-    def query_filter(self, *, spoilers: bool = True) -> models.Filter:
+    def query_filter(self) -> models.Filter:
         scope = models.MatchValue(value="base") if self.mode == "reviewed" else models.MatchAny(any=list(self.scopes))
         must = [models.FieldCondition(key="game_scope", match=scope)]
         if self.mode == "reviewed":
@@ -111,6 +109,4 @@ class CorpusPolicy:
                 models.FieldCondition(key="source_type", match=models.MatchAny(any=list(SOURCE_TYPES))),
             ]
         )
-        if not spoilers:
-            must.append(models.FieldCondition(key="spoiler_level", range=models.Range(gte=0, lte=0)))
         return models.Filter(must=must)

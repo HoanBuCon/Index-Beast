@@ -215,6 +215,44 @@ body {
   scrollbar-gutter: stable both-edges;
 }
 
+/* TV4 · Link Discord dùng cùng chat-panel, MessageList và cột 760 px của chat chính.
+   Không dùng .document: quy tắc paragraph 14 px của trang tài liệu làm chữ trả lời bị nhỏ. */
+.shared-answer-heading,
+.shared-answer-status,
+.shared-answer-footer {
+  width: 100%;
+  max-width: calc(var(--ui-chat-width) + 64px);
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+.shared-answer-heading h1 {
+  margin: 0 0 10px;
+  color: var(--ui-text);
+  font: 400 20px/1.4 var(--font-interface);
+}
+
+.shared-answer-heading p {
+  margin: 6px 0 0;
+  color: var(--ui-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.shared-answer-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 32px;
+  font-size: 16px;
+}
+
+.shared-answer-panel .shared-answer-footer .chat-ai-note {
+  margin: 0;
+}
+
 .chat-empty .chat-content {
   display: flex;
   align-items: flex-start;
@@ -351,6 +389,50 @@ body {
   align-self: end;
 }
 
+.web-search-control {
+  grid-column: 1;
+  grid-row: 2;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font: 13px/1.5 var(--font-interface);
+  color: var(--ui-muted);
+}
+.web-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ui-text);
+  cursor: pointer;
+  padding: 5px 11px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+.web-search-toggle[data-search-mode="always"] {
+  color: var(--ui-accent);
+}
+/* TV4: nút Web không đổi nền khi rê chuột; vẫn giữ focus bàn phím và màu chế độ. */
+.composer .web-search-toggle:hover:not(:disabled) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.web-search-toggle:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.thinking-label {
+  color: var(--ui-muted);
+  font: 14px/1.5 var(--font-interface);
+}
+.composer-bottom {
+  grid-row: 1;
+}
+
 .composer .primary {
   width: 44px;
   height: 44px;
@@ -380,7 +462,26 @@ body {
   opacity: 1;
 }
 
-/* TV4: biểu tượng Messenger cũ thay bằng phím Enter từ item_; nút dừng giữ kiểu hiện có. */
+/* TV4: biểu tượng Messenger cũ thay bằng phím Enter từ item_; nút dừng dùng phím Esc cùng bộ. */
+.composer .primary.stop-button {
+  display: grid;
+  place-items: center;
+  background: transparent;
+}
+
+.composer .primary.stop-button:hover:not(:disabled) {
+  background: #d9bc7814;
+}
+
+.stop-answer-icon {
+  display: block;
+  width: 40px;
+  height: 28px;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
 .composer .primary.send-button {
   color: #141610;
   background: transparent;
@@ -510,12 +611,72 @@ body {
   margin-bottom: 18px;
 }
 
+.message.assistant .prose :is(h2, h3) {
+  margin: 1.2em 0 0.45em;
+  color: var(--ui-accent);
+  font-size: 1.08em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.message.assistant .prose :is(ol, ul) {
+  margin-block: 0.5em 0.9em;
+  padding-inline-start: 1.5em;
+}
+
+.message.assistant .prose li + li {
+  margin-top: 0.3em;
+}
+
+.message.assistant .prose li::marker {
+  color: var(--ui-accent);
+}
+
+.message.assistant .prose .answer-table {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 0.6em 1em;
+}
+
+.message.assistant .prose .answer-table table {
+  display: table;
+  min-width: 100%;
+  font-size: 0.92em;
+}
+
+.message.assistant .prose .answer-table :is(th, td) {
+  vertical-align: top;
+  text-align: start;
+}
+
 .message .muted,
 .feedback,
 .feedback button,
 .source-list small {
   font-size: 14px;
   color: var(--ui-muted);
+}
+
+.source-list .source-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.source-item button {
+  min-width: 0;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.source-item button > span:last-child {
+  margin-left: 0;
+}
+.source-item .source-number {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.source-list .eyebrow {
+  font-size: 11px;
 }
 
 .input-area:not(.welcome-input) {
@@ -525,6 +686,8 @@ body {
 }
 
 .thinking-bubble {
+  gap: 12px;
+  flex-wrap: wrap;
   background: var(--ui-surface);
   box-shadow: none;
 }

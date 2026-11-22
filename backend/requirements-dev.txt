@@ -1,6 +1,7 @@
 -r requirements.txt
 pytest==9.1.1
 pytest-asyncio==1.4.0
+coverage==7.17.3
 ruff==0.17.1
 locust==2.46.7
 pre-commit==4.7.0

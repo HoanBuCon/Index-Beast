@@ -44,6 +44,29 @@ def test_latest_clean_requires_full_pipeline_version(data_dir):
     assert dp.latest_clean() == data_dir / "clean_runs" / "full"
 
 
+def test_latest_accepts_the_s3_and_s4_pipeline_versions(data_dir):
+    write_report(data_dir / "clean_runs" / "s3", cleaning_version="s3-full-clean-2.0", counts={"pages_in": 4})
+    write_report(data_dir / "chunk_runs" / "s4", chunking_version="s4-full-chunk-1.0", counts={"pages": 4})
+    write_report(data_dir / "chunk_runs" / "other", chunking_version="s9-experiment", counts={"pages": 4})
+
+    assert dp.latest_clean() == data_dir / "clean_runs" / "s3"
+    assert dp.latest_chunk() == data_dir / "chunk_runs" / "s4"
+
+
+def test_policy_flags_reach_the_clean_and_chunk_commands(data_dir, monkeypatch):
+    calls = []
+    monkeypatch.setattr(dp, "run", lambda *args: calls.append(args))
+    monkeypatch.setattr(dp, "tokenizer", lambda: data_dir / "tokenizer.json")
+    args = Namespace(input=None, output=None, tokenizer=None, gameplay=True, structured_tables=True, wiki_quality=True)
+
+    cleaned = dp.clean(args)
+    cleaned.mkdir(parents=True)
+    dp.chunk(args, cleaned)
+
+    assert "--gameplay" in calls[0] and "--structured-tables" in calls[0]
+    assert "--wiki-quality" in calls[1]
+
+
 def test_real_index_requires_explicit_collection(data_dir, monkeypatch):
     calls = []
     monkeypatch.setattr(dp, "run", lambda *args: calls.append(args))
@@ -63,7 +86,9 @@ def test_clean_and_chunk_default_to_new_stamped_directories(data_dir, monkeypatc
     calls = []
     monkeypatch.setattr(dp, "run", lambda *args: calls.append(args))
     monkeypatch.setattr(dp, "tokenizer", lambda: data_dir / "tokenizer.json")
-    args = Namespace(input=None, output=None, tokenizer=None)
+    args = Namespace(
+        input=None, output=None, tokenizer=None, gameplay=False, structured_tables=False, wiki_quality=False
+    )
 
     cleaned = dp.clean(args)
     (cleaned).mkdir(parents=True)

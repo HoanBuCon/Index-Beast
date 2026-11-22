@@ -779,6 +779,23 @@ input {
   font-size: 12px;
   line-height: 1.7;
 }
+/* Mã câu trả lời và liên kết trace: chỉ hiện khi API bật /admin/* (traceLinks). */
+.message-trace {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 8px 0 0;
+  color: #aeb49f;
+  font-size: 12px;
+}
+.message-trace code {
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.message-trace a {
+  color: #d9bc78;
+}
 .searching {
   color: #d9bc78;
   font-size: 13px;

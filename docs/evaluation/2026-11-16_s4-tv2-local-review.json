@@ -1,0 +1,57 @@
+{
+  "reviewed_at": "2026-11-16T01:14:45+07:00",
+  "performed_by": "Codex",
+  "responsible_role": "TV2 - UncleThing",
+  "method": "delegated_ai_local_review",
+  "human_direct_review": false,
+  "authorization": "TV3 yêu cầu ngày 16/11/2026; theo thông tin TV3 cung cấp, TV2 giao AI thực hiện và nhận trách nhiệm. Không phải xác nhận trực tiếp của TV2 trong phiên này.",
+  "total": 200,
+  "status_counts": {
+    "approved": 198,
+    "changes_requested": 2
+  },
+  "previously_revised": {
+    "approved": 25,
+    "changes_requested": 1
+  },
+  "factual_cases": 183,
+  "behavior_cases": 17,
+  "followup_cases": 11,
+  "quote_instances_verified": 256,
+  "supplemental_evidence_cases": [
+    "IB-GS-247",
+    "IB-GS-248",
+    "IB-GS-251",
+    "IB-GS-252",
+    "IB-GS-265",
+    "IB-GS-284"
+  ],
+  "findings": {
+    "IB-GS-265": {
+      "severity": "changes_requested",
+      "problem": "Cụm tim riêng không định danh Heart of Bayle. Corpus còn có Jagged Peak Drake rơi Dragon Heart.",
+      "proposed_question": "Ở Dragon's Pit, boss nào rơi Dragon-Hunter's Great Katana; tại Jagged Peak, boss nào rơi Heart of Bayle?",
+      "policy": "Giữ nguyên câu và điểm lịch sử; sửa câu trong phiên bản tập đánh giá kế tiếp."
+    },
+    "IB-GS-279": {
+      "severity": "changes_requested",
+      "problem": "Ngay sau lần gặp đầu ở Roundtable, Diallos tới Liurnia; sau khi trở lại Roundtable, ông nói về Volcano Manor. Followup hiện chưa khóa chặng.",
+      "proposed_followup": "Đó là Diallos, mình vừa gặp ông lần đầu tại Roundtable Hold và nghe ông nhờ tìm Lanya. Chỗ gặp tiếp theo ở đâu?",
+      "policy": "Giữ nguyên followup và điểm lịch sử; khóa rõ lần gặp đầu ở phiên bản kế tiếp."
+    }
+  },
+  "sha256": {
+    "golden_set": "666a7c69320567de29390d3007c476184919a514495c9c4a7a0d79fbd4319fc3",
+    "corpus": "ca98c06b8e773a0733d8cb2813cd2208e32867cc4e4199a900ff1bc4a66c5e33",
+    "review_before": "be8da332c0dd2f78ba8c0cb85836bd50093dbac56c975d1b7dd14dd52bcf68af",
+    "review_after": "2c04fbed0bc7c5afadad9e5b7e13024e463902aa9c86a365eff2a7332e2dbd56"
+  },
+  "golden_and_primary_evidence_unchanged": true,
+  "limitations": [
+    "Đối chiếu local, không truy cập web hoặc kiểm phiên bản game hiện tại.",
+    "Không chạy lại Agent, DeepSeek, Tavily, embedding hay indexing.",
+    "Cùng Codex rà lại dữ liệu từng được Codex rà ngày 14/11; không phải lượt người chấm độc lập.",
+    "Khó/dễ là nhãn thiết kế, chưa có hiệu chuẩn trên người chơi.",
+    "Còn hai changes_requested; không công bố toàn bộ golden set đã qua gate."
+  ]
+}

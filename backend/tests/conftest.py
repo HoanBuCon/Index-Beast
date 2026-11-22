@@ -26,7 +26,7 @@ def settings() -> Settings:
 
 @pytest.fixture(autouse=True)
 def disable_remote_tracing(monkeypatch):
-    """Offline tests must not export traces because a developer enabled tracing in their shell."""
+    """Test offline không được xuất trace chỉ vì lập trình viên bật tracing trong shell của họ."""
     monkeypatch.setenv("LANGSMITH_TRACING", "false")
     monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
 
@@ -63,10 +63,23 @@ class FakeEngine(FakeResource):
 
 
 class FakeRedis(FakeResource):
-    """Đủ cho health check và rate-limit (pipeline().incr().expire().execute())."""
+    """Đủ cho health check và rate-limit (get, pipeline().incr().expire().execute())."""
 
     async def ping(self) -> bool:
         return await self._respond()
+
+    async def set(self, key: str, value: str, ex: int | None = None) -> bool:
+        await self._respond()
+        self.__dict__.setdefault("store", {})[key] = value
+        return True
+
+    async def getdel(self, key: str):
+        await self._respond()
+        return self.__dict__.setdefault("store", {}).pop(key, None)
+
+    async def get(self, key: str):
+        await self._respond()
+        return self.__dict__.setdefault("counts", {}).get(key)
 
     def pipeline(self, transaction: bool = True) -> "_FakePipeline":
         self.__dict__.setdefault("counts", {})  # dataclass cha không gọi __post_init__ của lớp con

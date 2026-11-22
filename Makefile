@@ -12,12 +12,19 @@ PYTHON ?= $(if $(wildcard backend/.venv/Scripts/python.exe),$(CURDIR)/backend/.v
 API_PORT ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('API_PORT') or '')"),18000)
 # Đọc host chia sẻ web từ .env; override: make web WEB_HOST=<IP-LAN-hoac-VPN>.
 WEB_HOST ?= $(or $(shell "$(PYTHON)" -c "from dotenv import dotenv_values; print(dotenv_values('.env').get('WEB_HOST') or '')"),127.0.0.1)
+# Giới hạn chờ API sẵn sàng trước khi mở web; không cần sửa .env để ghi đè.
+DEV_READY_TIMEOUT ?= 60
+# Gián tiếp qua biến này để `make -n dev` chỉ in lệnh, không thực thi launcher.
+DEV_MAKE ?= $(MAKE)
 
-.PHONY: help up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
+.PHONY: help env up debug-up down logs ps migrate openapi test test-unit lint format api web dev health constraints
 .PHONY: bot bot-deploy bot-check bot-dev data
 
 help:            ## Liệt kê lệnh
 	@grep -E '^[a-z][a-z-]*:.*##' $(MAKEFILE_LIST) | sed 's/:.*##/ —/'
+
+env:             ## Đồng bộ .env với .env.example: thêm biến thiếu, hỏi khi có biến thừa (ARGS="--dry-run")
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.sync_env $(ARGS)
 
 up:              ## Bật PostgreSQL, Qdrant, Redis và chờ healthy
 	$(COMPOSE) up -d --wait $(INFRA)
@@ -35,24 +42,27 @@ ps:              ## Trạng thái container
 	$(COMPOSE) ps
 
 migrate:         ## Chạy migration database
-	cd backend && alembic upgrade head
+	cd backend && "$(PYTHON)" -X utf8 -m alembic upgrade head
 
 openapi:         ## Xuất hợp đồng API v1 ra docs/api/openapi.json
-	cd backend && python -m scripts.export_openapi
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.export_openapi
+
+trace:           ## Xem trace RAG của một câu trả lời: make trace ID=<message_id>
+	cd backend && "$(PYTHON)" -X utf8 -m scripts.trace $(ID)
 
 test:            ## Chạy test backend
-	cd backend && pytest
+	cd backend && "$(PYTHON)" -X utf8 -m pytest
 
 test-unit:       ## Chỉ test unit offline, không gọi LLM hoặc index corpus thật
 	cd backend && "$(PYTHON)" -X utf8 -m pytest -c pyproject.toml tests/unit -q
 
 lint:            ## Kiểm tra lint/format cho backend, web, bot
-	cd backend && ruff check . && ruff format --check .
+	cd backend && "$(PYTHON)" -X utf8 -m ruff check . && "$(PYTHON)" -X utf8 -m ruff format --check .
 	cd web && npm run format:check && npm run typecheck
 	cd bot && npm run format:check && npm run typecheck
 
 format:          ## Tự format code
-	cd backend && ruff check --fix . && ruff format .
+	cd backend && "$(PYTHON)" -X utf8 -m ruff check --fix . && "$(PYTHON)" -X utf8 -m ruff format .
 	cd web && npm run format
 	cd bot && npm run format
 
@@ -80,7 +90,7 @@ bot-dev: up      ## Bật hạ tầng, API mock và bot cùng terminal; cần Do
 	$(MAKE) --no-print-directory -j2 api bot
 
 dev: up          ## Bật hạ tầng, API và web; Ctrl+C dừng API/web, giữ dữ liệu Docker
-	$(MAKE) --no-print-directory -j2 api web
+	"$(PYTHON)" -X utf8 backend/scripts/dev.py --make "$(DEV_MAKE)" --api-port "$(API_PORT)" --web-host "$(WEB_HOST)" --timeout "$(DEV_READY_TIMEOUT)"
 
 data:            ## Pipeline dữ liệu: make data STEP=status|crawl|clean|chunk|load|index|all ARGS="--dry-run"
 	cd backend && "$(PYTHON)" -X utf8 -m scripts.data_pipeline $(or $(STEP),status) $(ARGS)

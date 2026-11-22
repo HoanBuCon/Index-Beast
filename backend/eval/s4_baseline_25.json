@@ -1,0 +1,331 @@
+[
+  {
+    "id": "IB-BL-001",
+    "lang": "vi",
+    "difficulty": "easy",
+    "category": "equipment",
+    "question": "Talisman Blessed Dew hồi máu theo cách nào?",
+    "expected_answer": "Hồi HP từ từ, 2 HP mỗi giây.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Blessed_Dew_Talisman"
+    ]
+  },
+  {
+    "id": "IB-BL-002",
+    "lang": "en",
+    "difficulty": "easy",
+    "category": "character",
+    "question": "Who grants the Spectral Steed Whistle?",
+    "expected_answer": "Melina grants it when the Tarnished accepts her accord.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Torrent"
+    ]
+  },
+  {
+    "id": "IB-BL-003",
+    "lang": "vi",
+    "difficulty": "easy",
+    "category": "mechanics",
+    "question": "Gắn Radagon Iconn rồi thì tác dụng chính là gì?",
+    "expected_answer": "Hiểu là Radagon Icon. Rút ngắn thời gian niệm phép.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Radagon_Icon"
+    ]
+  },
+  {
+    "id": "IB-BL-004",
+    "lang": "en",
+    "difficulty": "easy",
+    "category": "equipment",
+    "question": "Which weapon skill comes on the Claymore?",
+    "expected_answer": "Lion's Claw.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Claymore"
+    ]
+  },
+  {
+    "id": "IB-BL-005",
+    "lang": "vi",
+    "difficulty": "easy",
+    "category": "equipment",
+    "question": "Tìm Flask of Wondrous Physick ở nhà thờ nào?",
+    "expected_answer": "Third Church of Marika, trong chậu đá.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Flask_of_Wondrous_Physick"
+    ]
+  },
+  {
+    "id": "IB-BL-006",
+    "lang": "en",
+    "difficulty": "easy",
+    "category": "location",
+    "question": "In which region is the Shadow Keep located?",
+    "expected_answer": "It lies in Scadu Altus, in the Realm of Shadow.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Shadow_Keep",
+      "https://eldenring.wiki.gg/wiki/Scadu_Altus"
+    ]
+  },
+  {
+    "id": "IB-BL-007",
+    "lang": "vi",
+    "difficulty": "easy",
+    "category": "out_of_scope",
+    "question": "Soạn hộ mình thực đơn chay cho cả tuần.",
+    "expected_answer": "Nêu ngắn gọn phạm vi hỗ trợ Elden Ring.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "source_urls": []
+  },
+  {
+    "id": "IB-BL-008",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "mechanics",
+    "question": "Axe Talismn có tác dụng lên đòn chém thường hay đòn nặng giữ nút?",
+    "expected_answer": "Hiểu là Axe Talisman. Tăng sát thương đòn cận chiến nặng tích lực, không tăng mọi đòn thường.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Axe_Talisman"
+    ]
+  },
+  {
+    "id": "IB-BL-009",
+    "lang": "en",
+    "difficulty": "medium",
+    "category": "quest",
+    "question": "I've just shown Comet Azur to Sellen. Which item do I ask for, and what is it for?",
+    "expected_answer": "Get the Sellian Sealbreaker from Sellen after agreeing to journey together and asking about her favor. Use it to break the seal leading to Lusat in Sellia Hideaway.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sorceress_Sellen"
+    ]
+  },
+  {
+    "id": "IB-BL-010",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "equipment",
+    "question": "Con dao Fire Knight Shortsword nhặt ở rương hay farm từ kẻ địch nào?",
+    "expected_answer": "Fire Knight's Shortsword là đồ rơi từ Fire Knights dùng hai dao găm.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Fire_Knight%27s_Shortsword"
+    ]
+  },
+  {
+    "id": "IB-BL-011",
+    "lang": "en",
+    "difficulty": "medium",
+    "category": "mechanics",
+    "question": "Is Stonebarb Cracked Tear permanent once I drink the mixed Physick? What does it improve?",
+    "expected_answer": "It temporarily improves stance, poise and stamina damage. The cited snapshot gives 30 seconds.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Stonebarb_Cracked_Tear"
+    ]
+  },
+  {
+    "id": "IB-BL-012",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "quest",
+    "question": "Đã gặp Kenneth Haight. Mình phải dọn mục tiêu nào ở pháo đài để nhận cây dagger của ông ta?",
+    "expected_answer": "Diệt Blood-Obsessed Godrick Knight ở Fort Haight rồi quay lại Kenneth để nhận Erdsteel Dagger.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Kenneth_Haight"
+    ]
+  },
+  {
+    "id": "IB-BL-013",
+    "lang": "en",
+    "difficulty": "medium",
+    "category": "equipment",
+    "question": "What do I trade for the Carian Regal Scepter, and who accepts the trade?",
+    "expected_answer": "Trade the Remembrance of the Full Moon Queen to Finger Reader Enia at Roundtable Hold.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Carian_Regal_Scepter"
+    ]
+  },
+  {
+    "id": "IB-BL-014",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "location",
+    "question": "Đang ở Liurnia, hai nửa Dectus Medallion phải tìm ở đâu để dùng thang máy?",
+    "expected_answer": "Nửa trái ở Fort Haight, nửa phải ở Fort Faroth. Dùng cả hai để kích hoạt Grand Lift of Dectus.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Grand_Lift_of_Dectus"
+    ]
+  },
+  {
+    "id": "IB-BL-015",
+    "lang": "en",
+    "difficulty": "medium",
+    "category": "mechanics",
+    "question": "Does the Claw Talisman's jump-attack bonus have the same percentage against players and enemies?",
+    "expected_answer": "No. The snapshot lists 15% against enemies and 7.5% against other players.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Claw_Talisman"
+    ]
+  },
+  {
+    "id": "IB-BL-016",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "mechanics",
+    "question": "Mình chỉ mở menu rebirth của Rennala rồi thoát. Có bị trừ Larval Tear không?",
+    "expected_answer": "Không. Larval Tear chỉ tiêu hao nếu thay đổi chỉ số.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Larval_Tear"
+    ]
+  },
+  {
+    "id": "IB-BL-017",
+    "lang": "en",
+    "difficulty": "medium",
+    "category": "location",
+    "question": "Where does the Pureblood Knight's Medal put me, and can I use it during combat?",
+    "expected_answer": "Near Dynasty Mausoleum Entrance in Mohgwyn Palace. It is restricted to situations in which normal teleportation is possible, so not during combat.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Pureblood_Knight%27s_Medal"
+    ]
+  },
+  {
+    "id": "IB-BL-018",
+    "lang": "vi",
+    "difficulty": "medium",
+    "category": "character",
+    "question": "Dialloz đi tìm ai khi gặp mình ở Roundtable Hold?",
+    "expected_answer": "Nhận diện Diallos, đang tìm người hầu Lanya.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Knight_Diallos"
+    ]
+  },
+  {
+    "id": "IB-BL-019",
+    "lang": "vi",
+    "difficulty": "hard",
+    "category": "multi_hop",
+    "question": "Mình định buff đòn nhảy và đòn nặng tích lực. Nên dùng Claw Talisman và Axe Talisman cho kiểu đánh nào?",
+    "expected_answer": "Claw cho đòn nhảy, Axe cho đòn nặng cận chiến tích lực. Không suy cộng dồn hoặc áp dụng cho mọi đòn.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Claw_Talisman",
+      "https://eldenring.wiki.gg/wiki/Axe_Talisman"
+    ]
+  },
+  {
+    "id": "IB-BL-020",
+    "lang": "en",
+    "difficulty": "hard",
+    "category": "multi_hop",
+    "question": "At full health, how do Ritual Sword and Ritual Shield differ, and what happens when I take damage?",
+    "expected_answer": "Ritual Sword raises attack power and Ritual Shield reduces incoming damage at full HP. Once HP is below maximum, their full-HP effects no longer apply.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Ritual_Sword_Talisman",
+      "https://eldenring.wiki.gg/wiki/Ritual_Shield_Talisman"
+    ]
+  },
+  {
+    "id": "IB-BL-021",
+    "lang": "vi",
+    "difficulty": "hard",
+    "category": "quest",
+    "question": "Mình vừa nhặt được cây kim trong Coastal Cave. Cần gặp ai và giao vật gì?",
+    "expected_answer": "Nếu là Sewing Needle, giao cho Boc gần Site of Grace trong Coastal Cave để tiếp tục nhiệm vụ.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Boc_the_Seamster"
+    ]
+  },
+  {
+    "id": "IB-BL-022",
+    "lang": "en",
+    "difficulty": "hard",
+    "category": "location",
+    "question": "I haven't reached Scadu Altus yet. What's the route through Castle Ensis and the alternative through Fort of Reprimand?",
+    "expected_answer": "Castle Ensis: defeat Rellana and leave through Ensis Moongazing Grounds. Alternative: take the spiritspring near Elder's Hovel in eastern Gravesite Plain to Fort of Reprimand and exit it.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Scadu_Altus"
+    ]
+  },
+  {
+    "id": "IB-BL-023",
+    "lang": "vi",
+    "difficulty": "hard",
+    "category": "insufficient_evidence",
+    "question": "Chỗ cái cầu có lính, đi tiếp sao cho gặp đúng NPC làm nhiệm vụ?",
+    "expected_answer": "Hỏi tên cầu, Grace hoặc NPC/nhiệm vụ. Khi được bổ sung, hướng tới Irina gần Bridge of Sacrifice.",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "clarification_answers": [
+      "Bridge of Sacrifice. Mình muốn gặp Irina ở đầu Weeping Peninsula."
+    ],
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Weeping_Peninsula"
+    ]
+  },
+  {
+    "id": "IB-BL-024",
+    "lang": "en",
+    "difficulty": "hard",
+    "category": "multi_hop",
+    "question": "How does the Dragon Communion Seal help a caster, and where can an early character acquire it?",
+    "expected_answer": "It boosts Dragon Communion incantations. A spectral Banished Knight in Fringefolk Hero's Grave drops it.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Dragon_Communion_Seal"
+    ]
+  },
+  {
+    "id": "IB-BL-025",
+    "lang": "vi",
+    "difficulty": "hard",
+    "category": "quest",
+    "question": "Sellen đang bị xích ở đâu và cần đưa phần nào của cô ra khỏi đó trong quest?",
+    "expected_answer": "Witchbane Ruins. Nhận Sellen's Primal Glintstone sau khi tới đúng chặng nhiệm vụ.",
+    "web_search": "auto",
+    "endpoint": "chat",
+    "source_urls": [
+      "https://eldenring.wiki.gg/wiki/Sorceress_Sellen"
+    ]
+  }
+]

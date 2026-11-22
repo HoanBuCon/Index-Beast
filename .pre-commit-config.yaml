@@ -13,6 +13,7 @@ repos:
         exclude: \.md$
       - id: end-of-file-fixer
       - id: check-yaml
+        args: [--unsafe]  # chỉ kiểm cú pháp: compose dùng tag riêng như !reset
       - id: check-toml
       - id: check-json
       - id: check-merge-conflict

@@ -85,7 +85,7 @@ def install_middleware(app: FastAPI, settings: Settings, *, quiet_paths: Iterabl
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", REQUEST_ID_HEADER],
+        allow_headers=["Content-Type", REQUEST_ID_HEADER, "X-Conversation-Token"],
         expose_headers=[REQUEST_ID_HEADER],
     )
     app.add_middleware(RequestContextMiddleware, quiet_paths=quiet_paths)

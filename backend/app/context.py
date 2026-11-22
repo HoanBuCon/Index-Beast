@@ -36,6 +36,8 @@ class AppContext:
     qdrant: AsyncQdrantClient | None
     redis: Redis
     llm: DeepSeekLLM | None = None
+    web_search: object | None = None
+    reranker: object | None = None
     health_checks: dict[str, HealthCheck] = field(default_factory=dict)
     _closers: list[tuple[str, Closer]] = field(default_factory=list, repr=False)
 
@@ -68,8 +70,8 @@ def register_infra(ctx: AppContext) -> None:
         if not await ctx.redis.ping():
             raise ConnectionError("redis ping returned false")
 
-    # llm_only chat never constructs a Qdrant client. Keep the existing /health
-    # contract: an explicit infrastructure probe may lazily create its own client.
+    # A context without a Qdrant client (e.g. test fakes) still honours the /health
+    # contract: the explicit infrastructure probe lazily creates its own client.
     health_qdrant = ctx.qdrant
 
     async def check_qdrant() -> None:
@@ -99,20 +101,41 @@ def build_context(settings: Settings) -> AppContext:
         settings=settings,
         engine=engine,
         sessionmaker=create_sessionmaker(engine),
-        qdrant=(
-            AsyncQdrantClient(
-                url=settings.qdrant_url,
-                timeout=max(1, round(timeout)),
-                check_compatibility=False,
-            )
-            if settings.chat_mode != "llm_only"
-            else None
-        ),  # /health có thể tự tạo client probe riêng; llm_only chat không khởi tạo client
+        qdrant=AsyncQdrantClient(url=settings.qdrant_url, timeout=max(1, round(timeout)), check_compatibility=False),
         redis=Redis.from_url(
             settings.redis_url, decode_responses=True, socket_timeout=timeout, socket_connect_timeout=timeout
         ),
     )
     register_infra(ctx)
+    if settings.chat_mode == "rag" and settings.reranker_available and settings.rag_reranker_provider == "local":
+        from app.rag.reranker import local_reranker
+
+        ctx.reranker = local_reranker(settings)
+    elif settings.chat_mode == "rag" and settings.reranker_available:
+        import httpx
+
+        from app.rag.reranker import JinaReranker
+
+        client = httpx.AsyncClient(
+            timeout=settings.rag_reranker_timeout_seconds, follow_redirects=False, trust_env=False
+        )
+        ctx.reranker = JinaReranker(
+            settings.jina_api_key.get_secret_value().strip(),
+            model=settings.rag_reranker_model,
+            timeout_seconds=settings.rag_reranker_timeout_seconds,
+            max_candidates=settings.rag_reranker_max_candidates,
+            client=client,
+            tokens_per_minute=settings.rag_reranker_tokens_per_minute,
+            max_wait_seconds=settings.rag_reranker_max_wait_seconds,
+        )
+        ctx.register("reranker", close=client.aclose)
+    elif settings.chat_mode == "rag" and settings.rag_reranker_enabled:
+        log.warning("Reranker inactive: JINA_API_KEY is not configured")
+    if settings.web_search_available:
+        from app.adapters.tavily import TavilySearch
+
+        ctx.web_search = TavilySearch(settings)
+        ctx.register("web_search", close=ctx.web_search.aclose)
     if settings.deepseek_api_key and settings.deepseek_api_key.get_secret_value().strip():
         ctx.llm = DeepSeekLLM(settings)
         # Health check thường xuyên không gọi LLM để tránh tiêu hao API credits.

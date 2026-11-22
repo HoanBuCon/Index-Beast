@@ -7,7 +7,7 @@ import json
 import re
 import uuid
 from datetime import datetime
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -16,7 +16,9 @@ from core.db.models import Chunk, IngestionJob
 from core.db.repositories import finish_job, replace_chunks, start_job, upsert_document
 from core.db.session import create_engine, create_sessionmaker
 from core.ids import chunk_id, document_id
-from ingest.artifacts import read, save, sha256
+from ingest.artifacts import local_snapshot, read, save, sha256
+from ingest.transform.wiki_quality import OUT_OF_SCOPE_REASONS
+from ingest.transform.wiki_quality import VERSION as SPOILER_VERSION
 
 
 def read_lines(path):
@@ -26,28 +28,31 @@ def read_lines(path):
                 yield json.loads(line)
 
 
-def local_snapshot(recorded, data_dir):
-    """Artifact ghi đường dẫn tuyệt đối của máy tạo ra nó (vd. D:/Index-Beast/backend/data/raw/...).
-    Trên máy khác, tìm cùng file theo phần sau thư mục `raw` trong data dir hiện tại; hash vẫn được kiểm sau đó."""
-    path = Path(recorded)
-    if path.exists():
-        return path
-    parts = PureWindowsPath(recorded).parts
-    if "raw" not in parts:
-        return path
-    return data_dir.joinpath(*parts[parts.index("raw") :])
-
-
 def validate_document(doc, rows, cap):
     identity = document_id(doc["source"], doc["source_id"])
-    if str(identity) != doc["doc_id"] or doc["game_scope"] != "elden_ring":
+    if str(identity) != doc["doc_id"] or doc["game_scope"] not in {"elden_ring", "out_of_scope"}:
         raise ValueError("Document scope/identity mismatch")
+    if doc["game_scope"] == "out_of_scope" and (rows or doc.get("game_scope_reason") not in OUT_OF_SCOPE_REASONS):
+        raise ValueError("Document scope/identity mismatch")
+    version = doc.get("spoiler_rule_version")
+    if version is not None and (
+        version != SPOILER_VERSION or type(doc.get("spoiler_level")) is not int or doc["spoiler_level"] not in {0, 1, 2}
+    ):
+        raise ValueError("Document spoiler metadata mismatch")
     for i, c in enumerate(rows):
         if c["ordinal"] != i or c["chunk_id"] != str(chunk_id(identity, i)):
             raise ValueError("Chunk identity mismatch")
         for key in ["doc_id", "source_id", "source", "revision_id", "source_snapshot", "game_scope"]:
             if c[key] != doc[key]:
                 raise ValueError("Chunk provenance mismatch")
+        if version and (
+            type(c.get("spoiler_level")) is not int
+            or c["spoiler_level"] not in {0, 1, 2}
+            or not c.get("spoiler_reason")
+            or c.get("spoiler_rule_version") != version
+            or c.get("game_scope_reason") != doc.get("game_scope_reason")
+        ):
+            raise ValueError("Invalid spoiler metadata")
         if c["source_type"] not in {"in_game_text", "wiki_prose", "speculation"}:
             raise ValueError("Unresolved source type")
         if not re.fullmatch(r"[a-z]{2,3}|unknown", c["lang"]):
@@ -56,13 +61,43 @@ def validate_document(doc, rows, cap):
             raise ValueError("Invalid token budget")
         if sha256(c["text"].encode()) != c["text_hash"]:
             raise ValueError("Text hash mismatch")
+    if version and doc["spoiler_level"] != max((c["spoiler_level"] for c in rows), default=1):
+        raise ValueError("Document spoiler metadata mismatch")
     return identity
+
+
+def chunk_fields(identity, rows):
+    """Dòng chunk ghi vào PostgreSQL; dùng chung cho nạp toàn bộ và cập nhật tăng dần."""
+    return [
+        {
+            "id": chunk_id(identity, c["ordinal"]),
+            "ordinal": c["ordinal"],
+            "section": c["section"],
+            "text": c["embedding_text"],
+            "token_count": c["token_count"],
+            "game_scope": "elden_ring",
+            "source_type": c["source_type"],
+            "lang": c["lang"],
+            **({"spoiler_level": c["spoiler_level"]} if "spoiler_level" in c else {}),
+        }
+        for c in rows
+    ]
 
 
 def preflight(directory):
     report = read(directory / "report.json")
-    if report.get("chunking_version") != "s2-full-chunk-1.0":
-        raise ValueError("Full S2 artifact required")
+    if report.get("chunking_version") not in {
+        "s2-full-chunk-1.0",
+        "s2-full-chunk-1.1",
+        "s3-full-chunk-1.0",
+        "s3-full-chunk-1.1",
+        "s3-full-chunk-1.2",
+        "s3-full-chunk-1.3",
+        "s3-full-chunk-2.0",
+        "s4-full-chunk-1.0",
+        "s4-full-chunk-1.1",
+    }:
+        raise ValueError("Versioned full chunk artifact required")
     for name, digest in report["artifact_sha256"].items():
         if sha256((directory / name).read_bytes()) != digest:
             raise ValueError("Artifact checksum mismatch")
@@ -72,6 +107,8 @@ def preflight(directory):
     for doc in read_lines(directory / "documents.jsonl"):
         if not doc["source_id"].isdigit() or doc["doc_id"] in ids:
             raise ValueError("Duplicate/invalid source identity")
+        if report["chunking_version"] == "s4-full-chunk-1.0" and doc.get("spoiler_rule_version") != SPOILER_VERSION:
+            raise ValueError("Missing Sprint 4 spoiler metadata")
         ids.add(doc["doc_id"])
         payload = (directory / "wikigg" / (doc["source_id"] + ".jsonl")).read_bytes()
         digest.update(payload)
@@ -119,19 +156,9 @@ async def load(directory, *, validate_only=False):
             try:
                 rows = list(read_lines(directory / "wikigg" / (doc["source_id"] + ".jsonl")))
                 identity = validate_document(doc, rows, report["max_tokens"])
-                fields = [
-                    {
-                        "id": chunk_id(identity, c["ordinal"]),
-                        "ordinal": c["ordinal"],
-                        "section": c["section"],
-                        "text": c["embedding_text"],
-                        "token_count": c["token_count"],
-                        "game_scope": "elden_ring",
-                        "source_type": c["source_type"],
-                        "lang": c["lang"],
-                    }
-                    for c in rows
-                ]
+                if doc["game_scope"] == "out_of_scope":
+                    continue
+                fields = chunk_fields(identity, rows)
                 async with sessions() as session, session.begin():
                     old = (
                         (

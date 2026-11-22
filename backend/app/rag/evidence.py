@@ -1,4 +1,4 @@
-"""Deterministic evidence IDs: server extracts exact source substrings, never fuzzy-matches model prose."""
+"""Evidence ID tất định: server cắt đúng đoạn con của nguồn, không bao giờ khớp mờ với văn của model."""
 
 
 def evidence_units(text: str) -> dict[str, str]:

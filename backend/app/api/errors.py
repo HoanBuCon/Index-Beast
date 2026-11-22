@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.rag.generator import RAGValidationError
 from core.errors import AppError, BadRequestError, NotFoundError, RateLimitedError, UnauthorizedError
 from core.logging import request_id_var
 
@@ -37,7 +38,10 @@ def error_response(status_code: int, code: str, message: str, headers: dict[str,
 
 async def _app_error(request: Request, exc: AppError) -> JSONResponse:
     if exc.status_code >= 500:
-        log.error("app error", extra={"data": {"code": exc.code, "path": request.url.path}}, exc_info=exc)
+        data = {"code": exc.code, "path": request.url.path}
+        if isinstance(exc, RAGValidationError):
+            data["reason"] = exc.reason
+        log.error("app error", extra={"data": data}, exc_info=exc)
     return error_response(exc.status_code, exc.code, exc.message, exc.headers)
 
 

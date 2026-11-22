@@ -11,5 +11,7 @@ export function retryInput(conversation: Conversation) {
   return {
     base: { ...conversation, messages: conversation.messages.slice(0, last) },
     text: conversation.messages[last].content,
+    turnId: conversation.messages[last].id,
+    clarificationId: conversation.messages[last].clarificationId,
   };
 }

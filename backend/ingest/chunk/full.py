@@ -4,6 +4,8 @@ import argparse
 import csv
 import hashlib
 import json
+from collections import Counter
+from itertools import zip_longest
 from pathlib import Path
 from urllib.parse import quote
 
@@ -11,14 +13,22 @@ from tokenizers import Tokenizer
 
 from core.ids import chunk_id, document_id
 from core.text.chunking import chunk_section, prepare_units
-from ingest.artifacts import now, read, save, sha256
+from core.text.quest_stages import QUEST_SECTION, stage_locations
+from core.text.structured_tables import row_metadata
+from ingest.artifacts import local_snapshot, now, read, save, sha256
+from ingest.transform.wiki_quality import OUT_OF_SCOPE_REASONS, spoiler, wiki_context
 
-VERSION = "s2-full-chunk-1.0"
+VERSION = "s3-full-chunk-2.0"
+WIKI_QUALITY_VERSION = "s4-full-chunk-1.1"
 
 
-def build_chunks(doc, tokenizer, cap=450, overlap=50):
+def build_chunks(doc, tokenizer, cap=450, overlap=50, *, stages=frozenset()):
     identity = document_id(doc["source"], doc["source_id"])
-    if str(identity) != doc["doc_id"] or doc["game_scope"] != "elden_ring":
+    if str(identity) != doc["doc_id"]:
+        raise ValueError("Document identity mismatch")
+    if doc["game_scope"] == "out_of_scope" and doc.get("game_scope_reason") in OUT_OF_SCOPE_REASONS:
+        return [], [{"reason": doc["game_scope_reason"], "source_snapshot": doc["source_snapshot"]}], []
+    if doc["game_scope"] != "elden_ring":
         raise ValueError("Document identity/scope mismatch")
     chunks, reviews, coverage = [], [], []
     for section in doc["sections"]:
@@ -32,6 +42,19 @@ def build_chunks(doc, tokenizer, cap=450, overlap=50):
                 }
             )
             continue
+        if stages and QUEST_SECTION.search(section["section"]):
+            section = {
+                **section,
+                "blocks": [
+                    {**block, "quest_stage_start": True}
+                    if block["kind"] == "prose"
+                    and block["location"] in stages
+                    and len(block["text"]) <= 120
+                    and "\n" not in block["text"]
+                    else block
+                    for block in section["blocks"]
+                ],
+            }
         units = {u["unit_key"]: u for u in prepare_units(doc, section, tokenizer, cap)}
         result = chunk_section(doc, section, tokenizer, cap, overlap)
         for item in result["chunks"]:
@@ -45,9 +68,20 @@ def build_chunks(doc, tokenizer, cap=450, overlap=50):
             item.pop("source_text_hash_input")
             ordinal = len(chunks)
             anchor = section.get("anchor") or ""
+            extra = {}
+            if "spoiler_rule_version" in doc:
+                level, reason = spoiler(doc, section, unit)
+                extra = {
+                    "spoiler_level": level,
+                    "spoiler_reason": reason,
+                    "spoiler_rule_version": doc["spoiler_rule_version"],
+                    "game_scope_reason": doc["game_scope_reason"],
+                    "quest_stage": unit.get("quest_stage"),
+                }
             chunks.append(
                 dict(
                     item,
+                    **extra,
                     chunk_id=str(chunk_id(identity, ordinal)),
                     ordinal=ordinal,
                     doc_id=str(identity),
@@ -65,13 +99,27 @@ def build_chunks(doc, tokenizer, cap=450, overlap=50):
                     release_scope=section["release_scope"],
                     source_type=section["source_type"],
                     source_type_evidence=section.get("source_type_evidence"),
+                    content_type="equipment_stats" if unit["kind"] == "infobox_stats" else unit["kind"],
+                    table_header=unit.get("table_header"),
+                    table_id=unit.get("table_id"),
+                    fact_ids=unit.get("fact_ids", []),
+                    row_key=unit.get("row_key"),
+                    table_type=unit.get("table_type"),
+                    level=row_metadata(unit.get("row_key"))["level"],
+                    row_kind=row_metadata(unit.get("row_key"))["row_kind"] if unit.get("table_id") else None,
+                    affinity=(section.get("variant_context") or {}).get("label")
+                    if unit.get("table_type") == "upgrade_stats"
+                    else None,
+                    language_evidence=unit.get("language_evidence"),
                     image_ids=list(dict.fromkeys(section["image_ids"])),
                     image_association="section",
                     fetched_at=doc["fetched_at"],
                     source_updated_at=doc.get("source_updated_at"),
                     text_hash=sha256(item["text"].encode()),
                     cleaning_version=doc["cleaning_version"],
-                    chunking_version=VERSION,
+                    chunking_version=WIKI_QUALITY_VERSION
+                    if extra
+                    else (VERSION if doc["cleaning_version"].startswith("s3-") else "s2-full-chunk-1.1"),
                 )
             )
         reviews.extend(
@@ -81,11 +129,19 @@ def build_chunks(doc, tokenizer, cap=450, overlap=50):
     return chunks, reviews, coverage
 
 
-def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
+def run(input_dir, tokenizer_path, output, cap=450, overlap=50, *, wiki_quality=False):
     if output.exists():
         raise ValueError("Use a new output directory")
     report = read(input_dir / "report.json")
-    if report["cleaning_version"] not in {"s2-full-clean-1.0", "s2-full-clean-1.1"}:
+    if report["cleaning_version"] not in {
+        "s2-full-clean-1.0",
+        "s2-full-clean-1.1",
+        "s2-full-clean-1.2",
+        "s3-full-clean-1.0",
+        "s3-full-clean-1.1",
+        "s3-full-clean-1.2",
+        "s3-full-clean-2.0",
+    }:
         raise ValueError("Full clean version required")
     for name, info in report["csv_validation"].items():
         if sha256((input_dir / name).read_bytes()) != info["sha256"]:
@@ -109,6 +165,9 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
     }
     languages = {}
     types = {}
+    levels = Counter()
+    scopes = Counter()
+    stage_chunks = 0
     created = now()
     columns = [
         "chunk_id",
@@ -130,6 +189,8 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
         "cleaning_version",
         "chunking_version",
     ]
+    if wiki_quality:
+        columns += ["spoiler_level", "spoiler_reason", "spoiler_rule_version", "game_scope_reason", "quest_stage"]
     with (
         (output / "chunks.jsonl").open("w", encoding="utf-8") as all_chunks,
         (output / "review.jsonl").open("w", encoding="utf-8") as all_review,
@@ -154,7 +215,26 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
                     raise ValueError("Processed content differs from CSV")
                 if json.loads(row["image_ids"]) != list(dict.fromkeys(s["image_ids"])):
                     raise ValueError("Image association mismatch")
-            chunks, reviews, coverage = build_chunks(doc, tokenizer, cap, overlap)
+            stages = frozenset()
+            if wiki_quality:
+                snapshot = local_snapshot(doc["source_snapshot"], input_dir.resolve().parents[1])
+                raw_bytes = snapshot.read_bytes()
+                raw = json.loads(raw_bytes)
+                if any(raw[key] != doc[key] for key in ("source", "source_id", "revision_id", "title")) or (
+                    sha256(raw["content"].encode()) != raw["content_hash"]
+                    or raw["content_hash"] != doc["raw_content_hash"]
+                ):
+                    raise ValueError("Wiki quality metadata requires the matching raw revision")
+                fingerprints[str(snapshot.resolve())] = sha256(raw_bytes)
+                doc.update(wiki_context(raw, doc))
+                if any(QUEST_SECTION.search(section["section"]) for section in doc["sections"]):
+                    stages = stage_locations(raw["content"])
+            chunks, reviews, coverage = build_chunks(doc, tokenizer, cap, overlap, stages=stages)
+            if wiki_quality:
+                doc["spoiler_level"] = max((c["spoiler_level"] for c in chunks), default=1)
+                scopes[doc["game_scope"]] += 1
+                levels.update(c["spoiler_level"] for c in chunks)
+                stage_chunks += sum(bool(c["quest_stage"]) for c in chunks)
             folder = output / "wikigg"
             folder.mkdir(exist_ok=True)
             with (folder / (page["id"] + ".jsonl")).open("w", encoding="utf-8") as per_doc:
@@ -196,7 +276,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
         (output / "chunks.jsonl").open(encoding="utf-8") as source,
     ):
         n = 0
-        for row, line in __import__("itertools").zip_longest(csv.DictReader(stream), source):
+        for row, line in zip_longest(csv.DictReader(stream), source):
             if row is None or line is None:
                 raise ValueError("CSV row count mismatch")
             c = json.loads(line)
@@ -204,6 +284,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
                 row["text"] != c["text"]
                 or row["embedding_text"] != c["embedding_text"]
                 or json.loads(row["image_ids"]) != c["image_ids"]
+                or (wiki_quality and row["spoiler_level"] != str(c["spoiler_level"]))
             ):
                 raise ValueError("CSV round-trip mismatch")
             n += 1
@@ -213,7 +294,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
         raise ValueError("Input changed")
     result = {
         "created_at": created,
-        "chunking_version": VERSION,
+        "chunking_version": VERSION if report["cleaning_version"].startswith("s3-") else "s2-full-chunk-1.1",
         "clean_input": str(input_dir.resolve()),
         "source_job": report["source_job"],
         "game_scope": "elden_ring",
@@ -234,6 +315,13 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50):
         "encoder_calls": 0,
         "database_writes": 0,
     }
+    if wiki_quality:
+        result.update(
+            chunking_version=WIKI_QUALITY_VERSION,
+            spoiler_levels=dict(sorted(levels.items())),
+            page_game_scopes=dict(scopes),
+            quest_stage_chunks=stage_chunks,
+        )
     save(output / "input-fingerprints.json", fingerprints)
     save(output / "report.json", result)
     return result
@@ -244,8 +332,9 @@ def main():
     p.add_argument("--input-dir", type=Path, required=True)
     p.add_argument("--tokenizer", type=Path, required=True)
     p.add_argument("--output-dir", type=Path, required=True)
+    p.add_argument("--wiki-quality", action="store_true", help="Sprint 4 wiki scope, spoilers and quest stages")
     a = p.parse_args()
-    print(json.dumps(run(a.input_dir, a.tokenizer, a.output_dir)["counts"]))
+    print(json.dumps(run(a.input_dir, a.tokenizer, a.output_dir, wiki_quality=a.wiki_quality)["counts"]))
 
 
 if __name__ == "__main__":

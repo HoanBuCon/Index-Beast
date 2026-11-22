@@ -1,0 +1,16 @@
+[
+  {"id": "NB-01", "level": "lore (như BL-01)", "lang": "auto", "question": "Malenia là ai và vì sao cô ấy mang bệnh Scarlet Rot?", "replies": []},
+  {"id": "NB-02", "level": "acquisition (như BL-02)", "lang": "auto", "question": "Lấy Bloodhound's Fang ở đâu?", "replies": []},
+  {"id": "NB-03", "level": "tên gõ sai (như BL-03)", "lang": "auto", "question": "Darkmon Greatsword lấy ở đâu?", "replies": []},
+  {"id": "NB-04", "level": "tên mơ hồ (như BL-04)", "lang": "auto", "question": "Radagon đánh sao cho dễ?", "replies": ["Radagon of the Golden Order, trận cuối"]},
+  {"id": "NB-05", "level": "build có level, không class/vũ khí (như BL-05)", "lang": "auto", "question": "Build Dexterity cho PvE ở level 100, chia 8 chỉ số giúp mình.", "replies": ["class nào cũng được, vũ khí bạn chọn giúp"]},
+  {"id": "NB-06", "level": "build có class + vũ khí, level thấp (như BL-06)", "lang": "auto", "question": "Samurai level 25 muốn cầm Bloodhound's Fang thì cộng 8 chỉ số thế nào?", "replies": ["PvE, cầm 2 tay"]},
+  {"id": "NB-07", "level": "so sánh (như BL-07)", "lang": "auto", "question": "Moonveil hay Dark Moon Greatsword hợp cho build Intelligence hơn?", "replies": ["PvE"]},
+  {"id": "NB-08", "level": "chiến thuật boss (như BL-08)", "lang": "auto", "question": "Làm sao né đòn bay của Godskin Apostle?", "replies": []},
+  {"id": "NB-09", "level": "quest/route (như BL-09)", "lang": "auto", "question": "Questline của Fia bắt đầu ở đâu và bước tiếp theo là gì?", "replies": []},
+  {"id": "NB-10", "level": "tiếng Anh, tổng quan (như BL-10)", "lang": "auto", "question": "What are the main legacy dungeons in the base game?", "replies": []},
+  {"id": "NB-11", "level": "build không level/class (như BUILD-2)", "lang": "auto", "question": "Build bleed cho PvE", "replies": []},
+  {"id": "NB-12", "level": "người mới, không level (như BUILD-3)", "lang": "auto", "question": "Mình mới chơi, nên build Faith thế nào?", "replies": []},
+  {"id": "NB-13", "level": "build không level, PvP (như PY-1)", "lang": "auto", "question": "Gợi ý build Intelligence cho PvP", "replies": []},
+  {"id": "NB-14", "level": "build có level + vũ khí (như PY-2)", "lang": "auto", "question": "Build cầm Rivers of Blood ở level 90", "replies": []}
+]

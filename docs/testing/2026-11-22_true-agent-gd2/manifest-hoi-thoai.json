@@ -1,0 +1,6 @@
+[
+  {"id": "CONV-1", "level": "hỏi về câu trước (lỗi MinhMuc gặp)", "lang": "auto", "question": "Malenia mạnh nhất ở phase nào?", "replies": [], "followups": ["Câu hỏi trước của tôi là gì?"]},
+  {"id": "CONV-2", "level": "tóm tắt câu trả lời trước", "lang": "auto", "question": "Rykard là ai?", "replies": [], "followups": ["Tóm tắt lại những gì bạn vừa trả lời"]},
+  {"id": "CONV-3", "level": "nhắc lại đối tượng của lượt trước", "lang": "auto", "question": "Bloodhound's Fang lấy ở đâu?", "replies": [], "followups": ["Vũ khí đó cần bao nhiêu Dexterity?"]},
+  {"id": "REG-1", "level": "câu thường (kiểm hồi quy)", "lang": "auto", "question": "Starscourge Radahn có điểm yếu gì?", "replies": []}
+]

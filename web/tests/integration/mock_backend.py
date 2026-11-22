@@ -16,10 +16,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "backend"))
 from app.main import create_app
 from core.config import Settings
 
-app = create_app(
-    settings=Settings(_env_file=None, environment="test", log_level="WARNING"),
-    context=SimpleNamespace(health_checks={}),
-)
+settings = Settings(_env_file=None, environment="test", log_level="WARNING", chat_mode="mock")
+app = create_app(settings=settings, context=SimpleNamespace(settings=settings, health_checks={}))
 # Cổng do hệ điều hành cấp cho test; không chiếm hoặc đổi API_PORT/WEB_PORT của người dùng.
 with socket.socket() as listener:
     listener.bind(("127.0.0.1", 0))

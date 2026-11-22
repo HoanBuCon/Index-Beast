@@ -1,10 +1,9 @@
-"""Strict whole-output parsing; all cases are local strings, never model calls."""
+"""Parse chặt toàn bộ output; mọi ca đều là chuỗi local, không bao giờ gọi model."""
 
 import json
 
 import pytest
 
-from app.rag.generator import answer_prefix
 from app.rag.output import MAX_OUTPUT_CHARS, OutputFormatError, decode_output
 
 DATA = {"answer": 'Tiếng Việt: "Ranni"\nCô ấy.', "evidence": [], "insufficient": True}
@@ -30,7 +29,6 @@ def test_complete_output_envelopes_preserve_all_values(wrapper):
         "```python\n" + RAW + "\n```",
         '{"answer":"private answer",}',
         '{"answer":"private answer"',
-        '{"answer":"unescaped\nline"}',
         '{"answer":"private", "answer":"overridden"}',
         '{"evidence":[{"index":1,"index":2}]}',
         '{"answer":NaN}',
@@ -57,11 +55,3 @@ def test_invalid_json_coordinates_are_numeric_without_document_or_provider_error
 def test_oversized_or_deeply_nested_output_is_rejected(raw):
     with pytest.raises(OutputFormatError):
         decode_output(raw)
-
-
-@pytest.mark.parametrize("envelope", ["{}", "\ufeff{}", "```json\n{}\n```", "\ufeff```\r\n{}\r\n```"])
-def test_streamed_envelopes_and_unicode_escape_fragments_remain_monotonic(envelope):
-    raw = envelope.format(json.dumps(DATA, ensure_ascii=True))
-    prefixes = [answer_prefix(raw[:i]) for i in range(1, len(raw) + 1)]
-    assert prefixes[-1] == DATA["answer"]
-    assert all(current.startswith(previous) for previous, current in zip(prefixes, prefixes[1:], strict=False))

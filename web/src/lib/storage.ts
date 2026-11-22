@@ -2,8 +2,9 @@
 // Phụ trách: TV4 · [S4]
 
 import type { Conversation } from "../api/types";
-import { isSource } from "../api/types.ts";
+import { isSource, isConversationToken } from "../api/types.ts";
 import { readChatImages } from "../api/images.ts";
+import { readClarification } from "../api/clarification.ts";
 const KEY = "indexbeast.conversations.v1";
 export function readConversations(): Conversation[] {
   try {
@@ -18,6 +19,8 @@ export function readConversations(): Conversation[] {
           typeof c.title === "string" &&
           (c.mode === "demo" || c.mode === "api" || c.mode === "api-stream") &&
           (c.serverId === null || typeof c.serverId === "string") &&
+          (c.serverToken === undefined || isConversationToken(c.serverToken)) &&
+          (c.ownerUserId === undefined || typeof c.ownerUserId === "string") &&
           typeof c.updatedAt === "string" &&
           Array.isArray(c.messages) &&
           c.messages.every((m: unknown) => {
@@ -35,15 +38,27 @@ export function readConversations(): Conversation[] {
       .slice(0, 30)
       .map((conversation) => ({
         ...conversation,
-        messages: conversation.messages.map((message) =>
-          message.images === undefined
-            ? message
-            : { ...message, images: readChatImages(message.images, message.sources) },
-        ),
+        messages: conversation.messages.map(restoreMessage),
       }));
   } catch {
     return [];
   }
+}
+// Ảnh và clarification lưu cũ/hỏng bị bỏ (giữ nguyên tin nhắn) để MessageList không vỡ khi render.
+function restoreMessage(message: Conversation["messages"][number]): Conversation["messages"][number] {
+  let { clarification, images, ...rest } = message;
+  if (clarification !== undefined) {
+    try {
+      clarification = readClarification(clarification);
+    } catch {
+      clarification = undefined;
+    }
+  }
+  return {
+    ...rest,
+    ...(images === undefined ? {} : { images: readChatImages(images, message.sources) }),
+    ...(clarification === undefined ? {} : { clarification }),
+  };
 }
 export function saveConversations(conversations: Conversation[]): boolean {
   try {

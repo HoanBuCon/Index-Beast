@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import logging
+import os
 import re
 import threading
 import warnings
@@ -23,16 +24,24 @@ from urllib.parse import unquote, urlsplit
 from PIL import Image, UnidentifiedImageError
 
 from app.api.schemas.chat import ChatImage
-from core.config import REPO_ROOT
+from app.services.image_cache import CACHE, FORMATS
+from core.config import BACKEND_ROOT
 from core.corpus import CorpusPolicy
 
 IDENTIFIER = re.compile(r"^[0-9a-f]{64}$")
-FORMATS = {
-    "PNG": (".png", "image/png"),
-    "JPEG": (".jpg", "image/jpeg"),
-    "WEBP": (".webp", "image/webp"),
-    "GIF": (".gif", "image/gif"),
-}
+
+
+def ui_image(row):
+    """Wiki UI decorations can be attached to exact sections; they are not answer illustrations."""
+    return any(
+        re.search(
+            r"\bER[ _]+(?:(?:Main|Inventory)[ _]+Menu[ _]+Icon|"
+            r"Custom[ _]+(?:Stat[ _]+Icon|Sub[- _]+Menu[ _]+Icon))[ _]",
+            unquote(row.get(key) or ""),
+            re.I,
+        )
+        for key in ("alt", "source_url", "description_url")
+    )
 
 
 def http_url(value):
@@ -79,7 +88,7 @@ class ImageCatalog:
     def __init__(self, settings):
         self.enabled = settings.rag_images_enabled
         self.policy = CorpusPolicy.from_settings(settings)
-        base = REPO_ROOT / "backend"
+        base = BACKEND_ROOT
         self.catalog_path = base / settings.rag_images_catalog
         self.documents_path = base / settings.rag_images_documents
         self.root = base / settings.rag_images_root
@@ -91,6 +100,19 @@ class ImageCatalog:
         self._blobs = {}
         self.counts = Counter()
         self._metadata = lru_cache(maxsize=64)(self._read_metadata)
+
+    def preflight(self) -> bool:
+        """Kiểm file catalog khi khởi động: thiếu/không đọc được thì cảnh báo một lần (ảnh tắt, chat text vẫn chạy)."""
+        if not self.enabled:
+            return True
+        missing = [
+            str(p) for p in (self.catalog_path, self.documents_path) if not (p.is_file() and os.access(p, os.R_OK))
+        ]
+        if missing:
+            logging.getLogger(__name__).warning(
+                "Image catalog unreadable, images stay off (text chat continues): %s", ", ".join(missing)
+            )
+        return not missing
 
     def _load(self):
         if self._loaded or not self.enabled:
@@ -131,6 +153,9 @@ class ImageCatalog:
                         self.counts["rows"] += 1
                         if None in row or any(v is None for v in row.values()):
                             raise ValueError("Image catalog column mismatch")
+                        if ui_image(row):
+                            self.counts["ui_image_excluded"] += 1
+                            continue
                         if row["association"] != "exact_section" or any(
                             section.strip().casefold() in {"gallery", "references"}
                             for section in row["section"].split(">")
@@ -185,10 +210,17 @@ class ImageCatalog:
             return None, "unknown_image"
         self._load()
         path = self._blobs.get(image_id)
+        serving_root = self.root
+        if path is None:
+            for extension, _ in FORMATS.values():
+                candidate = CACHE / image_id[:2] / (image_id + extension)
+                if candidate.is_file():
+                    path, serving_root = candidate, CACHE
+                    break
         if path is None:
             return None, "unknown_image"
         try:
-            root, resolved = self.root.resolve(), path.resolve()
+            root, resolved = serving_root.resolve(), path.resolve()
             if not resolved.is_relative_to(root):
                 return None, "outside_media_root"
             if not resolved.is_file():
@@ -244,10 +276,10 @@ class ImageCatalog:
             pass
         return {}
 
-    async def resolve(self, hits, source_indices, *, spoilers):
-        return await asyncio.to_thread(self._resolve, hits, source_indices, spoilers)
+    async def resolve(self, hits, source_indices):
+        return await asyncio.to_thread(self._resolve, hits, source_indices)
 
-    def _resolve(self, hits, source_indices, spoilers):
+    def _resolve(self, hits, source_indices):
         if not self.enabled:
             return Resolution([], {"disabled": 1})
         self._load()
@@ -260,7 +292,7 @@ class ImageCatalog:
                 continue
             p = hits[index - 1].payload
             if (
-                self.policy.exclusion_reason(p, spoilers=spoilers)
+                self.policy.exclusion_reason(p)
                 or p.get("source") != "wikigg"
                 or p.get("image_association") != "section"
             ):
@@ -284,9 +316,6 @@ class ImageCatalog:
                 doc = row["document"]
                 if doc.get("game_scope") != p.get("game_scope") or doc.get("release_scope") != p.get("release_scope"):
                     reasons["scope_mismatch"] += 1
-                    continue
-                if not spoilers and row.get("spoiler_level") != "0":
-                    reasons["image_spoiler_unknown"] += 1
                     continue
                 if image_id in images:
                     if images[image_id].game_scope != p.get("game_scope") or images[image_id].release_scope != p.get(

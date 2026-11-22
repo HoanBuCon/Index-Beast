@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.api.schemas.chat import ChatImage, Source
+from app.api.schemas.chat import ChatImage, Clarification, Source
 
 
 class MessageOut(BaseModel):
@@ -19,6 +19,7 @@ class MessageOut(BaseModel):
     sources: list[Source] = []
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
     grounded: bool | None = None
+    clarification: Clarification | None = None
     created_at: datetime
 
 

@@ -15,7 +15,7 @@ Nhánh : `feature/s2-tv3-golden-set-expansion`.
 
 ## TV2 cần làm gì?
 
-Mở [golden set](../../backend/eval/golden_set.jsonl) cùng
+Mở [golden set lưu trữ S3](../../backend/eval/golden_set_s3.jsonl) cùng
 [sidecar review](../../backend/eval/reviews/s2-golden-set-review.jsonl).
 Ưu tiên 031–060 và case 027 vừa đổi policy; kiểm tiếp legacy factual case khi hoàn thiện baseline đã review.
 

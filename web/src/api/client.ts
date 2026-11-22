@@ -2,9 +2,10 @@
 // Phụ trách: TV4 · [S2] File api.ts viết tay · [S3] Web streaming SSE
 
 import type { AdminStats, ChatRequest, ChatResponse, ConversationOut, FeedbackRequest, StreamEvent } from "./types";
-import { isSource, isUuid, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
+import { isSource, isUuid, isConversationToken, MAX_MESSAGE_CHARS, MAX_FEEDBACK_CHARS } from "./types.ts";
 import { createUuid } from "../lib/uuid.ts";
 import { readChatImages } from "./images.ts";
+import { readClarification } from "./clarification.ts";
 
 export class ApiError extends Error {
   status: number;
@@ -17,6 +18,7 @@ export class ApiError extends Error {
 }
 async function request(path: string, init: RequestInit = {}) {
   const response = await fetch(`/api/v1${path}`, {
+    credentials: "same-origin", // cookie phiên đăng nhập (cùng origin qua Caddy/proxy Vite)
     ...init,
     headers: { "Content-Type": "application/json", "X-Request-ID": createUuid(), ...init.headers },
   });
@@ -26,13 +28,15 @@ async function request(path: string, init: RequestInit = {}) {
         ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
         : response.status === 404
           ? "Không tìm thấy hội thoại hoặc chức năng API. Thử tạo cuộc trò chuyện mới hoặc kiểm tra backend."
-          : response.status === 422
-            ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
-            : response.status === 401 || response.status === 403
-              ? "Không có quyền truy cập. Kiểm tra token quản trị."
-              : response.status === 502
-                ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
-                : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+          : response.status === 400
+            ? "Câu hỏi bổ sung đã hết hạn hoặc không còn khớp. Hãy gửi lại yêu cầu."
+            : response.status === 422
+              ? "Dữ liệu gửi lên không hợp lệ. Kiểm tra nội dung và độ dài câu hỏi."
+              : response.status === 401 || response.status === 403
+                ? "Không có quyền truy cập. Thử cuộc trò chuyện mới hoặc kiểm tra token."
+                : response.status === 502
+                  ? "Chưa tạo được câu trả lời hợp lệ. Vui lòng thử lại."
+                  : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
     throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
   }
   return response;
@@ -68,8 +72,11 @@ export async function chat(body: ChatRequest, signal?: AbortSignal): Promise<Cha
   ) {
     throw new Error("Dữ liệu câu trả lời không hợp lệ.");
   }
+  if (result.conversation_token !== undefined && !isConversationToken(result.conversation_token))
+    throw new Error("Token hội thoại không hợp lệ.");
   if (result.images !== undefined)
     result.images = readChatImages(result.images, result.sources as ChatResponse["sources"]);
+  if (result.clarification !== undefined) result.clarification = readClarification(result.clarification);
   return data as ChatResponse;
 }
 
@@ -126,10 +133,12 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
         type,
         sources: data.sources,
         ...(data.images === undefined ? {} : { images: readChatImages(data.images, data.sources) }),
+        ...(data.clarification === undefined ? {} : { clarification: readClarification(data.clarification) }),
       };
     } else if (type === "error") throw new Error("Dịch vụ gặp lỗi khi sinh câu trả lời. Vui lòng thử lại.");
     else if (type === "done") {
       if (
+        (data.conversation_token !== undefined && !isConversationToken(data.conversation_token)) ||
         !isUuid(data.conversation_id) ||
         !isUuid(data.message_id) ||
         typeof data.grounded !== "boolean" ||
@@ -143,6 +152,7 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
       yield {
         type,
         data: {
+          ...(data.conversation_token === undefined ? {} : { conversation_token: data.conversation_token as string }),
           conversation_id: data.conversation_id,
           message_id: data.message_id,
           grounded: data.grounded,
@@ -154,16 +164,25 @@ export async function* chatStream(body: ChatRequest, signal: AbortSignal): Async
   }
   if (!complete) throw new Error("Kết nối bị ngắt trước khi câu trả lời hoàn tất.");
 }
-export async function sendFeedback(messageId: string, rating: number, reason: string) {
+export async function sendFeedback(messageId: string, rating: number, reason: string, token?: string) {
   if (!isUuid(messageId) || (rating !== 1 && rating !== -1) || [...reason].length > MAX_FEEDBACK_CHARS) {
     throw new Error("Phản hồi không hợp lệ: kiểm tra mã câu trả lời, đánh giá và độ dài lý do.");
   }
   const body: FeedbackRequest = { message_id: messageId, rating, reason };
-  await request("/feedback", { method: "POST", body: JSON.stringify(body) });
+  await request("/feedback", {
+    method: "POST",
+    body: JSON.stringify(body),
+    headers: token ? { "X-Conversation-Token": token } : {},
+  });
 }
-export async function getConversation(id: string, signal?: AbortSignal): Promise<ConversationOut> {
+export async function getConversation(id: string, signal?: AbortSignal, token?: string): Promise<ConversationOut> {
   if (!isUuid(id)) throw new Error("Mã hội thoại không hợp lệ.");
-  const data = await (await request(`/conversations/${encodeURIComponent(id)}`, { signal })).json();
+  const data = await (
+    await request(`/conversations/${encodeURIComponent(id)}`, {
+      signal,
+      headers: token ? { "X-Conversation-Token": token } : {},
+    })
+  ).json();
   if (
     !isUuid(data?.id) ||
     !["web", "discord"].includes(data.channel) ||
@@ -189,9 +208,13 @@ export async function getConversation(id: string, signal?: AbortSignal): Promise
     ),
   };
 }
+// Quản trị viên đăng nhập (is_admin) vào /admin/* bằng cookie phiên: không có token thì không gửi header.
+function adminHeaders(token: string | null): Record<string, string> {
+  return token ? { "X-Admin-Token": token } : {};
+}
 // Token admin chỉ giữ trong state của trang, không ghi vào localStorage hay bundle.
-export async function getAdminStats(token: string, signal?: AbortSignal): Promise<AdminStats> {
-  const data = await (await request("/admin/stats", { headers: { "X-Admin-Token": token }, signal })).json();
+export async function getAdminStats(token: string | null, signal?: AbortSignal): Promise<AdminStats> {
+  const data = await (await request("/admin/stats", { headers: adminHeaders(token), signal })).json();
   if (
     !data ||
     !Array.isArray(data.conversations) ||
@@ -226,8 +249,8 @@ export async function getAdminStats(token: string, signal?: AbortSignal): Promis
   }
   return data;
 }
-export async function getTrace(token: string, messageId: string, signal?: AbortSignal): Promise<unknown> {
+export async function getTrace(token: string | null, messageId: string, signal?: AbortSignal): Promise<unknown> {
   return (
-    await request(`/admin/trace/${encodeURIComponent(messageId)}`, { headers: { "X-Admin-Token": token }, signal })
+    await request(`/admin/trace/${encodeURIComponent(messageId)}`, { headers: adminHeaders(token), signal })
   ).json();
 }

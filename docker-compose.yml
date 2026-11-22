@@ -3,6 +3,8 @@
 # Cổng chỉ mở trên 127.0.0.1 — ra Internet duy nhất qua Caddy (80/443).
 # Cổng phía máy = cổng gốc + 10000, lấy từ *_PORT trong .env. Bên trong mạng Docker, PostgreSQL/Qdrant/Redis
 # giữ cổng gốc (không ai bên ngoài chạm tới); api nghe 18000 (docs/quy_uoc.md → "Quy ước cổng").
+# 18000 là HỢP ĐỒNG CỐ ĐỊNH của container api, không phải biến cấu hình: backend/Dockerfile, infra/caddy/snippets.caddy,
+# healthcheck và BOT_API_URL dưới đây phải cùng giá trị (backend/tests/unit/test_ports.py kiểm; docs/production.md mục 1).
 # Biến ${...} lấy từ file .env ở gốc repo; mỗi service chỉ nhận đúng biến liệt kê trong `environment:`.
 
 name: index-beast
@@ -78,13 +80,32 @@ services:
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       LLM_MODEL: ${LLM_MODEL:-deepseek-flash}
       LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.2}
-      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-2048}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS:-8192}
       LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
       LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-2}
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      WEB_URL: ${WEB_URL:-http://localhost:15173}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_REDIRECT_URI: ${AUTH_REDIRECT_URI:-}
+      AUTH_SESSION_DAYS: ${AUTH_SESSION_DAYS:-7}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-}
+      AUTH_ADMIN_DISCORD_IDS: ${AUTH_ADMIN_DISCORD_IDS:-}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
+      RATE_LIMIT_GUILD_PER_MINUTE: ${RATE_LIMIT_GUILD_PER_MINUTE:-30}
       CHAT_TIMEOUT_SECONDS: ${CHAT_TIMEOUT_SECONDS:-45}
+      CHAT_STREAM_TIMEOUT_SECONDS: ${CHAT_STREAM_TIMEOUT_SECONDS:-90}
+      CHAT_PREPARE_TIMEOUT_SECONDS: ${CHAT_PREPARE_TIMEOUT_SECONDS:-25}
       CHAT_MODE: ${CHAT_MODE:-mock}
+      CHAT_AGENT_TIMEOUT_SECONDS: ${CHAT_AGENT_TIMEOUT_SECONDS:-12}
+      CHAT_AGENT_MAX_CALLS: ${CHAT_AGENT_MAX_CALLS:-6}
+      CHAT_COVERAGE_MAX_CALLS: ${CHAT_COVERAGE_MAX_CALLS:-12}
+      CHAT_PERSISTENCE: ${CHAT_PERSISTENCE:-memory}
+      CHAT_MEMORY_COLLECTION: ${CHAT_MEMORY_COLLECTION:-conversation_memories}
+      CHAT_MEMORY_CANDIDATES: ${CHAT_MEMORY_CANDIDATES:-6}
+      CHAT_MEMORY_TIMEOUT_SECONDS: ${CHAT_MEMORY_TIMEOUT_SECONDS:-5}
       CHAT_HISTORY_MESSAGES: ${CHAT_HISTORY_MESSAGES:-8}
       CHAT_HISTORY_CHARS: ${CHAT_HISTORY_CHARS:-8000}
       RAG_COLLECTION: ${RAG_COLLECTION:-lore_chunks}
@@ -93,19 +114,32 @@ services:
       RAG_PREFETCH: ${RAG_PREFETCH:-30}
       RAG_TOP_K: ${RAG_TOP_K:-5}
       RAG_CONTEXT_CHARS: ${RAG_CONTEXT_CHARS:-12000}
-      RAG_REWRITE_ENABLED: ${RAG_REWRITE_ENABLED:-false}
-      RAG_OVERVIEW_ENABLED: ${RAG_OVERVIEW_ENABLED:-true}
-      RAG_QUERY_MODE: ${RAG_QUERY_MODE:-rewrite}
-      RAG_REWRITE_TIMEOUT_SECONDS: ${RAG_REWRITE_TIMEOUT_SECONDS:-8}
-      RAG_REWRITE_MAX_TOKENS: ${RAG_REWRITE_MAX_TOKENS:-512}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      WEB_SEARCH_ENABLED: ${WEB_SEARCH_ENABLED:-true}
+      WEB_SEARCH_MODE: ${WEB_SEARCH_MODE:-auto}
+      WEB_SEARCH_TIMEOUT_SECONDS: ${WEB_SEARCH_TIMEOUT_SECONDS:-8}
+      WEB_SEARCH_MAX_RESULTS: ${WEB_SEARCH_MAX_RESULTS:-3}
+      WEB_SEARCH_DOMAINS: ${WEB_SEARCH_DOMAINS:-eldenring.wiki.gg,eldenring.wiki.fextralife.com,en.bandainamcoent.eu}
+      WEB_SEARCH_DOMAINS_MODE: ${WEB_SEARCH_DOMAINS_MODE:-prefer}
       RAG_RETRIEVAL_TIMEOUT_SECONDS: ${RAG_RETRIEVAL_TIMEOUT_SECONDS:-20}
+      JINA_API_KEY: ${JINA_API_KEY:-}
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}   # prod overlay bật mặc định
+      RAG_RERANKER_PROVIDER: ${RAG_RERANKER_PROVIDER:-local}   # local = MiniLM-L12 ONNX trong api (không key); jina = API
+      RAG_RERANKER_LOCAL_MODEL: ${RAG_RERANKER_LOCAL_MODEL:-Xenova/ms-marco-MiniLM-L-12-v2}
+      RAG_RERANKER_LOCAL_THREADS: ${RAG_RERANKER_LOCAL_THREADS:-2}
+      RAG_RERANKER_LOCAL_MAX_CANDIDATES: ${RAG_RERANKER_LOCAL_MAX_CANDIDATES:-20}
+      RAG_RERANKER_LOCAL_MAX_CHARS: ${RAG_RERANKER_LOCAL_MAX_CHARS:-600}
+      RAG_RERANKER_LOCAL_BATCH_SIZE: ${RAG_RERANKER_LOCAL_BATCH_SIZE:-8}
+      RAG_RERANKER_MODEL: ${RAG_RERANKER_MODEL:-jina-reranker-v2-base-multilingual}
+      RAG_RERANKER_TIMEOUT_SECONDS: ${RAG_RERANKER_TIMEOUT_SECONDS:-3}
+      RAG_RERANKER_MAX_CANDIDATES: ${RAG_RERANKER_MAX_CANDIDATES:-30}
       RAG_THINKING_ENABLED: ${RAG_THINKING_ENABLED:-false}
       RAG_FORMAT_RETRIES: ${RAG_FORMAT_RETRIES:-1}
       RAG_MODELS_DIR: ${RAG_MODELS_DIR:-models/fastembed}
       RAG_BATCH_SIZE: ${RAG_BATCH_SIZE:-32}
       RAG_ENCODER_THREADS: ${RAG_ENCODER_THREADS:-2}
       RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-true}
-      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/clean_runs/s2-full-v2/images.csv}
+      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/delivery/final/clean/images.csv}
       RAG_IMAGES_DOCUMENTS: ${RAG_IMAGES_DOCUMENTS:-data/chunk_runs/s2-full-v1/documents.jsonl}
       RAG_IMAGES_ROOT: ${RAG_IMAGES_ROOT:-data/media/blobs}
       RAG_IMAGES_MANIFESTS: ${RAG_IMAGES_MANIFESTS:-data/crawl_runs/s2-full-20261028/media}
@@ -118,6 +152,7 @@ services:
       qdrant: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
+      # 18000: cổng nội bộ cố định của api (xem đầu file)
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18000/api/v1/health')"]
       interval: 15s
       start_period: 60s
@@ -134,7 +169,7 @@ services:
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
-      BOT_API_URL: http://api:18000
+      BOT_API_URL: http://api:18000   # cổng nội bộ cố định của api (xem đầu file)
       WEB_URL: ${WEB_URL:-http://localhost:15173}
     depends_on:
       api: { condition: service_healthy }

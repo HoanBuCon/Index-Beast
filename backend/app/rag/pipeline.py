@@ -1,190 +1,117 @@
-"""One orchestration path; explicit llm_only/rag, no hidden fallback or automatic web search.
+"""LangGraph request preparation; clients stay outside invocation state/checkpoints.
+
+Một đường RAG duy nhất: vòng lặp Agent (gọi tool) → context → prompt; Generator viết câu trả lời.
+Backend chỉ giữ guard xác định (schema, provenance, citation, budget, quyền bộ nhớ).
 
 Phụ trách: TV3 · [S2–S3] Pipeline
 """
 
-import asyncio
+import inspect
 import json
-import re
 import time
-import unicodedata
+from typing import TypedDict
 from urllib.parse import urlsplit
 
+from langchain_core.documents import Document
 from langchain_core.messages import convert_to_openai_messages
 from langchain_core.retrievers import BaseRetriever
-from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
+from langgraph.graph import END, START, StateGraph
 from langsmith import tracing_context
 
+from app.adapters.tavily import WebHit, web_hit_allowed
+from app.api.schemas.chat import ChatRequest
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
-from app.rag.overview import detect_overview, no_overview_evidence, overview_queries, prefer_overview
 from app.rag.prompts import generation_prompt, prompt
-from app.rag.query_plan import content_key, fuse_ranked, plan_queries
-from app.rag.reranker import NoReranker, Reranker
-from app.rag.retriever import document_to_hit, hit_to_document
-from app.rag.rewrite import rewrite
+from app.rag.retriever import document_to_hit
 from core.config import Settings
 from core.corpus import CorpusPolicy
-from core.errors import UnavailableError
+from core.errors import AppError, UnavailableError
 from core.types import Hit
 
 
-def language(question: str, requested: str) -> str:
-    if requested != "auto":
-        return requested
-    normalized = unicodedata.normalize("NFD", question.lower())
-    if (
-        any(unicodedata.combining(c) for c in normalized)
-        or "đ" in question.lower()
-        or re.search(r"\b(la ai|tai sao|cho toi|nhan vat|cot truyen|o dau|chao|cam on)\b", question.lower())
-    ):
-        return "vi"
-    return "en"
+class PreparationState(TypedDict, total=False):
+    req: ChatRequest
+    trace: dict
+    history: list[dict]
+    resolved_question: str
+    answer_language: str
+    started: float
+    prepared: Prepared
+    diagnostic_queries: bool
+    player: object
+    next_player: object
+    documents: list[Document]
+    web_hits: list[WebHit]
+    overview: bool
+    search_mode: str
+    memory_scope: object
+    memory_candidates: list[dict]
+    recent_turns: list[dict]
+    turn_profile: dict
+    agent_results: str
+    verify_coverage: bool
 
 
-def outside_scope(question: str) -> bool:
-    plain = "".join(c for c in unicodedata.normalize("NFD", question.lower()) if not unicodedata.combining(c))
-    return bool(
-        re.search(
-            r"\b(dark souls|bitcoin|fibonacci|cover letter|"
-            r"gaming laptop|python code|viet.*chuong trinh|"
-            r"(?:ignore|disregard|forget) (?:all |the |your )?(?:previous |prior |system )?(?:instructions|rules)|"
-            r"(?:reveal|print|show) (?:your |the )?(?:system prompt|api key)|"
-            r"bo qua (?:tat ca )?(?:huong dan|chi dan|quy tac)|tiet lo (?:system prompt|api key))\b",
-            plain,
-        )
+def content_key(hit: Hit) -> str | None:
+    p = hit.payload
+    # Không gộp nguồn gốc không rõ hoặc khác mục, khác điều kiện/bản phát hành/ảnh.
+    if not p.get("source_id") or not p.get("revision_id"):
+        return None
+    keys = (
+        "source",
+        "source_id",
+        "revision_id",
+        "url",
+        "section",
+        "text",
+        "lang",
+        "game_scope",
+        "release_scope",
+        "speaker",
+        "trigger",
+        "variant_context",
+        "image_ids",
+        "image_association",
+        "source_type",
+        "source_type_evidence",
+        "unit_kind",
+        "review_status",
+        "spoiler_level",
+        "indexbeast_admission",
+        "game_version",
+        "patch_version",
+        "upgrade_level",
+        "affinity",
+        "ng_cycle",
     )
-
-
-_SMALL_TALK = (
-    (
-        re.compile(
-            r"(?:xin )?chao(?: ban| cau| em| anh| chi)?|hi|hello|hey|good (?:morning|afternoon|evening)|"
-            r"(?:ban|cau|em) (?:la ai|la gi|ten gi|ten la gi)|who are you|what are you|what(?: is|'s) your name"
-        ),
-        {
-            "vi": "Chào bạn! Mình là IndexBeast, trợ lý Elden Ring của nhóm 4 Hollows. "
-            "Bạn muốn tìm hiểu cốt truyện, nhiệm vụ, trang bị, boss hay build?",
-            "en": "Hi! I'm IndexBeast, the Elden Ring assistant from team 4 Hollows. "
-            "Would you like to explore lore, quests, equipment, bosses or builds?",
-        },
-    ),
-    (
-        re.compile(r"(?:xin )?cam on(?: ban| nhe| nha)?|thanks?(?: you)?|thx"),
-        {
-            "vi": "Không có gì! Bạn cần tìm hiểu thêm gì về Elden Ring cứ hỏi nhé.",
-            "en": "You're welcome! Ask away if you want to know more about Elden Ring.",
-        },
-    ),
-)
-
-
-def small_talk(question: str, lang: str) -> str | None:
-    """Whole-message greetings/identity/thanks only; anything longer stays a game question."""
-    plain = "".join(c for c in unicodedata.normalize("NFD", question.lower()) if not unicodedata.combining(c))
-    text = " ".join(re.sub(r"[^\w\s']", " ", plain).split())
-    return next((replies[lang] for pattern, replies in _SMALL_TALK if pattern.fullmatch(text)), None)
-
-
-def unresolved_reference(question: str) -> bool:
-    """Conservative pronoun-leading gate, not NER. A named/content prefix is left to the LLM/rewrite."""
-    pronoun = re.search(r"\b(ông ta|cô ấy|anh ấy|nó|họ|he|she|him|her|it|they|them)\b", question, re.I)
-    if pronoun is None:
-        return False
-    words = re.findall(r"[^\W\d_]+", question[: pronoun.start()].lower())
-    question_words = set(
-        [
-            "who",
-            "what",
-            "why",
-            "where",
-            "when",
-            "how",
-            "which",
-            "is",
-            "are",
-            "was",
-            "were",
-            "does",
-            "did",
-            "do",
-            "can",
-            "could",
-            "would",
-            "should",
-            "will",
-            "tell",
-            "me",
-            "i",
-            "get",
-            "obtain",
-            "find",
-            "us",
-            "about",
-            "explain",
-            "describe",
-            "please",
-            "the",
-            "a",
-            "an",
-            "of",
-            "to",
-            "for",
-            "and",
-            "you",
-            "your",
-            "happened",
-            "happen",
-            "tại",
-            "sao",
-            "vì",
-            "ai",
-            "là",
-            "ở",
-            "đâu",
-            "khi",
-            "nào",
-            "hãy",
-            "cho",
-            "tôi",
-            "biết",
-            "giải",
-            "thích",
-            "về",
-            "và",
-            "lấy",
-            "tìm",
-            "nhặt",
-            "kiếm",
-            "đã",
-            "có",
-            "thể",
-        ]
-    )
-    return all(word in question_words for word in words)
+    return json.dumps({key: p.get(key) for key in keys}, sort_keys=True, ensure_ascii=False)
 
 
 def select_context(
-    hits: list[Hit], limit: int, budget: int, *, policy: CorpusPolicy | None = None, spoilers: bool = True
+    hits: list[Hit],
+    limit: int,
+    budget: int,
+    *,
+    policy: CorpusPolicy | None = None,
 ) -> list[Hit]:
+    """Chỉ nhận vào, khử trùng và ngân sách. Thứ tự là của Agent (hoặc của retrieval), không bao giờ xếp lại ở đây."""
     admission = policy or CorpusPolicy()
     selected, seen, seen_content, used = [], set(), set(), 0
     for hit in hits:
         p = hit.payload
-        key = content_key(hit)
-        if (
-            hit.id in seen
-            or (key is not None and key in seen_content)
-            or admission.exclusion_reason(p, spoilers=spoilers)
-        ):
+        if not isinstance(hit, WebHit) and admission.exclusion_reason(p):
             continue
         if not all(isinstance(p.get(k), str) and p[k].strip() for k in ("text", "title", "url")):
             continue
         if urlsplit(p["url"]).scheme not in {"https", "http"} or not urlsplit(p["url"]).netloc:
             continue
+        key = content_key(hit)
+        if hit.id in seen or (key is not None and key in seen_content):
+            continue
         size = len(json.dumps(context_item(hit, len(selected) + 1), ensure_ascii=False)) + 2
         if used + size > budget:
-            continue  # Whole chunks only: do not silently cut dialogue/conditions.
+            continue  # Chỉ lấy nguyên chunk: không lặng lẽ cắt hội thoại/điều kiện.
         selected.append(hit)
         seen.add(hit.id)
         if key is not None:
@@ -204,9 +131,10 @@ def context_item(hit: Hit, index: int) -> dict:
         "title": p["title"],
         "section": p.get("section"),
         "source_type": p["source_type"],
+        "origin": "web" if isinstance(hit, WebHit) else "corpus",
         "text": p["text"],
     }
-    # Preserve provided unknown/null values, without fabricating absent metadata or wasting budget on it.
+    # Giữ nguyên giá trị unknown/null được cung cấp, không bịa metadata còn thiếu hay tốn ngân sách cho nó.
     for key in (
         "source_type_evidence",
         "source",
@@ -225,11 +153,16 @@ def context_item(hit: Hit, index: int) -> dict:
         "speaker",
         "variant_context",
         "unit_kind",
+        "retrieved_at",
+        "local_candidate_origin",
+        "rule_kind",
     ):
         if key in p:
             item[key] = p[key]
     if "indexbeast_admission" in p:
         item["admission_policy"] = p["indexbeast_admission"]
+    if isinstance(hit, WebHit):
+        item["source_domain"] = urlsplit(p["url"]).hostname
     units = evidence_units(p["text"])
     item["evidence_units"] = {"q0": "entire source text above"} if "q0" in units else units
     return item
@@ -241,216 +174,229 @@ class ChatPipeline:
         settings: Settings,
         llm: LLM | None,
         retriever: BaseRetriever | None = None,
-        reranker: Reranker | None = None,
+        web_search=None,
+        memory=None,
     ):
         self.settings, self.llm, self.retriever = settings, llm, retriever
+        self.web_search = web_search
+        self.memory = memory
         self.policy = CorpusPolicy.from_settings(settings)
         store = getattr(retriever, "store", None)
         if store is not None and store.policy != self.policy:
             raise ValueError("Retriever and pipeline must use the same corpus policy/languages")
-        self.reranker = (reranker or NoReranker()) if settings.chat_mode == "rag" else None
         self.generator = (
             Generator(llm, thinking=settings.rag_thinking_enabled, format_retries=settings.rag_format_retries)
             if llm is not None
             else None
         )
         self.template = generation_prompt()
-        rag_steps = (
-            RunnableLambda(self._rewrite, name="rewrite")
-            | RunnableLambda(self._retrieve, name="hybrid_retrieve")
-            | RunnableLambda(self._rerank, name="optional_rerank")
-            | RunnableLambda(self._context, name="select_numbered_context")
+        graph = StateGraph(PreparationState)
+        for name, node in (
+            ("scope", self._scope),
+            ("memory", self._memory),
+            ("agent", self._agent),
+            ("context", self._context),
+            ("prompt", self._prompt_node),
+        ):
+            graph.add_node(name, self._guarded(name, node))
+        graph.add_edge(START, "scope")
+        graph.add_edge("scope", "memory")
+        graph.add_edge("memory", "agent")
+        graph.add_conditional_edges(
+            "agent",
+            lambda s: "answer" if s["prepared"].static_answer is not None else "context",
+            {"context": "context", "answer": "prompt"},
         )
-        self.prepare_chain = (
-            RunnableLambda(self._scope, name="scope_and_language")
-            | RunnableBranch(
-                (lambda state: state["prepared"].mode == "rag" and state["prepared"].static_answer is None, rag_steps),
-                RunnablePassthrough(),
-            )
-            | RunnableLambda(self._prompt, name="prepare_chat_prompt")
-        )
+        graph.add_edge("context", "prompt")
+        graph.add_edge("prompt", END)
+        # State riêng cho mỗi lần gọi, ghi đè; không dùng MessagesState/append reducer hay checkpointer dùng chung.
+        self.prepare_graph = graph.compile(name="indexbeast_prepare")
 
-    async def prepare(self, req, history: list[dict], *, diagnostic_queries: bool = False) -> Prepared:
+    @staticmethod
+    def _guarded(name, node):
+        async def run(state: PreparationState):
+            started = time.perf_counter()
+            if (trace := state.get("trace")) is not None:
+                # Phần chẩn đoán hạn chót đọc giá trị này khi lượt bị hủy giữa node.
+                trace["current_node"] = name
+            try:
+                result = node(state)
+                if inspect.isawaitable(result):
+                    result = await result
+                trace = state["prepared"].trace
+                trace.setdefault("graph_nodes", []).append(name)
+                trace.setdefault("node_ms", {})[name] = round((time.perf_counter() - started) * 1000, 2)
+                trace.pop("current_node", None)
+                return result
+            except AppError as exc:
+                if state.get("diagnostic_queries") and "prepared" in state:
+                    exc.rag_diagnostics = dict(state["prepared"].trace)
+                raise
+
+        return run
+
+    async def prepare(
+        self,
+        req,
+        history: list[dict],
+        *,
+        diagnostic_queries: bool = False,
+        player=None,
+        memory_scope=None,
+        started: float | None = None,
+        trace: dict | None = None,
+    ) -> Prepared:
+        """`trace` là dict của bên gọi cho trace của lượt, để thông tin chẩn đoán còn lại khi lượt bị hủy."""
         state = {
             "req": req,
             "history": history,
-            "started": time.perf_counter(),
+            "trace": trace if trace is not None else {},
+            "started": started if started is not None else time.perf_counter(),
             "diagnostic_queries": diagnostic_queries,
+            "player": player,
+            "memory_scope": memory_scope,
+            "resolved_question": req.message,
         }
         with tracing_context(enabled=False):
-            try:
-                return await self.prepare_chain.ainvoke(state)
-            except UnavailableError as exc:
-                if diagnostic_queries and "prepared" in state:
-                    # Opt-in local benchmark data only; API error schema/loggers remain unchanged.
-                    exc.rag_diagnostics = dict(state["prepared"].trace)
-                raise
+            result = await self.prepare_graph.ainvoke(state, config={"recursion_limit": 24})
+            return result["prepared"]
 
     def _scope(self, state: dict) -> dict:
         req = state["req"]
         if self.llm is None:
             raise UnavailableError("Chưa cấu hình DeepSeek API key.")
         mode = self.settings.chat_mode
-        lang = language(req.message, req.options.lang)
-        prepared = Prepared(mode, lang, [], trace={"mode": mode, "rewrite_fallback": False})
-        state.update(prepared=prepared, query=req.message, documents=[])
-        if outside_scope(req.message):
-            prepared.static_answer = (
-                "Mình có thể giúp bạn về Elden Ring: cốt truyện, nhiệm vụ, trang bị, cơ chế và hướng build. "
-                "Bạn muốn tìm hiểu phần nào trong game?"
-                if lang == "vi"
-                else "I can help with Elden Ring lore, quests, equipment, mechanics and build ideas. "
-                "What would you like to explore in the game?"
-            )
-        elif reply := small_talk(req.message, lang):
-            # Không cần bằng chứng nên không gọi rewrite/retrieval; rewrite sẽ coi đây là out_of_scope.
-            prepared.static_answer = reply
-        if mode == "rag" and prepared.static_answer is None and self.settings.rag_overview_enabled:
-            state["overview"] = detect_overview(req.message)
-            if state["overview"] is not None:
-                prepared.trace["request_kind"] = "overview"
-                prepared.trace["overview_topic"] = state["overview"].topic
+        # Không đoán từ tin nhắn (22/11): lựa chọn của người chơi, nếu không thì ngôn ngữ Agent khai báo (mặc định vi).
+        lang = req.options.lang if req.options.lang != "auto" else "vi"
+        trace = state.get("trace")
+        if trace is None:
+            trace = state["trace"] = {}
+        trace["mode"] = mode
+        prepared = Prepared(mode, lang, [], trace=trace)
+        state.update(prepared=prepared, documents=[], answer_language=lang)
+        # Cùng mặc định trên mọi kênh (22/11: Discord không còn bị ép auto); Agent tự quyết khi nào tìm kiếm.
+        requested = req.options.web_search or self.settings.web_search_mode
+        state["search_mode"] = requested if self.settings.web_search_available else "off"
+        prepared.trace["web_search"] = {"requested": requested, "mode": state["search_mode"], "status": "not_run"}
+        state["verify_coverage"] = self.web_search is not None and state["search_mode"] == "auto"
+        if not state["verify_coverage"]:
+            prepared.max_calls = self.settings.chat_agent_max_calls
         return state
 
-    async def _rewrite(self, state: dict) -> dict:
-        p = state["prepared"]
-        if state.get("overview") is not None:
-            # A recognized global topic is already a valid scope, not an ambiguous referent.
-            # The bounded overview query plan supplies English search cues without a paid rewrite call.
-            p.trace["rewrite"] = {"status": "not_run", "reason": "overview_query_plan", "model_calls": 0}
+    async def _agent(self, state):
+        from app.rag.true_agent import run_agent
+
+        return await run_agent(self, state)
+
+    def _bounded(self, rows: list[dict]) -> list[dict]:
+        # Số ứng viên và số ký tự là ngân sách, không phải quyết định về độ liên quan ngữ nghĩa.
+        bounded, used = [], 0
+        for row in rows[: self.settings.chat_history_messages]:
+            text = row.get("text", row.get("content", ""))
+            if used + len(text) <= self.settings.chat_history_chars:
+                bounded.append(row)
+                used += len(text)
+        return bounded
+
+    def _recent_turns(self, history: list[dict]) -> list[dict]:
+        """Các lượt gần nhất của hội thoại này (người chơi và trợ lý), trong ngân sách lịch sử.
+
+        Giúp Agent trả lời câu hỏi về chính cuộc hội thoại ("tôi vừa hỏi gì?"). Không bao giờ là evidence
+        về game: Agent chỉ nhắc lại chúng trong reply. Lượt cũ hơn bị bỏ trước.
+        """
+        rows, used = [], 0
+        for msg in reversed(history[-self.settings.chat_history_messages :]):
+            text = (msg.get("content") or "")[:800]
+            if not text or used + len(text) > self.settings.chat_history_chars:
+                break
+            rows.append({"role": msg.get("role"), "text": text})
+            used += len(text)
+        return list(reversed(rows))
+
+    async def _memory(self, state: PreparationState) -> dict:
+        p, req = state["prepared"], state["req"]
+        if not self.settings.chat_history_messages or not self.settings.chat_history_chars:
+            state["memory_candidates"], state["history"], state["recent_turns"] = [], [], []
+            p.trace["memory"] = {"method": "disabled", "status": "disabled"}
             return state
-        if self.settings.rag_rewrite_enabled:
-            diagnostics = {}
-            rewritten, fallback = await rewrite(
-                self.llm,
-                state["query"],
-                state["history"],
-                p.lang,
-                deadline_seconds=self.settings.rag_rewrite_timeout_seconds,
-                max_tokens=self.settings.rag_rewrite_max_tokens,
-                diagnostics=diagnostics,
-            )
-            p.trace["rewrite"] = diagnostics
-            p.trace["rewrite_fallback"] = fallback
-            if rewritten.out_of_scope:
-                p.static_answer = (
-                    "Câu này nằm ngoài Elden Ring nên mình không giúp được. "
-                    "Bạn muốn hỏi về cốt truyện, nhiệm vụ, trang bị, boss hay build?"
-                    if p.lang == "vi"
-                    else "That's outside Elden Ring, so I can't help with it. "
-                    "Would you like to ask about lore, quests, equipment, bosses or builds?"
-                )
-            elif rewritten.ambiguous or (fallback and not state["history"] and unresolved_reference(state["query"])):
-                p.static_answer = (
-                    "Bạn đang hỏi nhân vật, trang bị, boss hoặc nhiệm vụ nào trong Elden Ring?"
-                    if p.lang == "vi"
-                    else "Which Elden Ring character, equipment, boss or quest do you mean?"
-                )
-            else:
-                state["query"] = rewritten.standalone_query_en
-        elif not state["history"] and unresolved_reference(state["query"]):
-            p.static_answer = "Bạn đang hỏi nhân vật nào?" if p.lang == "vi" else "Which character do you mean?"
-        return state
-
-    async def _retrieve(self, state: dict) -> dict:
-        if state["prepared"].static_answer is None:
-            if self.retriever is None:
-                raise UnavailableError("Kho tri thức RAG chưa được cấu hình.")
-            # Copy only the Pydantic retriever wrapper; clients/encoder remain shared.
-            retriever = self.retriever.model_copy(
-                update={
-                    "spoilers": state["req"].options.spoilers,
-                    "limit": self.settings.rag_prefetch,
-                }
-            )
-            queries = plan_queries(state["req"].message, state["query"], self.settings.rag_query_mode)
-            if state.get("overview") is not None:
-                queries = overview_queries(queries, state["overview"])
-            rows, diagnostics = [], []
-            for kind, query in queries:
-                started = time.perf_counter()
-                row = {"kind": kind}
-                if state.get("diagnostic_queries"):
-                    row["query"] = query
-                try:
-                    async with asyncio.timeout(self.settings.rag_retrieval_timeout_seconds / len(queries)):
-                        documents = await retriever.ainvoke(query)
-                    hits = [document_to_hit(d) for d in documents[: self.settings.rag_prefetch]]
-                    rows.append(hits)
-                    row.update(status="ok", candidates=len(hits))
-                except (UnavailableError, TimeoutError) as exc:
-                    row.update(status="error", error_type=type(exc).__name__)
-                row["elapsed_ms"] = round((time.perf_counter() - started) * 1000, 2)
-                diagnostics.append(row)
-            p = state["prepared"]
-            p.trace["retrieval_queries"] = diagnostics
-            if not rows:
-                raise UnavailableError("Không thể truy vấn kho tri thức RAG.")
-            # One query keeps its native Qdrant score. Dual-query scores are rank fusion, NOT probabilities.
-            hits = rows[0] if len(rows) == 1 else fuse_ranked(rows, self.settings.rag_prefetch)
-            state["documents"] = [hit_to_document(h) for h in hits]
-            p.trace["retrieved"] = [
+        if self.memory is not None and state.get("memory_scope") is not None:
+            rows, diagnostic = await self.memory.recall(state["memory_scope"], req.message)
+        else:
+            # Chế độ RAM không tuyên bố có bộ nhớ bền/ngữ nghĩa. Chỉ đưa hai mốc là câu của người dùng.
+            users = [r for r in state["history"] if r.get("role") == "user"][-2:]
+            rows = [
                 {
-                    "id": h.id,
-                    "score": h.score,
-                    "chunk_id": h.payload.get("artifact_chunk_id", h.id),
-                    "title": h.payload.get("title"),
-                    "url": h.payload.get("url"),
+                    "id": r.get("message_id", str(i)),
+                    "source_id": r.get("message_id", str(i)),
+                    "text": r["content"],
+                    "kind": "topic",
+                    "recent": True,
                 }
-                for h in hits
+                for i, r in enumerate(users)
             ]
+            diagnostic = {"method": "ram_recent", "status": "limited", "candidates": len(rows)}
+        rows = self._bounded(rows)
+        state["recent_turns"] = self._recent_turns(state["history"])
+        if req.channel == "discord" and (req.external_ref or "").startswith("discord:thread:"):
+            rows = [row for row in rows if row.get("kind") != "fact"]
+        state["memory_candidates"] = rows
+        state["history"] = []
+        p.trace["memory"] = diagnostic
         return state
 
-    async def _rerank(self, state: dict) -> dict:
-        if state["prepared"].static_answer is None:
-            hits = [document_to_hit(d) for d in state["documents"]]
-            ranked = await self.reranker.rank(state["query"], hits)
-            if state.get("overview") is not None:
-                ranked = prefer_overview(ranked, state["overview"])
-                state["prepared"].trace["context_ordering"] = "overview_title_section_preference"
-            state["documents"] = [hit_to_document(h) for h in ranked]
-        return state
+    def _prompt_node(self, state: PreparationState) -> dict:
+        return {"prepared": self._prompt(state)}
 
     def _context(self, state: dict) -> dict:
         p = state["prepared"]
         if p.static_answer is None:
+            # Chỉ evidence Agent đã chọn (22/11: server không còn dự phòng bằng mọi thứ tìm được).
+            web_hits = [h for h in state.get("web_hits", []) if web_hit_allowed(h, self.settings)]
+            by_id = {h.id: h for h in [document_to_hit(d) for d in state["documents"]] + web_hits}
+            p.trace.setdefault("evidence_selection", {"method": "model", "ids": []})
+            candidates = [by_id[i] for i in p.trace["evidence_selection"]["ids"] if i in by_id]
             p.hits = select_context(
-                [document_to_hit(d) for d in state["documents"]],
+                candidates,
                 self.settings.rag_top_k,
                 self.settings.rag_context_chars,
                 policy=self.policy,
-                spoilers=state["req"].options.spoilers,
             )
             p.trace["selected_ids"] = [h.id for h in p.hits]
-            if not p.hits:
-                p.static_answer = (
-                    no_overview_evidence(state["overview"], p.lang)
-                    if state.get("overview") is not None
-                    else (
-                        "Mình chưa tìm được nguồn đủ sát câu hỏi này để trả lời chắc chắn. "
-                        "Bạn có thể nêu tên trang bị, boss, nhiệm vụ hoặc chi tiết cần kiểm tra không?"
-                        if p.lang == "vi"
-                        else "I couldn't find evidence close enough to answer reliably. "
-                        "Could you name the equipment, boss, quest or specific detail you want to check?"
-                    )
-                )
+            # Không có evidence: bước viết nói rõ còn thiếu gì (câu trả lời insufficient), không phải một câu cố định
+            # của server.
         return state
 
     def _prompt(self, state: dict) -> Prepared:
         p, req = state["prepared"], state["req"]
+        player = state.get("next_player")
+        # Điều kiện của lượt này, gồm cả các giả định Agent đã nêu (không lưu vào player).
+        profile = state.get("turn_profile")
+        if profile is None:
+            profile = {c["key"]: c["value"] for c in player.get("constraints", [])} if isinstance(player, dict) else {}
         p.template = self.template
         p.values = {
             "persona": prompt("persona"),
             "lang": p.lang,
-            "spoilers": req.options.spoilers,
-            "policy": prompt("answer" if p.mode == "rag" else "llm_only")
-            + ("\n" + prompt("overview") if state.get("overview") is not None else ""),
-            "history": state["history"],
+            "policy": prompt("answer")
+            + ("\n" + prompt("gameplay_advice") if p.gameplay_advice else "")
+            + ("\n" + prompt("overview") if state.get("overview") else ""),
+            # Lượt cũ không thể làm lệch phần sinh câu trả lời hay giả làm evidence mới.
+            "history": [],
             "payload": json.dumps(
-                {"question": req.message, "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)]},
+                {
+                    "question": state.get("resolved_question", req.message),
+                    "original_user_message": req.message,
+                    "answer_language": "Vietnamese (tiếng Việt)" if p.lang == "vi" else "English",
+                    "evidence": [context_item(h, i) for i, h in enumerate(p.hits, 1)],
+                    **({"player_profile": profile} if profile else {}),
+                    # Các số Agent tính bằng run_python (ví dụ phân bổ build); dùng nguyên như vậy.
+                    **({"agent_results": state["agent_results"]} if state.get("agent_results") else {}),
+                },
                 ensure_ascii=False,
             ),
         }
+        if player is not None:
+            p.values["player_profile"] = profile
         p.messages = convert_to_openai_messages(self.template.invoke(p.values).to_messages())
         p.trace["prepare_ms"] = round((time.perf_counter() - state["started"]) * 1000, 2)
         return p

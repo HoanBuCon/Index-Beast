@@ -1,4 +1,4 @@
-"""Pilot admission and indexing preflight. Only synthetic artifacts/vectors; no external services."""
+"""Nhận vào thử nghiệm và kiểm trước khi index. Chỉ artifact/vector tổng hợp; không dịch vụ bên ngoài."""
 
 import hashlib
 import json
@@ -179,7 +179,7 @@ def test_cli_dry_run_and_invalid_real_run_cannot_construct_clients(tmp_path, mon
     assert report["excluded_by_reason"] == {"language_not_selected": 1}
     assert path.read_bytes() == before
     path = artifact(tmp_path, [record(), record(2, text=" ")])
-    assert main(["index", "--input", str(path)]) == 2  # invalid preflight stops even without --dry-run
+    assert main(["index", "--input", str(path)]) == 2  # preflight không hợp lệ thì dừng kể cả khi không có --dry-run
     report = json.loads(capsys.readouterr().out)
     assert report["accepted"] == 1 and report["invalid"][0]["line"] == 2
 
@@ -235,9 +235,9 @@ async def test_pilot_index_retrieve_context_share_policy_ids_and_provenance():
         assert "review_status" not in retrieved.payload
         assert retrieved.payload["custom"] == original["custom"]
         assert document_to_hit(hit_to_document(retrieved)) == retrieved
-        safe = await HybridRetriever(SyntheticEncoder(), store).retrieve("Ranni", spoilers=False)
-        assert [h.id for h in safe] == [str(chunks[1].point_uuid)]
-        assert len(select_context(hits, 5, 12000, policy=PILOT, spoilers=False)) == 1
+        # Đã bỏ lọc spoiler: chunk gắn nhãn spoiler được lấy ra như mọi chunk khác.
+        everything = await HybridRetriever(SyntheticEncoder(), store).retrieve("Ranni")
+        assert {h.id for h in everything} == {str(c.point_uuid) for c in chunks}
         with pytest.raises(ValueError):
             await index_chunks([ChunkRecord.model_validate(record(3, lang="ja"))], SyntheticEncoder(), store, 1)
     finally:
@@ -265,8 +265,24 @@ async def test_pilot_rrf_filters_all_branches_and_rechecks_payload_policy():
         assert "review_status" not in fields
 
 
+@pytest.mark.parametrize("mode", ["dense", "bm25"])
+async def test_single_retriever_ablation_modes_keep_the_policy_filter(mode):
+    from types import SimpleNamespace
+
+    client = AsyncMock()
+    client.query_points.return_value = SimpleNamespace(points=[])
+    store = QdrantStore(client, "existing", PILOT, mode=mode)
+    await store.search(Encoded([0.5] * 384, [7], [1.0]), limit=30)
+    query = client.query_points.call_args.kwargs
+    assert query["using"] == mode and "prefetch" not in query
+    assert (query["query"] == [0.5] * 384) if mode == "dense" else (query["query"].indices == [7])
+    assert {c.key for c in query["query_filter"].must} >= {"game_scope", "lang", ADMISSION_KEY}
+    with pytest.raises(ValueError):
+        QdrantStore(client, "existing", PILOT, mode="rrf-off")
+
+
 def test_direct_pipeline_rejects_policy_mismatch():
-    store = QdrantStore(AsyncMock(), "existing")  # reviewed policy
+    store = QdrantStore(AsyncMock(), "existing")  # chính sách đã review
     with pytest.raises(ValueError, match="same corpus policy"):
         ChatPipeline(Settings(_env_file=None, chat_mode="rag"), None, HybridRetriever(SyntheticEncoder(), store))
 
@@ -280,8 +296,8 @@ async def test_retrieval_diagnostic_is_read_only_and_closes_client(monkeypatch, 
     monkeypatch.setattr("scripts.check_retrieval.AsyncQdrantClient", lambda **_: client)
     monkeypatch.setattr("scripts.check_retrieval.FastEmbedEncoder", lambda *_, **__: SyntheticEncoder())
 
-    async def retrieve(self, query, *, spoilers):
-        assert self.store.policy == PILOT and query == "Ranni" and spoilers
+    async def retrieve(self, query):
+        assert self.store.policy == PILOT and query == "Ranni"
         if fail:
             raise UnavailableError("unavailable")
         return [Hit("point", 0.1, record())]
@@ -289,9 +305,9 @@ async def test_retrieval_diagnostic_is_read_only_and_closes_client(monkeypatch, 
     monkeypatch.setattr(HybridRetriever, "retrieve", retrieve)
     if fail:
         with pytest.raises(UnavailableError):
-            await check_retrieval(Settings(_env_file=None), "Ranni", limit=5, spoilers=True)
+            await check_retrieval(Settings(_env_file=None), "Ranni", limit=5)
     else:
-        result = await check_retrieval(Settings(_env_file=None), "Ranni", limit=5, spoilers=True)
+        result = await check_retrieval(Settings(_env_file=None), "Ranni", limit=5)
         assert result["hits"][0]["point_id"] == "point"
         assert result["hits"][0]["release_scope"] == "unknown"
         assert result["hits"][0]["review_status"] is None

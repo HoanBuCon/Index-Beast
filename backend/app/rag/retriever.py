@@ -3,20 +3,37 @@
 Phụ trách: TV3 · [S2] Module retrieval hybrid
 """
 
+import asyncio
+import time
 from copy import deepcopy
 from typing import Any
 
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from core.errors import UnavailableError
 from core.types import Encoder, Hit
 from core.vector.store import QdrantStore
 
 
+async def rank_with_deadline(reranker, query: str, hits: list[Hit], deadline: float | None) -> list[Hit]:
+    if reranker is None:
+        return hits
+    if deadline is None:
+        return await reranker.rank(query, hits)
+    remaining = deadline - time.perf_counter()
+    if remaining <= 0:
+        return hits
+    try:
+        async with asyncio.timeout(remaining):
+            return await reranker.rank(query, hits)
+    except TimeoutError:
+        return hits
+
+
 def hit_to_document(hit: Hit) -> Document:
-    # Namespaced metadata is lossless even if source payload already has id/score fields.
+    # Metadata có namespace nên không mất dữ liệu kể cả khi payload nguồn đã có trường id/score.
     return Document(
         id=hit.id,
         page_content=hit.payload["text"],
@@ -41,7 +58,10 @@ class HybridRetriever(BaseRetriever):
     encoder: Any
     store: QdrantStore
     limit: int = 30
-    spoilers: bool = True
+    reranker: Any = Field(default=None, exclude=True, repr=False)
+    reranker_timeout_seconds: float = 0
+    search_timeout_seconds: float = 20
+    rerank_deadline: float | None = None
 
     def __init__(self, encoder: Encoder, store: QdrantStore, limit: int = 30, **kwargs):
         super().__init__(encoder=encoder, store=store, limit=limit, **kwargs)
@@ -52,19 +72,24 @@ class HybridRetriever(BaseRetriever):
     async def _aget_relevant_documents(self, query: str, *, run_manager) -> list[Document]:
         return [hit_to_document(h) for h in await self._search(query)]
 
-    async def retrieve(self, query: str, *, spoilers: bool = True) -> list[Hit]:
-        # Backward-compatible domain API; delegates to the same LangChain retriever.
+    async def retrieve(self, query: str) -> list[Hit]:
+        # API miền tương thích ngược; ủy quyền cho cùng retriever LangChain.
         from langsmith import tracing_context
 
         with tracing_context(enabled=False):
-            docs = await self.model_copy(update={"spoilers": spoilers}).ainvoke(query)
+            docs = await self.ainvoke(query)
         return [document_to_hit(d) for d in docs]
 
     async def _search(self, query: str) -> list[Hit]:
         try:
-            await self.store.ready()  # Check before any model load/download.
-            vectors = await self.encoder.encode([query], query=True)
-            return await self.store.search(vectors[0], limit=self.limit, spoilers=self.spoilers)
+            # Retrieval không được dùng ngân sách dự phòng riêng của provider.
+            async with asyncio.timeout(self.search_timeout_seconds):
+                await self.store.ready()  # Kiểm trước mọi lần nạp/tải model.
+                vectors = await self.encoder.encode([query], query=True)
+                hits = await self.store.search(vectors[0], limit=self.limit)
+            # Ranh giới dùng chung cho cả graph cũ và các lời gọi ainvoke trực tiếp của Tool Agent.
+            # Giữ đủ tập ứng viên: Agent vẫn là bên chọn evidence cuối cùng.
+            return await rank_with_deadline(self.reranker, query, hits, self.rerank_deadline)
         except UnavailableError:
             raise
         except Exception:

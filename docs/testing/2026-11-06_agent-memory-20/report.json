@@ -1,0 +1,122 @@
+{
+  "created_at": "2026-11-05T18:40:40.707673+00:00",
+  "status": "blocked",
+  "manifest": {
+    "version": "agent-semantic-memory-v1",
+    "purpose": "development smoke and provisional review, not held-out evaluation",
+    "turn_limit": 20,
+    "mode": "auto",
+    "maximum_logical_model_calls_per_turn": 6,
+    "maximum_search_calls_per_turn": 1,
+    "maximum_extract_calls_per_turn": 1,
+    "standalone_ids": [
+      "IB-GS-001",
+      "IB-GS-041",
+      "IB-GS-091",
+      "IB-GS-096",
+      "IB-GS-005",
+      "IB-GS-047",
+      "IB-GS-086",
+      "IB-GS-100"
+    ],
+    "scenarios": [
+      {
+        "id": "VI-FAMILY",
+        "lang": "vi",
+        "turns": [
+          {
+            "question": "Gia phả Marika",
+            "expected": "Retrieve family evidence; no generic clarification"
+          },
+          {
+            "question": "Ranni là ai?",
+            "expected": "New topic; do not carry Marika constraints"
+          },
+          {
+            "question": "nói tiếp về gia phả",
+            "restart_before": true,
+            "expected": "Recall user family topic after service restart; retrieve Marika evidence"
+          }
+        ]
+      },
+      {
+        "id": "VI-BUILD",
+        "lang": "vi",
+        "turns": [
+          {
+            "question": "Chia chỉ số Moonveil level 100",
+            "expected": "Ask only essential missing player details"
+          },
+          {
+            "question": "Samurai, PvE",
+            "restart_before": true,
+            "expected": "Restore pending request; keep Moonveil and level 100"
+          },
+          {
+            "question": "đổi level 120",
+            "expected": "Correction replaces level 100; no conflicting levels"
+          }
+        ]
+      },
+      {
+        "id": "EN-QUEST",
+        "lang": "en",
+        "turns": [
+          {
+            "question": "I have given Ranni the Fingerslayer Blade. What should I do next?",
+            "expected": "Quest milestone; do not demand unrelated build profile"
+          },
+          {
+            "question": "Where can I find it?",
+            "expected": "Resolve only if one referent is established by user context; otherwise clarify"
+          },
+          {
+            "question": "I mean the Carian Inverted Statue.",
+            "expected": "Resolve the acquisition request using the explicit subject"
+          }
+        ]
+      },
+      {
+        "id": "EN-ROUTE",
+        "lang": "en",
+        "turns": [
+          {
+            "question": "Where should I go next?",
+            "expected": "Ask for relevant start/goal rather than assume boss kills"
+          },
+          {
+            "question": "I am at Liurnia, aiming to reach Altus Plateau.",
+            "endpoint": "chat/stream",
+            "expected": "Resume route with supplied start/goal; only evidence-backed steps"
+          },
+          {
+            "question": "Forget the route. How do I get Great Stars?",
+            "expected": "New acquisition request outside old weapon allowlist"
+          }
+        ]
+      }
+    ]
+  },
+  "manifest_sha256": "8cf5d2cc3a75ee9c4cbd0725ee3e51f39a3bb7104629e785459c0b30bbf6b676",
+  "planned_turns": 20,
+  "attempted_turns": 0,
+  "rows": [],
+  "preflight": [
+    {
+      "resource": "PostgreSQL",
+      "status": "error",
+      "error_type": "ConnectionRefusedError"
+    }
+  ],
+  "test_database": "indexbeast_agent_test_d5e489154c",
+  "test_memory_collection": "ib_agent_test_d5e489154c",
+  "logical_model_calls": [],
+  "tavily_requests": [],
+  "transport": "in-process ASGI HTTP, real model/tools/encoder when preflight passes",
+  "limitations": [
+    "Development set; no independent human review",
+    "HTTP success is not correctness",
+    "Service recreation tests state restoration, not a Windows reboot",
+    "SSE usage may be unavailable"
+  ]
+}

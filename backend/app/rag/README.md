@@ -1,4 +1,179 @@
-# IndexBeast: LangChain và corpus thử nghiệm
+# IndexBeast: LangGraph, LangChain và corpus thử nghiệm
+
+## Hiện trạng — 24/11/2026
+
+Đọc mục này trước. Các mục có ngày bên dưới là nhật ký thay đổi; nhiều chi tiết trong đó (rewrite truy vấn, Agent
+decision, Tool Agent, assessor, calculator build, gói `knowledge/gameplay.json`, recall lexical) đã bị gỡ.
+
+Luồng một lượt RAG ([pipeline.py](pipeline.py)): `scope` → `memory` (ứng viên ký ức, lượt gần đây) → `agent`
+(vòng lặp tool của [true_agent.py](true_agent.py), quyết định theo [ADR 006](../../../docs/adr/006-true-agent.md)) →
+`context` (chỉ evidence Agent chọn, tối đa 5, trong ngân sách ký tự) → `prompt`. Sau đó [generator.py](generator.py)
+viết JSON có trích dẫn, kiểm, sinh lại tối đa một lần, gọi Answer Guard khi lộ tên trường nội bộ. Chọn ảnh chạy
+song song với bước viết ([answer_media.py](../services/answer_media.py)), chỉ giữ ảnh của nguồn được trích dẫn.
+
+Agent quyết: hiểu yêu cầu, ngôn ngữ trả lời, truy vấn, tìm web, chọn tên (`check_name` chỉ trả các tiêu đề tìm
+được, không chấm chính tả), điều kiện người chơi,
+tính build bằng `run_python`, chọn evidence, hỏi lại, câu cần thinking (`needs_reasoning`). Server chỉ giữ guard
+xác định:
+
+| Guard | Ở đâu | Vì sao giữ |
+|---|---|---|
+| Schema tham số tool, tool không có trong chính sách (web tắt, hết lượt hỏi lại) | `true_agent.execute` | Hợp đồng tool |
+| Điều kiện người chơi phải có nguyên văn trong nguồn ghi kèm; giả định không đè lời người chơi | `set_conditions` | Chống bịa dữ kiện người chơi |
+| Corpus policy (scope, ngôn ngữ, admission) cho mọi hit local | `admit`, `select_context` | Phạm vi dữ liệu |
+| Web `always`: phải gọi `search_web` trước `finish` | `execute` | Lựa chọn của người chơi |
+| Nhắc một lần khi `finish` không có `evidence_ids` mà đã tìm được nguồn | `execute` | Agent tự quyết lại |
+| Ngân sách lượt gọi model và thời gian; lượt cuối chỉ cho `finish` | `run_agent` | Hạn 45 s của bot |
+| JSON, trích dẫn khớp nguồn, quote nguyên văn, không URL do model viết | `validate_answer` | Grounding hình thức |
+| Ký ức `fact` không dùng trong thread Discord chung | `_memory` | Quyền riêng tư |
+| Tên trường nội bộ trong câu gửi người chơi (RAG, `reply`, `ask_user`) được thay bằng chữ thường | `plain_field_names` | Không lộ nội bộ |
+
+Quy tắc level có nguồn (tổng 8 chỉ số = level + 79) luôn có trong `built_in_sources` để Agent trích dẫn
+([gameplay_knowledge.py](gameplay_knowledge.py)); chỉ vào câu trả lời khi Agent chọn.
+
+Prompt: [true_agent](prompts/true_agent.md) (Agent), [persona](prompts/persona.md), [answer](prompts/answer.md),
+[language](prompts/language.md), [gameplay_advice](prompts/gameplay_advice.md) và [overview](prompts/overview.md)
+(khi Agent bật), [format_retry](prompts/format_retry.md) và [format_retry_gameplay](prompts/format_retry_gameplay.md)
+(lần sinh lại), [guard](prompts/guard.md) (Answer Guard), [image_selection](prompts/image_selection.md) (chọn ảnh).
+
+## Jina Reranker tùy chọn — 16/11/2026
+
+RAG có thể xếp hạng lại các kết quả local sau khi E5 và BM25 được hợp nhất bằng RRF. Mặc định tính năng tắt.
+Để bật, đặt `RAG_RERANKER_ENABLED=true` và cung cấp `JINA_API_KEY` trong `.env` cục bộ, rồi khởi động lại API.
+Lấy key tại [Jina AI](https://jina.ai/?sui=apikey); endpoint và mô tả provider ở [Jina Reranker](https://jina.ai/reranker/).
+Không cần reindex. Nếu bật cờ nhưng key trống hoặc `change-me`, ứng dụng chọn `NoReranker` và giữ thứ tự RRF.
+
+`RAG_RERANKER_MODEL` mặc định là `jina-reranker-v2-base-multilingual`;
+`RAG_RERANKER_MAX_CANDIDATES` giới hạn số ứng viên gửi provider (mặc định 30),
+và `RAG_RERANKER_TIMEOUT_SECONDS` đặt timeout riêng (mặc định 3 giây, tối đa 10).
+Provider chỉ xếp hạng lại phần đầu danh sách; phần đuôi giữ nguyên. Nếu request lỗi, timeout hoặc response không hợp lệ,
+retriever dùng lại toàn bộ thứ tự RRF ban đầu. Điểm và payload của `Hit` được giữ nguyên; reranker không tự chọn bằng chứng
+cuối cùng, Agent vẫn chọn tối đa 5 evidence cho context. Retrieval có timeout riêng.
+
+Reranker được gắn một lần vào `HybridRetriever`, dùng chung cho mọi `search_corpus`/`check_name` của vòng lặp Agent.
+Đường compatibility hợp nhất truy vấn bằng RRF trước khi gọi reranker một lần. Deadline rerank lấy từ thời gian còn lại của lượt chat;
+timeout giữ thứ tự retrieval và cancellation vẫn được truyền tiếp. HTTP client thuộc lifespan của API và được đóng khi ứng dụng tắt.
+Log outcome ghi provider/model, candidate/ranked count, trạng thái, nhóm nguyên nhân và thời gian đã trôi qua;
+không ghi query, nội dung tài liệu, key, raw response hay thông tin lỗi thô.
+
+Test provider offline dùng HTTP mock. Kết quả review và giới hạn kiểm chứng live (tối đa 5 câu hỏi chính, tính cả follow-up)
+được cập nhật tại [báo cáo ngày 16/11/2026](../../../docs/testing/2026-11-16_reranker-review-live.md).
+
+## Evidence, ảnh và build có nguồn — 07/11/2026
+
+Luồng tool-agent chọn context bằng ID và metadata, ảnh local/web qua metadata selector,
+calculator mới nhận dữ liệu class/weapon có nguồn thay vì chỉ Samurai/Moonveil.
+Xem [contract, kiểm kê rule và lệnh benchmark](../../../docs/api/evidence-media-build.md).
+Nhánh compatibility cũ vẫn tồn tại; validation số học/citation không phải human review hay chứng minh entailment.
+
+
+## Vòng lặp Agent — cập nhật 22/11/2026
+
+Chỉ còn một luồng RAG: một vòng lặp Agent dùng native tool calling của DeepSeek ([true_agent.py](true_agent.py),
+[prompt](prompts/true_agent.md), [ADR 006](../../../docs/adr/006-true-agent.md)) thay Agent decision, Tool Agent và
+assessor cũ. Agent tự hiểu yêu cầu, ghi điều kiện người chơi (`set_conditions`), chọn tên từ ứng viên `check_name`,
+tìm corpus/web, chọn bằng chứng, hỏi lại (`ask_user`) và kết thúc bằng `finish`; Generator + Answer Guard viết câu
+trả lời. Lỗi tool trả lại cho Agent tự sửa. Xem [handover GĐ2](../../../docs/handover/2026-11-22_s5-tv3_true-agent-gd2.md),
+[handover giữ câu cho Guard](../../../docs/handover/2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md) và
+[đo qua API](../../../docs/testing/2026-11-22_true-agent-gd2/README.md).
+Server giữ schema/provenance, quyền truy cập, deadline/budget và citation. Từ 22/11 không còn calculator: Agent tự tính
+phân bổ chỉ số bằng `run_python` ([python_sandbox.py](python_sandbox.py)) và tự kiểm; server không kiểm lại số build.
+[Run thật 10 lượt](../../../docs/testing/2026-11-06_tool-agent-10/README.md) có 1 lỗi schema đã sửa offline;
+không tuyên bố HTTP success là correctness hoặc đã test Tavily thật khi không có call web.
+
+## Semantic memory PostgreSQL — 06/11/2026
+
+Đã có code lưu conversation/working state trong PostgreSQL và dense semantic memory ở collection Qdrant riêng.
+Default persistence vẫn `memory` để không tự migrate môi trường cũ; muốn lưu bền cần setup migration 0002,
+memory collection và đặt `CHAT_PERSISTENCE=postgres` thủ công. `.env` thật chưa sửa.
+Tham khảo [agent, semantic memory, contract TV4 và setup](../../../docs/api/agent-semantic-memory.md).
+
+Sau khi hạ tầng được khôi phục, local DB đã migrate lên **0002**, collection memory đã setup.
+Runner thật hoàn tất **20/20 lượt** với DeepSeek, Tavily auto và E5 cache, dùng DB/memory collection test riêng.
+HTTP 200 cả 20 không đồng nghĩa correctness: có guard chặn nhầm và câu chưa đáp ứng đủ.
+Xem [kết quả live, giới hạn và sửa offline](../../../docs/testing/2026-11-06_agent-memory-20-live/README.md).
+Report [preflight 0 lượt trước đó](../../../docs/testing/2026-11-06_agent-memory-20/README.md) giữ nguyên làm lịch sử.
+Các mục lexical bên dưới mô tả bản triển khai trước trong cùng ngày/đường legacy.
+
+## Cập nhật 06/11/2026: graph và history liên quan
+
+Luồng chuẩn bị dùng LangGraph cho scope, gameplay clarification, chọn user memory, rewrite,
+retrieval, đánh giá bằng chứng và quyết định gọi web. Graph generation riêng điều phối sinh,
+validation và tối đa một lần sửa output. LangChain vẫn cung cấp prompt/model/retriever.
+Auth/lock trước graph; images và lưu conversation sau graph, sau khi output thành công.
+
+Không còn nạp nguyên 8 message vào mọi bước. Tìm trong tối đa 64 message RAM của **đúng conversation**,
+chọn tối đa 3 user turn liên quan, có ID/thời gian; câu hỏi độc lập không nhận lịch sử.
+Trong RAG, chỉ rewrite nhận các user turn đã chọn; assessor và generator không nhận transcript cũ.
+Ký ức không nằm trong evidence/citation. Đây là lexical recall có heuristic chủ thể, **chưa phải semantic/vector memory**.
+Player slot thuộc task đang làm; task mới không tự lấy weapon/location cũ, correction cập nhật task hiện tại.
+
+Conversation, player state và pending clarification vẫn RAM, mất sau restart/eviction.
+Không có PostgreSQL chat persistence/checkpointer mới hoặc nhớ xuyên conversation trong bản này.
+Không cần migration, setup collection hoặc reindex; `.env` thật giữ nguyên.
+Xem [hướng dẫn và sơ đồ graph](../../../docs/api/langgraph-memory.md) và
+[kiểm thử offline](../../../docs/testing/2026-11-06_langgraph-memory.md).
+
+### Gameplay, hỏi lại và test thật 05/11/2026
+
+Đã có player state/pending clarification, API JSON/SSE additive và form web tối thiểu.
+Luồng trả lời nối chủ thể với thông tin bổ sung; history bị cắt không làm mất các slot đang giữ.
+Memory vẫn RAM/TTL 30 phút, không giả persistence sau restart. Discord trả lời text, web theo giá trị bot gửi (auto).
+Nguồn local bổ sung nhỏ từ snapshot giúp một số quest/route/weapon; không reindex, không gán approved.
+Build số có bộ kiểm tính khả thi cho Samurai/Moonveil một tay, chưa phải optimizer hoặc damage calculator.
+Xem [contract/cách demo](../../../docs/api/gameplay-clarification-tv4.md),
+[báo cáo DeepSeek/Tavily thật](../../../docs/testing/2026-11-05_gameplay-evaluation.md)
+và [handover](../../../docs/handover/2026-11-05_s3-tv3_gameplay-clarification-va-golden-100.md).
+Golden set đã thêm đúng 40 để đạt 100; live chỉ chọn 25 prompt và các lượt so sánh/retest liên quan.
+Restart `make dev`, `make web`, không cần đổi `.env` hoặc embedding/index lại cho tính năng này.
+
+### Sửa guard và evidence (05/11/2026)
+
+Assessor dùng `evidence: {"1":["q0"]}`; string cũ tự chuyển thành list một phần tử,
+không bỏ bớt ID. `sufficient` phải có evidence hợp lệ, phần đã phủ và không còn gap.
+Trace phân biệt `local_sufficient`, `local_partial`, `local_insufficient`, `ambiguous`,
+`assessment_error`; lỗi assessor không còn được coi là chứng cứ local thiếu.
+Trong auto, sufficient bỏ qua Tavily; partial/insufficient/error có thể search; ambiguous hỏi lại.
+
+Guard rewrite hiểu các khung mở câu và hai biến thể tên vật phẩm số nhiều đã khai báo;
+vẫn giữ kiểm tên, số, phủ định, PvE/PvP, ý định và history. Đây là heuristic, chưa phải NER.
+Context ưu tiên đoạn mechanics/quest theo section và thực thể đã rewrite hợp lệ, vẫn top-5/budget cũ.
+Web alias chỉ gom khi text, title chuẩn hóa và metadata còn lại khớp; giữ mọi URL trong
+`Hit.payload.provenance`, không gộp điều kiện/release khác nhau. Public Source vẫn dùng URL đại diện.
+
+Generator nhận `quote_ids` (1–3 ID/source), tương thích `quote_id` hoặc quote nguyên văn cũ;
+chỉ dùng một dạng trong mỗi evidence, không lặp source index. `Source.text` nối đúng các đoạn
+được chọn bằng `\n[…]\n`, không tự mở rộng thành cả trang. Đây là kiểm provenance/cấu trúc,
+không phải semantic entailment. Recovery chung vẫn tối đa một lần và không retry sau text SSE.
+Build được gợi ý định tính khi có mechanics hỗ trợ, hoặc hỏi 1–2 điều kiện thiết yếu;
+không từ chối cả yêu cầu vì thiếu một chi tiết phụ, không bịa stat spread/AR/DPS.
+
+Đã kiểm offline: **684 passed**, Ruff/format, OpenAPI và pip check đạt; chưa chạy lại model/server thật.
+Restart `make dev` để nạp code/prompt; không cần reindex hay đổi `.env` cho bản sửa này.
+Xem [báo cáo và lệnh chạy lại 25 câu](../../../docs/testing/2026-11-05_rag-evidence-guards.md)
+và [handover](../../../docs/handover/2026-11-05_s3-tv3_rag-evidence-guards.md).
+
+### Web search và nút trên web (04/11/2026)
+
+Đã thêm Tavily Search → Extract async và assessment coverage trong RAG. Web có nút
+**Web: OFF → ON → ALWAYS → OFF**: off/auto/always tương ứng; mặc định ON (auto).
+Discord dùng giá trị bot gửi (hiện là auto); backend không ép từ 22/11.
+Có key và CHAT_MODE=rag thì tự khả dụng trừ khi operator tắt công tắc tổng; không phải
+sửa .env mỗi lần dùng nút. Request cũ/missing key giữ local. Không reindex corpus.
+Xem [contract, budget, giới hạn và smoke test](../../../docs/api/web-search-tv4.md).
+Đã kiểm offline; chưa gọi Tavily/DeepSeek thật cho tính năng này.
+
+### Cập nhật 04/11/2026: schema recovery và cách trả lời
+
+`RAG_FORMAT_RETRIES=1` nay cho phép sinh lại một lần khi JSON hợp lệ nhưng sai schema,
+ngoài các lỗi protocol đã hỗ trợ. Không ép kiểu hoặc chấp nhận output sai; lượt sau vẫn
+qua toàn bộ validation với cùng context. SSE chỉ recovery khi chưa phát text. Nếu hết budget
+hoặc quote sai, request vẫn lỗi; log `Generation failed` ghi reason tĩnh, không ghi nội dung.
+
+Prompt yêu cầu trả lời trực tiếp, không kể việc tìm kiếm hay nói “the supplied sources”.
+Citation và evidence contract giữ nguyên. Thiếu thông tin được diễn đạt như một giới hạn cụ thể.
+Không tự bật pretrained fallback trong mode RAG; web search chưa được triển khai trong cập nhật này.
+Restart API để nạp code/prompt, không cần reindex. Xem [handover](../../../docs/handover/2026-11-04_s3-tv3_schema-recovery-va-giong-tra-loi.md).
 
 TV3 — MinhMuc, nhóm 4 Hollows. Cập nhật 31/10/2026.
 
@@ -25,13 +200,14 @@ hoặc walkthrough toàn diện. Collection hiện tại dùng tiếp, không c�
 
 ## Trạng thái và luồng xử lý
 
-- `CHAT_MODE=mock` vẫn là mặc định. `llm_only` dùng ChatDeepSeek, không tạo encoder/retriever/reranker/Qdrant client cho chat.
-- `rag` dùng LCEL, async BaseRetriever/Document, E5 ONNX + BM25, Qdrant RRF và context tối đa 5 chunk.
+- `CHAT_MODE=mock` vẫn là mặc định; chế độ còn lại duy nhất là `rag`. Mode `llm_only` (gọi ChatDeepSeek không truy xuất) đã bị gỡ.
+- `rag` dùng LangGraph điều phối, LCEL prompt/model, async BaseRetriever/Document,
+  E5 ONNX + BM25, Qdrant RRF và context tối đa 5 chunk.
 - Lượt triển khai đầu chỉ kiểm offline. Sau đó người dùng cho phép sửa `.env`, chạy embedding/index và DeepSeek thật.
   Xem [báo cáo tích hợp ngày 29/10](../../../docs/testing/2026-10-29_rag-integration-report.md), gồm cả lỗi đã phát hiện.
 - API JSON/SSE/conversation/feedback giữ nguyên. Kiểm thử thật là smoke test, chưa thay benchmark chất lượng độc lập.
-- Không thêm dependency hoặc LangGraph; giữ `langchain-core==1.7.1`, `langchain-deepseek==1.1.1`,
-  `fastembed==0.9.0`, `qdrant-client==1.19.1` và constraints hiện có.
+- Thêm `langgraph==1.2.20` và các pin gián tiếp; giữ `langchain-core==1.7.1`, `langchain-deepseek==1.1.1`,
+  `fastembed==0.9.0`, `qdrant-client==1.19.1` và các pin cũ.
 
 ```mermaid
 flowchart TD
@@ -40,12 +216,13 @@ flowchart TD
     B --> D["Không được chọn: thống kê lý do"]
     B --> E["Được chọn — giữ metadata/ID"]
     E -.-> F["Người dùng tự chạy E5/BM25 và upsert Qdrant"]
-    G["Chat API + history có budget"] --> H["LCEL scope/language → optional rewrite"]
-    H --> I["BaseRetriever → Qdrant RRF với cùng CorpusPolicy"]
+    G["Chat API + current conversation"] --> H["LangGraph scope → memory → vòng lặp Agent gọi tool"]
+    H --> I["search_corpus: BaseRetriever → Qdrant RRF với cùng CorpusPolicy → optional rerank"]
     F --> I
-    I --> J["Document → optional rerank → cùng policy → top-5/context budget"]
+    I --> H
+    H --> J["context: evidence Agent chọn → cùng policy → top-5/context budget"]
     J --> K["ChatPromptTemplate + MessagesPlaceholder → ChatDeepSeek"]
-    K --> L["Validate answer/citation/quote → JSON hoặc SSE"]
+    K --> L["LangGraph validation → bounded repair → Answer Guard → JSON hoặc SSE"]
 ```
 
 ## Artifact và dry-run thực tế
@@ -101,9 +278,8 @@ Supported source types: `in_game_text`, `wiki_prose`, `speculation`. Nhãn unkno
 không được chọn, không sửa nhãn. Ngôn ngữ mặc định `en`; có thể chọn `en,ja` hoặc tập tường minh khác.
 `unknown` chỉ được chọn nếu chủ động chỉ định chính nhãn đó, không bao giờ đổi thành `en`.
 
-Spoiler: thiếu/null nhãn không được coi là an toàn. `spoilers=false` chỉ nhận `spoiler_level=0`;
-corpus hiện thiếu trường này nên có thể trả thiếu bằng chứng. Dùng `spoilers=true` khi tự thử baseline,
-không gán 0 hàng loạt vào dữ liệu.
+Không còn tính năng tránh spoiler (bỏ 20/11/2026): chat trả lời như wiki. Trường `options.spoilers` đã bị xóa khỏi API; client cũ gửi kèm vẫn được chấp nhận vì trường lạ bị bỏ qua.
+`spoiler_level` chỉ còn là metadata của chunk (công cụ đánh giá dữ liệu `ingest.debug.s4_wiki_eval` vẫn tự lọc theo nó).
 
 ## Cấu hình
 
@@ -121,12 +297,16 @@ collection hiện có. CLI override không sửa `.env`; index/retrieval/API c�
 Docker Compose đã truyền hai biến mới; đổi env cần recreate service API.
 
 Biến giữ nguyên: `RAG_PREFETCH=30`, `RAG_TOP_K=5`, `RAG_CONTEXT_CHARS=12000`,
-`RAG_REWRITE_ENABLED=false`, `RAG_MODELS_DIR=models/fastembed`, `RAG_BATCH_SIZE=32`,
+`RAG_MODELS_DIR=models/fastembed`, `RAG_BATCH_SIZE=32`,
 `CHAT_HISTORY_MESSAGES=8`, `CHAT_HISTORY_CHARS=8000` và cấu hình `LLM_*`/DeepSeek hiện có.
-Model lấy từ Settings, không thay tên model theo ví dụ. Rewrite bật sẽ thêm lượt gọi model thật.
+Model lấy từ Settings, không thay tên model theo ví dụ. Không còn biến rewrite: Agent tự viết query.
 `RAG_ENCODER_THREADS=2` là mặc định code (giới hạn 1–32); máy thử dùng 4 thread, batch 8 và cache
 `models/notebook-fastembed`. `RAG_THINKING_ENABLED=false` mặc định; máy thử bật `true` sau khi phát hiện
-non-thinking có lỗi JSON/citation. Flag chỉ bật thinking cho generation RAG, không đổi llm_only/dev test.
+non-thinking có lỗi JSON/citation. Từ 23/11 flag chỉ là công tắc **cho phép**: bước viết chỉ nghĩ khi Agent khai báo
+`needs_reasoning=true` ở `finish` (nguồn mâu thuẫn hoặc phụ thuộc điều kiện, so sánh nhiều tiêu chí, quest/route nhiều
+bước); trace `writer_thinking` ghi `allowed`/`requested`/`used`. `CHAT_AGENT_THINKING=false` (thử nghiệm) bật thinking
+cho các lượt Agent; adapter gửi lại `reasoning_content` theo yêu cầu của DeepSeek khi có tool, lượt `finish` bắt buộc
+luôn tắt. Answer Guard, lần sinh lại, chọn ảnh luôn tắt.
 Thinking có thể tăng token/độ trễ; private reasoning không được gửi qua chat/SSE hoặc lưu báo cáo.
 Lượt kiểm thử cuối dùng `LLM_MAX_TOKENS=4096`; budget ảnh hưởng cả chi phí và khả năng hoàn tất JSON.
 
@@ -171,7 +351,7 @@ Từ gốc repo có thể bật Qdrant: `docker compose up -d --wait qdrant`. Sa
 Model FastEmbed: `intfloat/multilingual-e5-small`, ONNX mean pooling/normalization, dense 384 cosine;
 sparse `Qdrant/bm25`, IDF; Qdrant fusion RRF. Không có splitter mới hoặc embedding ảnh.
 Encoder thêm prefix đúng một lần, kiểm tokenizer thật trước inference; load/inference trong thread với
-lock bảo vệ tái sử dụng/cancellation. Không load model lúc import, mock hoặc llm_only.
+lock bảo vệ tái sử dụng/cancellation. Không load model lúc import hoặc ở mode mock.
 
 Preflight toàn file xong trước client/model. Batch upsert dùng ID ổn định; chạy lại cùng input không tăng
 số point. Kiểm schema và payload indexes, không drop/recreate collection không tương thích.
@@ -190,11 +370,11 @@ có thể tải model nếu cache thiếu. Lượt tích hợp đã kiểm retri
 ```
 
 Diagnostic dùng HybridRetriever, in point/artifact ID, score, nguồn, release/lang/review và excerpt.
-Không gọi DeepSeek hoặc ghi index. Thêm `--no-spoilers` để kiểm hành vi nhãn an toàn; thiếu nhãn sẽ không được lấy.
+Không gọi DeepSeek hoặc ghi index.
 RRF score không phải xác suất đáp án đúng; chưa chốt threshold hoặc benchmark reranker.
-Nếu không có kết quả, kiểm collection, policy stamp, ngôn ngữ, spoiler và corpus trước khi kết luận model lỗi.
+Nếu không có kết quả, kiểm collection, policy stamp, ngôn ngữ và corpus trước khi kết luận model lỗi.
 
-## Tự bật API RAG / llm_only — có gọi DeepSeek và dùng credits
+## Tự bật API RAG — có gọi DeepSeek và dùng credits
 
 Sau khi index và kiểm retrieval, tự đặt `CHAT_MODE=rag` trong `.env` rồi restart API.
 Giữ `RAG_CORPUS_POLICY=pilot`, `RAG_LANGUAGES=en`, `RAG_COLLECTION=lore_pilot_v1` cho ví dụ trên.
@@ -211,14 +391,13 @@ Swagger ở `/api/docs`, thử `POST /api/v1/chat` hoặc `/api/v1/chat/stream`:
 {
   "message": "Ranni là ai? Nêu rõ nếu dùng thông tin từ bản mở rộng.",
   "channel": "web",
-  "options": {"lang": "vi", "spoilers": true}
+  "options": {"lang": "vi"}
 }
 ```
 
-Nếu chưa muốn index, dùng `CHAT_MODE=llm_only` với key DeepSeek Platform hiện có. Mode này không retrieval,
-`sources=[]`, `grounded=false`, có nhãn chưa đối chiếu corpus. Không fallback giữa mode hoặc sang mock khi lỗi.
-App vẫn có health probes PostgreSQL/Redis/Qdrant; `/health` có thể 503 khi chúng tắt. Riêng llm_only chat
-không tạo Qdrant client; chỉ explicit health probe mới tạo client riêng, tái sử dụng và đóng lúc shutdown.
+Chưa index thì dùng `CHAT_MODE=mock` để thử giao diện; không còn mode gọi LLM mà không truy xuất.
+Không fallback giữa mode hoặc sang mock khi lỗi. App có health probes PostgreSQL/Redis/Qdrant;
+`/health` có thể 503 khi chúng tắt. Health probe Qdrant dùng lại client của app và đóng lúc shutdown.
 
 ## ID, context và contract ứng dụng
 
@@ -240,11 +419,9 @@ Không nâng candidate thành verified. Prompt yêu cầu ưu tiên đúng relea
 không gộp canon theo co-retrieval. Release còn là candidate, chưa phải filter release được xác minh.
 Không dùng history làm evidence.
 
-Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; rewrite JSON có Pydantic validation/fallback câu gốc;
-NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
+Giữ ChatPromptTemplate + MessagesPlaceholder đúng role; NoReranker giữ thứ tự, chưa tự tải reranker. Context có budget ký tự riêng, giữ chunk nguyên vẹn, tối đa top-5.
 ChatDeepSeek/client dùng lifespan; usage thiếu là null, không bịa 0. Remote tracing tắt tại entry points.
-Prompt phân biệt [persona](prompts/persona.md), [llm_only](prompts/llm_only.md),
-[answer](prompts/answer.md) và [rewrite](prompts/rewrite.md).
+Danh sách prompt và việc của từng file: xem mục Hiện trạng ở đầu trang.
 
 Validation yêu cầu citation khớp index/evidence, quote nguyên văn, URL/title từ metadata server,
 chỉ trả nguồn thực sự trích. Đây là kiểm grounding hình thức, không phải entailment judge.
@@ -255,40 +432,21 @@ Phần answer có facts vẫn cần citation mỗi đoạn; không ép citation 
 Context bổ sung evidence units có ID: model chọn `quote_id`, backend trích nguyên văn từ chunk đã chọn
 và kiểm citation/evidence-set như cũ. Quote literal vẫn được hỗ trợ; ID không tồn tại bị từ chối.
 Đoạn dài được chia thành các phần evidence giới hạn 2.000 ký tự để chọn quote, không chia lại chunk/index.
-SSE dùng streaming thật, prime trước headers, giữ cancellation/cleanup; lỗi giữa stream hoặc validation cuối
-thất bại trả error, không done thành công. Không gửi evidence JSON hoặc private reasoning trong chat/SSE.
+SSE prime trước headers, giữ cancellation/cleanup. Từ 21/11 mọi câu được giữ tới khi kiểm và Answer Guard xong
+rồi mới gửi một event `token`; validation thất bại sau lượt sửa trả lỗi, không done thành công. Không gửi evidence JSON hoặc private reasoning trong chat/SSE.
 API JSON/SSE/conversation/feedback không đổi; dev endpoint giữ contract reasoning riêng, không log.
 History/feedback live vẫn là RAM, có giới hạn hội thoại/trace, chưa phải persistence production hoặc xác thực.
 
 ## Kiểm thử và phần cần đồng bộ riêng
 
-### Câu hỏi tổng quan / danh sách
+### Câu hỏi tổng quan, danh sách và query VI → EN
 
-`RAG_OVERVIEW_ENABLED=true` mặc định nhận diện các yêu cầu VI/EN như “các boss trong elden ring”,
-“các loại vũ khí”, “những kiểu build”, “tổng quan cốt truyện” hoặc “Elden Ring là gì?”.
-Topic rõ ràng không bắt buộc phải có tên một nhân vật/vật phẩm; câu có tên riêng hoặc đại từ chưa rõ giữ luồng cũ.
-Đây là heuristic, không phải NER hoặc bộ phân loại ngữ nghĩa tổng quát.
-
-Nhánh overview bỏ qua paid rewrite, thêm English search cues kèm nguyên query/điều kiện gốc;
-tối đa 2 query trong budget retrieval hiện có, fusion RRF và context tối đa 5. Ưu tiên title trang tổng quan,
-section Introduction/Overview/List/Types/Categories và xen kẽ section/source; không gọi đây là semantic reranker.
-Không tạo kiến thức taxonomy từ query cues. Prompt yêu cầu dùng grouping/ví dụ có evidence, trả phần hữu ích
-khi nguồn chưa đầy đủ, không tuyên bố danh sách exhaustive hoặc số liệu current-patch nếu nguồn không xác lập.
-
-Không cần reindex hoặc sửa .env thật để dùng default. Đặt flag false rồi restart để tắt.
-Benchmark VI–EN có ghi flag overview và tính thêm query này trong upper bound; khi muốn cô lập tác dụng rewrite,
-tự tắt overview trong phiên benchmark. Xem [hướng dẫn và kiểm chứng](../../../docs/testing/2026-10-31_overview-routing.md).
-
-### Query VI → EN và chế độ dual
-
-Rewrite vẫn tắt mặc định, không tự sửa `.env`. Khi bật, `RAG_QUERY_MODE=rewrite` dùng một query English đã validate;
-`dual` tìm thêm query gốc nếu khác, tối đa hai query. Giữ ngôn ngữ answer từ request, không lấy lang từ rewrite.
-Fallback về câu gốc khi rewrite lỗi/mất constraint; tham chiếu mơ hồ không có history thì hỏi lại.
-Dual gộp rank bằng RRF, không cộng score native; exact content dedup giữ provenance/release/conditions/images khác nhau.
-Mỗi query lấy tối đa rag_prefetch, context vẫn top-5; một query lỗi có thể dùng query kia, tất cả lỗi vẫn unavailable.
-Budget mới: rewrite 8 giây/512 token, retrieval 20 giây chia đều theo số query, chỉnh bằng biến server.
-Không thêm model reranker, tăng temperature hoặc bật fallback kiến thức ngoài corpus.
-Xem [cấu hình, giới hạn và lệnh benchmark VI–EN](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md).
+Cập nhật 21/11/2026: đã gỡ heuristic `RAG_OVERVIEW_ENABLED` và các biến `RAG_REWRITE_*`, `RAG_QUERY_MODE`.
+Agent tự nhận ra câu tổng quan (`finish.intent=overview`) và tự viết query tìm kiếm (thường bằng English, giữ tên riêng và
+điều kiện gốc), có thể gọi `search_corpus` nhiều lần trong ngân sách `CHAT_AGENT_MAX_CALLS`/`CHAT_COVERAGE_MAX_CALLS`.
+Ngôn ngữ trả lời vẫn lấy từ request, không lấy từ query. Context vẫn top-5 sau dedup; không tạo kiến thức taxonomy từ query.
+Tài liệu [overview routing](../../../docs/testing/2026-10-31_overview-routing.md) và
+[VI–EN retrieval](../../../docs/testing/2026-10-31_vi-en-retrieval-guide.md) chỉ còn giá trị lịch sử.
 
 Nếu DeepSeek trả HTTP 200 nhưng chat báo 502, kiểm tra log `Generation failed`,
 `Citation index mismatch` và `RAG validation failed` theo request_id.
@@ -305,7 +463,7 @@ và độ trễ. Đặt `0` để tắt; chỉ backend quyết định, API clie
 Đây là retry định dạng, khác `LLM_MAX_RETRIES` xử lý lỗi transport của SDK; không nhân định dạng retry
 cho lỗi mạng, hết token, schema hoặc quote sai. Citation mismatch thông thường vẫn bị chặn;
 chỉ lỗi protocol `insufficient_with_citations` được phục hồi cùng ngân sách format (không cộng thêm lượt riêng).
-Lượt đầu giữ thinking theo cấu hình; lượt phục hồi dùng non-thinking, temperature=0, JSON mode vẫn bật.
+Lượt đầu nghĩ khi cấu hình cho phép và Agent yêu cầu; lượt phục hồi dùng non-thinking, temperature=0, JSON mode vẫn bật.
 Mọi output mới vẫn vượt validator đầy đủ. Không sửa/cắt bỏ citation từ answer lỗi rồi công bố answer đó.
 
 Parser dùng chung cho JSON/SSE chỉ chấp nhận toàn bộ JSON, có thể bỏ một BOM hoặc một code fence hoàn chỉnh.
@@ -314,8 +472,8 @@ Duplicate key, NaN/Infinity, phần dư và JSON thiếu vẫn bị chặn. Outp
 Nguồn và quote vẫn phải vượt validator cũ. Chỉ answer hợp lệ mới vào history và chọn ảnh.
 
 SSE chỉ retry nếu **chưa gửi token đáp án nào**; sau khi đã gửi text, lỗi kết thúc bằng error và không done.
-Không chuyển sang llm_only khi lỗi hoặc thiếu bằng chứng. Không có context thì trả thông báo có sẵn,
-không gọi generation. Có context nhưng thiếu evidence thì model trả JSON `insufficient=true`, sources rỗng.
+Không có đường trả lời không truy xuất khi lỗi hoặc thiếu bằng chứng. Agent không chọn evidence nào thì bước viết
+vẫn chạy và trả JSON `insufficient=true` nêu rõ còn thiếu gì, sources rỗng (từ 22/11 không còn câu cố định của server).
 Diagnostic JSON bổ sung vị trí dòng/cột/offset và số ký tự, không có output thô hay nội dung reasoning.
 Xem [phân tích và kiểm thử offline](../../../docs/testing/2026-10-31_rag-json-recovery.md).
 Xem [kiểm chứng DeepSeek thật và cập nhật protocol recovery](../../../docs/testing/2026-10-31_deepseek-live-output-fix.md).
@@ -353,7 +511,7 @@ và sinh `s2-chunk-1.0`; artifact bàn giao dùng `s2-full-*`. Adapter đọc ar
 được workflow tạo bộ full hoặc thay code cleaner/chunker.
 
 Đã kiểm hạ tầng server Docker, embedding và DeepSeek thật theo báo cáo liên kết ở đầu trang. Chưa kiểm image API
-trên Linux hoặc benchmark lore/entailment độc lập. Heuristic đại từ chỉ xử lý tham chiếu đầu câu đơn giản,
-không phải NER; câu có tên/nội dung trước đại từ được chuyển cho rewrite/LLM. Validator chỉ log mã lỗi/chỉ số protocol.
+trên Linux hoặc benchmark lore/entailment độc lập. Tham chiếu ngược ("con boss đó") do Agent hiểu từ
+`recent_turns`, không còn heuristic đại từ. Validator chỉ log mã lỗi/chỉ số protocol.
 Không sửa web/bot, SRS/ADR/planning/Trello hoặc dữ liệu nguồn. `.env` đã sửa theo yêu cầu mới, không đổi key.
 Không commit/push/merge và không tạo handover riêng.

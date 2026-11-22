@@ -18,3 +18,10 @@ asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 markers = ["integration: cần PostgreSQL, Redis, Qdrant đang chạy"]
 addopts = "-m 'not integration'"
+
+[tool.coverage.run]
+source = ["app/rag"]
+
+[tool.coverage.report]
+fail_under = 60
+skip_empty = true

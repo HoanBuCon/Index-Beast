@@ -1,0 +1,24 @@
+........................................................................ [  7%]
+........................................................................ [ 15%]
+........................................................................ [ 23%]
+........................................................................ [ 31%]
+........................................................................ [ 39%]
+........................................................................ [ 47%]
+........................................................................ [ 55%]
+........................................................................ [ 62%]
+........................................................................ [ 70%]
+........................................................................ [ 78%]
+........................................................................ [ 86%]
+........................................................................ [ 94%]
+...................................................                      [100%]
+============================== warnings summary ===============================
+tests/unit/test_agent_durable.py::test_restart_capability_replay_and_scope
+  D:\Index-Beast\backend\app\rag\semantic_memory.py:42: UserWarning: Payload indexes have no effect in the local Qdrant. Please use server Qdrant if you need payload indexes.
+    await self.client.create_payload_index(self.collection, key, qm.PayloadSchemaType.KEYWORD, wait=True)
+
+tests/unit/test_agent_durable.py::test_migration_offline_only_adds_runtime_and_memory_tables
+  D:\Index-Beast\backend\.venv\Lib\site-packages\alembic\config.py:604: DeprecationWarning: No path_separator found in configuration; falling back to legacy splitting on spaces, commas, and colons for prepend_sys_path.  Consider adding path_separator=os to Alembic config.
+    util.warn_deprecated(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+915 passed, 2 warnings in 28.52s

@@ -3,10 +3,17 @@
 
 import { Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
 import { commands } from "./commands/index.ts";
+import { createMessageHandler } from "./handlers/message.ts";
 import { loadConfig } from "./config.ts";
 import { errorName, log } from "./utils/logger.ts";
+import { followupThreads } from "./interactions/followup.ts";
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+// MessageContent là intent đặc quyền: phải bật trong Discord Developer Portal (Bot → Privileged Gateway Intents),
+// nếu không client.login báo "Used disallowed intents". Cần cho @mention và trả lời kênh /setup.
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+});
+const handleMessage = createMessageHandler();
 
 client.once(Events.ClientReady, (readyClient) => {
   log("info", "Bot đã online.", { user: readyClient.user.tag });
@@ -14,7 +21,25 @@ client.once(Events.ClientReady, (readyClient) => {
 
 client.on(Events.Error, (error) => log("error", "Discord client gặp lỗi.", { error: errorName(error) }));
 
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    await handleMessage(message);
+  } catch (error) {
+    log("error", "Không xử lý được tin nhắn.", { error: errorName(error) });
+  }
+});
+
 client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isButton()) {
+    if (interaction.customId.startsWith("followup:")) {
+      try {
+        await followupThreads.handle(interaction);
+      } catch (error) {
+        log("warn", "Không gửi được phản hồi nút Hỏi tiếp.", { error: errorName(error) });
+      }
+    }
+    return;
+  }
   if (!interaction.isChatInputCommand()) return;
   try {
     const command = commands.get(interaction.commandName);
@@ -48,7 +73,13 @@ try {
   const config = loadConfig();
   await client.login(config.token);
 } catch (error) {
-  log("error", "Không khởi động được bot. Kiểm tra DISCORD_TOKEN.", { error: errorName(error) });
+  log(
+    "error",
+    error instanceof Error && error.message === "Used disallowed intents"
+      ? "Discord chưa cho phép Message Content Intent. Bật trong Developer Portal → Bot → Privileged Gateway Intents rồi chạy lại."
+      : "Không khởi động được bot. Kiểm tra DISCORD_TOKEN và kết nối Discord.",
+    { error: errorName(error) },
+  );
   client.destroy();
   process.exitCode = 1;
 }

@@ -1,4 +1,4 @@
-"""Local image fixtures and fake RAG; no LLM, embedding, server DB or downloads."""
+"""Fixture ảnh local và RAG giả; không LLM, embedding, DB server hay tải xuống."""
 
 import asyncio
 import csv
@@ -107,16 +107,42 @@ def media(tmp_path):
 
 
 async def test_exact_provenance_cited_only_dedup_and_limit(media):
-    result = await media.catalog.resolve(media.hits, [2, 4], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [2, 4])
     assert [x.id for x in result.images] == [media.rows[1]["image_id"], media.rows[3]["image_id"]]
     assert result.images[0].source_indices == [2] and result.images[0].attribution == "Artist"
     assert result.images[0].license is None and result.images[0].license_status == "unknown_review_required"
     assert result.images[0].url.startswith("/api/v1/images/") and "Producer" not in result.images[0].model_dump_json()
-    result = await media.catalog.resolve(media.hits, [1, 2, 3, 4, 5], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1, 2, 3, 4, 5])
     assert len(result.images) == 3 and result.reasons["image_limit"] == 2
     duplicated = [media.hits[0], replace(media.hits[0], id="other-hit")]
-    result = await media.catalog.resolve(duplicated, [1, 2], spoilers=True)
+    result = await media.catalog.resolve(duplicated, [1, 2])
     assert len(result.images) == 1 and result.images[0].source_indices == [1, 2]
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("source_url", "https://eldenring.wiki.gg/images/ER_Main_Menu_Icon_Messages.png?1feaaf"),
+        ("description_url", "https://eldenring.wiki.gg/wiki/File:ER_Main_Menu_Icon_Messages.png"),
+        ("alt", "ER Main Menu Icon Messages.png"),
+        ("source_url", "https://eldenring.wiki.gg/images/ER%20Custom%20Stat%20Icon%20Intelligence.png"),
+    ],
+)
+async def test_ui_decorations_are_not_served_even_with_exact_section_provenance(media, field, value):
+    media.rows[0][field] = value
+    media.write()
+    result = await media.catalog.resolve(media.hits, [1, 2])
+    assert [image.id for image in result.images] == [media.rows[1]["image_id"]]
+    assert media.catalog.counts["ui_image_excluded"] == 1
+    assert media.catalog.read_blob(media.rows[0]["image_id"])[1] == "unknown_image"
+
+
+@pytest.mark.parametrize("name", ["ER Icon weapon Moonveil.png", "ER Custom Icon Unalloyed Gold.png"])
+async def test_content_icons_remain_eligible(media, name):
+    media.rows[0]["alt"] = name
+    media.write()
+    result = await media.catalog.resolve(media.hits, [1])
+    assert [image.id for image in result.images] == [media.rows[0]["image_id"]]
 
 
 @pytest.mark.parametrize("change", ["revision", "section", "scope", "release", "source", "association", "unrelated_id"])
@@ -136,16 +162,13 @@ async def test_never_borrows_same_hash_from_wrong_provenance(media, change):
         p["image_association"] = "page"
     else:
         p["image_ids"] = [media.rows[1]["image_id"]]
-    assert (await media.catalog.resolve(media.hits, [1], spoilers=True)).images == []
+    assert (await media.catalog.resolve(media.hits, [1])).images == []
 
 
-async def test_spoilers_unknown_never_inferred_safe(media):
-    media.hits[0].payload["spoiler_level"] = 0
-    assert not (await media.catalog.resolve(media.hits, [1], spoilers=False)).images
-    media.rows[0]["spoiler_level"] = "0"
-    media.write()
-    media.catalog = ImageCatalog(media.settings)
-    assert len((await media.catalog.resolve(media.hits, [1], spoilers=False)).images) == 1
+async def test_image_selection_ignores_spoiler_labels(media):
+    # Đã bỏ lọc spoiler: nhãn spoiler không rõ hoặc khác 0 không còn ẩn ảnh.
+    media.hits[0].payload["spoiler_level"] = 2
+    assert len((await media.catalog.resolve(media.hits, [1])).images) == 1
 
 
 @pytest.mark.parametrize("change", ["excluded_ui", "review", "failed", "gallery", "traversal", "encoded", "svg"])
@@ -165,7 +188,7 @@ async def test_bad_rows_are_not_servable_or_selected(media, change):
     else:
         row["local_path"] = str(media.paths[0].with_suffix(".svg"))
     media.write()
-    assert not (await media.catalog.resolve(media.hits, [1], spoilers=True)).images
+    assert not (await media.catalog.resolve(media.hits, [1])).images
     assert media.catalog.read_blob(row["image_id"])[0] is None
 
 
@@ -226,7 +249,7 @@ def configure_chat(client, media, llm=None, mode="rag"):
     return live, llm
 
 
-def test_json_sse_history_and_three_modes_remain_compatible(client, media):
+def test_json_sse_history_and_both_modes_remain_compatible(client, media):
     live, llm = configure_chat(client, media)
     response = client.post("/api/v1/chat", json=BODY)
     assert response.status_code == 200
@@ -241,10 +264,8 @@ def test_json_sse_history_and_three_modes_remain_compatible(client, media):
     assert sources["images"] == data["images"] and frames[-1][0] == "event: done"
     assert "event: images" not in response.text
     assert all("images" not in p for event, p in frames if event == "event: token")
-    configure_chat(client, media, mode="llm_only")
-    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []
     client.app.dependency_overrides.clear()
-    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []  # Fixture app defaults mock.
+    assert client.post("/api/v1/chat", json=BODY).json()["images"] == []  # Mặc định của app fixture là mock.
 
 
 def test_generation_failure_and_no_evidence_never_resolve_images(client, media, monkeypatch):
@@ -298,24 +319,24 @@ async def test_catalog_is_lazy_cached_and_has_no_model_or_network_clients(media,
     monkeypatch.setattr(Path, "open", opened)
     catalog = ImageCatalog(media.settings)
     assert not scans
-    assert len((await catalog.resolve(media.hits, [1], spoilers=True)).images) == 1
-    assert len((await catalog.resolve(media.hits, [1], spoilers=True)).images) == 1
+    assert len((await catalog.resolve(media.hits, [1])).images) == 1
+    assert len((await catalog.resolve(media.hits, [1])).images) == 1
     assert len(scans) == 1
 
 
 @pytest.mark.parametrize("streaming", [False, True])
-async def test_image_resolution_cancellation_is_not_swallowed(media, streaming):
+async def test_image_resolution_cancellation_is_not_swallowed(media, streaming, monkeypatch):
     llm = FakeLLM()
     llm.tokens = list(json.dumps(llm.data))
     live = service("rag", llm, FakeRetriever(media.hits))
     started = asyncio.Event()
 
-    class Slow:
-        async def resolve(self, *args, **kwargs):
-            started.set()
-            await asyncio.Event().wait()
+    async def slow(*args, **kwargs):
+        started.set()
+        await asyncio.Event().wait()
 
-    live.image_catalog = Slow()
+    live.image_catalog = media.catalog
+    monkeypatch.setattr("app.services.answer_media.resolve", slow)
     events = None
     if streaming:
         events = await live.open_stream(ChatRequest(**BODY))
@@ -340,7 +361,7 @@ async def test_wrong_revision_manifest_does_not_invent_attribution(media):
     doc = json.loads(path.read_text())
     doc["revision_id"] = 999
     path.write_text(json.dumps(doc), encoding="utf-8")
-    result = await media.catalog.resolve(media.hits, [1], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1])
     assert result.images[0].attribution is None and result.images[0].license_status == "unknown_review_required"
 
 
@@ -350,7 +371,7 @@ async def test_same_blob_does_not_merge_release_contexts(media):
     media.docs[1]["release_scope"] = "sote_candidate"
     media.hits[1].payload.update(image_ids=[shared], release_scope="sote_candidate")
     media.write()
-    result = await media.catalog.resolve(media.hits, [1, 2], spoilers=True)
+    result = await media.catalog.resolve(media.hits, [1, 2])
     assert len(result.images) == 1 and result.images[0].source_indices == [1]
     assert result.images[0].release_scope == "unknown" and result.reasons["dedup_scope_conflict"] == 1
 
@@ -363,7 +384,7 @@ async def test_images_can_be_disabled_without_opening_any_artifacts(media, monke
         pytest.fail("I/O for disabled image feature")
 
     monkeypatch.setattr(Path, "open", forbidden)
-    assert (await catalog.resolve(media.hits, [1], spoilers=True)).images == []
+    assert (await catalog.resolve(media.hits, [1])).images == []
     assert catalog.read_blob(media.rows[0]["image_id"])[0] is None
 
 
@@ -371,7 +392,7 @@ def test_hash_matching_but_truncated_jpeg_is_not_served(media):
     buffer = io.BytesIO()
     Image.new("RGB", (64, 64), "blue").save(buffer, format="JPEG")
     data = buffer.getvalue()[:-20]
-    # Headers can still be parsed, so hash/MIME/header checks alone are insufficient.
+    # Header vẫn parse được, nên chỉ kiểm hash/MIME/header là không đủ.
     with Image.open(io.BytesIO(data)) as image:
         assert image.format == "JPEG"
     digest = hashlib.sha256(data).hexdigest()

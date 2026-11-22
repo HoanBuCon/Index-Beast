@@ -4,6 +4,34 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { MAX_MESSAGE_CHARS } from "../../api/types";
 import enterIcon from "../../../item_/KG_Key_Enter.png";
+import stopIcon from "../../../item_/KG_Key_Esc.png";
+import { nextSearchMode, searchModeLabel } from "./searchMode";
+import type { SearchMode } from "./searchMode";
+
+// Nút tạm ba chế độ; TV4 có thể thay hình thức mà giữ nguyên mapping API.
+export function SearchModeButton({
+  mode,
+  disabled,
+  onChange,
+}: {
+  mode: SearchMode;
+  disabled: boolean;
+  onChange?: (mode: SearchMode) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="web-search-toggle"
+      data-search-mode={mode}
+      disabled={disabled}
+      aria-describedby="web-search-description"
+      aria-label={`Tìm trên web: ${searchModeLabel[mode]}. Chuyển sang ${searchModeLabel[nextSearchMode(mode)]}`}
+      onClick={() => onChange?.(nextSearchMode(mode))}
+    >
+      Web: {searchModeLabel[mode]}
+    </button>
+  );
+}
 
 // Đo cả dòng xuống hàng tự nhiên; giới hạn chiều cao rồi cuộn nội dung dài.
 function fitTextarea(element: HTMLTextAreaElement) {
@@ -19,10 +47,16 @@ export default function MessageInput({
   busy,
   onSend,
   onStop,
+  searchMode = "auto",
+  searchAvailable = false,
+  onSearchChange,
 }: {
   busy: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
+  searchMode?: SearchMode;
+  searchAvailable?: boolean;
+  onSearchChange?: (mode: SearchMode) => void;
 }) {
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -56,6 +90,20 @@ export default function MessageInput({
   return (
     <form
       className="composer"
+      onClick={(e) => {
+        // Bấm nền/viền khung cũng nhập được; không lấy focus của các nút hoặc đổi vị trí con trỏ trong textarea.
+        if (!(e.target instanceof Element) || e.target.closest("textarea, button, a, input, select, label")) return;
+        if (window.getSelection()?.toString()) return;
+        textareaRef.current?.focus();
+      }}
+      onKeyDown={(e) => {
+        // Phím Esc chỉ hủy khi đang xử lý và focus nằm trong composer, không chặn IME.
+        if (busy && e.key === "Escape" && !e.repeat && !composing.current && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          e.stopPropagation();
+          onStop();
+        }
+      }}
       onSubmit={(e) => {
         e.preventDefault();
         submit();
@@ -94,12 +142,35 @@ export default function MessageInput({
           }
         }}
       />
+      <div className="web-search-control">
+        <SearchModeButton
+          mode={searchAvailable ? searchMode : "off"}
+          disabled={busy || !searchAvailable}
+          onChange={onSearchChange}
+        />
+        <small id="web-search-description" aria-live="polite">
+          {searchAvailable
+            ? searchMode === "always"
+              ? "Tìm web cho mỗi câu hỏi"
+              : searchMode === "auto"
+                ? "Tự động tìm web khi cần"
+                : "Chỉ dùng kho kiến thức local"
+            : "Tìm web chưa khả dụng"}
+        </small>
+      </div>
       <div className="composer-bottom">
         <small>{"Enter để gửi · Shift + Enter xuống dòng"}</small>
         {busy ? (
-          <button type="button" className="primary" onClick={onStop}>
-            <span aria-hidden="true">■</span>
-            <span className="sr-only">{"■ Dừng"}</span>
+          <button
+            type="button"
+            className="primary stop-button"
+            onClick={onStop}
+            title="Dừng trả lời (Esc khi đang chọn ô chat)"
+            aria-label="Dừng trả lời"
+            aria-keyshortcuts="Escape"
+          >
+            {/* TV4: phím Esc từ hi_01 đồng bộ phím Enter, chỉ dừng yêu cầu hiện tại. */}
+            <img className="stop-answer-icon" src={stopIcon} width={40} height={28} alt="" draggable={false} />
           </button>
         ) : (
           <button

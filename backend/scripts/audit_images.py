@@ -1,4 +1,4 @@
-"""Read-only image artifact audit; checks metadata census, paths and a bounded blob sample. No clients/models."""
+"""Kiểm artifact ảnh chỉ đọc; kiểm thống kê metadata, đường dẫn và một mẫu blob có giới hạn. Không client/model."""
 
 import argparse
 import csv
@@ -50,7 +50,7 @@ async def audit(sample_size):
         candidates = [r for r in chunks if r["title"] == title and r["lang"] == "en" and r.get("image_ids")]
         chosen = next((r for r in candidates if r["section"] == "Infobox"), candidates[0])
         hit = Hit(chosen["chunk_id"], 0.0, chosen)
-        result = await catalog.resolve([hit], [1], spoilers=True)
+        result = await catalog.resolve([hit], [1])
         cases.append(
             {
                 "title": title,
@@ -60,7 +60,7 @@ async def audit(sample_size):
                 "excluded": result.reasons,
             }
         )
-    # Local ASGI only: fake context, mock chat, real local image file, no infrastructure resources.
+    # Chỉ ASGI local: context giả, chat mock, file ảnh local thật, không dùng tài nguyên hạ tầng.
     from types import SimpleNamespace
 
     app = create_app(settings, context=SimpleNamespace(health_checks={}))

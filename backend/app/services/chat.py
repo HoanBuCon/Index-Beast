@@ -4,25 +4,56 @@ Phụ trách: TV3 · [S3] Chat integration
 """
 
 import asyncio
+import hmac
 import logging
+import secrets
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import aclosing
+from contextlib import aclosing, suppress
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 from pydantic import BaseModel
 
-from app.api.schemas.chat import ChatImage, ChatRequest, ChatResponse, DoneEvent, SourcesEvent, StatusEvent, TokenEvent
+from app.api.schemas.chat import (
+    ChatImage,
+    ChatRequest,
+    ChatResponse,
+    DoneEvent,
+    Source,
+    SourcesEvent,
+    StatusEvent,
+    TokenEvent,
+)
 from app.api.schemas.conversation import ConversationOut, MessageOut
 from app.rag.generator import Generated, Prepared
 from app.rag.pipeline import ChatPipeline
-from core.errors import NotFoundError, TimeoutAppError, UnavailableError
+from app.rag.semantic_memory import MemoryScope
+from app.rag.trace import public_trace, token_usage
+from app.services.memory_repository import MemoryRepository, Snapshot, owner_hash
+from core.errors import BadRequestError, NotFoundError, TimeoutAppError, UnauthorizedError, UnavailableError
 
 ChatEvents = AsyncIterator[tuple[str, BaseModel]]
+
+
+def log_deadline(stage: str, trace: dict, started: float, limit: float) -> None:
+    """Which step consumed a timed-out turn. Step names and timings only: no prompts, queries or answers."""
+    data = {
+        "stage": stage,
+        "limit_s": limit,
+        "elapsed_ms": round((time.perf_counter() - started) * 1000, 2),
+        "current_node": trace.get("current_node"),
+        "node_ms": trace.get("node_ms"),
+        "agent_steps": [
+            {k: row.get(k) for k in ("tool", "status", "ms")} for row in (trace.get("agent") or {}).get("steps", [])
+        ],
+        "model_calls": [call.get("phase") for call in trace.get("model_calls", [])],
+        "generation_retries": trace.get("generation_retries"),
+    }
+    logging.getLogger(__name__).warning("Chat deadline exceeded", extra={"data": data})
 
 
 class ManagedEvents:
@@ -49,6 +80,7 @@ class ChatService(Protocol):
     async def open_stream(self, req: ChatRequest) -> ChatEvents: ...
     def history(self, conversation_id: UUID) -> ConversationOut: ...
     def has_message(self, message_id: UUID) -> bool: ...
+    async def trace(self, message_id: UUID) -> dict: ...
 
 
 @dataclass
@@ -56,25 +88,41 @@ class ConversationState:
     conversation: ConversationOut
     external_ref: str | None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-
-
-def notice(lang: str) -> str:
-    return (
-        "Chế độ LLM: câu trả lời chưa được đối chiếu kho tri thức.\n\n"
-        if lang == "vi"
-        else "LLM mode: this answer has not been checked against the knowledge base.\n\n"
-    )
+    player: object = None
+    owner: str = ""
+    user_id: UUID | None = None  # chủ tài khoản (ADR-005), chỉ dùng cho kiểm quyền đọc ở chế độ memory
+    revision: int = 0
+    token: str | None = field(default=None, repr=False)
 
 
 class LiveChatService:
-    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None):
+    def __init__(self, pipeline: ChatPipeline, *, image_catalog=None, repository=None):
         self.pipeline = pipeline
         self.image_catalog = image_catalog
+        self.repository: MemoryRepository | None = repository
+        self._registry_lock = asyncio.Lock()
         self._conversations: OrderedDict[UUID, ConversationState] = OrderedDict()
         # (channel, external_ref) → hội thoại: bot không giữ conversation_id, nên mỗi thread hoặc user Discord
         # dùng lại một hội thoại
         self._by_ref: dict[tuple[str, str], UUID] = {}
         self.traces: OrderedDict[UUID, dict] = OrderedDict()
+
+    async def trace(self, message_id: UUID) -> dict:
+        """Trace của một câu trả lời: ưu tiên bản đã lưu trong PostgreSQL, không có DB thì lấy bản trong RAM."""
+        if self.repository is not None:
+            stored = await self.repository.trace(message_id)
+            if stored is not None:
+                return stored
+        if (live := self.traces.get(message_id)) is not None:
+            return {"message_id": message_id, "trace": public_trace(live), "source": "memory"}
+        raise NotFoundError("Không tìm thấy trace của câu trả lời này.")
+
+    def forget(self, conversation_ids) -> None:
+        """Bỏ hội thoại khỏi bộ nhớ RAM sau khi đã xóa bền: không thì lượt hỏi kế tiếp dùng lại bản cũ và báo lỗi."""
+        for conversation_id in set(conversation_ids):
+            state = self._conversations.pop(conversation_id, None)
+            if state is not None and state.external_ref:
+                self._by_ref.pop((state.conversation.channel, state.external_ref), None)
 
     def history(self, conversation_id: UUID) -> ConversationOut:
         if conversation_id not in self._conversations:
@@ -114,55 +162,296 @@ class LiveChatService:
             self._by_ref[ref] = conv.id
         return state
 
-    def _history_for(self, state: ConversationState) -> list[dict]:
-        settings = self.pipeline.settings
-        rows, size = [], 0
-        candidates = (
-            state.conversation.messages[-settings.chat_history_messages :] if settings.chat_history_messages else []
-        )
-        for msg in reversed(candidates):
-            if size + len(msg.content) > settings.chat_history_chars:
-                break
-            rows.append({"role": msg.role, "content": msg.content})
-            size += len(msg.content)
-        return list(reversed(rows))
+    async def _load_state(self, req):
+        if self.repository is None:
+            state = self._state(req)
+            if req.channel == "web" and not state.owner:
+                # Chế độ memory cũng cấp capability cho hội thoại web mới: chỉ băm vào RAM, token chỉ trả cho client
+                state.token = secrets.token_urlsafe(32)
+                state.owner, state.user_id = owner_hash(state.token), req.user_id
+            return state
+        if req.channel == "web" and req.external_ref is not None:
+            raise BadRequestError("Web dùng conversation token, không dùng external_ref làm danh tính.")
+        async with self._registry_lock:
+            stored = await self.repository.load(
+                req.conversation_id,
+                channel=req.channel,
+                external_ref=req.external_ref,
+                token=req.conversation_token,
+                user_id=req.user_id,
+            )
+            if stored:
+                if stored.conversation.id not in self._conversations:
+                    if len(self._conversations) >= 500:
+                        victim = next(
+                            (key for key, value in self._conversations.items() if not value.lock.locked()), None
+                        )
+                        if victim is None:
+                            raise UnavailableError("Có quá nhiều hội thoại đang hoạt động.")
+                        evicted = self._conversations.pop(victim)
+                        if evicted.external_ref:
+                            self._by_ref.pop((evicted.conversation.channel, evicted.external_ref), None)
+                    self._conversations[stored.conversation.id] = ConversationState(
+                        stored.conversation,
+                        stored.external_ref,
+                        player=stored.working,
+                        owner=stored.owner,
+                        revision=stored.revision,
+                    )
+                state = self._conversations[stored.conversation.id]
+                state.token = req.conversation_token
+                return state
+            # A new durable conversation receives a random capability. Only its hash enters PostgreSQL.
+            state = self._state(req)
+            if not state.owner:
+                if req.channel == "web":
+                    state.token = secrets.token_urlsafe(32)
+                    state.owner = owner_hash(state.token)
+                else:
+                    if not req.external_ref:
+                        raise BadRequestError("Discord cần external_ref cho hội thoại lưu bền.")
+                    state.owner = owner_hash(req.external_ref)
+                    old_id = state.conversation.id
+                    state.conversation.id = uuid5(NAMESPACE_URL, "indexbeast:" + state.owner)
+                    self._conversations.pop(old_id, None)
+                    self._conversations[state.conversation.id] = state
+                    self._by_ref[(req.channel, req.external_ref)] = state.conversation.id
+            return state
 
-    async def _images(self, req, prepared, result) -> list[ChatImage]:
+    async def _refresh(self, state, req):
+        if self.repository is None or state.revision == 0:
+            return
+        try:
+            stored = await self.repository.load(
+                state.conversation.id,
+                channel=req.channel,
+                external_ref=req.external_ref,
+                token=req.conversation_token,
+                user_id=req.user_id,
+            )
+        except NotFoundError:
+            if req.channel != "discord":
+                raise
+            # Hội thoại Discord đã bị xóa bền (vd. /clear chạy ở worker khác): coi như cache miss, bắt đầu lại hội thoại
+            # rỗng cùng khóa (id cố định theo owner) ngay trong state này; lượt lưu tới sẽ tạo lại dòng với revision 0
+            state.conversation = ConversationOut(
+                id=state.conversation.id, channel=state.conversation.channel, created_at=datetime.now(UTC), messages=[]
+            )
+            state.player, state.revision = None, 0
+            return
+        state.conversation, state.player, state.revision = stored.conversation, stored.working, stored.revision
+
+    async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):
+        if self.repository is None:
+            return self._memory_history(conversation_id, token, trusted_service, user_id)
+        # Read the channel/ref by ID internally, but never return messages before capability/service auth.
+        from core.db.models import Conversation
+
+        try:
+            async with self.repository.sessions() as session:
+                conv = await session.get(Conversation, conversation_id)
+                if conv is None:
+                    raise NotFoundError("Không tìm thấy hội thoại.")
+                channel, external_ref = conv.channel, conv.external_ref
+        except NotFoundError:
+            raise
+        except Exception:
+            raise UnavailableError("Không đọc được hội thoại.") from None
+        if channel == "discord" and not trusted_service:
+            raise UnauthorizedError("Cần service token để đọc hội thoại Discord.")
+        stored = await self.repository.load(
+            conversation_id, channel=channel, external_ref=external_ref, token=token, user_id=user_id
+        )
+        return stored.conversation
+
+    def _memory_history(self, conversation_id, token, trusted_service, user_id) -> ConversationOut:
+        """Cùng hợp đồng phân quyền với `MemoryRepository.load` + `stored_history`: Discord chỉ service tin cậy; web cần
+        token của hội thoại hoặc là tài khoản chủ sở hữu; không đúng thì 401 (hội thoại không có thì 404)."""
+        state = self._conversations.get(conversation_id)
+        if state is None:
+            raise NotFoundError("Không tìm thấy hội thoại.")
+        channel = state.conversation.channel
+        if channel == "discord" and not trusted_service:
+            raise UnauthorizedError("Cần service token để đọc hội thoại Discord.")
+        if channel == "web":
+            owned_by_user = user_id is not None and state.user_id == user_id
+            if not owned_by_user and (not token or not hmac.compare_digest(owner_hash(token), state.owner)):
+                raise UnauthorizedError("Cần token của hội thoại này.")
+        return state.conversation.model_copy(deep=True)
+
+    async def stored_has_message(self, message_id, *, token=None, trusted_service=False, user_id=None):
+        if self.repository is None:
+            for state in self._conversations.values():
+                if any(m.id == message_id and m.role == "assistant" for m in state.conversation.messages):
+                    self._memory_history(state.conversation.id, token, trusted_service, user_id)
+                    return True
+            return False
+        from core.db.models import Message
+
+        try:
+            async with self.repository.sessions() as session:
+                row = await session.get(Message, message_id)
+                if row is None or row.role != "assistant":
+                    return False
+                conversation_id = row.conversation_id
+        except Exception:
+            raise UnavailableError("Không kiểm tra được câu trả lời đã lưu.") from None
+        await self.stored_history(conversation_id, token=token, trusted_service=trusted_service, user_id=user_id)
+        return True
+
+    def _history_for(self, state: ConversationState) -> list[dict]:
+        # Search the bounded conversation BEFORE applying model-input budgets.
+        # Existing channel/external_ref routing checks remain in _state. No global or
+        # cross-conversation lookup; a web conversation UUID is NOT verified account ownership.
+        return [
+            {
+                "role": msg.role,
+                "content": msg.content,
+                "message_id": str(msg.id),
+                "created_at": msg.created_at.isoformat(),
+                "conversation_id": str(state.conversation.id),
+            }
+            for msg in state.conversation.messages[-64:]
+        ]
+
+    async def _images(self, req, prepared, result, started=None, limit=None) -> list[ChatImage]:
         if self.image_catalog is None or prepared.mode != "rag" or not result.grounded or not result.sources:
             return []
         try:
-            resolved = await self.image_catalog.resolve(
-                prepared.hits, [s.index for s in result.sources], spoilers=req.options.spoilers
-            )
-            prepared.trace["images"] = {"returned": len(resolved.images), "excluded": resolved.reasons}
-            return resolved.images
+            from app.services.answer_media import resolve
+
+            limit = limit or self.pipeline.settings.chat_timeout_seconds
+            remaining = limit - (time.perf_counter() - started) if started else 7
+            if remaining <= 1:
+                prepared.trace["images"] = {"returned": 0, "selection": "deadline"}
+                return []
+            t0 = time.perf_counter()
+            async with asyncio.timeout(min(6, remaining - 1)):
+                images = await resolve(self, req, prepared, result)
+            if isinstance(prepared.trace.get("images"), dict):
+                prepared.trace["images"]["ms"] = round((time.perf_counter() - t0) * 1000)
+            return images
         except Exception:
             # Images are optional. Never swallow task cancellation or leak paths/data through errors.
             prepared.trace["images"] = {"returned": 0, "excluded": {"resolver_unavailable": 1}}
             logging.getLogger(__name__).warning("Image resolver unavailable; returning text only")
             return []
 
-    def _save(self, req, state, prepared: Prepared, result: Generated, started: float, images=None) -> ChatResponse:
-        answer = (notice(prepared.lang) if prepared.mode == "llm_only" else "") + result.answer
+    def _start_images(self, req, prepared, started, limit=None) -> asyncio.Task | None:
+        """Chọn ảnh song song với bước viết (23/11), trên evidence Agent đã chọn; sau đó chỉ giữ ảnh của nguồn được
+        trích dẫn. Số thứ tự nguồn trùng với số trích dẫn [n] vì cả hai đều theo thứ tự prepared.hits."""
+        if self.image_catalog is None or prepared.mode != "rag" or prepared.static_answer is not None:
+            return None
+        sources = [
+            Source(index=i, title=h.payload.get("title") or "", url=h.payload["url"], section=h.payload.get("section"))
+            for i, h in enumerate(prepared.hits, 1)
+            if h.payload.get("url")
+        ]
+        if not sources:
+            return None
+        return asyncio.create_task(self._images(req, prepared, Generated("", sources, True), started, limit))
+
+    async def _finish_images(self, task, req, prepared, result, started=None, limit=None) -> list[ChatImage]:
+        if task is None:
+            return await self._images(req, prepared, result, started, limit)
+        if not result.grounded or not result.sources:
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+            prepared.trace.pop("images", None)
+            return []
+        cited = {source.index for source in result.sources}
+        images = [image for image in await task if cited & set(image.source_indices or [])]
+        if not images:
+            # Ảnh chọn sớm đều thuộc nguồn không được trích dẫn: chọn lại một lần trên nguồn được trích dẫn (như trước).
+            prepared.trace.pop("images", None)
+            images = await self._images(req, prepared, result, started, limit)
+            if isinstance(prepared.trace.get("images"), dict):
+                prepared.trace["images"]["parallel"] = "fallback"
+            return images
+        if isinstance(prepared.trace.get("images"), dict):
+            prepared.trace["images"].update(returned=len(images), parallel=True)
+        return images
+
+    async def _prepare(self, req, state, started=None, trace=None):
+        kwargs = {"player": state.player, "started": started}
+        if trace is not None:
+            kwargs["trace"] = trace
+        if self.repository is not None:
+            kwargs["memory_scope"] = MemoryScope(state.conversation.id, state.owner)
+        prepared = await self.pipeline.prepare(req, self._history_for(state), **kwargs)
+        return prepared, prepared.player_state
+
+    async def _save(
+        self, req, state, prepared: Prepared, result: Generated, started: float, images=None, player=None
+    ) -> ChatResponse:
+        answer = result.answer
         now = datetime.now(UTC)
-        message_id = uuid4()
-        state.conversation.messages.extend(
-            [
-                MessageOut(id=uuid4(), role="user", content=req.message, created_at=now),
-                MessageOut(
-                    id=message_id,
-                    role="assistant",
-                    content=answer,
-                    sources=result.sources,
-                    images=images or [],
-                    grounded=result.grounded,
-                    created_at=now,
-                ),
+        user_id = uuid5(state.conversation.id, f"user:{req.turn_id}") if req.turn_id else uuid4()
+        message_id = uuid5(state.conversation.id, f"assistant:{req.turn_id}") if req.turn_id else uuid4()
+        pair = [
+            MessageOut(id=user_id, role="user", content=req.message, created_at=now),
+            MessageOut(
+                id=message_id,
+                role="assistant",
+                content=answer,
+                sources=result.sources,
+                images=images or [],
+                grounded=result.grounded,
+                clarification=prepared.clarification,
+                created_at=now + timedelta(microseconds=1),
+            ),
+        ]
+        working = dict(player) if isinstance(player, dict) else None
+        if working is not None:
+            working["constraints"] = [
+                {**c, "source_id": str(user_id) if c["source_id"] == "current" else c["source_id"]}
+                for c in working.get("constraints", [])
             ]
-        )
+            player = working
+        # Một giá trị cho DB, trace và phản hồi; đồng bộ bộ nhớ ngữ nghĩa bên dưới nằm ngoài độ trễ này
+        latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        if self.repository is not None:
+            working = working or {}
+            snapshot = Snapshot(
+                state.conversation,
+                state.external_ref,
+                state.owner,
+                state.revision,
+                working,
+                user_id=req.user_id,
+                guild_id=req.guild_id,
+            )
+            tokens_in, tokens_out = token_usage(prepared.trace)
+            record = {
+                "trace": public_trace(prepared.trace, latency_ms=latency_ms),
+                "rewritten_query": prepared.trace.get("rewritten_query"),
+                "latency_ms": latency_ms,
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+            }
+            created = await self.repository.save(snapshot, pair, working, prepared.agent_decision, record)
+            if not created:
+                replay = await self._replay(req, state, started)
+                if replay is None:
+                    raise UnavailableError("Không khôi phục được lượt hỏi trùng.")
+                return replay
+            state.revision += 1
+            player = working
+        state.conversation.messages.extend(pair)
         state.conversation.messages[:] = state.conversation.messages[-64:]
+        if player is not None:
+            state.player = player
+        if self.repository is not None and self.pipeline.memory is not None:
+            try:
+                async with asyncio.timeout(self.pipeline.settings.chat_memory_timeout_seconds):
+                    prepared.trace["memory_sync"] = await self.pipeline.memory.sync(
+                        MemoryScope(state.conversation.id, state.owner)
+                    )
+            except TimeoutError:
+                prepared.trace["memory_sync"] = {"status": "pending"}
         trace = {k: v for k, v in prepared.trace.items() if k != "result"}
-        trace["latency_ms"] = round((time.perf_counter() - started) * 1000, 2)
+        trace["latency_ms"] = latency_ms
         self.traces[message_id] = trace
         if len(self.traces) > 1000:
             self.traces.popitem(last=False)
@@ -172,42 +461,86 @@ class LiveChatService:
             answer=answer,
             sources=result.sources,
             grounded=result.grounded,
-            latency_ms=trace["latency_ms"],
+            latency_ms=latency_ms,
             images=images or [],
+            clarification=prepared.clarification,
+            conversation_token=state.token if req.channel == "web" else None,
         )
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
         started = time.perf_counter()
-        state = self._state(req)
+        limit = self.pipeline.settings.chat_timeout_seconds
+        trace, stage = {}, "wait_conversation"
         try:
             # Hạn tổng cho cả chờ khóa, LLM (kể cả retry) và ảnh: bot bỏ cuộc ở 60 s, backend phải dừng trước
-            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds), state.lock:
-                prepared = await self.pipeline.prepare(req, self._history_for(state))
-                result = await self.pipeline.generator.generate(prepared)
-                images = await self._images(req, prepared, result)
-                return self._save(req, state, prepared, result, started, images)
+            async with asyncio.timeout(limit):
+                state = await self._load_state(req)
+                async with state.lock:
+                    await self._refresh(state, req)
+                    if replay := await self._replay(req, state, started):
+                        return replay
+                    stage = "prepare"
+                    prepared, player = await self._prepare(req, state, started, trace)
+                    early = self._start_images(req, prepared, started)
+                    try:
+                        stage = "generate"
+                        result = await self.pipeline.generator.generate(prepared)
+                        stage = "images_and_save"
+                        images = await self._finish_images(early, req, prepared, result, started)
+                    finally:
+                        if early is not None and not early.done():
+                            early.cancel()
+                    return await self._save(req, state, prepared, result, started, images, player)
         except TimeoutError:
+            log_deadline(stage, trace, started, limit)
             raise TimeoutAppError() from None
 
     async def open_stream(self, req: ChatRequest) -> ChatEvents:
         """Prepare and prime provider BEFORE sending HTTP headers, then stream actual deltas."""
         started = time.perf_counter()
-        state = self._state(req)
-        await state.lock.acquire()
+        settings = self.pipeline.settings
+        # Web has no 60 s client limit like the bot: give it a longer whole-turn deadline (first token included).
+        limit = settings.chat_stream_timeout_seconds if req.channel == "web" else settings.chat_timeout_seconds
+        deadline = asyncio.get_running_loop().time() + limit
+        trace, stage = {}, "wait_conversation"
+        owns_lock = False
         tokens = None
+        early = None
         try:
-            # Hạn chỉ tính tới token đầu; sau đó web nhận dần và có thể tự hủy
-            async with asyncio.timeout(self.pipeline.settings.chat_timeout_seconds):
-                prepared = await self.pipeline.prepare(req, self._history_for(state))
-                tokens = self.pipeline.generator.stream(prepared)
-                first = await anext(tokens)
+            async with asyncio.timeout_at(deadline):
+                state = await self._load_state(req)
+                await state.lock.acquire()
+                owns_lock = True
+                await self._refresh(state, req)
+                replay = await self._replay(req, state, started)
+                if replay is not None:
+
+                    async def replay_tokens():
+                        yield replay.answer
+
+                    prepared = Prepared(self.pipeline.settings.chat_mode, "vi", [], static_answer=replay.answer)
+                    prepared.trace["result"] = Generated(replay.answer, replay.sources, replay.grounded)
+                    player = state.player
+                    tokens = replay_tokens()
+                    first = await anext(tokens)
+                else:
+                    stage = "prepare"
+                    prepared, player = await self._prepare(req, state, started, trace)
+                    early = self._start_images(req, prepared, started, limit)
+                    stage = "first_token"
+                    tokens = self.pipeline.generator.stream(prepared)
+                    first = await anext(tokens)
         except BaseException as exc:
+            if early is not None:
+                early.cancel()
             try:
                 if tokens is not None:
                     await tokens.aclose()
             finally:
-                state.lock.release()
+                if owns_lock:
+                    state.lock.release()
             if isinstance(exc, TimeoutError):
+                log_deadline(stage, trace, started, limit)
                 raise TimeoutAppError() from None
             raise
 
@@ -224,19 +557,58 @@ class LiveChatService:
 
         async def events():
             try:
-                async with aclosing(tokens):
+                async with asyncio.timeout_at(deadline), aclosing(tokens):
                     yield "status", StatusEvent(status="generating")
-                    if prepared.mode == "llm_only":
-                        yield "token", TokenEvent(token=notice(prepared.lang))
                     yield "token", TokenEvent(token=first)
                     async for token in tokens:
                         yield "token", TokenEvent(token=token)
                     result = prepared.trace["result"]
-                    images = await self._images(req, prepared, result)
-                    response = self._save(req, state, prepared, result, started, images)
-                    yield "sources", SourcesEvent(sources=response.sources, images=response.images)
+                    images = await self._finish_images(early, req, prepared, result, started, limit)
+                    response = replay or await self._save(req, state, prepared, result, started, images, player)
+                    yield (
+                        "sources",
+                        SourcesEvent(
+                            sources=response.sources, images=response.images, clarification=response.clarification
+                        ),
+                    )
                     yield "done", DoneEvent.model_validate(response, from_attributes=True)
+            except TimeoutError:
+                log_deadline("stream", prepared.trace, started, limit)
+                raise TimeoutAppError() from None
             finally:
+                if early is not None and not early.done():
+                    early.cancel()
                 await cleanup()
 
         return ManagedEvents(events(), cleanup)
+
+    async def _replay(self, req, state, started):
+        if req.turn_id is None:
+            return None
+        user_id = uuid5(state.conversation.id, f"user:{req.turn_id}")
+        answer_id = uuid5(state.conversation.id, f"assistant:{req.turn_id}")
+        if self.repository is None:
+            messages = {message.id: message for message in state.conversation.messages}
+            user, row = messages.get(user_id), messages.get(answer_id)
+        else:
+            user = await self.repository.message(state.conversation.id, user_id)
+            row = await self.repository.message(state.conversation.id, answer_id) if user is not None else None
+        if user is None:
+            return None
+        if user.content != req.message:
+            raise BadRequestError("Mã lượt hỏi đã dùng cho nội dung khác.")
+        if row is None:
+            raise UnavailableError("Lượt hỏi đã lưu chưa hoàn chỉnh.")
+        images = row.images if self.repository is None else (row.trace or {}).get("images", [])
+        clarification = row.clarification if self.repository is None else (row.trace or {}).get("clarification")
+        return ChatResponse(
+            conversation_id=state.conversation.id,
+            message_id=row.id,
+            answer=row.content,
+            sources=row.sources,
+            grounded=bool(row.grounded),
+            latency_ms=(time.perf_counter() - started) * 1000,
+            images=images,
+            clarification=clarification,
+            conversation_token=state.token if req.channel == "web" else None,
+        )

@@ -1,0 +1,6 @@
+[
+  {"id": "BUILD-1", "level": "build không level/class", "lang": "auto", "question": "Gợi ý cho mình một build dùng katana", "replies": []},
+  {"id": "BUILD-2", "level": "build không level/class", "lang": "auto", "question": "Build tank chịu đòn tốt cho PvE", "replies": []},
+  {"id": "BUILD-3", "level": "người mới, không level", "lang": "auto", "question": "Mình mới chơi, nên build phép thế nào?", "replies": []},
+  {"id": "BUILD-4", "level": "đòi bảng chính xác cho nhân vật của mình", "lang": "auto", "question": "Chia lại chính xác 8 chỉ số cho nhân vật Faith của mình giúp", "replies": ["level 75, class Confessor"]}
+]

@@ -5,7 +5,9 @@ from collections import Counter
 
 from bs4 import BeautifulSoup, Comment, NavigableString, Tag
 
+from core.text.lore_policy import tab_language
 from core.text.normalize import normalize_text, normalized_key
+from core.text.structured_tables import extract as extract_tables
 
 VERSION = "s2-clean-2.1"
 UI_CLASSES = {
@@ -57,7 +59,9 @@ def render(node):
     return ("\n" + inner + "\n") if node.name in {"p", "li", "dt", "dd", "blockquote"} else inner
 
 
-def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False) -> dict:
+def clean_html(
+    html: str, *, title: str, skip_sections=(), capture_context=False, preserve_gameplay=False, structured_tables=False
+) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     body = soup.select_one(".mw-parser-output, #page-content, main")
     if body is None:
@@ -67,6 +71,7 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
         for n, tag in enumerate(body.find_all(True))
     }
     anchor_counts = Counter(t.get("id") for t in body.find_all(id=True))
+    table_inventory = extract_tables(soup, title, positions) if structured_tables else {}
 
     def variant_context(node):
         if node is None:
@@ -157,7 +162,12 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
             key = (item.get("data-source") or item.get("data-item-name") or "").lower()
             label = item.select_one(".pi-data-label")
             value = item.select_one(".pi-data-value")
-            if key in NON_LORE_FIELDS or (label and STATS.search(label.get_text(" ", strip=True))):
+            excluded_field = (
+                key in {"voice", "voice_actor"}
+                if preserve_gameplay
+                else key in NON_LORE_FIELDS or (label and STATS.search(label.get_text(" ", strip=True)))
+            )
+            if excluded_field:
                 audit(item, "infobox_numeric_or_production_field")
                 continue
             if value:
@@ -188,6 +198,9 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
         if heading and lines and lines[0] == heading[-1]:
             lines = lines[1:]  # tiêu đề bảng trùng tiêu đề nhóm
         add(group, "\n".join([*heading, *lines]), "infobox_stats")
+        if preserve_gameplay:
+            headers = [line for line in lines if ":" not in line and not re.search(r"\d", line)]
+            active["blocks"][-1]["table_header"] = " / ".join(dict.fromkeys([*heading, *headers]))
 
     def one_line(node):
         return " ".join(normalize_text(render(node)).split())
@@ -218,6 +231,37 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
         return lines
 
     def table(node):
+        if (
+            structured_tables
+            and id(node) in table_inventory
+            and table_inventory[id(node)].get("renderer") != "legacy_dialogue"
+        ):
+            parsed_table = table_inventory[id(node)]
+            if parsed_table["decision"] == "excluded":
+                audit(node, parsed_table["reason"])
+                return
+            if parsed_table["blocks"]:
+                for row in parsed_table["blocks"]:
+                    add(node, row["text"], "table_fact")
+                    active["blocks"][-1].update(
+                        table_id=parsed_table["table_id"],
+                        fact_ids=row["fact_ids"],
+                        row_key=row["row_key"],
+                        table_type=parsed_table["table_type"],
+                        lang_override=row.get("lang"),
+                    )
+                    if parsed_table["variant"] and not (active["blocks"][-1].get("variant_context") or {}).get("label"):
+                        active["blocks"][-1]["variant_context"] = {
+                            "label": parsed_table["variant"],
+                            "anchor": (variant_context(node) or {}).get("anchor"),
+                            "source": "source_tab_id",
+                        }
+            else:
+                add(node, normalize_text(render(node)), "table", [parsed_table["reason"]])
+                for child in node.find_all("table"):
+                    if child.find_parent("table") is node:
+                        table(child)
+            return
         rows = node.find_all("tr")
         text = normalize_text(render(node))
         labels = [
@@ -227,6 +271,11 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
         ]
         dialogue = "dialogue" in active["section"].lower() or any("dialogue" in label.lower() for label in labels)
         dialogue = dialogue or bool(re.search(r"(?:English|Japanese) Dialogue", text[:100], re.I))
+        if preserve_gameplay:
+            # A quest-item cell mentioning "exhausting her dialogue" is not a dialogue header.
+            dialogue = "dialogue" in active["section"].lower() or any(
+                re.fullmatch(r"(?:(?:English|Japanese) )?Dialogue(?: \(Japanese\))?", label, re.I) for label in labels
+            )
         if not dialogue and sum(bool(STATS.search(v)) for v in labels) >= 2:
             audit(node, "numeric_stats_table")
             return
@@ -245,6 +294,15 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
             if values:
                 lines.append(" | ".join(values))
         notes = [] if dialogue or quote else ["table_retained_for_review"]
+        if (
+            preserve_gameplay
+            and dialogue
+            and any(
+                sum(bool(normalize_text(render(c))) for c in row.find_all(["td", "th"], recursive=False)) > 1
+                for row in rows
+            )
+        ):
+            notes.append("unresolved_multicolumn_dialogue")
         add(node, "\n".join(lines), "dialogue" if dialogue else ("quote" if quote else "table"), notes)
         if dialogue and lines:
             # Preserve source row order and header roles; never infer the speaker from page title.
@@ -257,13 +315,25 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
             def flush_turn():
                 nonlocal current, has_speech
                 if current:
+                    text = "\n".join(current)
+                    effective_language = language
+                    language_evidence = "table_header"
+                    if preserve_gameplay:
+                        declared = tab_language((variant_context(node) or {}).get("label"))
+                        if declared is not None:
+                            effective_language = declared
+                            language_evidence = "source_tab_label"
+                        if effective_language == "en" and re.search(r"[\u3040-\u30ff\u3400-\u9fff]", text):
+                            effective_language = "unknown"
+                            language_evidence = "mixed_script_requires_review"
                     units.append(
                         {
                             "unit_ordinal": len(units),
-                            "text": "\n".join(current),
+                            "text": text,
                             "trigger": trigger,
                             "speaker": node.get("data-speaker"),
-                            "lang": language,
+                            "lang": effective_language,
+                            "language_evidence": language_evidence,
                             "source_location": positions.get(id(node), "article"),
                         }
                     )
@@ -387,4 +457,5 @@ def clean_html(html: str, *, title: str, skip_sections=(), capture_context=False
         "removed": removed,
         "cleaning_version": VERSION,
         "html_lang": body.get("lang", "unknown"),
+        "table_inventory": list(table_inventory.values()),
     }

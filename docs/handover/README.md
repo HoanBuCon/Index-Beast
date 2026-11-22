@@ -1,5 +1,148 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Sửa review hệ thống: vận hành, restore an toàn, deploy, cổng 18000, reranker trong compose (22/11/2026)](2026-11-22_s5-tv1_sua-review-ops.md)
+- [TV1 · Sửa review hệ thống: quyền đọc lịch sử chế độ memory, xóa tài khoản gọi lại được (22/11/2026)](2026-11-22_s5-tv1_sua-review-rieng-tu.md)
+- [TV1 · Sửa review hệ thống: chính sách domain web, catalog ảnh, phân lớp adapter, schema Qdrant (22/11/2026)](2026-11-22_s5-tv1_sua-review-rag-config.md)
+- [TV1 · Sửa review hệ thống: lịch sử theo tài khoản trên web (22/11/2026)](2026-11-22_s5-tv1_sua-review-web.md)
+- [TV1 · Sửa review hệ thống: redact ID trong /ask, cache kênh, thời hạn link chia sẻ (22/11/2026)](2026-11-22_s5-tv1_sua-review-bot.md)
+- [TV1 · Sửa review hệ thống: giới hạn trang của ingest update, tokenizer dùng chung (22/11/2026)](2026-11-22_s5-tv1_sua-review-ingest.md)
+- [TV3 · Đo lại golden 200 với reranker L12 chạy trên máy, đủ 9 cấu hình (24/11/2026)](2026-11-24_s5-tv3_do-l12-ablation.md)
+- [TV3 · Reranker chạy trên máy (MiniLM-L12) thay API Jina, chống tràn RAM (24/11/2026)](2026-11-24_s5-tv3_reranker-cuc-bo.md)
+- [TV3 (làm thay TV2) · Duyệt golden set 200 câu, bổ sung câu gõ nhầm (24/11/2026)](2026-11-24_s5-tv3_duyet-golden-200.md)
+- [TV3 · Rà soát rule cứng còn lại, dọn code chết, prompt và docs cũ (24/11/2026)](2026-11-24_s5-tv3_ra-soat-rule-va-don-dep.md)
+- [TV3 · Đo lại chất lượng sau `run_python`, ngân sách Agent, tối ưu bước viết, thinking có chọn lọc (23/11/2026)](2026-11-23_s5-tv3_do-lai-chat-luong-va-thinking.md)
+- [TV3 · True Agent GĐ2: một vòng lặp Agent thay Agent decision, Tool Agent và Assessor (22/11/2026)](2026-11-22_s5-tv3_true-agent-gd2.md)
+- [TV3 · Spike True Agent bằng DeepSeek function calling (22/11/2026)](2026-11-22_s5-tv3_spike-true-agent.md)
+- [TV3 · Giữ câu cho Answer Guard, gọt prompt build, lỗi G, bỏ chỗ server quyết định thay Agent (22/11/2026)](2026-11-22_s5-tv3_giu-cau-guard-va-agent-tu-quyet.md)
+- [TV3 · Phân bổ chỉ số do Agent làm, Answer Guard, hạn thời gian (21/11/2026)](2026-11-21_s5-tv3_build-guard-va-thoi-gian.md)
+- [TV4 (TV3 làm thay) · Bỏ tùy chọn `spoilers` khỏi web, bot và API (21/11/2026)](2026-11-21_s5-tv4_bo-tuy-chon-spoiler.md)
+
+- [TV2 (TV3 làm thay) · Bổ sung 11 trang Origins/Attributes vào corpus (20/11/2026)](2026-11-20_s5-tv2_bo-sung-trang-class.md)
+
+- [TV3 · Chuyển rule con số cho Agent (20/11/2026)](2026-11-20_s4-tv3_agent-rule-con-so.md)
+
+- [TV3 · Gỡ chế độ chat `llm_only` (20/11/2026)](2026-11-20_s4-tv3_go-llm-only.md)
+
+- [TV4 · Làm mềm mép video đăng nhập (17/11/2026)](2026-11-17_s5-tv4_lam-mem-mep-video-dang-nhap.md)
+
+- [TV4 · Hỏi tiếp trong thread và kiểm thử bot (17/11/2026)](2026-11-17_s5-tv4_hoi-tiep-thread-va-kiem-thu-bot.md)
+- [TV2 · Sprint 5: rà soát mã toàn hệ thống (17/11/2026)](2026-11-17_s5-tv2_ra-soat-ma-toan-he-thong.md)
+
+- [TV3 · Sprint 5: công cụ load test, chi phí LLM, p95 từng bước (16/11/2026)](2026-11-16_s5-tv3_load-test-chi-phi.md)
+- [TV2 · Sprint 5: cập nhật dữ liệu tăng dần và tài liệu pipeline (16/11/2026)](2026-11-16_s5-tv2_cap-nhat-tang-dan.md)
+- [TV2 · Sprint 5: phạm vi Tarnished Pack và an toàn cập nhật dữ liệu (16/11/2026)](2026-11-16_s5-tv2_pham-vi-tarnished-pack.md)
+- [TV4 (TV1 làm hộ) · Bot: lệnh cơ bản, /setup, /clear, trả lời mention (16/11/2026)](2026-11-16_s5-tv4_bot-lenh-co-ban.md)
+- [TV1 · Quyền riêng tư và xóa tài khoản (16/11/2026)](2026-11-16_s5-tv1_quyen-rieng-tu-xoa-tai-khoan.md)
+- [TV1 · Sprint 5: deploy production, script deploy, backup (16/11/2026)](2026-11-16_s5-tv1_production-deploy.md)
+- [TV2 · Sprint 5: tài liệu pipeline và backlog lịch tuần (16/11/2026)](2026-11-16_s5-tv2_tai-lieu-pipeline.md) · [Meta prompts](2026-11-16_s5-tv2_meta-prompts.md)
+
+- [TV1 · API server Discord cho bot: kênh `/setup` và xóa ký ức `/clear` (16/11/2026)](2026-11-16_s5-tv1_discord-guild-api.md)
+- [TV2 · Sprint 5: giới hạn lưu giữ 90 ngày (16/11/2026)](2026-11-16_s5-tv2_retention-gioi-han.md)
+
+- [TV1 · Báo cáo bàn giao Sprint 4 (16/11/2026)](2026-11-16_s4-tv1_bao-cao-ban-giao-sprint-4.md)
+- [TV3 · Chấp nhận thứ tự trường JSON hợp lệ trong SSE (16/11/2026)](2026-11-16_s4-tv3_stream-json-field-order.md)
+- [TV3 · Việt hóa chú thích cấu hình `.env.example` (16/11/2026)](2026-11-16_s4-tv3_viet-hoa-env-comments.md)
+- [TV3 · Jina Reranker API tùy chọn (16/11/2026)](2026-11-16_s4-tv3_jina-reranker.md)
+- [TV3 · Review và kiểm chứng live Jina reranker (16/11/2026)](2026-11-16_s4-tv3_review-reranker-live.md)
+
+- [TV2 · Rà soát 200 câu S4 bằng artifact local (16/11/2026)](2026-11-16_s4-tv2_ra-soat-golden-local.md)
+
+- [TV3 · Đánh giá RAG Sprint 4, bổ sung ngày 15/11/2026](2026-11-15_s4-tv3_danh-gia-rag.md)
+
+- [TV3 · Trợ lý chơi Elden Ring dùng nhiều nguồn (14/11/2026)](2026-11-14_s4-tv3_gameplay-multi-source.md)
+
+- [TV3 · Cập nhật điều kiện khi người dùng đổi yêu cầu (14/11/2026)](2026-11-14_s4-tv3_superseded-constraints.md)
+
+- [TV3 · Nối lượt hỏi đường bằng mốc tiến độ (14/11/2026)](2026-11-14_s4-tv3_progress-clarification.md)
+- [TV4 · Giao diện đăng nhập Google/Discord (14/11/2026)](2026-11-14_s4-tv4_giao-dien-dang-nhap-google-discord.md)
+
+- [TV3 · Agent thích ứng và lập kế hoạch (13/11/2026)](2026-11-13_s4-tv3_adaptive-agent.md)
+
+- [TV1 · Sprint 4: test CORS và giới hạn tần suất theo server Discord (13/11/2026)](2026-11-13_s4-tv1_cors-va-gioi-han-theo-guild.md)
+
+- [TV1 · Sprint 4: review và sửa lỗi phần đăng nhập, feedback, eval (13/11/2026)](2026-11-13_s4-tv1_review-va-sua-loi.md)
+
+- [TV1 · Sprint 4: feedback, eval, đăng nhập Discord (13/11/2026)](2026-11-13_s4-tv1_bao-cao-ban-giao.md)
+
+- [TV2 · Sprint 4: kiểm chứng Qdrant hybrid (13/11/2026)](2026-11-13_s4-tv2_hybrid-verification.md)
+
+- [TV2 · Sprint 4: chất lượng wiki, spoiler và eval local (12/11/2026)](2026-11-12_s4-tv2_wiki-quality.md)
+
+- [TV3 · README công việc TV2, TV4 và mục tra cứu thành viên (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv2-tv4.md)
+
+- [TV3 · README công việc TV1 và TV3 qua 6 sprint (09/11/2026)](2026-11-09_s4-tv3_readme-toan-bo-tv1-tv3.md)
+
+- [TV3 · Chấm golden set 25 câu theo độ khó (09/11/2026)](2026-11-09_s3-tv3_cham-golden-25-theo-do-kho.md)
+
+- [TV3 · So sánh và hỏi bổ sung đúng lý do (09/11/2026)](2026-11-09_s3-tv3_so-sanh-va-hoi-bo-sung.md)
+
+- [TV2 · Commit và PR structured tables (09/11/2026)](2026-11-09_s3-tv2_commit-va-pr-structured-tables.md)
+
+- [TV2 · Tái tạo facts/clean/chunk từ raw cuối (09/11/2026)](2026-11-09_s3-tv2_tai-tao-facts-clean-chunk-tu-raw.md)
+
+- [TV2 · Khảo sát bảng raw và đề xuất chờ duyệt (08/11/2026)](2026-11-08_s3-tv2_khao-sat-bang-raw-va-de-xuat.md)
+
+- [TV2 · Lọc bảng text nhập nhằng và xuất clean-only (08/11/2026)](2026-11-08_s3-tv2_loc-bang-text-va-xuat-clean-only.md)
+
+- [TV2 · Bản cuối raw/clean/chunk và dọn dữ liệu cũ (08/11/2026)](2026-11-08_s3-tv2_ban-cuoi-va-don-du-lieu-cu.md)
+
+- [TV2 · Chất lượng dữ liệu và RAG readiness offline (08/11/2026)](2026-11-08_s3-tv2_chat-luong-du-lieu-va-rag-readiness.md)
+
+- [TV4 · Bỏ nền hover nút Web (08/11/2026)](2026-11-08_s3-tv4_bo-hover-nut-web.md)
+
+- [TV4 · Đổi nhãn chờ thành Đang suy nghĩ (08/11/2026)](2026-11-08_s3-tv4_doi-nhan-dang-suy-nghi.md)
+
+- [TV4 · Bỏ link mở nguồn trùng bên ngoài (08/11/2026)](2026-11-08_s3-tv4_bo-link-nguon-trung.md)
+
+- [TV4 · Đồng bộ giao diện trang chia sẻ Discord (08/11/2026)](2026-11-08_s3-tv4_giao-dien-chia-se-discord.md)
+
+
+- [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
+
+- [TV4 · Đăng ký global và kiểm tra backend thật (08/11/2026)](2026-11-08_s3-tv4_dang-ky-global-va-thu-backend-that.md)
+
+- [TV4 · Sprint 3: SSE web, bot và About (08/11/2026)](2026-11-08_s3-tv4_web-sse-bot-va-about.md)
+
+- [TV4 · Đóng bảng trả lời bổ sung khi gửi (08/11/2026)](2026-11-08_s3-tv4_dong-bang-bo-sung-khi-gui.md)
+
+- [TV4 · Bấm khung chat để nhập (08/11/2026)](2026-11-08_s3-tv4_bam-khung-chat-de-nhap.md)
+
+- [TV4 · Đổi biểu tượng dừng trả lời (08/11/2026)](2026-11-08_s3-tv4_icon-dung-tra-loi.md)
+
+- [TV4 · Khóa điều hướng sidebar khi đang trả lời (07/11/2026)](2026-11-07_s3-tv4_khoa-dieu-huong-khi-dang-tra-loi.md)
+
+- [TV4 · Bỏ viền nút Web trong ô chat (07/11/2026)](2026-11-07_s3-tv4_bo-vien-nut-web.md)
+
+- [TV4 · Khung trả lời bổ sung kiểu menu Elden Ring (07/11/2026)](2026-11-07_s3-tv4_khung-tra-loi-bo-sung-menu.md)
+
+- [TV4 · Cấu hình key Tavily local (07/11/2026)](2026-11-07_s3-tv4_cau-hinh-tavily-local.md)
+
+- [TV4 · Cập nhật venv local sau khi pull LangGraph (07/11/2026)](2026-11-07_s3-tv4_cap-nhat-venv-langgraph.md)
+
+- [TV3 · Migration/setup và hoàn tất 20 lượt thật (06/11/2026)](2026-11-06_s3-tv3_migration-setup-va-live-20.md)
+
+- [TV3 · Model decisions và semantic memory lưu bền (06/11/2026)](2026-11-06_s3-tv3_agent-va-semantic-memory.md)
+
+- [TV3 · LangGraph, history liên quan và prompt trực tiếp (06/11/2026)](2026-11-06_s3-tv3_langgraph-va-history-lien-quan.md)
+
+- [TV3 · Gỡ conflict rebase với develop (05/11/2026)](2026-11-05_s3-tv3_giai-quyet-conflict-rebase.md)
+
+- [TV3 · Golden 100, hỏi lại và test gameplay thật (05/11/2026)](2026-11-05_s3-tv3_gameplay-clarification-va-golden-100.md)
+
+- [TV3 · Guard rewrite, assessor và evidence RAG (05/11/2026)](2026-11-05_s3-tv3_rag-evidence-guards.md)
+
+- [TV4 · Bỏ đánh giá dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-gia-duoi-cau-tra-loi.md)
+
+- [TV4 · Bỏ danh sách nguồn dưới câu trả lời (05/11/2026)](2026-11-05_s3-tv4_bo-danh-sach-nguon-duoi-cau-tra-loi.md)
+
+- [TV3 · Chẩn đoán thật 25 câu golden set (04/11/2026)](2026-11-04_s3-tv3_golden-25-diagnostic.md)
+
+- [TV3 · Query web, excerpt và chẩn đoán 502 (04/11/2026)](2026-11-04_s3-tv3_web-query-va-excerpt.md)
+
+- [TV3 · Tavily và nút tìm web, Discord auto (04/11/2026)](2026-11-04_s3-tv3_tavily-web-search.md)
+
+- [TV3 · Schema recovery và trả lời trực tiếp (04/11/2026)](2026-11-04_s3-tv3_schema-recovery-va-giong-tra-loi.md)
+
 - [TV3 · Sơ đồ pipeline hệ thống (02/11/2026)](2026-11-02_s3-tv3_system-pipeline.md)
 
 - [TV3 · Nhánh câu hỏi tổng quan (31/10/2026)](2026-10-31_s2-tv3_overview-routing.md)
@@ -58,6 +201,8 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 
 ## Danh sách
 
+- [TV4 · Nạp dữ liệu và chạy local (03/11/2026)](2026-11-03_s2-tv4_nap-du-lieu-va-chay-local.md)
+
 - [TV2 full chunk và PostgreSQL base/SotE](2026-10-29_s2-tv2_chunk-full-base-sote.md)
 
 - [TV2 cài Docker local — chờ reboot](2026-10-28_s2-tv2_docker-local.md)
@@ -112,3 +257,17 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 | 2026-11-02 | TV1 (Hoanbucon) | [Căn trái chữ menu sidebar web](2026-11-02_s3-tv1_can-trai-menu-sidebar.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Sửa câu chào và câu hỏi danh tính bị từ chối khi bật rewrite](2026-11-02_s3-tv1_sua-chao-hoi-khi-bat-rewrite.md) |
 | 2026-11-02 | TV1 (Hoanbucon) | [Thử lại khi LLM trích dẫn sai giao thức và sửa thông báo 502 trên web](2026-11-02_s3-tv1_thu-lai-loi-trich-dan.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Cập nhật SRS và TechStack theo công nghệ, pipeline cuối Sprint 3](2026-11-08_s3-tv1_cap-nhat-srs-techstack.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Staging trên VPS: compose, Caddy bảo vệ, script cài đặt, deploy và đo tài nguyên](2026-11-08_s3-tv1_staging-vps.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Lưu trace và số đo từng câu trả lời vào PostgreSQL, endpoint xem trace](2026-11-08_s3-tv1_trace-rag-postgres-va-admin.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Sửa 9 lỗi tìm thấy khi review phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [`make env`: đồng bộ `.env` với `.env.example`](2026-11-08_s3-tv1_make-env.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Sửa `make migrate`, `test`, `lint`, `format`, `openapi` khi chưa kích hoạt venv](2026-11-08_s3-tv1_make-dung-python-venv.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [`/admin/stats` và xem trace từ giao diện web](2026-11-08_s3-tv1_admin-stats-va-xem-trace-tren-web.md) |
+| 2026-11-08 | TV1 (Hoanbucon) | [Sửa 3 lỗi tìm thấy ở lần review thứ hai phần Sprint 3 của TV1](2026-11-08_s3-tv1_sua-loi-review-lan-2.md) |
+| 2026-11-02 | TV1 (Hoanbucon) | [Rà soát cách chia section và chunk trên 4.164 trang](2026-11-02_s3-tv1_ra-soat-section-chunk.md) |
+| 2026-11-09 | TV1 (Hoanbucon) | [Báo cáo bàn giao Sprint 3](2026-11-09_s3-tv1_bao-cao-ban-giao-sprint-3.md) |
+| 2026-11-13 | TV1 (Quỷ Tháng 5 Khóc) | [Sprint 4: đề xuất điều chỉnh kế hoạch và ADR-005 đăng nhập](../proposals/2026-11-13_s4-tv1-de-xuat-dieu-chinh-ke-hoach.md) |
+- [TV4 · Câu hỏi động và hai nút trong bảng bổ sung (14/11/2026)](2026-11-14_s4-tv4_cau-hoi-va-hai-nut-bo-sung.md)
+- [TV4 · Dọn ảnh không sử dụng (14/11/2026)](2026-11-14_s4-tv4_don-anh-khong-su-dung.md)
+- [TV4 · Web: đăng nhập Discord, feedback, admin, xóa tài khoản (16/11/2026, TV1 làm hộ)](2026-11-16_s5-tv4_web-dang-nhap-feedback-admin.md)

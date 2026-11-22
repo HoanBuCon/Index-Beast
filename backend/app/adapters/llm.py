@@ -35,6 +35,18 @@ def track_provider_stream(stream):
 
 
 class ManagedChatDeepSeek(ChatDeepSeek):
+    def _get_request_payload(self, input_, *, stop=None, **kwargs) -> dict:
+        payload = super()._get_request_payload(input_, stop=stop, **kwargs)
+        # DeepSeek thinking + tool call: reasoning_content của mọi tin nhắn assistant phải được gửi lại, thiếu thì lỗi
+        # 400; langchain_deepseek 1.1.1 bỏ trường này khi chuyển tin nhắn (23/11).
+        originals = [m for m in self._convert_input(input_).to_messages() if isinstance(m, AIMessage)]
+        sent = [m for m in payload["messages"] if m.get("role") == "assistant"]
+        for message, original in zip(sent, originals, strict=False):
+            reasoning = original.additional_kwargs.get("reasoning_content")
+            if reasoning:
+                message["reasoning_content"] = reasoning
+        return payload
+
     async def _astream(self, *args, **kwargs):
         stream = track_provider_stream(super()._astream(*args, **kwargs))
         async with aclosing(stream):
@@ -244,7 +256,8 @@ class DeepSeekLLM:
                 error_type=type(exc).__name__,
             ) from None
 
-    async def stream_chain(self, chain: Runnable, inputs: Any) -> AsyncIterator[str]:
+    async def stream_chain(self, chain: Runnable, inputs: Any, usage: dict | None = None) -> AsyncIterator[str]:
+        """`usage`, nếu có, nhận prompt_tokens/completion_tokens từ chunk cuối (stream_usage=True)."""
         # One producer owns every LCEL context and provider iterator for the whole run.
         # Consumers can prime in a route task and resume in an SSE task safely.
         queue = asyncio.Queue(maxsize=1)
@@ -261,7 +274,11 @@ class DeepSeekLLM:
                             async for message in stream:
                                 if stopping.is_set():
                                     break
-                                await queue.put(message)
+                                acknowledged = asyncio.get_running_loop().create_future()
+                                await queue.put((message, acknowledged))
+                                # Do not advance the provider until the consumer resumes after a delta.
+                                # Graph scheduling must not turn priming into eager background generation.
+                                await acknowledged
                     finally:
                         for provider in reversed(streams):
                             await provider.aclose()
@@ -272,19 +289,25 @@ class DeepSeekLLM:
             finally:
                 _PROVIDER_STREAMS.reset(token)
             if not stopping.is_set():
-                await queue.put(error)
+                await queue.put((error, None))
 
         producer = asyncio.create_task(produce())
         has_content, finished = False, False
         try:
             while True:
-                message = await queue.get()
+                message, acknowledged = await queue.get()
                 if message is None:
                     break
                 if isinstance(message, Exception):
                     raise message
                 if not isinstance(message, AIMessageChunk):
                     raise LLMError("Unexpected model stream output.")
+                if usage is not None and message.usage_metadata:
+                    usage["prompt_tokens"] = message.usage_metadata.get("input_tokens")
+                    usage["completion_tokens"] = message.usage_metadata.get("output_tokens")
+                    details = message.usage_metadata.get("output_token_details") or {}
+                    if details.get("reasoning") is not None:
+                        usage["reasoning_tokens"] = details["reasoning"]
                 reason = message.response_metadata.get("finish_reason")
                 if reason is not None:
                     if reason != "stop":
@@ -293,6 +316,8 @@ class DeepSeekLLM:
                 if isinstance(message.content, str) and message.content:
                     has_content = has_content or bool(message.content.strip())
                     yield message.content
+                if not acknowledged.done():
+                    acknowledged.set_result(None)
             if not has_content or not finished:
                 raise LLMError(
                     "DeepSeek stream ended without a complete answer.",

@@ -15,7 +15,7 @@ from app.services.mock_chat import MockChatService
 from core.config import Settings
 from core.errors import TimeoutAppError
 from tests.conftest import FakeRedis
-from tests.unit.test_live_chat import FakeLLM, service
+from tests.unit.test_live_chat import FakeLLM, FakeRetriever, service
 
 TOKEN = "bot-secret-for-tests"
 BODY = {"message": "Ranni là ai?", "channel": "web"}
@@ -26,7 +26,7 @@ BOT = {"message": "Ranni là ai?", "channel": "discord", "external_ref": "discor
 def guarded(ctx, fakes) -> Iterator[tuple[TestClient, FakeRedis]]:
     redis = fakes["redis"]
     ctx.settings = Settings(
-        _env_file=None, environment="test", chat_mode="llm_only", api_service_token=TOKEN, rate_limit_per_minute=2
+        _env_file=None, environment="test", chat_mode="rag", api_service_token=TOKEN, rate_limit_per_minute=2
     )
     with TestClient(create_app(ctx.settings, context=ctx)) as client:
         client.app.state.chat_service = MockChatService()  # chỉ kiểm guard, không gọi LLM
@@ -65,6 +65,30 @@ def test_bot_is_limited_per_external_ref_not_shared_ip(guarded):
     assert other_thread.status_code == 200  # cùng IP của bot nhưng thread khác: không bị chặn chung
 
 
+def test_one_discord_server_has_a_shared_ceiling_across_threads(guarded):
+    client, _ = guarded  # hạn mức guild mặc định 30 > 2 mỗi thread: hạ xuống 3 để kiểm
+    client.app.state.ctx.settings.rate_limit_guild_per_minute = 3
+    headers = {"X-Service-Token": TOKEN}
+
+    def ask(thread, guild="42"):
+        body = {**BOT, "external_ref": f"discord:thread:{thread}", "guild_id": guild}
+        return client.post("/api/v1/chat", json=body, headers=headers).status_code
+
+    assert [ask(1), ask(1), ask(2), ask(3)] == [200, 200, 200, 429]  # thread 3 còn hạn mức riêng nhưng server đã hết
+    assert ask(4, guild="43") == 200  # server khác không bị ảnh hưởng
+
+
+def test_guild_id_from_a_web_client_cannot_be_used_to_dodge_or_poison_limits(guarded):
+    client, _ = guarded
+    codes = [client.post("/api/v1/chat", json={**BODY, "guild_id": str(n)}).status_code for n in range(3)]
+    assert codes == [200, 200, 429]  # vẫn bị giới hạn theo IP; guild_id không có service token thì bị bỏ qua
+
+
+def test_guild_id_must_be_a_discord_snowflake(guarded):
+    client, _ = guarded
+    assert client.post("/api/v1/chat", json={**BODY, "guild_id": "abc"}).status_code == 422
+
+
 def test_redis_down_rejects_instead_of_unlimited(guarded):
     client, redis = guarded
     redis.fail = True
@@ -82,7 +106,7 @@ def test_mock_mode_skips_guard(client):
 
 async def test_same_external_ref_reuses_conversation_and_history():
     llm = FakeLLM()
-    chat = service(llm=llm)
+    chat = service(llm=llm, retriever=FakeRetriever())
     ask = ChatRequest(**BOT)
 
     first = await chat.answer(ask)
@@ -91,7 +115,11 @@ async def test_same_external_ref_reuses_conversation_and_history():
 
     assert second.conversation_id == first.conversation_id
     assert other.conversation_id != first.conversation_id
-    assert any("Ranni is an Empyrean" in str(m.get("content", "")) for m in llm.seen[1])  # có lịch sử lượt trước
+    # Agent chỉ nhớ lại lượt NGƯỜI DÙNG trước đó của cùng thread, không bao giờ câu trả lời của trợ lý.
+    assert chat.traces[second.message_id]["memory"]["candidates"] == 1
+    assert chat.traces[other.message_id]["memory"]["candidates"] == 0
+    # Bước sinh không bao giờ nhận các lượt trước làm lịch sử chat.
+    assert all(m["role"] != "assistant" for m in llm.seen[1])
 
 
 async def test_mock_service_also_reuses_by_external_ref():
@@ -109,8 +137,8 @@ async def test_slow_llm_hits_deadline_and_releases_conversation():
     async def slow(messages, **kwargs):
         await asyncio.sleep(5)
 
-    llm.complete = slow
-    chat = service(llm=llm, chat_timeout_seconds=0.05)
+    llm.complete_json = slow
+    chat = service(llm=llm, retriever=FakeRetriever(), chat_timeout_seconds=0.05)
 
     with pytest.raises(TimeoutAppError):
         await chat.answer(ChatRequest(**BODY))

@@ -77,6 +77,7 @@ pydantic==2.14.1
 pydantic_core==2.50.1
 Pygments==2.21.0
 pytest-asyncio==1.4.0
+coverage==7.17.3
 pytest==9.1.1
 python-discovery==1.6.4
 python-dotenv==1.2.4
@@ -130,3 +131,10 @@ tiktoken==0.14.0
 uuid-utils==0.19.0
 xxhash==4.0.2
 zstandard==0.25.0
+
+# LangGraph orchestration; resolved against existing pins without upgrading LangChain.
+langgraph==1.2.20
+langgraph-checkpoint==4.3.1
+langgraph-prebuilt==1.1.1
+langgraph-sdk==0.4.13
+ormsgpack==1.13.0

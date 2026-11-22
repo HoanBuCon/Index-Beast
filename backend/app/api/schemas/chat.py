@@ -9,28 +9,64 @@ Phụ trách: TV1 · [S2] API contract v1
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, PrivateAttr, StringConstraints
 
 MAX_MESSAGE_CHARS = 2000
 
 
 class ChatOptions(BaseModel):
-    spoilers: bool = True
+    # The legacy `spoilers` option was removed (20/11/2026): IndexBeast answers like a wiki. Unknown fields are
+    # ignored, so an older client that still sends it keeps working.
     lang: Literal["auto", "vi", "en"] = "auto"
+    web_search: Literal["off", "auto", "always"] | None = None
 
 
 class ChatRequest(BaseModel):
     conversation_id: UUID | None = Field(None, description="Bỏ trống để tạo hội thoại mới.")
+    conversation_token: str | None = Field(default=None, min_length=32, max_length=128, repr=False)
+    turn_id: UUID | None = None
     # strip trước khi kiểm tra độ dài: câu hỏi toàn khoảng trắng bị từ chối, không tới LLM
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_CHARS)]
     channel: Literal["web", "discord"]
     external_ref: Annotated[str, Field(max_length=128)] | None = Field(
         None, description="Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô."
     )
+    guild_id: Annotated[str, Field(pattern=r"^\d{1,32}$")] | None = Field(
+        None, description="ID server Discord của bot, để giới hạn tần suất theo server. Chỉ tính khi có service token."
+    )
     options: ChatOptions = ChatOptions()
+    clarification_id: UUID | None = Field(None, description="ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.")
+    # Người dùng đăng nhập do server gắn từ cookie phiên (ADR-005); không có trong JSON/OpenAPI, client không giả được
+    _user_id: UUID | None = PrivateAttr(default=None)
+
+    @property
+    def user_id(self) -> UUID | None:
+        return self._user_id
+
+    def attach_user(self, user_id: UUID | None) -> "ChatRequest":
+        self._user_id = user_id
+        return self
+
+
+class ClarificationField(BaseModel):
+    key: str
+    label: str
+    input_type: Literal["text", "number", "choice"] = "text"
+    options: list[str] = Field(default_factory=list, max_length=10)
+
+
+class Clarification(BaseModel):
+    id: UUID
+    status: Literal["pending"] = "pending"
+    question: str
+    fields: list[ClarificationField] = Field(min_length=1, max_length=2)
+    expires_at: str
 
 
 class ChatImage(BaseModel):
+    association: Literal["exact_section", "entity_page", "web_result"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     id: str = Field(pattern=r"^[0-9a-f]{64}$")
     url: str
     caption: str | None = None
@@ -62,6 +98,8 @@ class ChatResponse(BaseModel):
     grounded: bool = Field(description="False khi không đủ bằng chứng; khi đó sources rỗng.")
     latency_ms: float
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
+    clarification: Clarification | None = None
+    conversation_token: str | None = Field(default=None, repr=False, exclude_if=lambda value: value is None)
 
 
 class DoneEvent(BaseModel):
@@ -69,6 +107,7 @@ class DoneEvent(BaseModel):
     message_id: UUID
     grounded: bool
     latency_ms: float
+    conversation_token: str | None = Field(default=None, repr=False, exclude_if=lambda value: value is None)
 
 
 class StatusEvent(BaseModel):
@@ -82,6 +121,7 @@ class TokenEvent(BaseModel):
 class SourcesEvent(BaseModel):
     sources: list[Source]
     images: list[ChatImage] = Field(default_factory=list, max_length=3)
+    clarification: Clarification | None = None
 
 
 class ErrorEvent(BaseModel):

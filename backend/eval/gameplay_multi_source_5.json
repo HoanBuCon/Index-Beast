@@ -1,0 +1,42 @@
+[
+  {
+    "id": "PLAY-01",
+    "lang": "vi",
+    "web_search": "auto",
+    "question": "Tôi đã tới Liurnia nhưng chưa vào được Altus Plateau. Có đường nào lên đó mà không cần hai nửa huy chương không?",
+    "expected": "Chỉ một tuyến khả thi, đúng khu vực xuất phát, đường vào và điều kiện để đi qua. Không đưa Grand Lift of Dectus làm tuyến bắt buộc.",
+    "clarification_answers": ["Tôi ở Site of Grace gần Ravine-Veiled Village, chưa hạ boss ở đó, muốn đi bộ lên Altus bằng đường hầm."]
+  },
+  {
+    "id": "PLAY-02",
+    "lang": "vi",
+    "web_search": "auto",
+    "endpoint": "chat/stream",
+    "question": "Tôi đang làm nhiệm vụ của Millicent. Bước tiếp theo là gì?",
+    "expected": "Hỏi mốc đang ở đâu nếu chưa rõ, rồi tiếp tục đúng bước của Millicent theo thông tin bổ sung. Đánh giá câu trả lời cuối và mốc quest, không tính prompt đầu là xong nếu chỉ có câu hỏi phụ.",
+    "clarification_answers": ["Tôi đã chữa cho Millicent bằng kim, đã gặp cô ấy ở Erdtree-Gazing Hill và chưa đưa Valkyrie's Prosthesis. Tôi muốn biết lấy món đó ở đâu và đưa cho ai.", "Tôi đã tới Altus Plateau và chưa lấy Valkyrie's Prosthesis. Có thể nói thẳng cách đi và bước giao vật phẩm."]
+  },
+  {
+    "id": "PLAY-03",
+    "lang": "en",
+    "web_search": "auto",
+    "question": "I'm fighting the Valiant Gargoyles in Siofra Aqueduct and keep dying when both are active. How should I move and choose attack windows to avoid the poison?",
+    "expected": "Give practical positioning and punish-window advice for fighting two enemies. Back up any named move, poison behavior or encounter-specific timing with evidence.",
+    "clarification_answers": ["I'm playing PvE solo with a shield and a melee weapon. Both gargoyles are alive when I start struggling; I mainly want advice on movement and safe attacks."]
+  },
+  {
+    "id": "PLAY-04",
+    "lang": "vi",
+    "web_search": "auto",
+    "question": "Tôi dùng Claymore nâng bằng Smithing Stone thường. Lấy bell bearing nào để mua Smithing Stone [3] và [4], và nộp cho ai?",
+    "expected": "Xác định đúng loại bell bearing, nơi lấy và người nhận, phân biệt nhánh nâng thường với Somber. Dấu ngoặc số trong câu là hạng đá, không phải citation."
+  },
+  {
+    "id": "PLAY-05",
+    "lang": "en",
+    "web_search": "auto",
+    "question": "I want to co-op with a friend in Limgrave. What should each of us use so I can see their summon sign, and where does the shared password go?",
+    "expected": "Explain host and guest roles, correct item and password type, and a practical order to use them.",
+    "clarification_answers": ["We're both on PC, in the same area, with the area boss still alive. I'm hosting and my friend should put down the sign."]
+  }
+]

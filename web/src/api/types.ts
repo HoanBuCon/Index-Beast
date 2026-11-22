@@ -30,14 +30,28 @@ export function isSource(value: unknown): value is Source {
     (source.origin === undefined || source.origin === "web" || source.origin === "corpus")
   );
 }
+export function isConversationToken(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(value);
+}
 export interface ChatRequest {
+  conversation_token?: string;
+  turn_id?: string;
   conversation_id?: string | null;
   message: string;
   channel: "web" | "discord";
   external_ref?: string | null;
-  options?: { lang?: "auto" | "vi" | "en"; spoilers?: boolean };
+  options?: { lang?: "auto" | "vi" | "en"; web_search?: "off" | "auto" | "always" };
+  clarification_id?: string;
+}
+export interface Clarification {
+  id: string;
+  status: "pending";
+  question: string;
+  expires_at: string;
+  fields: { key: string; label: string; input_type: "text" | "number" | "choice"; options: string[] }[];
 }
 export interface ChatResponse {
+  conversation_token?: string;
   conversation_id: string;
   message_id: string;
   answer: string;
@@ -45,6 +59,7 @@ export interface ChatResponse {
   images?: ChatImage[];
   grounded: boolean;
   latency_ms: number;
+  clarification?: Clarification | null;
 }
 // Additive backend contract: legacy responses/history may omit images.
 export interface ChatImage {
@@ -77,16 +92,18 @@ export interface ConversationOut {
     sources: Source[];
     images?: ChatImage[];
     grounded?: boolean | null;
+    clarification?: Clarification | null;
     created_at: string;
   }[];
 }
 export type StreamEvent =
   | { type: "status"; status: string }
   | { type: "token"; token: string }
-  | { type: "sources"; sources: Source[]; images?: ChatImage[] }
+  | { type: "sources"; sources: Source[]; images?: ChatImage[]; clarification?: Clarification | null }
   | { type: "done"; data: Omit<ChatResponse, "answer" | "sources" | "images"> }
   | { type: "error"; message: string };
 export interface Message {
+  clarificationId?: string;
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -95,8 +112,12 @@ export interface Message {
   serverId?: string;
   incomplete?: boolean;
   grounded?: boolean;
+  clarification?: Clarification | null;
 }
 export interface Conversation {
+  serverToken?: string;
+  // Id người dùng đăng nhập sở hữu bản lưu này; có thì xóa khỏi trình duyệt khi đăng xuất/xóa tài khoản.
+  ownerUserId?: string;
   id: string;
   title: string;
   mode: "demo" | "api" | "api-stream";

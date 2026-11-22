@@ -7,6 +7,7 @@ app/api/router.py · middleware → app/middleware.py · cấu hình → core/co
 Phụ trách: TV1 · [S1] Skeleton FastAPI
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -35,10 +36,14 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        app.state.image_catalog.preflight()
         ctx = context or build_context(settings)
         app.state.ctx = ctx
         if settings.chat_mode != "mock":
             app.state.chat_service = build_chat_service(ctx, image_catalog=app.state.image_catalog)
+        warm = getattr(ctx.reranker, "warm", None)
+        if warm is not None:  # nạp model reranker cục bộ ở nền, API nhận request ngay (chưa nạp xong thì giữ RRF)
+            app.state.reranker_warm = asyncio.create_task(warm())
         started = {"environment": settings.environment, "resources": list(ctx.health_checks)}
         log.info("api started", extra={"data": started})
         try:

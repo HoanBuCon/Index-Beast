@@ -1,4 +1,4 @@
-"""Manual retrieval diagnostic. Running this command embeds a query and reads Qdrant; no LLM/index writes."""
+"""Chẩn đoán retrieval thủ công. Lệnh này embed một câu truy vấn và đọc Qdrant; không LLM/không ghi index."""
 
 import argparse
 import asyncio
@@ -14,7 +14,7 @@ from core.errors import UnavailableError
 from core.vector.store import QdrantStore
 
 
-async def check_retrieval(settings, query: str, *, limit: int, spoilers: bool) -> dict:
+async def check_retrieval(settings, query: str, *, limit: int) -> dict:
     policy = CorpusPolicy.from_settings(settings)
     client = AsyncQdrantClient(
         url=settings.qdrant_url, timeout=max(1, round(settings.client_timeout_seconds)), check_compatibility=False
@@ -25,12 +25,11 @@ async def check_retrieval(settings, query: str, *, limit: int, spoilers: bool) -
             QdrantStore(client, settings.rag_collection, policy),
             limit=limit,
         )
-        hits = await retriever.retrieve(query, spoilers=spoilers)
+        hits = await retriever.retrieve(query)
         return {
             "collection": settings.rag_collection,
             "policy": policy.mode,
             "languages": list(policy.languages),
-            "spoilers": spoilers,
             "hits": [
                 {
                     "point_id": h.id,
@@ -55,14 +54,11 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--query", required=True)
     parser.add_argument("--limit", type=int, default=5)
-    parser.add_argument("--no-spoilers", action="store_true")
     args = parser.parse_args(argv)
     if not args.query.strip() or not 1 <= args.limit <= 200:
         parser.error("Provide a nonempty query and limit between 1 and 200")
     try:
-        result = asyncio.run(
-            check_retrieval(get_settings(), args.query, limit=args.limit, spoilers=not args.no_spoilers)
-        )
+        result = asyncio.run(check_retrieval(get_settings(), args.query, limit=args.limit))
     except UnavailableError as exc:
         print(json.dumps({"code": exc.code, "message": exc.message}, ensure_ascii=False))
         return 2

@@ -1,4 +1,4 @@
-"""Offline verification of measurement boundaries, percentile math and explicit inference guard."""
+"""Kiểm offline ranh giới đo, phép tính percentile và chặn inference tường minh."""
 
 from types import SimpleNamespace
 
@@ -35,17 +35,15 @@ async def test_measurement_rows_reset_and_failures_are_not_fast_successes(fail):
     probe.query_calls = 99
 
     class Retriever:
-        async def retrieve(self, query, *, spoilers):
-            assert query == "synthetic" and spoilers
+        async def retrieve(self, query):
+            assert query == "synthetic"
             with probe.stage("ready_ms"), probe.stage("embedding_ms"), probe.stage("qdrant_ms"):
                 if fail:
                     raise RuntimeError("private exception body must not enter report")
                 probe.query_calls += 1
             return [SimpleNamespace(id="point", score=0.5, payload={"title": "synthetic"})]
 
-    row = await benchmark.measure_one(
-        Retriever(), probe, ("T01", "en", "synthetic"), phase="warm", round_number=1, spoilers=True
-    )
+    row = await benchmark.measure_one(Retriever(), probe, ("T01", "en", "synthetic"), phase="warm", round_number=1)
     assert row["success"] is not fail and "old_metric" not in row
     assert all(row[m] >= 0 for m in benchmark.METRICS)
     assert "private exception" not in str(row)
@@ -57,11 +55,11 @@ async def test_measurement_rows_reset_and_failures_are_not_fast_successes(fail):
 
 async def test_missing_instrumentation_is_failure_not_zero_latency():
     class Retriever:
-        async def retrieve(self, query, *, spoilers):
+        async def retrieve(self, query):
             return []
 
     row = await benchmark.measure_one(
-        Retriever(), benchmark.Probe(), ("T01", "en", "synthetic"), phase="warm", round_number=1, spoilers=True
+        Retriever(), benchmark.Probe(), ("T01", "en", "synthetic"), phase="warm", round_number=1
     )
     assert not row["success"] and row["error_type"] == "ValueError"
 

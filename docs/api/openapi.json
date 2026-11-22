@@ -1,6 +1,275 @@
 {
   "components": {
     "schemas": {
+      "AdminConversation": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "description": "Câu hỏi đầu tiên của hội thoại, cắt còn 60 ký tự.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "AdminConversation",
+        "type": "object"
+      },
+      "AdminEvalRun": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Metrics",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "metrics"
+        ],
+        "title": "AdminEvalRun",
+        "type": "object"
+      },
+      "AdminFeedback": {
+        "properties": {
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "message_id",
+          "rating"
+        ],
+        "title": "AdminFeedback",
+        "type": "object"
+      },
+      "AdminJob": {
+        "properties": {
+          "id": {
+            "description": "Mã job của CLI (external_id) nếu có, không thì UUID.",
+            "title": "Id",
+            "type": "string"
+          },
+          "pages_ok": {
+            "title": "Pages Ok",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "pages_ok"
+        ],
+        "title": "AdminJob",
+        "type": "object"
+      },
+      "AdminStats": {
+        "properties": {
+          "conversations": {
+            "items": {
+              "$ref": "#/components/schemas/AdminConversation"
+            },
+            "title": "Conversations",
+            "type": "array"
+          },
+          "eval_runs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminEvalRun"
+            },
+            "title": "Eval Runs",
+            "type": "array"
+          },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/AdminFeedback"
+            },
+            "title": "Feedback",
+            "type": "array"
+          },
+          "ingestion_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AdminJob"
+            },
+            "title": "Ingestion Jobs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "conversations",
+          "feedback",
+          "ingestion_jobs",
+          "eval_runs"
+        ],
+        "title": "AdminStats",
+        "type": "object"
+      },
+      "AnswerShareCreated": {
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "token": {
+            "pattern": "^[A-Za-z0-9_-]{43}$",
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "expires_at"
+        ],
+        "title": "AnswerShareCreated",
+        "type": "object"
+      },
+      "AnswerShareRequest": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "message_id"
+        ],
+        "title": "AnswerShareRequest",
+        "type": "object"
+      },
+      "AuthMe": {
+        "properties": {
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "title": "AuthMe",
+        "type": "object"
+      },
+      "AuthUserOut": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_admin": {
+            "title": "Is Admin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "is_admin"
+        ],
+        "title": "AuthUserOut",
+        "type": "object"
+      },
+      "ChannelsRemoved": {
+        "properties": {
+          "deleted": {
+            "description": "Số kênh vừa tắt; 0 khi kênh chưa bật (gọi lại vẫn 200).",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "ChannelsRemoved",
+        "type": "object"
+      },
+      "ChatCapabilities": {
+        "properties": {
+          "auth_available": {
+            "default": false,
+            "title": "Auth Available",
+            "type": "boolean"
+          },
+          "trace_available": {
+            "default": false,
+            "title": "Trace Available",
+            "type": "boolean"
+          },
+          "web_search_available": {
+            "title": "Web Search Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "web_search_available"
+        ],
+        "title": "ChatCapabilities",
+        "type": "object"
+      },
       "ChatImage": {
         "properties": {
           "alt": {
@@ -13,6 +282,22 @@
               }
             ],
             "title": "Alt"
+          },
+          "association": {
+            "anyOf": [
+              {
+                "enum": [
+                  "exact_section",
+                  "entity_page",
+                  "web_result"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Association"
           },
           "attribution": {
             "anyOf": [
@@ -135,10 +420,21 @@
             "title": "Lang",
             "type": "string"
           },
-          "spoilers": {
-            "default": true,
-            "title": "Spoilers",
-            "type": "boolean"
+          "web_search": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "auto",
+                  "always"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Search"
           }
         },
         "title": "ChatOptions",
@@ -154,6 +450,19 @@
             "title": "Channel",
             "type": "string"
           },
+          "clarification_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID câu hỏi đang chờ; client cũ có thể trả lời bằng text.",
+            "title": "Clarification Id"
+          },
           "conversation_id": {
             "anyOf": [
               {
@@ -166,6 +475,19 @@
             ],
             "description": "Bỏ trống để tạo hội thoại mới.",
             "title": "Conversation Id"
+          },
+          "conversation_token": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Token"
           },
           "external_ref": {
             "anyOf": [
@@ -180,6 +502,19 @@
             "description": "Khóa kênh của client, vd. discord:thread:<id>. Không chứa thông tin định danh thô.",
             "title": "External Ref"
           },
+          "guild_id": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,32}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ID server Discord của bot, để giới hạn tần suất theo server. Chỉ tính khi có service token.",
+            "title": "Guild Id"
+          },
           "message": {
             "maxLength": 2000,
             "minLength": 1,
@@ -189,9 +524,20 @@
           "options": {
             "$ref": "#/components/schemas/ChatOptions",
             "default": {
-              "lang": "auto",
-              "spoilers": true
+              "lang": "auto"
             }
+          },
+          "turn_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Turn Id"
           }
         },
         "required": [
@@ -207,10 +553,31 @@
             "title": "Answer",
             "type": "string"
           },
+          "clarification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "conversation_id": {
             "format": "uuid",
             "title": "Conversation Id",
             "type": "string"
+          },
+          "conversation_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Token"
           },
           "grounded": {
             "description": "False khi không đủ bằng chứng; khi đó sources rỗng.",
@@ -251,6 +618,178 @@
           "latency_ms"
         ],
         "title": "ChatResponse",
+        "type": "object"
+      },
+      "ClaimRequest": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "conversation_token": {
+            "maxLength": 128,
+            "minLength": 32,
+            "title": "Conversation Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "conversation_token"
+        ],
+        "title": "ClaimRequest",
+        "type": "object"
+      },
+      "Clarification": {
+        "properties": {
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ClarificationField"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "status": {
+            "const": "pending",
+            "default": "pending",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "question",
+          "fields",
+          "expires_at"
+        ],
+        "title": "Clarification",
+        "type": "object"
+      },
+      "ClarificationField": {
+        "properties": {
+          "input_type": {
+            "default": "text",
+            "enum": [
+              "text",
+              "number",
+              "choice"
+            ],
+            "title": "Input Type",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Options",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "ClarificationField",
+        "type": "object"
+      },
+      "ClearAllMemory": {
+        "properties": {
+          "scope": {
+            "const": "all",
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "ClearAllMemory",
+        "type": "object"
+      },
+      "ClearMemoryResult": {
+        "properties": {
+          "conversations": {
+            "description": "Số hội thoại đã xóa; tin nhắn, đánh giá và ký ức của chúng xóa theo (cascade), không đếm riêng.",
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "guild_id": {
+            "title": "Guild Id",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "user",
+              "all"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "threads_kept": {
+            "description": "Số hội thoại thread của server được giữ nguyên khi scope=user (thread dùng chung, chỉ `all` xóa); luôn 0 khi scope=all.",
+            "title": "Threads Kept",
+            "type": "integer"
+          },
+          "vector_conversations": {
+            "description": "Số hội thoại đã xóa điểm ký ức ở Qdrant (không phải số điểm); 0 nếu không có kho vector.",
+            "title": "Vector Conversations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "guild_id",
+          "scope",
+          "conversations",
+          "threads_kept",
+          "vector_conversations"
+        ],
+        "title": "ClearMemoryResult",
+        "type": "object"
+      },
+      "ClearUserMemory": {
+        "properties": {
+          "scope": {
+            "const": "user",
+            "title": "Scope",
+            "type": "string"
+          },
+          "user_hash": {
+            "description": "SHA-256 hex của Discord user id (bot băm; bút danh, không phải ẩn danh).",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "User Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "user_hash"
+        ],
+        "title": "ClearUserMemory",
         "type": "object"
       },
       "ConversationOut": {
@@ -346,6 +885,52 @@
           "rating"
         ],
         "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "GuildChannelOut": {
+        "properties": {
+          "channel_id": {
+            "title": "Channel Id",
+            "type": "string"
+          },
+          "enabled_at": {
+            "format": "date-time",
+            "title": "Enabled At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "enabled_at"
+        ],
+        "title": "GuildChannelOut",
+        "type": "object"
+      },
+      "GuildChannelsOut": {
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/GuildChannelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "guild_id": {
+            "title": "Guild Id",
+            "type": "string"
+          },
+          "limit": {
+            "default": 50,
+            "description": "Số kênh tối đa mỗi server.",
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "guild_id",
+          "channels"
+        ],
+        "title": "GuildChannelsOut",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -553,6 +1138,16 @@
       },
       "MessageOut": {
         "properties": {
+          "clarification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Clarification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "content": {
             "title": "Content",
             "type": "string"
@@ -612,6 +1207,73 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "MyConversation": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "description": "Câu hỏi đầu tiên của hội thoại, cắt còn 60 ký tự.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "created_at"
+        ],
+        "title": "MyConversation",
+        "type": "object"
+      },
+      "SharedAnswer": {
+        "properties": {
+          "answer": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Answer",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "grounded": {
+            "title": "Grounded",
+            "type": "boolean"
+          },
+          "question": {
+            "maxLength": 2000,
+            "title": "Question",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "maxItems": 100,
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "question",
+          "answer",
+          "sources",
+          "grounded",
+          "expires_at"
+        ],
+        "title": "SharedAnswer",
+        "type": "object"
+      },
       "Source": {
         "properties": {
           "index": {
@@ -669,6 +1331,122 @@
         "title": "Source",
         "type": "object"
       },
+      "TraceOut": {
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "grounded": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grounded"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "rewritten_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rewritten Query"
+          },
+          "source": {
+            "description": "postgres (đã lưu) hoặc memory (chỉ còn trong RAM, mất khi khởi động lại).",
+            "enum": [
+              "postgres",
+              "memory"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "tokens_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens In"
+          },
+          "tokens_out": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Out"
+          },
+          "trace": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Dấu vết từng bước RAG, đã che secret.",
+            "title": "Trace"
+          }
+        },
+        "required": [
+          "message_id",
+          "source"
+        ],
+        "title": "TraceOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -717,6 +1495,514 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/stats": {
+      "get": {
+        "description": "Đọc PostgreSQL. Hội thoại chỉ có ở đó khi CHAT_PERSISTENCE=postgres; chế độ memory trả danh sách rỗng.",
+        "operationId": "get_stats_api_v1_admin_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminStats"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Hội thoại gần đây, feedback, job ingestion và kết quả eval",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/trace/{message_id}": {
+      "get": {
+        "operationId": "get_trace_api_v1_admin_trace__message_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TraceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        },
+        "summary": "Trace RAG của một câu trả lời",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/answer-shares": {
+      "get": {
+        "operationId": "read_answer_share_api_v1_answer_shares_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Answer-Share-Token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Answer-Share-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedAnswer"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Read Answer Share",
+        "tags": [
+          "answer-shares"
+        ]
+      },
+      "post": {
+        "operationId": "create_answer_share_api_v1_answer_shares_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerShareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswerShareCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Answer Share",
+        "tags": [
+          "answer-shares"
+        ]
+      }
+    },
+    "/api/v1/auth/discord/callback": {
+      "get": {
+        "operationId": "discord_callback_api_v1_auth_discord_callback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Về trang web sau khi đăng nhập."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Discord gọi lại sau khi người dùng cấp quyền",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/discord/login": {
+      "get": {
+        "operationId": "discord_login_api_v1_auth_discord_login_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "next",
+            "required": false,
+            "schema": {
+              "default": "/",
+              "title": "Next",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Chuyển sang Discord để cấp quyền."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Bắt đầu đăng nhập bằng Discord",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Đăng xuất: xóa phiên",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthMe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Trạng thái đăng nhập hiện tại; luôn 200, chưa đăng nhập thì authenticated=false",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/chat": {
       "post": {
         "operationId": "chat_api_v1_chat_post",
@@ -740,6 +2026,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -818,6 +2114,27 @@
         ]
       }
     },
+    "/api/v1/chat/capabilities": {
+      "get": {
+        "operationId": "capabilities_api_v1_chat_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCapabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Capabilities",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
     "/api/v1/chat/stream": {
       "post": {
         "operationId": "chat_stream_api_v1_chat_stream_post",
@@ -840,6 +2157,16 @@
               "text/event-stream": {}
             },
             "description": "Luồng SSE. Mỗi frame: `event: <tên>` + `data: <JSON>`. Thứ tự: status, token (nhiều lần), sources, done; lỗi giữa chừng gửi `error` rồi đóng. Schema từng event: StatusEvent, TokenEvent, SourcesEvent, DoneEvent, ErrorEvent."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "401": {
             "content": {
@@ -944,6 +2271,16 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -963,11 +2300,387 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Lịch sử hội thoại",
         "tags": [
           "conversations"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/channels": {
+      "delete": {
+        "operationId": "disable_all_channels_api_v1_discord_guilds__guild_id__channels_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelsRemoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Tắt mọi kênh của server",
+        "tags": [
+          "discord-guild"
+        ]
+      },
+      "get": {
+        "operationId": "list_channels_api_v1_discord_guilds__guild_id__channels_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuildChannelsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Kênh bot tự trả lời của một server",
+        "tags": [
+          "discord-guild"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/channels/{channel_id}": {
+      "delete": {
+        "operationId": "disable_channel_api_v1_discord_guilds__guild_id__channels__channel_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelsRemoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Tắt một kênh (idempotent)",
+        "tags": [
+          "discord-guild"
+        ]
+      },
+      "put": {
+        "operationId": "enable_channel_api_v1_discord_guilds__guild_id__channels__channel_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "channel_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Channel Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuildChannelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Bật một kênh (idempotent)",
+        "tags": [
+          "discord-guild"
+        ]
+      }
+    },
+    "/api/v1/discord/guilds/{guild_id}/memory/clear": {
+      "post": {
+        "operationId": "clear_memory_api_v1_discord_guilds__guild_id__memory_clear_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "guild_id",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{1,32}$",
+              "title": "Guild Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "all": "#/components/schemas/ClearAllMemory",
+                    "user": "#/components/schemas/ClearUserMemory"
+                  },
+                  "propertyName": "scope"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClearUserMemory"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClearAllMemory"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearMemoryResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa ký ức hội thoại của một người hoặc cả server (idempotent)",
+        "tags": [
+          "discord-guild"
         ]
       }
     },
@@ -988,6 +2701,16 @@
           "204": {
             "description": "Successful Response"
           },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
           "404": {
             "content": {
               "application/json": {
@@ -1007,6 +2730,16 @@
               }
             },
             "description": "Unprocessable Entity"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
           }
         },
         "summary": "Gửi 👍/👎 cho message_id",
@@ -1117,6 +2850,180 @@
         "summary": "Ảnh raster local đã kiểm tra hash/MIME, không nhận đường dẫn file",
         "tags": [
           "images"
+        ]
+      }
+    },
+    "/api/v1/me": {
+      "delete": {
+        "description": "FR-AUTH-08. Xóa người dùng, mọi phiên, hội thoại gắn với tài khoản (gồm hội thoại khách đã nhận qua claim)\nkèm tin nhắn, feedback, ký ức và điểm Qdrant. Hội thoại khách chưa nhận (thiết bị khác) và hội thoại Discord\nkhông gắn với tài khoản nên không bị xóa ở đây: retention 90 ngày hoặc `/clear` của bot xóa chúng.\nGọi lại sau khi xóa thì cookie không còn hiệu lực nên nhận 401; dịch vụ xóa tự nó idempotent.",
+        "operationId": "delete_me_api_v1_me_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa tài khoản và các hội thoại đã gắn với nó, gồm hội thoại khách đã nhận (không hoàn tác)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/conversations": {
+      "get": {
+        "operationId": "my_conversations_api_v1_me_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MyConversation"
+                  },
+                  "title": "Response My Conversations Api V1 Me Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Hội thoại của tôi, mới nhất trước (tối đa 50)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/me/conversations/claim": {
+      "post": {
+        "operationId": "claim_conversation_api_v1_me_conversations_claim_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Nhận hội thoại khách đang có conversation_token về tài khoản của tôi",
+        "tags": [
+          "auth"
         ]
       }
     }

@@ -1,0 +1,88 @@
+# Production trên một VPS 4 vCPU / 8 GB RAM, tên miền tarnished.liemdai.io.vn. Chạy chồng lên docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d --build
+# (scripts/deploy.sh gói sẵn lệnh này). Hướng dẫn đầy đủ: docs/production.md. Mẫu biến môi trường: .env.prod.example.
+#
+# Khác với compose gốc:
+#   - ENVIRONMENT=prod, CHAT_MODE=rag, CHAT_PERSISTENCE=postgres được đặt cứng(rag luôn dùng Agent):
+#     một dòng CHAT_MODE=mock sót trong .env không làm production trả lời giả
+#   - WEB_URL, CORS_ORIGINS, AUTH_REDIRECT_URI suy ra từ DOMAIN (cùng một nguồn): web và api cùng gốc nên không cần CORS rộng
+#   - cookie phiên luôn Secure (HTTPS)
+#   - KHÔNG công khai cổng nào ngoài Caddy 80/443: bỏ cả cổng 127.0.0.1 của PostgreSQL/Qdrant/Redis (vào bằng `docker compose exec`)
+#   - log container ghi bằng driver local (xoay vòng 5x20 MB) để còn xem được khi sự cố; đặt DOCKER_LOG_DRIVER=none để tắt
+#   - ảnh minh họa tắt mặc định (backend/data/media nặng ~7,5 GB); mount backend/models vào api (.dockerignore không đưa model vào image)
+#   - Caddy dùng infra/Caddyfile.prod: HTTPS tự động, header bảo mật, không basic auth
+#   - healthcheck cho mọi container có cổng (trừ bot, xem bên dưới); giới hạn CPU/RAM (tổng mem_limit ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành)
+#   - api, bot, caddy: no-new-privileges + cap_drop ALL (Caddy thêm lại NET_BIND_SERVICE). PostgreSQL/Qdrant/Redis KHÔNG bỏ capability:
+#     entrypoint của image chown thư mục dữ liệu rồi hạ quyền (cần CHOWN/SETUID/SETGID/DAC_OVERRIDE), chưa thử trên VPS nên không liều
+# Cần Docker Compose >= 2.24 (thẻ !reset). Docker không tự khởi động lại container "unhealthy": restart: unless-stopped
+# chỉ có tác dụng khi tiến trình thoát; xem docs/production.md mục Giám sát.
+
+x-prod-logging: &prod-logging
+  driver: ${DOCKER_LOG_DRIVER:-local}
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    logging: *prod-logging
+    ports: !reset []
+    cpus: 1.0
+
+  qdrant:
+    logging: *prod-logging
+    ports: !reset []
+    cpus: 1.5
+
+  redis:
+    logging: *prod-logging
+    ports: !reset []
+    cpus: 0.5
+
+  api:
+    logging: *prod-logging
+    environment:
+      ENVIRONMENT: prod
+      CHAT_MODE: rag
+      CHAT_PERSISTENCE: postgres
+      WEB_URL: https://${DOMAIN:-tarnished.liemdai.io.vn}
+      CORS_ORIGINS: https://${DOMAIN:-tarnished.liemdai.io.vn}
+      AUTH_REDIRECT_URI: https://${DOMAIN:-tarnished.liemdai.io.vn}/api/v1/auth/discord/callback
+      AUTH_COOKIE_SECURE: "true"
+      RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-false}
+      # Reranker chạy trong api (cross-encoder MiniLM-L12 ONNX, không key): Hybrid + L12 là cấu hình TV3 chọn. Tắt: RAG_RERANKER_ENABLED=false.
+      # Model phải có sẵn trong backend/models/fastembed trước deploy (docs/production.md mục 4.1); thiếu thì giữ thứ tự RRF.
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-true}
+      RAG_RERANKER_PROVIDER: ${RAG_RERANKER_PROVIDER:-local}
+    volumes:
+      - ./backend/models:/app/models
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]    # api chạy user app (uid 10001), không cần capability nào
+    cpus: 2.5
+
+  bot:
+    logging: *prod-logging
+    environment:
+      WEB_URL: https://${DOMAIN:-tarnished.liemdai.io.vn}
+    # Bot không mở cổng nào nên không có healthcheck (một kiểm tra giả luôn "healthy" chỉ gây hiểu lầm): restart: unless-stopped
+    # lo trường hợp tiến trình thoát; sức khỏe bot xem log và trạng thái online trên Discord (docs/production.md mục Giám sát).
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]    # bot chạy user node, không cần capability nào
+    cpus: 0.5
+
+  caddy:
+    logging: *prod-logging
+    environment:
+      DOMAIN: ${DOMAIN:-tarnished.liemdai.io.vn}
+    volumes:
+      - ./infra/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+    # API quản trị của Caddy nghe ở 127.0.0.1:2019 bên trong container (không công khai); dùng để hỏi trạng thái
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]    # chỉ để nghe cổng 80/443
+    cpus: 0.5

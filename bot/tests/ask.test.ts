@@ -1,11 +1,13 @@
 // TV4 · S2: mock Discord interaction và API; không đăng ký lệnh hoặc kết nối Gateway thật.
 import assert from "node:assert/strict";
 import test from "node:test";
+import { ChannelType } from "discord.js";
 import type { ChatInputCommandInteraction, InteractionEditReplyOptions } from "discord.js";
+import { createFollowupThreads } from "../src/interactions/followup.ts";
 import { createAskCommand } from "../src/commands/ask.ts";
 import { commands } from "../src/commands/index.ts";
 import { ApiError } from "../src/api/client.ts";
-import { answerEmbed } from "../src/utils/format.ts";
+import { answerEmbed, answerEmbeds } from "../src/utils/format.ts";
 
 const response = {
   conversation_id: "12345678-1234-4234-8234-123456789012",
@@ -22,7 +24,8 @@ function interaction(question: string, thread = false) {
     id: "333333333333333333",
     user: { id: "111111111111111111" },
     channelId: "222222222222222222",
-    channel: { isThread: () => thread },
+    guildId: "444444444444444444",
+    channel: { type: thread ? ChannelType.PublicThread : ChannelType.GuildText, isThread: () => thread },
     options: { getString: () => question },
     deferReply: async () => {
       calls.push("defer");
@@ -43,6 +46,24 @@ test("registry keeps ping and exposes ask with a required bounded question", () 
   assert.equal(data.options?.[0].required, true);
 });
 
+test("ask attaches Hỏi tiếp in a guild text channel, keeping the web share button", async () => {
+  const mock = interaction("Marika?");
+  await createAskCommand(
+    async () => response,
+    {
+      webUrl: "https://example.test",
+      createShare: async () => ({ token: "a".repeat(43), expires_at: "2026-11-18T00:00:00Z" }),
+    },
+    createFollowupThreads(),
+  ).execute(mock.value);
+  const components = JSON.stringify(mock.replies[0].components);
+  assert.match(components, /Hỏi tiếp/);
+  assert.match(components, /Xem đầy đủ/);
+  const thread = interaction("Marika?", true);
+  await createAskCommand(async () => response).execute(thread.value);
+  assert.ok(!JSON.stringify(thread.replies[0].components).includes("Hỏi tiếp"));
+});
+
 test("ask defers before API, hashes user reference and edits an embed with sources", async () => {
   const mock = interaction("  Marika là ai?  ");
   const command = createAskCommand(async (body) => {
@@ -50,6 +71,8 @@ test("ask defers before API, hashes user reference and edits an embed with sourc
     mock.calls.push("api");
     assert.equal(body.message, "Marika là ai?");
     assert.equal(body.channel, "discord");
+    assert.equal(body.options?.web_search, "auto");
+    assert.equal(body.guild_id, "444444444444444444");
     assert.match(body.external_ref!, /^discord:channel:222222222222222222:[a-f0-9]{64}$/);
     assert.ok(!body.external_ref!.includes("111111111111111111"));
     return response;
@@ -68,6 +91,37 @@ test("ask thread reference uses channel ID without raw user identity", async () 
     assert.equal(body.external_ref, "discord:thread:222222222222222222");
     return response;
   }).execute(mock.value);
+});
+
+test("ask redacts Discord user/role/channel/emoji IDs before sending the question to the backend", async () => {
+  const mock = interaction(
+    "  <@123456789012345678> <@&222222222222222222> ở <#333333333333333333> <a:dance:444444444444444444>?  ",
+  );
+  let sent = "";
+  await createAskCommand(async (body) => {
+    sent = body.message;
+    return response;
+  }).execute(mock.value);
+  assert.equal(sent, "@ai đó @ai đó ở #kênh :dance:?");
+});
+
+test("share notices use the TTL from expires_at, not a hardcoded 24 hours", async () => {
+  const mock = interaction("Marika?");
+  await createAskCommand(
+    async () => response,
+    {
+      webUrl: "https://example.test",
+      createShare: async () => ({
+        token: "a".repeat(43),
+        expires_at: new Date(Date.now() + 6 * 3600_000 + 30_000).toISOString(),
+      }),
+    },
+    createFollowupThreads(),
+  ).execute(mock.value);
+  const payload = JSON.stringify(mock.replies[0]);
+  assert.match(payload, /trong 6 giờ/);
+  assert.match(payload, /web · 6 giờ/);
+  assert.doesNotMatch(payload, /24 giờ/);
 });
 
 test("blank and oversized questions never call backend", async () => {
@@ -117,4 +171,36 @@ test("embed stays below Discord limits for long answers and source lists; reject
     embed.fields!.reduce((n, f) => n + f.name.length + f.value.length, 0);
   assert.ok(total <= 6000);
   assert.match(embed.footer!.text, /rút gọn/);
+});
+
+test("long answer parts reconstruct every character without cutting emoji or exceeding per-message limits", () => {
+  const answer = "Một câu trả lời có dấu 😀 và trích dẫn [1].\n".repeat(500);
+  const embeds = answerEmbeds("Câu hỏi", { ...response, answer }).map((embed) => embed.toJSON());
+  assert.ok(embeds.length > 1);
+  assert.equal(embeds.map((embed) => embed.description).join(""), answer);
+  for (const [index, embed] of embeds.entries()) {
+    assert.ok(embed.description!.length <= 4096);
+    assert.ok(!/[\uD800-\uDBFF]$/.test(embed.description!));
+    const size =
+      (embed.title?.length ?? 0) +
+      embed.description!.length +
+      (embed.footer?.text.length ?? 0) +
+      (embed.fields?.reduce((sum, field) => sum + field.name.length + field.value.length, 0) ?? 0);
+    assert.ok(size <= 6000);
+    assert.match(embed.footer!.text, new RegExp(`Phần ${index + 1}/${embeds.length}`));
+  }
+});
+
+test("ask posts continuation embeds after the initial deferred reply, with mentions disabled", async () => {
+  const mock = interaction("Câu hỏi dài");
+  const following: InteractionEditReplyOptions[] = [];
+  mock.value.followUp = (async (payload: InteractionEditReplyOptions) => {
+    following.push(payload);
+  }) as typeof mock.value.followUp;
+  const answer = "Cốt truyện 😀\n".repeat(900);
+  await createAskCommand(async () => ({ ...response, answer })).execute(mock.value);
+  const embeds = [...mock.replies, ...following].flatMap((reply) => reply.embeds ?? []);
+  assert.equal(embeds.map((embed) => JSON.parse(JSON.stringify(embed)).description).join(""), answer);
+  assert.ok(following.length > 0);
+  for (const reply of following) assert.deepEqual(reply.allowedMentions, { parse: [] });
 });

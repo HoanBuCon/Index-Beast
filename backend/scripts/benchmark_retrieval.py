@@ -1,7 +1,8 @@
-"""Sequential, read-only retrieval benchmark. --allow-inference permits real query embedding.
+"""Benchmark retrieval tuần tự, chỉ đọc. --allow-inference cho phép embed câu truy vấn thật.
 
-No LLM, indexing or Qdrant writes. A fresh encoder's first request is reported separately;
-the same encoder/client is reused for warm requests. Qdrant time is client round-trip, not server CPU time.
+Không LLM, không index, không ghi Qdrant. Request đầu của encoder mới được báo riêng;
+cùng encoder/client được dùng lại cho các request đã ấm. Thời gian Qdrant là round-trip phía client,
+không phải CPU server.
 """
 
 import argparse
@@ -38,7 +39,7 @@ METRICS = ("ready_ms", "embedding_ms", "qdrant_ms", "total_retrieve_ms")
 
 
 class Probe:
-    """Shared by sequential wrappers; never share across concurrent retrieval requests."""
+    """Dùng chung cho các wrapper tuần tự; không bao giờ dùng chung giữa các request retrieval đồng thời."""
 
     def __init__(self):
         self.metrics = {}
@@ -103,14 +104,14 @@ def summarize(rows):
     return summary
 
 
-async def measure_one(retriever, probe, question, *, phase, round_number, spoilers):
+async def measure_one(retriever, probe, question, *, phase, round_number):
     qid, lang, text = question
     row = {"id": qid, "lang": lang, "question": text, "phase": phase, "round": round_number, "success": False}
     probe.metrics = {}
     probe.query_calls = 0
     started = time.perf_counter()
     try:
-        hits = await retriever.retrieve(text, spoilers=spoilers)
+        hits = await retriever.retrieve(text)
         if probe.query_calls != 1 or any(k not in probe.metrics for k in METRICS[:-1]):
             raise ValueError("Incomplete instrumentation")
         row.update(
@@ -128,7 +129,7 @@ async def measure_one(retriever, probe, question, *, phase, round_number, spoile
             ],
         )
     except Exception as exc:
-        row["error_type"] = type(exc).__name__  # Never persist exception bodies/credentials/model inputs.
+        row["error_type"] = type(exc).__name__  # Không bao giờ lưu nội dung exception/credential/input của model.
     finally:
         row.update(probe.metrics)
         row["total_retrieve_ms"] = (time.perf_counter() - started) * 1000
@@ -146,7 +147,6 @@ async def run(args):
         "collection": settings.rag_collection,
         "policy": policy.mode,
         "languages": list(policy.languages),
-        "spoilers": not args.no_spoilers,
         "prefetch_and_fusion_limit": limit,
         "context_top_k_setting": settings.rag_top_k,
         "rounds": args.rounds,
@@ -178,11 +178,9 @@ async def run(args):
             probe=probe,
         )
         store = MeasuredStore(client, settings.rag_collection, policy, probe=probe)
-        await store.ready()  # Fail before model loading if collection missing/incompatible/empty.
+        await store.ready()  # Lỗi trước khi nạp model nếu collection thiếu/không tương thích/rỗng.
         report["points_before"] = (await client.count(settings.rag_collection, exact=True)).count
-        report["filters"] = policy.query_filter(spoilers=not args.no_spoilers).model_dump(
-            mode="json", exclude_none=True
-        )
+        report["filters"] = policy.query_filter().model_dump(mode="json", exclude_none=True)
         encoder = MeasuredEncoder(
             FastEmbedEncoder(REPO_ROOT / "backend" / settings.rag_models_dir, threads=settings.rag_encoder_threads),
             probe,
@@ -192,9 +190,7 @@ async def run(args):
         schedule = [("cold", 0, QUESTIONS[0])]
         schedule += [("warm", n, q) for n in range(1, args.rounds + 1) for q in QUESTIONS]
         for phase, n, question in schedule:
-            row = await measure_one(
-                retriever, probe, question, phase=phase, round_number=n, spoilers=not args.no_spoilers
-            )
+            row = await measure_one(retriever, probe, question, phase=phase, round_number=n)
             report["rows"].append(row)
             save(args.report, report)
             print(
@@ -232,7 +228,6 @@ def main():
     parser.add_argument("--allow-inference", action="store_true")
     parser.add_argument("--rounds", type=int, default=3)
     parser.add_argument("--limit", type=int)
-    parser.add_argument("--no-spoilers", action="store_true")
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     if not args.allow_inference:

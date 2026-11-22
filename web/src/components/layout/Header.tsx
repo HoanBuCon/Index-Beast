@@ -9,7 +9,7 @@ export default function Header({ sidebarToggle }: { sidebarToggle?: ReactNode })
     <header className="header">
       <div className="sidebar-brand-row">
         {sidebarToggle}
-        <Link to="/" className="brand" aria-label={"Index Beast — trang chủ"}>
+        <Link to="/chat" className="brand" aria-label={"Index Beast — trang chủ"}>
           {!sidebarToggle && (
             <span className="brand-mark" aria-hidden="true">
               <img src={graceIcon} alt="" draggable={false} />

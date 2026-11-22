@@ -61,7 +61,7 @@ def test_compose_publishes_only_project_ports_on_the_host():
 def test_api_process_never_listens_on_default_port():
     sources = {
         "backend/Dockerfile": r'"--port", "(\d+)"|EXPOSE (\d+)',
-        "infra/Caddyfile": r"reverse_proxy api:(\d+)",
+        "infra/caddy/snippets.caddy": r"reverse_proxy api:(\d+)",
         "Makefile": r"\),(\d+)\)",
         "web/vite.config.ts": r'DEFAULT_\w+_PORT = "(\d+)"',
         "docker-compose.yml": r"api:(\d+)|127\.0\.0\.1:(\d+)/api",
@@ -70,3 +70,33 @@ def test_api_process_never_listens_on_default_port():
         ports = {int(group) for m in re.finditer(pattern, _read(path)) for group in m.groups() if group}
         assert ports, f"không tìm thấy cổng trong {path}"
         assert not ports & DEFAULT_PORTS, f"{path} dùng cổng mặc định: {sorted(ports & DEFAULT_PORTS)}"
+
+
+def test_internal_api_port_is_one_fixed_contract():
+    # 18000 là cổng nội bộ cố định của container api (không có biến cấu hình): mọi nơi dùng nó phải cùng giá trị.
+    compose = _read("docker-compose.yml")
+    found = {
+        "Dockerfile --port": re.findall(r"--port (\d+)", _read("backend/Dockerfile")),
+        "Dockerfile EXPOSE": re.findall(r"^EXPOSE (\d+)", _read("backend/Dockerfile"), re.M),
+        "Caddy snippet": re.findall(r"reverse_proxy api:(\d+)", _read("infra/caddy/snippets.caddy")),
+        "compose healthcheck": re.findall(r"127\.0\.0\.1:(\d+)/api/v1/health", compose),
+        "compose BOT_API_URL": re.findall(r"BOT_API_URL: http://api:(\d+)", compose),
+    }
+    for where, ports in found.items():
+        assert ports, f"không tìm thấy cổng api ở {where}"
+    values = {int(p) for ports in found.values() for p in ports}
+    assert values == {18000}, f"cổng nội bộ của api không đồng nhất: { {k: v for k, v in found.items()} }"
+
+    # Giá trị này được ghi lại trong docs/production.md (hợp đồng cố định).
+    assert "18000" in _read("docs/production.md")
+
+
+def test_every_caddyfile_proxies_api_through_the_shared_snippet():
+    # Cổng proxy nằm ở snippet dùng chung; mỗi Caddyfile phải nạp snippet và dùng `import api_proxy`,
+    # và không được tự khai báo reverse_proxy riêng (nếu có thì cũng không được dùng cổng mặc định).
+    for path in ("infra/Caddyfile", "infra/Caddyfile.staging", "infra/Caddyfile.prod"):
+        lines = _active_lines(_read(path))
+        assert any(line.strip() == "import /etc/caddy/snippets.caddy" for line in lines), f"{path} không nạp snippet"
+        assert any(line.strip().startswith("import api_proxy") for line in lines), f"{path} không dùng api_proxy"
+        own = {int(m) for line in lines for m in re.findall(r"reverse_proxy \w+:(\d+)", line)}
+        assert not own & DEFAULT_PORTS, f"{path} proxy tới cổng mặc định: {sorted(own & DEFAULT_PORTS)}"

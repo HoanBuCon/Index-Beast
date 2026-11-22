@@ -1,0 +1,44 @@
+# Staging trên một VPS 4 vCPU / 8 GB RAM. Chạy chồng lên docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml --profile app up -d --build
+# (scripts/staging/deploy.sh gói sẵn lệnh này). Hướng dẫn đầy đủ: docs/staging.md.
+#
+# Khác với compose gốc:
+#   - ENVIRONMENT=prod: từ chối khởi động nếu còn giá trị mẫu "change-me", ẩn Swagger/OpenAPI
+#   - lưu hội thoại và trace vào PostgreSQL (CHAT_PERSISTENCE=postgres), chạy RAG thật (CHAT_MODE=rag)
+#   - ảnh minh họa tắt mặc định (backend/data/media nặng ~7,5 GB); bật khi đã chép dữ liệu ảnh lên VPS
+#   - mount backend/models vào api (.dockerignore không đưa model vào image)
+#   - Caddy dùng infra/Caddyfile.staging: basic auth + danh sách IP; chỉ Caddy mở cổng ra Internet
+#   - giới hạn CPU từng service (mem_limit đã có ở compose gốc). Tổng mem_limit ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành
+
+services:
+  postgres:
+    cpus: 1.0
+
+  qdrant:
+    cpus: 1.5
+
+  redis:
+    cpus: 0.5
+
+  api:
+    environment:
+      ENVIRONMENT: prod
+      CHAT_MODE: ${CHAT_MODE:-rag}
+      CHAT_PERSISTENCE: ${CHAT_PERSISTENCE:-postgres}
+      RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-false}
+    volumes:
+      - ./backend/models:/app/models
+    cpus: 2.5
+
+  bot:
+    cpus: 0.5
+
+  caddy:
+    environment:
+      STAGING_HOST: ${STAGING_HOST:-localhost}
+      STAGING_USER: ${STAGING_USER:-staging}
+      STAGING_PASSWORD_HASH: ${STAGING_PASSWORD_HASH:?Đặt STAGING_PASSWORD_HASH trong .env (xem docs/staging.md)}
+      STAGING_ALLOW_IPS: ${STAGING_ALLOW_IPS:-0.0.0.0/0 ::/0}
+    volumes:
+      - ./infra/Caddyfile.staging:/etc/caddy/Caddyfile:ro
+    cpus: 0.5

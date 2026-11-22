@@ -12,6 +12,8 @@ def context_prefix(doc, section, unit):
     variant = section.get("variant_context")
     if variant and variant.get("label"):
         lines.append("Variant: " + variant["label"])
+    if unit.get("quest_stage"):
+        lines.append("Quest stage: " + unit["quest_stage"])
     if unit.get("lang") not in (None, "unknown"):
         lines.append("Language: " + unit["lang"])
     if unit.get("speaker"):
@@ -20,6 +22,8 @@ def context_prefix(doc, section, unit):
         lines.append("Trigger: " + unit["trigger"])
     if unit.get("table_header"):
         lines.append("Table header: " + unit["table_header"])
+    if unit.get("row_key"):
+        lines.append("Row: " + unit["row_key"])
     return "\n".join(lines) + "\n"
 
 
@@ -49,6 +53,10 @@ def split_unit(text, prefix, tokenizer, cap=450, overlap=50):
             boundaries = [start + m.end() for m in matches if m.end() >= (end - start) // 2]
             if boundaries:
                 end = boundaries[-1]
+            else:
+                words = [start + m.end() for m in re.finditer(r"\s+", text[start:end]) if m.end() >= (end - start) // 2]
+                if words:
+                    end = words[-1]
         fragment = text[start:end]
         if token_count(tokenizer, prefix + fragment) > cap:
             raise AssertionError("Token cap exceeded")
@@ -73,14 +81,47 @@ def split_unit(text, prefix, tokenizer, cap=450, overlap=50):
                 lo = mid + 1
             else:
                 hi = mid - 1
-        start = max(start + 1, end - tail)
+        next_start = end - tail
+        word_character = r"[A-Za-z0-9_'’%.+-]"
+        if (
+            start < next_start < end
+            and re.match(word_character, text[next_start])
+            and re.match(word_character, text[next_start - 1])
+        ):
+            while next_start < end and re.match(word_character, text[next_start]):
+                next_start += 1
+        start = max(start + 1, next_start)
     return spans
 
 
 def prepare_units(doc, section, tokenizer, cap):
+    blocks = section["blocks"]
+    # Keep a source infobox together when it fits. Passive effects following the
+    # tables otherwise become orphan fragments competing with their own stats.
+    if (
+        section.get("kind") == "infobox"
+        and any(b["kind"] == "infobox_stats" for b in blocks)
+        and all(b["kind"] in {"infobox", "infobox_stats"} for b in blocks)
+    ):
+        text = "\n".join(b["text"] for b in blocks)
+        prefix = context_prefix(doc, section, {"lang": section["lang"]})
+        if token_count(tokenizer, prefix + text) <= cap:
+            return [
+                {
+                    "unit_key": f"blocks:0-{len(blocks) - 1}",
+                    "kind": "infobox_stats",
+                    "text": text,
+                    "lang": section["lang"],
+                    "trigger": None,
+                    "speaker": None,
+                    "block_indices": list(range(len(blocks))),
+                    "source_locations": [b["location"] for b in blocks],
+                }
+            ]
     units = []
     buffer = []
     indices = []
+    stage = None
 
     def flush():
         nonlocal buffer, indices
@@ -94,6 +135,7 @@ def prepare_units(doc, section, tokenizer, cap):
                     "trigger": None,
                     "speaker": None,
                     "block_indices": indices[:],
+                    "quest_stage": stage,
                     "source_locations": [b["location"] for b in buffer],
                 }
             )
@@ -101,6 +143,9 @@ def prepare_units(doc, section, tokenizer, cap):
         indices = []
 
     for index, block in enumerate(section["blocks"]):
+        if block.get("quest_stage_start"):
+            flush()
+            stage = block["text"]
         if block["kind"] == "dialogue":
             flush()
             if not block.get("turns"):
@@ -115,14 +160,19 @@ def prepare_units(doc, section, tokenizer, cap):
                         source_locations=[block["location"]],
                     )
                 )
-        elif block["kind"] == "table":
+        elif block["kind"] in {"table", "infobox_stats", "table_fact"}:
             flush()
             units.append(
                 {
                     "unit_key": f"block:{index}",
-                    "kind": "table",
+                    "kind": block["kind"],
                     "text": block["text"],
-                    "table_header": block["text"].splitlines()[0],
+                    "table_header": block.get("table_header")
+                    or (None if block["kind"] == "table_fact" else block["text"].splitlines()[0]),
+                    "table_id": block.get("table_id"),
+                    "fact_ids": block.get("fact_ids", []),
+                    "row_key": block.get("row_key"),
+                    "table_type": block.get("table_type"),
                     "lang": section["lang"],
                     "trigger": None,
                     "speaker": None,
@@ -132,7 +182,7 @@ def prepare_units(doc, section, tokenizer, cap):
             )
         else:
             candidate = "\n".join([b["text"] for b in buffer] + [block["text"]])
-            prefix = context_prefix(doc, section, {"lang": section["lang"]})
+            prefix = context_prefix(doc, section, {"lang": section["lang"], "quest_stage": stage})
             if buffer and token_count(tokenizer, prefix + candidate) > cap:
                 flush()
             buffer.append(block)
@@ -152,6 +202,8 @@ def chunk_section(doc, section, tokenizer, cap=450, overlap=50):
     for unit in prepare_units(doc, section, tokenizer, cap):
         prefix = context_prefix(doc, section, unit)
         try:
+            if unit["kind"] == "table_fact" and token_count(tokenizer, prefix + unit["text"]) > cap:
+                raise ValueError("structured_row_over_budget")
             spans = split_unit(unit["text"], prefix, tokenizer, cap, overlap)
         except ValueError as exc:
             reviews.append(

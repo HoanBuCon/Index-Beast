@@ -1,0 +1,12 @@
+[
+  {"id":"EMB01","lang":"vi","web_search":"off","question":"Rivers of Blood là vũ khí gì? Cho tôi xem ảnh đúng Rivers of Blood."},
+  {"id":"EMB02","lang":"vi","web_search":"off","question":"Arsenal Charm có tác dụng gì? Cho tôi xem ảnh của chính talisman này."},
+  {"id":"EMB03","lang":"vi","web_search":"off","endpoint":"chat/stream","question":"Ranni là ai? Cho tôi xem ảnh Ranni."},
+  {"id":"EMB04","lang":"en","web_search":"always","question":"What is Reduvia and what are its requirements? Show a picture of Reduvia from the web if available."},
+  {"id":"EMB05","lang":"vi","web_search":"always","question":"Dark Moon Greatsword lấy ở đâu? Cho tôi xem ảnh đúng thanh kiếm này nếu web có ảnh."},
+  {"id":"EMB06","lang":"en","web_search":"auto","question":"Give a feasible eight-stat allocation for a Vagabond at level 60 using Zweihander one-handed, PvE strength melee, no buffs or stat-boosting gear. Check class floors, level accounting and weapon requirements from sources; don't claim optimality."},
+  {"id":"EMB07","lang":"vi","web_search":"auto","question":"Tôi là Hero level 80, chơi PvE cận chiến dùng Great Stars một tay, không buff hay trang bị cộng chỉ số. Hãy đề xuất bảng tám chỉ số khả thi, kiểm tra điểm theo level, chỉ số nền class và yêu cầu vũ khí."},
+  {"id":"EMB08","lang":"en","web_search":"auto","question":"Bandit level 50, Reduvia one-handed, PvE bleed melee, no stat bonuses: suggest a feasible eight-stat allocation. Verify the starting class stats, level rules and weapon requirements; do not invent missing numbers."},
+  {"id":"EMB09","lang":"vi","web_search":"auto","group":"missing-build","question":"Chia tám chỉ số cho build PvE của tôi, nhưng tôi chưa chọn class, level hay vũ khí."},
+  {"id":"EMB10","lang":"vi","web_search":"off","group":"missing-build","question":"Tôi chọn Astrologer level 25, vũ khí là Moonveilll-X bản mod riêng không có dữ liệu công khai. Không tự đoán yêu cầu của vũ khí này."}
+]

@@ -99,6 +99,9 @@ class MockChatService:
         except KeyError:
             raise NotFoundError("Không tìm thấy hội thoại.") from None
 
+    async def trace(self, message_id: UUID) -> dict:
+        raise NotFoundError("Chế độ mock không lưu trace.")
+
     def has_message(self, message_id: UUID) -> bool:
         return any(m.id == message_id for c in self._conversations.values() for m in c.messages)
 

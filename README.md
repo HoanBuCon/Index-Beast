@@ -11,20 +11,22 @@ Trello: https://trello.com/b/mZEBMPGV/elden-ring
 > Repo đang ở giai đoạn nền tảng: API health, cấu hình và adapter DeepSeek đã có triển khai.
 > Pipeline dữ liệu và RAG đang được phát triển theo kế hoạch sprint.
 
-Chat hiện có ba mode server: `mock` (mặc định), `llm_only` và `rag`. Xem
+Chat hiện có hai mode server: `mock` (mặc định, dữ liệu giả) và `rag`. Xem
 [hướng dẫn LangChain + DeepSeek và tích hợp corpus thử nghiệm](backend/app/rag/README.md).
-`llm_only` dùng được khi dữ liệu chưa sẵn sàng. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
+Mode `llm_only` (gọi mô hình không truy xuất) đã bị gỡ; `rag` cần corpus đã index trong Qdrant. Xem [báo cáo kiểm thử offline và tích hợp thật](docs/testing/2026-10-29_rag-integration-report.md) để biết kết quả, lỗi đã phát hiện và cấu hình máy thử.
 
 **Phạm vi hiện tại:** Elden Ring có nguồn, gồm lore, gameplay và tư vấn build định tính; giữ rõ game/release và mức độ chưa xác minh. Corpus thử nghiệm dùng policy `pilot`, mặc định chọn chunk tiếng Anh. Dữ liệu gameplay còn thiếu bảng stat/acquisition/combat đã bị lọc; xem [audit khả năng thực tế và cách thử](docs/testing/2026-10-29_elden-ring-assistant-capabilities.md). Các tài liệu SRS/ADR cũ cần nhóm đồng bộ riêng.
 
-## 4 con Hollows
+## Thành viên 4 Hollows
 
-| Mã | Thành viên | Vai trò |
-|---|---|---|
-| TV1 | Hoanbucon | Tech Lead · Backend & DevOps |
-| TV2 | UncleThing | Data Engineer |
-| TV3 | MinhMuc | AI / RAG Engineer |
-| TV4 | QuyVuiVe | Frontend & Discord Bot |
+Mở phần của từng thành viên để xem việc đã làm, việc còn cần nghiệm thu và kế hoạch đến cuối Sprint 6.
+
+| Mã | Thành viên | Vai trò | Phân công và tiến độ |
+|---|---|---|---|
+| TV1 | Hoanbucon | Tech Lead · Backend & DevOps | [Công việc TV1](backend/README-TV1-TV3.md#tv1-hoanbucon) |
+| TV2 | UncleThing | Data Engineer | [Công việc TV2](backend/README-TV2-TV4.md#tv2-unclething) |
+| TV3 | MinhMuc | AI / RAG Engineer | [Công việc TV3](backend/README-TV1-TV3.md#tv3-minhmuc) |
+| TV4 | QuyVuiVe | Frontend & Discord Bot | [Công việc TV4](web/README-TV2-TV4.md#tv4-quyvuive) |
 
 ## Tài liệu
 
@@ -56,6 +58,10 @@ Xem [hướng dẫn tự chạy](backend/notebooks/README.md). Notebook chưa đ
 ## Chạy local
 
 Chạy nhanh API + web + hạ tầng: `make dev`. Kiểm tra: `make health`; unit offline: `make test-unit`.
+`make dev` chờ Docker healthy, khởi động API rồi chờ `/api/v1/health` trả `status=ok` trước khi mở web.
+Mặc định chờ tối đa 60 giây; đổi bằng `make dev DEV_READY_TIMEOUT=90`. Nếu API lỗi/timeout, web không mở
+và tiến trình API vừa tạo được dừng. Ctrl+C dừng cây tiến trình API/web, giữ nguyên container và dữ liệu Docker.
+`make api` / `make web` riêng vẫn chạy độc lập; không có bước chờ backend khi chỉ chạy `make web`.
 Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local-guide.md).
 
 ### Cần cài
@@ -74,6 +80,7 @@ Xem [hướng dẫn test và cấu hình DeepSeek](docs/testing/indexbeast-local
 git clone https://github.com/HoanBuCon/Index-Beast.git && cd Index-Beast
 git switch develop
 cp .env.example .env                      # điền giá trị thật khi cần (xem mục Cấu hình)
+# về sau, mỗi lần pull mà .env.example có biến mới: `make env` (thêm biến thiếu, hỏi khi có biến thừa)
 
 # Backend
 cd backend
@@ -134,6 +141,9 @@ npm run dev
 
 Trong server thử nghiệm, chọn lệnh `/ping` của bot → nhận `Pong!`. S1 không cần API hay Docker để thử `/ping`.
 Giữ terminal mở để bot online; nhấn Ctrl+C để dừng. PowerShell chặn `npm.ps1` thì dùng `npm.cmd` thay `npm`.
+**Sprint 5 — Message Content Intent:** bot nghe tin nhắn thường (trả lời khi được mention và ở kênh `/setup`) nên cần bật
+**Message Content Intent** trong Discord Developer Portal (Bot → Privileged Gateway Intents). Chưa bật thì bot không đăng nhập được
+(`Used disallowed intents`). Lệnh mới `/setup`, `/clear` cần chạy lại `npm run deploy-commands`.
 Đăng ký lại lệnh khi thay đổi định nghĩa lệnh, không cần đăng ký mỗi lần khởi động bot.
 Lệnh deploy đăng ký global cho mọi server đã cài bot (Discord có thể mất vài phút để hiện lệnh mới) và
 thay thế toàn bộ danh sách slash command của ứng dụng bằng registry hiện tại (`/ping`, `/ask`).
