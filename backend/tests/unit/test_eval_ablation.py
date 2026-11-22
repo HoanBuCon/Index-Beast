@@ -52,7 +52,7 @@ def test_summary_counts_gold_pages_jina_outcomes_and_the_discord_limit():
     row = case_row(case, {"turns": [turn], "rerank": {"ok": 1, "fallback:http_status:429": 3}}, {"correctness": 2})
     assert row["gold_cited"] and row["noisy"] and row["over_45s"] and row["search_web"] == 1
     summary = aggregate([row])
-    assert summary["accuracy_pct"] == 100.0 and summary["jina_ok_pct"] == 25.0 and summary["over_45s"] == 1
+    assert summary["accuracy_pct"] == 100.0 and summary["reranker_ok_pct"] == 25.0 and summary["over_45s"] == 1
 
 
 async def test_throttled_reranker_retries_only_on_rate_limit(monkeypatch):

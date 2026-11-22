@@ -13,9 +13,10 @@
   "rerank_outcomes": {
     "ok:None": 183
   },
-  "method": "Raw question, Qdrant hybrid + Jina rerank, top five distinct pages",
+  "method": "Raw question, Qdrant hybrid + jina-reranker-v2-base-multilingual rerank, top five distinct pages",
   "summary": {
     "n": 183,
+    "precision_at5": 0.21530054644808744,
     "recall_at5": 0.907103825136612,
     "mrr_at5": 0.7889799635701275,
     "hit_at5": 0.9398907103825137,
@@ -24,6 +25,7 @@
   "by_language": {
     "en": {
       "n": 86,
+      "precision_at5": 0.23255813953488375,
       "recall_at5": 0.9593023255813954,
       "mrr_at5": 0.8207364341085271,
       "hit_at5": 0.9883720930232558,
@@ -31,6 +33,7 @@
     },
     "vi": {
       "n": 97,
+      "precision_at5": 0.2,
       "recall_at5": 0.8608247422680413,
       "mrr_at5": 0.7608247422680412,
       "hit_at5": 0.8969072164948454,
@@ -40,6 +43,7 @@
   "by_difficulty": {
     "easy": {
       "n": 55,
+      "precision_at5": 0.19636363636363638,
       "recall_at5": 0.9818181818181818,
       "mrr_at5": 0.8742424242424243,
       "hit_at5": 0.9818181818181818,
@@ -47,6 +51,7 @@
     },
     "hard": {
       "n": 45,
+      "precision_at5": 0.28,
       "recall_at5": 0.7111111111111111,
       "mrr_at5": 0.6311111111111111,
       "hit_at5": 0.8444444444444444,
@@ -54,6 +59,7 @@
     },
     "medium": {
       "n": 83,
+      "precision_at5": 0.1927710843373494,
       "recall_at5": 0.963855421686747,
       "mrr_at5": 0.8180722891566266,
       "hit_at5": 0.963855421686747,
@@ -63,6 +69,7 @@
   "by_input": {
     "clean": {
       "n": 134,
+      "precision_at5": 0.22388059701492538,
       "recall_at5": 0.9216417910447762,
       "mrr_at5": 0.8026119402985075,
       "hit_at5": 0.9626865671641791,
@@ -70,6 +77,7 @@
     },
     "noisy": {
       "n": 49,
+      "precision_at5": 0.19183673469387758,
       "recall_at5": 0.8673469387755102,
       "mrr_at5": 0.7517006802721088,
       "hit_at5": 0.8775510204081632,
@@ -157,7 +165,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-102",
@@ -237,7 +246,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-103",
@@ -317,7 +327,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-104",
@@ -397,7 +408,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-105",
@@ -479,7 +491,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-106",
@@ -559,7 +572,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-107",
@@ -641,7 +655,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-108",
@@ -721,7 +736,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-109",
@@ -801,7 +817,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-110",
@@ -881,7 +898,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-111",
@@ -963,7 +981,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-112",
@@ -1043,7 +1062,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-113",
@@ -1126,7 +1146,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-114",
@@ -1206,7 +1227,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-115",
@@ -1286,7 +1308,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-116",
@@ -1366,7 +1389,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-117",
@@ -1448,7 +1472,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-118",
@@ -1528,7 +1553,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-119",
@@ -1608,7 +1634,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-120",
@@ -1688,7 +1715,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-121",
@@ -1770,7 +1798,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-122",
@@ -1850,7 +1879,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-123",
@@ -1930,7 +1960,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-124",
@@ -2010,7 +2041,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-125",
@@ -2090,7 +2122,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-126",
@@ -2170,7 +2203,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-127",
@@ -2252,7 +2286,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-128",
@@ -2332,7 +2367,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-129",
@@ -2412,7 +2448,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-130",
@@ -2492,7 +2529,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-131",
@@ -2572,7 +2610,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-132",
@@ -2652,7 +2691,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-133",
@@ -2732,7 +2772,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-134",
@@ -2812,7 +2853,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-135",
@@ -2892,7 +2934,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-136",
@@ -2972,7 +3015,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-137",
@@ -3054,7 +3098,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-138",
@@ -3134,7 +3179,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-139",
@@ -3214,7 +3260,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-140",
@@ -3294,7 +3341,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-141",
@@ -3376,7 +3424,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-142",
@@ -3456,7 +3505,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-143",
@@ -3536,7 +3586,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-144",
@@ -3616,7 +3667,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-145",
@@ -3698,7 +3750,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-146",
@@ -3778,7 +3831,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-147",
@@ -3861,7 +3915,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-148",
@@ -3941,7 +3996,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-149",
@@ -4023,7 +4079,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-150",
@@ -4103,7 +4160,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-151",
@@ -4186,7 +4244,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-152",
@@ -4266,7 +4325,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-153",
@@ -4348,7 +4408,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-154",
@@ -4428,7 +4489,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-155",
@@ -4508,7 +4570,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-156",
@@ -4588,7 +4651,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-157",
@@ -4670,7 +4734,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-158",
@@ -4750,7 +4815,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-159",
@@ -4830,7 +4896,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-160",
@@ -4910,7 +4977,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-161",
@@ -4990,7 +5058,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-162",
@@ -5070,7 +5139,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-163",
@@ -5153,7 +5223,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-164",
@@ -5233,7 +5304,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-165",
@@ -5313,7 +5385,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-166",
@@ -5393,7 +5466,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-167",
@@ -5475,7 +5549,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-168",
@@ -5557,7 +5632,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-169",
@@ -5637,7 +5713,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-170",
@@ -5717,7 +5794,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-171",
@@ -5797,7 +5875,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-172",
@@ -5877,7 +5956,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-173",
@@ -5957,7 +6037,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-174",
@@ -6037,7 +6118,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-175",
@@ -6117,7 +6199,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-176",
@@ -6197,7 +6280,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-177",
@@ -6277,7 +6361,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-178",
@@ -6357,7 +6442,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-179",
@@ -6437,7 +6523,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-180",
@@ -6517,7 +6604,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-181",
@@ -6599,7 +6687,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-182",
@@ -6679,7 +6768,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-183",
@@ -6759,7 +6849,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-184",
@@ -6839,7 +6930,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-185",
@@ -6919,7 +7011,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-186",
@@ -6999,7 +7092,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-187",
@@ -7081,7 +7175,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-188",
@@ -7161,7 +7256,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-189",
@@ -7241,7 +7337,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-190",
@@ -7321,7 +7418,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-191",
@@ -7401,7 +7499,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-192",
@@ -7481,7 +7580,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-193",
@@ -7563,7 +7663,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-194",
@@ -7645,7 +7746,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-195",
@@ -7725,7 +7827,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-196",
@@ -7805,7 +7908,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-197",
@@ -7888,7 +7992,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-198",
@@ -7968,7 +8073,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-199",
@@ -8048,7 +8154,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-200",
@@ -8128,7 +8235,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-201",
@@ -8210,7 +8318,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-202",
@@ -8292,7 +8401,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-203",
@@ -8374,7 +8484,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-204",
@@ -8454,7 +8565,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-205",
@@ -8534,7 +8646,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-206",
@@ -8614,7 +8727,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-207",
@@ -8694,7 +8808,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-208",
@@ -8774,7 +8889,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-209",
@@ -8854,7 +8970,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-210",
@@ -8934,7 +9051,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-211",
@@ -9016,7 +9134,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-212",
@@ -9096,7 +9215,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-213",
@@ -9176,7 +9296,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-214",
@@ -9256,7 +9377,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-215",
@@ -9339,7 +9461,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-216",
@@ -9419,7 +9542,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-217",
@@ -9499,7 +9623,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-218",
@@ -9579,7 +9704,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-219",
@@ -9659,7 +9785,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-220",
@@ -9739,7 +9866,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-221",
@@ -9821,7 +9949,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-222",
@@ -9901,7 +10030,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-223",
@@ -9981,7 +10111,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-224",
@@ -10061,7 +10192,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-225",
@@ -10141,7 +10273,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-226",
@@ -10221,7 +10354,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-227",
@@ -10304,7 +10438,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-228",
@@ -10385,7 +10520,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-229",
@@ -10466,7 +10602,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-230",
@@ -10547,7 +10684,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-231",
@@ -10628,7 +10766,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-232",
@@ -10709,7 +10848,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-233",
@@ -10790,7 +10930,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-234",
@@ -10871,7 +11012,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-235",
@@ -10954,7 +11096,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-236",
@@ -11034,7 +11177,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-237",
@@ -11116,7 +11260,8 @@
       ],
       "recall_at5": 0.3333333333333333,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-238",
@@ -11198,7 +11343,8 @@
       ],
       "recall_at5": 0.3333333333333333,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-239",
@@ -11279,7 +11425,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-240",
@@ -11360,7 +11507,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-241",
@@ -11442,7 +11590,8 @@
       ],
       "recall_at5": 0.6666666666666666,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-242",
@@ -11524,7 +11673,8 @@
       ],
       "recall_at5": 0.6666666666666666,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-243",
@@ -11605,7 +11755,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-244",
@@ -11686,7 +11837,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-245",
@@ -11767,7 +11919,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-246",
@@ -11850,7 +12003,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-247",
@@ -11933,7 +12087,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-248",
@@ -12014,7 +12169,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-249",
@@ -12095,7 +12251,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-250",
@@ -12176,7 +12333,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-251",
@@ -12257,7 +12415,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-252",
@@ -12338,7 +12497,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-253",
@@ -12419,7 +12579,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-254",
@@ -12500,7 +12661,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-255",
@@ -12584,7 +12746,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-256",
@@ -12666,7 +12829,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.6
     },
     {
       "id": "IB-GS-257",
@@ -12749,7 +12913,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-258",
@@ -12830,7 +12995,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-259",
@@ -12910,7 +13076,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-260",
@@ -12990,7 +13157,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-261",
@@ -13073,7 +13241,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-262",
@@ -13154,7 +13323,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-263",
@@ -13235,7 +13405,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-264",
@@ -13318,7 +13489,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-265",
@@ -13399,7 +13571,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-266",
@@ -13480,7 +13653,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-271",
@@ -13562,7 +13736,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-272",
@@ -13644,7 +13819,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-273",
@@ -13726,7 +13902,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-274",
@@ -13808,7 +13985,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-276",
@@ -13890,7 +14068,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-282",
@@ -13973,7 +14152,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-283",
@@ -14053,7 +14233,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-284",
@@ -14135,7 +14316,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-285",
@@ -14218,7 +14400,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-286",
@@ -14300,7 +14483,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-287",
@@ -14382,7 +14566,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-289",
@@ -14464,7 +14649,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-295",
@@ -14547,7 +14733,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-296",
@@ -14629,7 +14816,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-297",
@@ -14710,7 +14898,8 @@
       ],
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-298",
@@ -14791,7 +14980,8 @@
       ],
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-300",
@@ -14873,7 +15063,8 @@
       ],
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     }
   ]
 }

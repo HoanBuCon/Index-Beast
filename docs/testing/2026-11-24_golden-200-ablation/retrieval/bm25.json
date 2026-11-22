@@ -13,6 +13,7 @@
   "method": "Raw question, Qdrant bm25, top five distinct pages",
   "summary": {
     "n": 183,
+    "precision_at5": 0.1825136612021858,
     "recall_at5": 0.7859744990892532,
     "mrr_at5": 0.5839708561020036,
     "hit_at5": 0.825136612021858,
@@ -21,6 +22,7 @@
   "by_language": {
     "en": {
       "n": 86,
+      "precision_at5": 0.2046511627906977,
       "recall_at5": 0.8875968992248062,
       "mrr_at5": 0.7226744186046512,
       "hit_at5": 0.9302325581395349,
@@ -28,6 +30,7 @@
     },
     "vi": {
       "n": 97,
+      "precision_at5": 0.16288659793814433,
       "recall_at5": 0.6958762886597938,
       "mrr_at5": 0.46099656357388313,
       "hit_at5": 0.7319587628865979,
@@ -37,6 +40,7 @@
   "by_difficulty": {
     "easy": {
       "n": 55,
+      "precision_at5": 0.18545454545454546,
       "recall_at5": 0.9272727272727272,
       "mrr_at5": 0.626969696969697,
       "hit_at5": 0.9272727272727272,
@@ -44,6 +48,7 @@
     },
     "hard": {
       "n": 45,
+      "precision_at5": 0.21333333333333335,
       "recall_at5": 0.5518518518518518,
       "mrr_at5": 0.5181481481481481,
       "hit_at5": 0.7111111111111111,
@@ -51,6 +56,7 @@
     },
     "medium": {
       "n": 83,
+      "precision_at5": 0.163855421686747,
       "recall_at5": 0.8192771084337349,
       "mrr_at5": 0.5911646586345382,
       "hit_at5": 0.8192771084337349,
@@ -60,6 +66,7 @@
   "by_input": {
     "clean": {
       "n": 134,
+      "precision_at5": 0.1985074626865672,
       "recall_at5": 0.8420398009950248,
       "mrr_at5": 0.6436567164179104,
       "hit_at5": 0.8880597014925373,
@@ -67,6 +74,7 @@
     },
     "noisy": {
       "n": 49,
+      "precision_at5": 0.13877551020408163,
       "recall_at5": 0.6326530612244898,
       "mrr_at5": 0.4207482993197279,
       "hit_at5": 0.6530612244897959,
@@ -151,7 +159,8 @@
       "latency_ms": 1686.57,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-102",
@@ -228,7 +237,8 @@
       "latency_ms": 31.88,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-103",
@@ -305,7 +315,8 @@
       "latency_ms": 31.2,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-104",
@@ -382,7 +393,8 @@
       "latency_ms": 31.44,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-105",
@@ -403,7 +415,8 @@
       "latency_ms": 22.83,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-106",
@@ -480,7 +493,8 @@
       "latency_ms": 27.19,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-107",
@@ -559,7 +573,8 @@
       "latency_ms": 28.8,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-108",
@@ -636,7 +651,8 @@
       "latency_ms": 27.15,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-109",
@@ -713,7 +729,8 @@
       "latency_ms": 28.42,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-110",
@@ -790,7 +807,8 @@
       "latency_ms": 27.18,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-111",
@@ -869,7 +887,8 @@
       "latency_ms": 24.56,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-112",
@@ -946,7 +965,8 @@
       "latency_ms": 27.8,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-113",
@@ -1026,7 +1046,8 @@
       "latency_ms": 26.04,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-114",
@@ -1103,7 +1124,8 @@
       "latency_ms": 26.16,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-115",
@@ -1180,7 +1202,8 @@
       "latency_ms": 29.94,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-116",
@@ -1257,7 +1280,8 @@
       "latency_ms": 28.01,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-117",
@@ -1336,7 +1360,8 @@
       "latency_ms": 28.0,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-118",
@@ -1413,7 +1438,8 @@
       "latency_ms": 30.56,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-119",
@@ -1456,7 +1482,8 @@
       "latency_ms": 25.87,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-120",
@@ -1533,7 +1560,8 @@
       "latency_ms": 26.2,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-121",
@@ -1612,7 +1640,8 @@
       "latency_ms": 26.33,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-122",
@@ -1689,7 +1718,8 @@
       "latency_ms": 25.68,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-123",
@@ -1766,7 +1796,8 @@
       "latency_ms": 24.74,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-124",
@@ -1843,7 +1874,8 @@
       "latency_ms": 25.39,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-125",
@@ -1920,7 +1952,8 @@
       "latency_ms": 26.21,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-126",
@@ -1997,7 +2030,8 @@
       "latency_ms": 25.54,
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-127",
@@ -2076,7 +2110,8 @@
       "latency_ms": 22.64,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-128",
@@ -2153,7 +2188,8 @@
       "latency_ms": 24.91,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-129",
@@ -2230,7 +2266,8 @@
       "latency_ms": 24.73,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-130",
@@ -2307,7 +2344,8 @@
       "latency_ms": 24.81,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-131",
@@ -2384,7 +2422,8 @@
       "latency_ms": 23.59,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-132",
@@ -2461,7 +2500,8 @@
       "latency_ms": 23.92,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-133",
@@ -2538,7 +2578,8 @@
       "latency_ms": 24.82,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-134",
@@ -2615,7 +2656,8 @@
       "latency_ms": 25.77,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-135",
@@ -2692,7 +2734,8 @@
       "latency_ms": 27.8,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-136",
@@ -2769,7 +2812,8 @@
       "latency_ms": 26.34,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-137",
@@ -2848,7 +2892,8 @@
       "latency_ms": 25.73,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-138",
@@ -2925,7 +2970,8 @@
       "latency_ms": 25.45,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-139",
@@ -3002,7 +3048,8 @@
       "latency_ms": 25.8,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-140",
@@ -3079,7 +3126,8 @@
       "latency_ms": 26.39,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-141",
@@ -3158,7 +3206,8 @@
       "latency_ms": 28.79,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-142",
@@ -3235,7 +3284,8 @@
       "latency_ms": 29.07,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-143",
@@ -3312,7 +3362,8 @@
       "latency_ms": 27.83,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-144",
@@ -3389,7 +3440,8 @@
       "latency_ms": 27.73,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-145",
@@ -3468,7 +3520,8 @@
       "latency_ms": 26.44,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-146",
@@ -3545,7 +3598,8 @@
       "latency_ms": 24.51,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-147",
@@ -3625,7 +3679,8 @@
       "latency_ms": 25.56,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-148",
@@ -3702,7 +3757,8 @@
       "latency_ms": 26.58,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-149",
@@ -3781,7 +3837,8 @@
       "latency_ms": 28.13,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-150",
@@ -3858,7 +3915,8 @@
       "latency_ms": 27.71,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-151",
@@ -3938,7 +3996,8 @@
       "latency_ms": 28.55,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-152",
@@ -4015,7 +4074,8 @@
       "latency_ms": 30.26,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-153",
@@ -4038,7 +4098,8 @@
       "latency_ms": 22.75,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-154",
@@ -4115,7 +4176,8 @@
       "latency_ms": 27.44,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-155",
@@ -4192,7 +4254,8 @@
       "latency_ms": 32.51,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-156",
@@ -4269,7 +4332,8 @@
       "latency_ms": 32.46,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-157",
@@ -4348,7 +4412,8 @@
       "latency_ms": 28.84,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-158",
@@ -4425,7 +4490,8 @@
       "latency_ms": 30.79,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-159",
@@ -4502,7 +4568,8 @@
       "latency_ms": 27.34,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-160",
@@ -4579,7 +4646,8 @@
       "latency_ms": 29.4,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-161",
@@ -4656,7 +4724,8 @@
       "latency_ms": 28.28,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-162",
@@ -4733,7 +4802,8 @@
       "latency_ms": 26.43,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-163",
@@ -4813,7 +4883,8 @@
       "latency_ms": 28.96,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-164",
@@ -4890,7 +4961,8 @@
       "latency_ms": 30.22,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-165",
@@ -4967,7 +5039,8 @@
       "latency_ms": 26.83,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-166",
@@ -5044,7 +5117,8 @@
       "latency_ms": 31.12,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-167",
@@ -5065,7 +5139,8 @@
       "latency_ms": 25.25,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-168",
@@ -5144,7 +5219,8 @@
       "latency_ms": 33.65,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-169",
@@ -5221,7 +5297,8 @@
       "latency_ms": 28.99,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-170",
@@ -5298,7 +5375,8 @@
       "latency_ms": 27.56,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-171",
@@ -5375,7 +5453,8 @@
       "latency_ms": 26.07,
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-172",
@@ -5452,7 +5531,8 @@
       "latency_ms": 26.16,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-173",
@@ -5529,7 +5609,8 @@
       "latency_ms": 27.09,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-174",
@@ -5606,7 +5687,8 @@
       "latency_ms": 28.33,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-175",
@@ -5683,7 +5765,8 @@
       "latency_ms": 30.1,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-176",
@@ -5760,7 +5843,8 @@
       "latency_ms": 28.23,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-177",
@@ -5837,7 +5921,8 @@
       "latency_ms": 26.06,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-178",
@@ -5914,7 +5999,8 @@
       "latency_ms": 28.15,
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-179",
@@ -5991,7 +6077,8 @@
       "latency_ms": 25.55,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-180",
@@ -6068,7 +6155,8 @@
       "latency_ms": 27.33,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-181",
@@ -6147,7 +6235,8 @@
       "latency_ms": 28.85,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-182",
@@ -6224,7 +6313,8 @@
       "latency_ms": 25.81,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-183",
@@ -6301,7 +6391,8 @@
       "latency_ms": 28.04,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-184",
@@ -6378,7 +6469,8 @@
       "latency_ms": 29.15,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-185",
@@ -6455,7 +6547,8 @@
       "latency_ms": 29.27,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-186",
@@ -6532,7 +6625,8 @@
       "latency_ms": 27.76,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-187",
@@ -6611,7 +6705,8 @@
       "latency_ms": 25.34,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-188",
@@ -6688,7 +6783,8 @@
       "latency_ms": 29.17,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-189",
@@ -6765,7 +6861,8 @@
       "latency_ms": 27.4,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-190",
@@ -6842,7 +6939,8 @@
       "latency_ms": 28.24,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-191",
@@ -6919,7 +7017,8 @@
       "latency_ms": 26.97,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-192",
@@ -6996,7 +7095,8 @@
       "latency_ms": 28.25,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-193",
@@ -7075,7 +7175,8 @@
       "latency_ms": 26.2,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-194",
@@ -7154,7 +7255,8 @@
       "latency_ms": 26.37,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-195",
@@ -7231,7 +7333,8 @@
       "latency_ms": 25.9,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-196",
@@ -7308,7 +7411,8 @@
       "latency_ms": 27.3,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-197",
@@ -7388,7 +7492,8 @@
       "latency_ms": 27.55,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-198",
@@ -7465,7 +7570,8 @@
       "latency_ms": 27.25,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-199",
@@ -7542,7 +7648,8 @@
       "latency_ms": 24.56,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-200",
@@ -7619,7 +7726,8 @@
       "latency_ms": 26.74,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-201",
@@ -7698,7 +7806,8 @@
       "latency_ms": 29.77,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-202",
@@ -7777,7 +7886,8 @@
       "latency_ms": 26.51,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-203",
@@ -7856,7 +7966,8 @@
       "latency_ms": 26.72,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-204",
@@ -7933,7 +8044,8 @@
       "latency_ms": 26.92,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-205",
@@ -8010,7 +8122,8 @@
       "latency_ms": 25.58,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-206",
@@ -8087,7 +8200,8 @@
       "latency_ms": 27.02,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-207",
@@ -8164,7 +8278,8 @@
       "latency_ms": 28.05,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-208",
@@ -8241,7 +8356,8 @@
       "latency_ms": 27.84,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-209",
@@ -8318,7 +8434,8 @@
       "latency_ms": 26.33,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-210",
@@ -8395,7 +8512,8 @@
       "latency_ms": 26.42,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-211",
@@ -8474,7 +8592,8 @@
       "latency_ms": 25.43,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-212",
@@ -8551,7 +8670,8 @@
       "latency_ms": 25.35,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-213",
@@ -8628,7 +8748,8 @@
       "latency_ms": 27.51,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-214",
@@ -8705,7 +8826,8 @@
       "latency_ms": 26.78,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-215",
@@ -8785,7 +8907,8 @@
       "latency_ms": 25.59,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-216",
@@ -8862,7 +8985,8 @@
       "latency_ms": 26.43,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-217",
@@ -8939,7 +9063,8 @@
       "latency_ms": 27.77,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-218",
@@ -9016,7 +9141,8 @@
       "latency_ms": 27.57,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-219",
@@ -9093,7 +9219,8 @@
       "latency_ms": 27.67,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-220",
@@ -9170,7 +9297,8 @@
       "latency_ms": 26.82,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-221",
@@ -9249,7 +9377,8 @@
       "latency_ms": 26.61,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-222",
@@ -9326,7 +9455,8 @@
       "latency_ms": 25.64,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-223",
@@ -9403,7 +9533,8 @@
       "latency_ms": 26.68,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-224",
@@ -9480,7 +9611,8 @@
       "latency_ms": 27.25,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-225",
@@ -9557,7 +9689,8 @@
       "latency_ms": 26.29,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-226",
@@ -9634,7 +9767,8 @@
       "latency_ms": 25.62,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-227",
@@ -9714,7 +9848,8 @@
       "latency_ms": 30.29,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-228",
@@ -9792,7 +9927,8 @@
       "latency_ms": 30.78,
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-229",
@@ -9870,7 +10006,8 @@
       "latency_ms": 26.95,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-230",
@@ -9948,7 +10085,8 @@
       "latency_ms": 27.36,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-231",
@@ -10026,7 +10164,8 @@
       "latency_ms": 30.51,
       "recall_at5": 0.5,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-232",
@@ -10104,7 +10243,8 @@
       "latency_ms": 30.29,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-233",
@@ -10182,7 +10322,8 @@
       "latency_ms": 33.99,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-234",
@@ -10260,7 +10401,8 @@
       "latency_ms": 31.49,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-235",
@@ -10340,7 +10482,8 @@
       "latency_ms": 29.77,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-236",
@@ -10417,7 +10560,8 @@
       "latency_ms": 28.23,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-237",
@@ -10496,7 +10640,8 @@
       "latency_ms": 29.56,
       "recall_at5": 0.6666666666666666,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-238",
@@ -10575,7 +10720,8 @@
       "latency_ms": 27.5,
       "recall_at5": 0.6666666666666666,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-239",
@@ -10653,7 +10799,8 @@
       "latency_ms": 28.57,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-240",
@@ -10731,7 +10878,8 @@
       "latency_ms": 28.22,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-241",
@@ -10810,7 +10958,8 @@
       "latency_ms": 28.34,
       "recall_at5": 0.3333333333333333,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-242",
@@ -10889,7 +11038,8 @@
       "latency_ms": 29.57,
       "recall_at5": 0.3333333333333333,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-243",
@@ -10967,7 +11117,8 @@
       "latency_ms": 25.76,
       "recall_at5": 0.5,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-244",
@@ -11045,7 +11196,8 @@
       "latency_ms": 27.07,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-245",
@@ -11123,7 +11275,8 @@
       "latency_ms": 31.25,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-246",
@@ -11203,7 +11356,8 @@
       "latency_ms": 27.83,
       "recall_at5": 0.5,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-247",
@@ -11283,7 +11437,8 @@
       "latency_ms": 28.54,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-248",
@@ -11361,7 +11516,8 @@
       "latency_ms": 28.62,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-249",
@@ -11439,7 +11595,8 @@
       "latency_ms": 30.01,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-250",
@@ -11517,7 +11674,8 @@
       "latency_ms": 28.7,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-251",
@@ -11537,7 +11695,8 @@
       "latency_ms": 22.59,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-252",
@@ -11615,7 +11774,8 @@
       "latency_ms": 29.32,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-253",
@@ -11693,7 +11853,8 @@
       "latency_ms": 31.03,
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-254",
@@ -11771,7 +11932,8 @@
       "latency_ms": 29.62,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-255",
@@ -11852,7 +12014,8 @@
       "latency_ms": 35.53,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-256",
@@ -11931,7 +12094,8 @@
       "latency_ms": 35.13,
       "recall_at5": 0.3333333333333333,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-257",
@@ -12011,7 +12175,8 @@
       "latency_ms": 33.6,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-258",
@@ -12089,7 +12254,8 @@
       "latency_ms": 33.77,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-259",
@@ -12166,7 +12332,8 @@
       "latency_ms": 29.6,
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-260",
@@ -12243,7 +12410,8 @@
       "latency_ms": 28.79,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-261",
@@ -12323,7 +12491,8 @@
       "latency_ms": 29.86,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-262",
@@ -12401,7 +12570,8 @@
       "latency_ms": 29.49,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-263",
@@ -12479,7 +12649,8 @@
       "latency_ms": 28.4,
       "recall_at5": 0.5,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-264",
@@ -12559,7 +12730,8 @@
       "latency_ms": 28.79,
       "recall_at5": 0.5,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-265",
@@ -12637,7 +12809,8 @@
       "latency_ms": 30.17,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-266",
@@ -12715,7 +12888,8 @@
       "latency_ms": 30.21,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-271",
@@ -12794,7 +12968,8 @@
       "latency_ms": 25.44,
       "recall_at5": 1.0,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-272",
@@ -12873,7 +13048,8 @@
       "latency_ms": 32.86,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-273",
@@ -12952,7 +13128,8 @@
       "latency_ms": 41.83,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-274",
@@ -13031,7 +13208,8 @@
       "latency_ms": 33.56,
       "recall_at5": 1.0,
       "mrr_at5": 0.25,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-276",
@@ -13110,7 +13288,8 @@
       "latency_ms": 40.58,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-282",
@@ -13190,7 +13369,8 @@
       "latency_ms": 38.43,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-283",
@@ -13267,7 +13447,8 @@
       "latency_ms": 31.25,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-284",
@@ -13346,7 +13527,8 @@
       "latency_ms": 28.77,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-285",
@@ -13426,7 +13608,8 @@
       "latency_ms": 28.33,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-286",
@@ -13505,7 +13688,8 @@
       "latency_ms": 29.31,
       "recall_at5": 1.0,
       "mrr_at5": 0.3333333333333333,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-287",
@@ -13584,7 +13768,8 @@
       "latency_ms": 28.16,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-289",
@@ -13663,7 +13848,8 @@
       "latency_ms": 29.41,
       "recall_at5": 1.0,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-295",
@@ -13743,7 +13929,8 @@
       "latency_ms": 35.01,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-296",
@@ -13822,7 +14009,8 @@
       "latency_ms": 35.57,
       "recall_at5": 1.0,
       "mrr_at5": 0.5,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.4
     },
     {
       "id": "IB-GS-297",
@@ -13900,7 +14088,8 @@
       "latency_ms": 36.56,
       "recall_at5": 0.5,
       "mrr_at5": 0.2,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     },
     {
       "id": "IB-GS-298",
@@ -13978,7 +14167,8 @@
       "latency_ms": 35.42,
       "recall_at5": 0.0,
       "mrr_at5": 0.0,
-      "hit_at5": false
+      "hit_at5": false,
+      "precision_at5": 0.0
     },
     {
       "id": "IB-GS-300",
@@ -14057,7 +14247,8 @@
       "latency_ms": 35.97,
       "recall_at5": 0.5,
       "mrr_at5": 1.0,
-      "hit_at5": true
+      "hit_at5": true,
+      "precision_at5": 0.2
     }
   ]
 }

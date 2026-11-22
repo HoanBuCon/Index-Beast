@@ -56,8 +56,8 @@ def case_row(case: dict, result: dict, judged: dict | None) -> dict:
         "search_web": sum(s.get("tool") == "search_web" for s in steps),
         "search_corpus": sum(s.get("tool") in {"search_corpus", "check_name"} for s in steps),
         "tokens": sum((u.get("prompt_tokens") or 0) + (u.get("completion_tokens") or 0) for u in usage + writer),
-        "jina_ok": rerank.get("ok", 0),
-        "jina_fallback": sum(v for k, v in rerank.items() if k != "ok"),
+        "reranker_ok": rerank.get("ok", 0),
+        "reranker_fallback": sum(v for k, v in rerank.items() if k != "ok"),
         "forced_finish": bool((trace.get("agent") or {}).get("forced_finish")),
         **({k: judged.get(k) for k in ("correctness", "faithfulness", "behavior", "followup")} if judged else {}),
     }
@@ -70,7 +70,7 @@ def aggregate(rows: list[dict]) -> dict:
     behavioral = [r for r in rows if r["behavioral"]]
     judged = [r for r in factual if "correctness" in r]
     faithful = [r for r in judged if r.get("faithfulness") is not None]
-    calls = sum(r["jina_ok"] + r["jina_fallback"] for r in rows)
+    calls = sum(r["reranker_ok"] + r["reranker_fallback"] for r in rows)
     return {
         "n": len(rows),
         "ok_pct": pct(r["ok"] for r in rows),
@@ -88,7 +88,9 @@ def aggregate(rows: list[dict]) -> dict:
         "search_web_per_case": round(mean(r["search_web"] for r in rows), 2),
         "search_corpus_per_case": round(mean(r["search_corpus"] for r in rows), 2),
         "tokens_per_case": round(mean(r["tokens"] for r in rows)),
-        "jina_ok_pct": pct([True] * sum(r["jina_ok"] for r in rows) + [False] * sum(r["jina_fallback"] for r in rows))
+        "reranker_ok_pct": pct(
+            [True] * sum(r["reranker_ok"] for r in rows) + [False] * sum(r["reranker_fallback"] for r in rows)
+        )
         if calls
         else None,
         "forced_finish": sum(r["forced_finish"] for r in rows),
@@ -117,6 +119,17 @@ def summarize(manifest: list[dict], run_dir: Path) -> dict:
     }
 
 
+def dump_report(report):
+    """JSON thụt lề cho phần tổng hợp, còn mỗi câu nằm gọn trên một dòng để file không vượt 1 MB."""
+    placeholders = {name: f"__rows_{name}__" for name in report}
+    shell = {name: {**item, "rows": placeholders[name]} for name, item in report.items()}
+    text = json.dumps(shell, ensure_ascii=False, indent=1)
+    for name, item in report.items():
+        rows = ",\n".join("   " + json.dumps(row, ensure_ascii=False, separators=(",", ":")) for row in item["rows"])
+        text = text.replace(json.dumps(placeholders[name]), "[\n" + rows + "\n  ]" if rows else "[]")
+    return text + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--manifest", type=Path, required=True)
@@ -125,7 +138,7 @@ def main():
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     report = {d.name: summarize(manifest, d) for d in sorted(args.runs.iterdir()) if (d / "results.json").exists()}
-    args.output.write_text(json.dumps(report, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    args.output.write_bytes(dump_report(report).encode("utf-8"))
     for name, item in report.items():
         print(name, json.dumps(item["summary"], ensure_ascii=False))
 
