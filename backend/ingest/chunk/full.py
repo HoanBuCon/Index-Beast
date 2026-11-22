@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 from collections import Counter
+from itertools import zip_longest
 from pathlib import Path
 from urllib.parse import quote
 
@@ -275,7 +276,7 @@ def run(input_dir, tokenizer_path, output, cap=450, overlap=50, *, wiki_quality=
         (output / "chunks.jsonl").open(encoding="utf-8") as source,
     ):
         n = 0
-        for row, line in __import__("itertools").zip_longest(csv.DictReader(stream), source):
+        for row, line in zip_longest(csv.DictReader(stream), source):
             if row is None or line is None:
                 raise ValueError("CSV row count mismatch")
             c = json.loads(line)

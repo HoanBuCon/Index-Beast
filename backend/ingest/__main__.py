@@ -10,6 +10,16 @@ from ingest.settings import load_settings
 from ingest.sources.wikigg import WikiGG
 
 
+def positive_int(text):
+    try:
+        value = int(text)
+    except ValueError:
+        value = 0
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"phải là số nguyên dương (positive integer), nhận {text!r}")
+    return value
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="IndexBeast offline crawl, clean, chunk and index (TV2/TV3)")
     p.add_argument("command", choices=["crawl", "survey", "report", "clean", "chunk", "index", "update"])
@@ -36,8 +46,12 @@ def main(argv=None):
     p.add_argument("--full-scan", action="store_true", help="update: so revision toàn corpus thay vì recentchanges")
     p.add_argument("--bootstrap-from", type=Path, help="update: tạo state từ thư mục chunk đã nghiệm thu")
     p.add_argument("--bootstrap-from-db", action="store_true", help="update: tạo state từ bảng documents")
-    p.add_argument("--max-pages", type=int, help="update: giới hạn số trang xử lý mỗi lượt, phần còn lại để lượt sau")
-    p.add_argument("--batch-pages", type=int, help="update: số trang mỗi lô crawl-clean-chunk-index (mặc định 50)")
+    p.add_argument(
+        "--max-pages", type=positive_int, help="update: giới hạn số trang xử lý mỗi lượt, phần còn lại để lượt sau"
+    )
+    p.add_argument(
+        "--batch-pages", type=positive_int, help="update: số trang mỗi lô crawl-clean-chunk-index (mặc định 50)"
+    )
     args = p.parse_args(argv)
     if args.command == "index":
         if args.input is None:
