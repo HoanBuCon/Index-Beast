@@ -12,6 +12,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Id câu trả lời cuối của hội thoại: dán vào ô tra cứu trace (id hội thoại cũng được chấp nhận).",
+            "title": "Last Message Id"
+          },
           "title": {
             "description": "Câu hỏi đầu tiên của hội thoại, cắt còn 60 ký tự.",
             "title": "Title",
@@ -252,6 +264,11 @@
           "auth_available": {
             "default": false,
             "title": "Auth Available",
+            "type": "boolean"
+          },
+          "google_auth_available": {
+            "default": false,
+            "title": "Google Auth Available",
             "type": "boolean"
           },
           "trace_available": {
@@ -1549,6 +1566,7 @@
     },
     "/api/v1/admin/trace/{message_id}": {
       "get": {
+        "description": "Nhận id câu trả lời; nếu là id hội thoại thì trả trace của câu trả lời cuối của hội thoại đó.",
         "operationId": "get_trace_api_v1_admin_trace__message_id__get",
         "parameters": [
           {
@@ -1943,6 +1961,196 @@
           }
         },
         "summary": "Bắt đầu đăng nhập bằng Discord",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/google/callback": {
+      "get": {
+        "operationId": "google_callback_api_v1_auth_google_callback_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Về trang web sau khi đăng nhập."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Google gọi lại sau khi người dùng cấp quyền",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/google/login": {
+      "get": {
+        "operationId": "google_login_api_v1_auth_google_login_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "next",
+            "required": false,
+            "schema": {
+              "default": "/",
+              "title": "Next",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Chuyển sang Google để cấp quyền."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Bắt đầu đăng nhập bằng Google",
         "tags": [
           "auth"
         ]

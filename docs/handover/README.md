@@ -1,5 +1,8 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Đăng nhập bằng Google (OAuth + PKCE, chỉ lưu băm `sub`) (23/11/2026)](2026-11-23_s5-tv1_dang-nhap-google.md)
+- [TV1 · Trang admin: tra cứu trace bằng id hội thoại, khung cuộn, Ctrl+A và sao chép JSON (23/11/2026)](2026-11-23_s5-tv1_admin-trace.md)
+- [TV1 · Sidebar nhóm hội thoại theo chủ sở hữu, không nhảy mục khi mở (23/11/2026)](2026-11-23_s5-tv1_sidebar-hoi-thoai.md)
 - [TV1 · Xóa từng hội thoại của tài khoản, sửa hội thoại không xóa được ở mục "Của tài khoản" (22/11/2026)](2026-11-22_s5-tv1_xoa-hoi-thoai-tai-khoan.md)
 - [TV1 · Hạn mức hỏi đáp mỗi ngày cho khách, tài khoản và ngân sách token chung (22/11/2026)](2026-11-22_s5-tv1_han-muc-hoi-dap.md)
 - [TV4 · Menu tài khoản, điều hướng đăng nhập/chat và tích hợp Auth phía web (22/11/2026)](2026-11-22_s5-tv4_menu-tai-khoan-auth-routing.md)
