@@ -1,4 +1,5 @@
-"""Người dùng và phiên đăng nhập (ADR-005): băm Discord ID, tạo và tra phiên, nhận hội thoại, kiểm đường dẫn `next`.
+"""Người dùng và phiên đăng nhập (ADR-005): băm Discord ID / Google sub, tạo và tra phiên,
+nhận hội thoại, kiểm đường dẫn `next`.
 
 Không đọc cookie hay gọi Discord ở đây (việc của routes và adapter) để dễ kiểm thử.
 
@@ -36,14 +37,16 @@ class AuthUser:
     is_admin: bool
 
 
-def provider_hash(settings: Settings, discord_id: str) -> str:
-    """HMAC-SHA256 theo AUTH_SECRET: nhận ra người dùng quay lại mà không lưu Discord ID thô."""
+def provider_hash(settings: Settings, raw_id: str, provider: str = "discord") -> str:
+    """HMAC-SHA256 theo AUTH_SECRET: nhận ra người dùng quay lại mà không lưu ID thô (Discord ID, Google `sub`).
+    Mặc định "discord" để bản băm Discord giữ nguyên `discord:<id>` như trước."""
     secret = settings.auth_secret.get_secret_value().strip().encode()
-    return hmac.new(secret, f"discord:{discord_id}".encode(), hashlib.sha256).hexdigest()
+    return hmac.new(secret, f"{provider}:{raw_id}".encode(), hashlib.sha256).hexdigest()
 
 
 def admin_hashes(settings: Settings) -> frozenset[str]:
-    if not settings.auth_enabled:
+    """Chỉ Discord ID trong AUTH_ADMIN_DISCORD_IDS là admin; người dùng Google không bao giờ là admin."""
+    if not settings.login_enabled:
         return frozenset()
     return frozenset(provider_hash(settings, i) for i in settings.auth_admin_discord_ids)
 
@@ -72,12 +75,14 @@ def title_of(question: str | None) -> str:
     return text[:TITLE_CHARS] if text else "(chưa có câu hỏi)"
 
 
-async def upsert_user(sessionmaker, settings: Settings, discord_id: str, display_name: str | None) -> AuthUser:
-    digest = provider_hash(settings, discord_id)
+async def upsert_user(
+    sessionmaker, settings: Settings, raw_id: str, display_name: str | None, provider: str = "discord"
+) -> AuthUser:
+    digest = provider_hash(settings, raw_id, provider)
     now = datetime.now(UTC)
     statement = (
         insert(User)
-        .values(provider="discord", provider_user_hash=digest, display_name=display_name, last_login_at=now)
+        .values(provider=provider, provider_user_hash=digest, display_name=display_name, last_login_at=now)
         .on_conflict_do_update(
             constraint="uq_users_provider_provider_user_hash",
             set_={"display_name": display_name, "last_login_at": now},

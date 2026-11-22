@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     discord_client_secret: SecretStr | None = None
     auth_secret: SecretStr | None = None  # khóa băm Discord ID (HMAC), không bao giờ đổi sau khi đã có người dùng
     auth_redirect_uri: str = ""  # bỏ trống: <WEB_URL>/api/v1/auth/discord/callback; phải khớp Discord Developer Portal
+    # Đăng nhập Google (ADR-005): cùng AUTH_SECRET với Discord; chỉ xin scope `openid profile`, không lấy email
+    google_client_id: str = ""
+    google_client_secret: SecretStr | None = None
+    google_redirect_uri: str = ""  # bỏ trống: <WEB_URL>/api/v1/auth/google/callback; phải khớp Google Cloud Console
     auth_session_days: int = Field(default=7, ge=1, le=90)
     auth_cookie_secure: bool | None = None  # bỏ trống: bật khi WEB_URL là https
     auth_admin_discord_ids: Annotated[list[str], NoDecode] = []  # .env: Discord ID, phân cách bằng dấu phẩy
@@ -178,20 +182,34 @@ class Settings(BaseSettings):
 
     @property
     def auth_enabled(self) -> bool:
-        """Đăng nhập chỉ bật khi đủ ba giá trị thật (không trống, không "change-me"), AUTH_SECRET từ 32 ký tự."""
+        """Discord bật khi đủ ba giá trị thật (không trống, không "change-me") và AUTH_SECRET từ 32 ký tự."""
+        return _real(self.discord_client_id) and _real(self.discord_client_secret) and self._auth_secret_ok
 
-        def real(value: object) -> bool:
-            text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
-            return bool(text.strip()) and text.strip() != PLACEHOLDER
+    @property
+    def google_auth_enabled(self) -> bool:
+        """Đăng nhập Google: client id + secret thật và cùng quy tắc AUTH_SECRET như Discord."""
+        return _real(self.google_client_id) and _real(self.google_client_secret) and self._auth_secret_ok
 
-        long_secret = self.auth_secret is not None and len(self.auth_secret.get_secret_value().strip()) >= 32
+    @property
+    def login_enabled(self) -> bool:
+        """Có ít nhất một phương thức đăng nhập: đọc cookie phiên, băm admin."""
+        return self.auth_enabled or self.google_auth_enabled
+
+    @property
+    def _auth_secret_ok(self) -> bool:
         return (
-            real(self.discord_client_id) and real(self.discord_client_secret) and real(self.auth_secret) and long_secret
+            _real(self.auth_secret)
+            and self.auth_secret is not None
+            and len(self.auth_secret.get_secret_value().strip()) >= 32
         )
 
     @property
     def auth_callback_url(self) -> str:
         return self.auth_redirect_uri.strip() or f"{self.web_url.rstrip('/')}/api/v1/auth/discord/callback"
+
+    @property
+    def google_callback_url(self) -> str:
+        return self.google_redirect_uri.strip() or f"{self.web_url.rstrip('/')}/api/v1/auth/google/callback"
 
     @property
     def auth_cookie_is_secure(self) -> bool:
@@ -288,6 +306,11 @@ class Settings(BaseSettings):
         return self.environment == "prod"
 
 
+def _real(value: object) -> bool:
+    text = value.get_secret_value() if isinstance(value, SecretStr) else (value or "")
+    return bool(text.strip()) and text.strip() != PLACEHOLDER
+
+
 class UnsafeConfigError(RuntimeError):
     """Cấu hình không an toàn cho môi trường hiện tại."""
 
@@ -299,7 +322,7 @@ def ensure_safe_for_environment(settings: Settings) -> None:
     leaked = [name.upper() for name, value in settings if _reveal(value) == PLACEHOLDER]
     if leaked:
         raise UnsafeConfigError(f"ENVIRONMENT=prod nhưng vẫn dùng giá trị mẫu '{PLACEHOLDER}': {', '.join(leaked)}")
-    if settings.auth_enabled and not settings.auth_cookie_is_secure:
+    if settings.login_enabled and not settings.auth_cookie_is_secure:
         raise UnsafeConfigError(
             "ENVIRONMENT=prod bật đăng nhập nhưng cookie phiên không có cờ Secure: đặt WEB_URL https://..."
         )

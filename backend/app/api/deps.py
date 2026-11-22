@@ -16,6 +16,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.discord_oauth import DiscordOAuth
+from app.adapters.google_oauth import GoogleOAuth
 from app.api.guard import ensure_admin_not_blocked, record_admin_failure
 from app.context import AppContext
 from app.services import auth
@@ -53,7 +54,7 @@ async def optional_user(request: Request) -> AuthUser | None:
     """Người dùng của cookie phiên (ADR-005), hoặc None cho khách. Lỗi DB coi như khách để chat vẫn chạy."""
     ctx = request.app.state.ctx
     token = request.cookies.get(SESSION_COOKIE)
-    if not token or ctx.sessionmaker is None or not ctx.settings.auth_enabled:
+    if not token or ctx.sessionmaker is None or not ctx.settings.login_enabled:
         return None
     try:
         return await auth.user_for_token(ctx.sessionmaker, ctx.settings, token)
@@ -87,6 +88,10 @@ def require_same_origin(request: Request) -> None:
 
 def get_discord_oauth(request: Request) -> DiscordOAuth:
     return DiscordOAuth(request.app.state.ctx.settings)
+
+
+def get_google_oauth(request: Request) -> GoogleOAuth:
+    return GoogleOAuth(request.app.state.ctx.settings)
 
 
 async def require_admin(request: Request) -> None:

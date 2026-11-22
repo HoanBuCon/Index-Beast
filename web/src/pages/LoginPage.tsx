@@ -112,7 +112,9 @@ export default function LoginPage() {
                       {pending === provider.id
                         ? `Đang chuyển tới ${provider.label}…`
                         : `Đăng nhập bằng ${provider.label}`}
-                      {!auth.loading && !provider.enabled && <small className="login-soon"> (chưa khả dụng)</small>}
+                      {!auth.loading && !provider.enabled && (
+                        <small className="login-soon"> ({provider.id === "google" ? "sắp có" : "chưa khả dụng"})</small>
+                      )}
                     </span>
                   </button>
                 ))

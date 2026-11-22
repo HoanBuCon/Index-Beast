@@ -15,6 +15,8 @@ class ChatCapabilities(BaseModel):
     trace_available: bool = False
     # Web chỉ hiện nút đăng nhập khi API đã cấu hình Discord OAuth
     auth_available: bool = False
+    # Tương tự cho Google OAuth (ADR-005); auth_available vẫn chỉ nghĩa là Discord
+    google_auth_available: bool = False
 
 
 @router.get("/chat/capabilities", response_model=ChatCapabilities)
@@ -23,4 +25,5 @@ async def capabilities(ctx: AppContext = Depends(get_ctx)):
         web_search_available=ctx.settings.web_search_available,
         trace_available=ctx.settings.admin_enabled,
         auth_available=ctx.settings.auth_enabled,
+        google_auth_available=ctx.settings.google_auth_enabled,
     )

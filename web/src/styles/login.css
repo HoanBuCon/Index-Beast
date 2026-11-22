@@ -259,7 +259,7 @@ body:has(.login-page)::-webkit-scrollbar {
     font-size: 16px;
   }
 }
-/* Google chưa có backend: hàng bị khóa, mờ đi nhưng vẫn đọc được (tương phản ≥ 3:1 cho nhãn "sắp có"). */
+/* Nhà cung cấp chưa cấu hình (Google chưa bật ở backend): hàng bị khóa, mờ đi nhưng vẫn đọc được (tương phản ≥ 3:1 cho nhãn "sắp có"). */
 .login-providers button:disabled {
   opacity: 0.55;
   cursor: not-allowed;

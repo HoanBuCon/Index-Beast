@@ -9,12 +9,13 @@ IndexBeast là chatbot hỏi đáp về Elden Ring, làm ra cho mục đích h�
 | Dữ liệu | Khi nào có | Lưu như thế nào |
 |---|---|---|
 | Định danh Discord | Bạn đăng nhập bằng Discord | Chỉ lưu **mã băm HMAC-SHA256** của Discord ID, không lưu ID thô, không lưu email hay mật khẩu. Kèm tên hiển thị Discord và giờ đăng nhập gần nhất. Không thể suy ngược mã băm thành ID nếu không có khóa bí mật của máy chủ |
+| Định danh Google | Bạn đăng nhập bằng Google | Chỉ xin quyền `openid profile` và chỉ lưu **mã băm HMAC-SHA256** của mã định danh `sub` do Google cấp, kèm tên hiển thị Google và giờ đăng nhập gần nhất. **Không lấy và không lưu email**, ảnh đại diện hay danh bạ. Tài khoản Google không bao giờ có quyền quản trị |
 | Phiên đăng nhập | Bạn đăng nhập | Cookie `httpOnly` giữ token ngẫu nhiên; máy chủ chỉ giữ mã băm SHA-256 của token, hết hạn tự động |
 | Hội thoại | Bạn hỏi trên web hoặc trong Discord | Câu hỏi, câu trả lời, nguồn trích dẫn, đánh giá 👍/👎 (nếu có) và một số dấu vết kỹ thuật của lần trả lời (trace) để tìm lỗi. Hội thoại của khách (chưa đăng nhập) gắn với một token giữ trong trình duyệt, máy chủ chỉ giữ mã băm của token đó |
 | Ký ức hội thoại | Bạn hỏi nhiều lượt trong một hội thoại | Vài ý chính rút từ hội thoại để trả lời mạch lạc hơn, kèm vector tìm kiếm tương ứng. Chỉ truy hồi trong chính hội thoại đó |
 | Nhật ký máy chủ | Mọi yêu cầu | Giờ, đường dẫn, mã trạng thái và thời gian xử lý. Không ghi nội dung câu hỏi, token hay cookie |
 
-Chúng tôi **không** lưu Discord ID thô, email, mật khẩu, số điện thoại, vị trí hay dữ liệu thanh toán, và không bán hay chia sẻ dữ liệu để quảng cáo.
+Chúng tôi **không** lưu Discord ID hay Google `sub` thô, email, mật khẩu, số điện thoại, vị trí hay dữ liệu thanh toán, và không bán hay chia sẻ dữ liệu để quảng cáo.
 
 Để trả lời, câu hỏi của bạn (cùng đoạn wiki liên quan) được gửi tới dịch vụ mô hình ngôn ngữ (DeepSeek), tới dịch vụ xếp hạng lại kết quả tìm (Jina, khi máy chủ đặt `RAG_RERANKER_PROVIDER=jina`; production đang dùng) và, khi bạn bật tìm web, tới dịch vụ tìm kiếm (Tavily). Đừng nhập thông tin cá nhân vào câu hỏi.
 
