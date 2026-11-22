@@ -1,0 +1,13 @@
+[Unit]
+Description=IndexBeast DOCKER-USER firewall rules
+After=docker.service
+Requires=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/indexbeast-firewall.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=docker.service
