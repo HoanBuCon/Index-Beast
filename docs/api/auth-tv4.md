@@ -60,5 +60,23 @@ Người đăng nhập có Discord ID trong `AUTH_ADMIN_DISCORD_IDS` có `is_adm
 ## Giới hạn hiện tại
 
 - Chưa thử với Discord thật (cần client secret và người bấm). Phần gọi Discord được kiểm bằng giả lập.
-- Chưa có xóa tài khoản và dữ liệu (FR-AUTH-08).
+- Đã có API xóa tài khoản và giao diện xác nhận; kiểm thử tự động dùng phiên giả lập, không xóa tài khoản thật.
 - Cần `CHAT_PERSISTENCE=postgres` để hội thoại thuộc về tài khoản; chế độ `memory` chỉ cho phép đăng nhập, không có lịch sử.
+
+## TV4 · Menu tài khoản và điều hướng (22/11/2026)
+
+- `/` và `/login` là màn đăng nhập; `/chat` vẫn mở cho khách qua **Dùng thử**.
+- Menu tài khoản nằm cuối sidebar, luôn truy cập được cả khi thu gọn. Khách có **Đăng nhập**; người có phiên có **Trang đăng nhập**, **Đăng xuất**, **Xóa tài khoản**. **Quản trị** hiện khi phiên có `is_admin` hoặc API đã bật khả năng quản trị bằng token. API vẫn kiểm quyền cho mọi thao tác.
+- Từ menu vào `/login?next=...`; web chỉ nhận đường quay lại `/chat`, `/about`, `/admin` (có thể kèm query/fragment). Giá trị ngoài ứng dụng, percent-encoded nguy hiểm, ký tự điều khiển hoặc màn không tồn tại được đổi thành `/chat`.
+- Đăng xuất hoặc xóa tài khoản thành công đưa về `/login` và dọn bản hội thoại của tài khoản ở trình duyệt theo cơ chế hiện có. Khi POST logout lỗi, chỉ kết luận hết phiên nếu `/auth/me` trả thành công với `authenticated: false, user: null`; lỗi mạng/503 giữ trạng thái để thử lại.
+- Xóa tài khoản cần xác nhận; lỗi giữ hộp thoại cùng thông báo và cho thử lại. Esc/Hủy không gọi DELETE.
+
+### Google: phần client đã sẵn sàng, backend chưa triển khai
+
+**Hợp đồng đề xuất bàn giao cho TV1, chưa phải endpoint hiện có trong OpenAPI:**
+
+1. Thêm boolean tùy chọn `google_auth_available` vào `GET /api/v1/chat/capabilities`, chỉ trả `true` sau khi Google OAuth phía server thực sự sẵn sàng. Web hiện coi thiếu trường hoặc sai kiểu là `false`, độc lập với Discord `auth_available`.
+2. `GET /api/v1/auth/google/login?next=...` bắt đầu luồng OAuth qua chuyển hướng trình duyệt. Web đã có URL builder và nút dùng đường dẫn này khi capability được bật. Backend phải kiểm lại `next`, thực hiện callback, kiểm state/PKCE và thông tin từ Google, tạo phiên cookie httpOnly rồi đưa về trang yêu cầu.
+3. Dùng lại hợp đồng `/auth/me`, `/auth/logout`, `/me/conversations`, `/me` cho cả hai nhà cung cấp; frontend không tự tạo phiên hoặc xử lý token của Google.
+
+Hiện `ChatCapabilities` của backend chưa có `google_auth_available`, chưa có route Google. Vì vậy bản đang chạy hiển thị Google **chưa khả dụng**; không bật bằng biến Vite hoặc đưa client secret vào trình duyệt. Discord chỉ bật khi `auth_available` là `true`. Bản local kiểm ngày 22/11 có `auth_enabled=false`, nên cần TV1/người quản trị cấu hình OAuth trước khi đăng nhập thật.

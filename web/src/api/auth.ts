@@ -16,6 +16,7 @@ export interface MyConversation {
 }
 export interface Capabilities {
   authAvailable: boolean;
+  googleAuthAvailable: boolean;
   searchAvailable: boolean;
   traceAvailable: boolean;
 }
@@ -24,20 +25,43 @@ const BASE = "/api/v1";
 // Production: web và API cùng origin sau Caddy; dev: proxy Vite. Cookie phiên đi kèm tự động.
 const SAME_ORIGIN: RequestInit = { credentials: "same-origin" };
 
-// Chỉ nhận đường dẫn tương đối ("/chat"); "//host" hoặc "/\\host" bị đổi về "/chat" (backend cũng lọc lại).
+// Chỉ quay lại các màn có sẵn; kiểm cả dạng percent-encoded để tránh chuyển hướng ra ngoài hoặc vòng lặp đăng nhập.
+export function safeAuthNext(next: string | null = "/chat"): string {
+  try {
+    const decoded = decodeURIComponent(next ?? "");
+    if (!decoded.startsWith("/") || decoded.startsWith("//") || /[\\\u0000-\u0020]/.test(decoded)) return "/chat";
+    const url = new URL(next!, "https://indexbeast.invalid");
+    if (url.origin !== "https://indexbeast.invalid" || !["/chat", "/about", "/admin"].includes(url.pathname))
+      return "/chat";
+    return `${url.pathname}${url.search}${url.hash}`.slice(0, 200);
+  } catch {
+    return "/chat";
+  }
+}
+
+export function loginPageUrl(next = "/chat"): string {
+  return `/login?next=${encodeURIComponent(safeAuthNext(next))}`;
+}
+
+// Điều hướng tới backend cùng origin; backend thực hiện OAuth và đặt cookie httpOnly.
 export function discordLoginUrl(next = "/chat"): string {
-  const safe = /^\/(?![/\\])/.test(next) ? next : "/chat";
-  return `${BASE}/auth/discord/login?next=${encodeURIComponent(safe)}`;
+  return `${BASE}/auth/discord/login?next=${encodeURIComponent(safeAuthNext(next))}`;
+}
+
+// Hợp đồng Google dành cho TV1: chỉ gọi khi capabilities có google_auth_available === true.
+export function googleLoginUrl(next = "/chat"): string {
+  return `${BASE}/auth/google/login?next=${encodeURIComponent(safeAuthNext(next))}`;
 }
 
 export async function getCapabilities(signal?: AbortSignal): Promise<Capabilities> {
-  const none = { authAvailable: false, searchAvailable: false, traceAvailable: false };
+  const none = { authAvailable: false, googleAuthAvailable: false, searchAvailable: false, traceAvailable: false };
   try {
     const response = await fetch(`${BASE}/chat/capabilities`, { ...SAME_ORIGIN, signal });
     if (!response.ok) return none;
     const data = await response.json();
     return {
       authAvailable: data?.auth_available === true,
+      googleAuthAvailable: data?.google_auth_available === true,
       searchAvailable: data?.web_search_available === true,
       traceAvailable: data?.trace_available === true,
     };
@@ -80,7 +104,15 @@ export async function logout(): Promise<boolean> {
 // Đăng xuất chỉ coi là xong khi POST thành công, hoặc /auth/me xác nhận đã không còn phiên (POST lỗi mạng nhưng phiên hết).
 export async function logoutVerified(): Promise<boolean> {
   if (await logout()) return true;
-  return (await getMe()) === null;
+  // getMe() coi lỗi mạng là khách để trang vẫn mở được; ở đây phải phân biệt lỗi với phiên thực sự đã hết.
+  try {
+    const response = await fetch(`${BASE}/auth/me`, SAME_ORIGIN);
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data?.authenticated === false && data?.user === null;
+  } catch {
+    return false;
+  }
 }
 
 export async function listMyConversations(signal?: AbortSignal): Promise<MyConversation[]> {

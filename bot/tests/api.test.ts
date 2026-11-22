@@ -104,6 +104,60 @@ test("HTTP errors preserve status and Retry-After without revealing backend body
   }
 });
 
+const QUOTA_MESSAGE = "Hệ thống đã dùng hết ngân sách trả lời hôm nay. Vui lòng quay lại sau 0 giờ (giờ Việt Nam).";
+const RATE_MESSAGE = "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại.";
+const status429 = (body: string, headers: Record<string, string> = { "Retry-After": "3600" }) =>
+  new Response(body, { status: 429, headers });
+
+test("429 quota_exceeded passes the backend message and code through (chat and stream)", async () => {
+  const body = JSON.stringify({ code: "quota_exceeded", message: QUOTA_MESSAGE, request_id: "r" });
+  const check = (error: unknown) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.status, 429);
+    assert.equal(error.code, "quota_exceeded");
+    assert.equal(error.message, QUOTA_MESSAGE);
+    assert.equal(error.retryAfter, "3600");
+    return true;
+  };
+  const api = client(async () => status429(body));
+  await assert.rejects(api.chat(question), check);
+  await assert.rejects(async () => {
+    for await (const _ of api.chatStream(question, new AbortController().signal));
+  }, check);
+});
+
+test("429 with a non-JSON or unusable body falls back to the generic rate-limit message", async () => {
+  const bodies = [
+    "PRIVATE_PROVIDER_DETAIL",
+    "",
+    "null",
+    JSON.stringify({ code: "quota_exceeded" }),
+    JSON.stringify({ code: "quota_exceeded", message: "   " }),
+    JSON.stringify({ code: "quota_exceeded", message: 5 }),
+    JSON.stringify({ code: "quota_exceeded", message: "x".repeat(2000) }),
+  ];
+  for (const body of bodies) {
+    await assert.rejects(client(async () => status429(body)).chat(question), (error: unknown) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.message, RATE_MESSAGE);
+      assert.equal(error.code, body.includes("quota_exceeded") ? "quota_exceeded" : undefined);
+      assert.ok(!error.message.includes("PRIVATE_PROVIDER_DETAIL"));
+      return true;
+    });
+  }
+});
+
+test("429 rate_limited keeps the existing wording and ignores the backend message", async () => {
+  const body = JSON.stringify({ code: "rate_limited", message: "Backend wording", request_id: "r" });
+  await assert.rejects(client(async () => status429(body, { "Retry-After": "7" })).chat(question), (error: unknown) => {
+    assert.ok(error instanceof ApiError);
+    assert.equal(error.message, RATE_MESSAGE);
+    assert.equal(error.code, "rate_limited");
+    assert.equal(error.retryAfter, "7");
+    return true;
+  });
+});
+
 test("malformed JSON, UUID, latency and sources cannot reach the bot renderer", async () => {
   for (const value of [
     { ...answer, message_id: "x" },

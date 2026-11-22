@@ -2,7 +2,7 @@
 // Phụ trách: TV4 · [S3] Web streaming SSE
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApiError, chatStream, parseSSE, sendFeedback } from "../src/api/client.ts";
+import { ApiError, chatStream, describeApiError, parseSSE, sendFeedback } from "../src/api/client.ts";
 
 function body(text: string, split = false) {
   const bytes = new TextEncoder().encode(text);
@@ -92,6 +92,51 @@ test("429 preserves Retry-After without exposing provider body", async (t) => {
       error.status === 429 &&
       error.retryAfter === "30" &&
       !error.message.includes("private"),
+  );
+});
+
+const quotaMessage = "Đã hết lượt hỏi của khách hôm nay. Đăng nhập bằng Discord để hỏi 30 câu mỗi ngày.";
+function quotaResponse(code: string, message: string) {
+  return new Response(JSON.stringify({ code, message, request_id: "r" }), {
+    status: 429,
+    headers: { "Retry-After": "41000", "Content-Type": "application/json" },
+  });
+}
+test("429 quota_exceeded passes server message and code, without retry suffix", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => quotaResponse("quota_exceeded", quotaMessage));
+  await assert.rejects(
+    sendFeedback("22222222-2222-4222-8222-222222222222", -1, "reason"),
+    (error: unknown) =>
+      error instanceof ApiError &&
+      error.message === quotaMessage &&
+      error.code === "quota_exceeded" &&
+      describeApiError(error) === quotaMessage,
+  );
+});
+test("429 quota_exceeded also applies to the stream request", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => quotaResponse("quota_exceeded", quotaMessage));
+  await assert.rejects(
+    async () => {
+      for await (const event of chatStream(request, new AbortController().signal)) void event;
+    },
+    (error: unknown) => error instanceof ApiError && error.message === quotaMessage,
+  );
+});
+test("429 with non-JSON body falls back to the default text", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response("<html>429</html>", { status: 429 }));
+  await assert.rejects(
+    sendFeedback("22222222-2222-4222-8222-222222222222", -1, "reason"),
+    (error: unknown) => error instanceof ApiError && /quá nhanh/.test(error.message) && error.code === undefined,
+  );
+});
+test("429 rate_limited keeps the default text and shows seconds", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => quotaResponse("rate_limited", "bất kỳ"));
+  await assert.rejects(
+    sendFeedback("22222222-2222-4222-8222-222222222222", -1, "reason"),
+    (error: unknown) =>
+      error instanceof ApiError &&
+      /quá nhanh/.test(error.message) &&
+      describeApiError(new ApiError(error.message, 429, "12", "rate_limited")).endsWith("Thử lại sau 12 giây."),
   );
 });
 

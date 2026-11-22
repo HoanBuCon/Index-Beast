@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import Header from "../components/layout/Header";
 import GraceMenuItem from "../components/layout/GraceMenuItem";
 import type { Conversation } from "../api/types";
@@ -20,13 +20,14 @@ import {
   stampOwner,
 } from "../lib/accountData";
 import AccountMenu from "../components/layout/AccountMenu";
-import { claimGuestConversations, discordLoginUrl, toLocalConversation } from "../api/auth";
+import { claimGuestConversations, toLocalConversation } from "../api/auth";
 import { getConversation } from "../api/client";
 import MessageInput from "../components/chat/MessageInput";
 import type { SearchMode } from "../components/chat/searchMode";
 import MessageList from "../components/chat/MessageList";
 import { retryInput } from "../hooks/chatState";
 import graceIcon from "../assets/ERN_Map_Icon_Site_of_Grace.png";
+import newChatIcon from "../../item_/MENU_Tab_22.png";
 import { createUuid } from "../lib/uuid.ts";
 
 // Thanh thu gọn chỉ dẫn tới chức năng đã có của web TV4.
@@ -212,13 +213,15 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         onSearchChange={setSearchMode}
       />
       {/* TV4: ghi chú đặt dưới ô chat, dùng chung cả màn chào và hội thoại. */}
-      <p className="chat-ai-note">AI có thể mắc sai sót.</p>
+      <p className="chat-ai-note">INDEX BEAST có thể mắc sai sót.</p>
     </>
   );
   return (
     <div
       className={`workspace${sidebarOpen ? "" : " sidebar-collapsed"}`}
       onKeyDown={(event) => {
+        // Dialog tự giữ focus và xử lý Esc; không để vòng Tab của sidebar giành thao tác này.
+        if (event.target instanceof Element && event.target.closest("dialog")) return;
         if (event.key === "Escape" && sidebarOpen) closeMobileSidebar();
         // Giữ điều hướng bàn phím trong menu khi menu phủ lên nội dung trên điện thoại.
         if (event.key === "Tab" && smallScreen && sidebarOpen) {
@@ -240,6 +243,24 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
       }}
     >
       {sidebarToggle}
+      {/* TV4 · Điện thoại (≤ 700 px): thanh tiêu đề thay cho cột icon; CSS ẩn thanh này ở màn rộng.
+          Nút mở menu là sidebarToggle phía trên, được đặt vào góc trái thanh này. */}
+      <div className="mobile-topbar">
+        <span className="mobile-topbar__toggle-space" aria-hidden="true" />
+        <Link to="/chat" className="mobile-topbar__brand" aria-label="Index Beast — trang chủ">
+          INDEX <strong>BEAST</strong>
+        </Link>
+        <button
+          type="button"
+          className="mobile-topbar__new"
+          aria-label="Trò chuyện mới"
+          title="Trò chuyện mới"
+          disabled={stream.busy}
+          onClick={() => reset()}
+        >
+          <img src={newChatIcon} alt="" draggable={false} />
+        </button>
+      </div>
       {sidebarOpen && (
         <button
           type="button"
@@ -331,43 +352,34 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         )}
         {openError && <p role="alert">{openError}</p>}
         {history.storageError && <p role="status">{"Trình duyệt không lưu được lịch sử."}</p>}
-        {(auth.user || auth.authAvailable) && (
-          <div className="sidebar-account">
-            {auth.user ? (
-              <AccountMenu
-                name={auth.user.display_name}
-                disabled={stream.busy}
-                logoutError={auth.logoutError}
-                onLogout={() => {
-                  const user = auth.user;
-                  const serverIds = auth.myConversations.map((c) => c.id);
-                  void auth.logout().then((ok) => {
-                    if (ok && user) purgeAccountConversations(user.id, serverIds);
-                  });
-                }}
-                onDeleted={() => {
-                  // Server đã xóa mọi hội thoại của tài khoản: bỏ luôn mọi bản lưu trong trình duyệt thuộc tài khoản.
-                  if (auth.user)
-                    purgeAccountConversations(
-                      auth.user.id,
-                      auth.myConversations.map((c) => c.id),
-                    );
-                  auth.clearUser();
-                  reset();
-                }}
-              />
-            ) : (
-              <a href={discordLoginUrl("/chat")}>Đăng nhập Discord</a>
-            )}
-          </div>
-        )}
-        <GraceMenuItem
-          className="sidebar-admin"
-          to="/admin"
-          icon="admin"
-          label="QUẢN TRỊ"
-          disabled={stream.busy}
-          onClick={closeMobileSidebar}
+        <AccountMenu
+          name={auth.user?.display_name}
+          canAdmin={auth.user?.is_admin === true || auth.traceAvailable}
+          onNavigate={closeMobileSidebar}
+          disabled={stream.busy || auth.loading}
+          logoutError={auth.logoutError}
+          onLogout={() => {
+            const user = auth.user;
+            const serverIds = auth.myConversations.map((c) => c.id);
+            return auth.logout().then((ok) => {
+              if (ok && user) {
+                purgeAccountConversations(user.id, serverIds);
+                navigate("/login");
+                closeMobileSidebar();
+              }
+            });
+          }}
+          onDeleted={() => {
+            // Server đã xóa mọi hội thoại của tài khoản: bỏ luôn mọi bản lưu trong trình duyệt thuộc tài khoản.
+            if (auth.user)
+              purgeAccountConversations(
+                auth.user.id,
+                auth.myConversations.map((c) => c.id),
+              );
+            auth.clearUser();
+            reset();
+            navigate("/login");
+          }}
         />
       </aside>
       {isChat ? (

@@ -41,10 +41,23 @@ Sprint 5, sau lần deploy đầu tiên. Nhánh `fix/s5-tv1-dos-hardening`. Runb
 | `caddy validate` Caddyfile.prod mới (trên VPS, bản copy ở /tmp) | Valid configuration |
 | `docker compose config` overlay mới | hợp lệ, caddy `mem_limit` 268435456 |
 
+## Cập nhật tối 22/11: đợt 2 và tường lửa (nhánh `fix/s5-tv1-firewall-service`)
+
+**Deploy v2.0.1** (PR #146, `main` 0b4b094) lúc 22:14 giờ VN: rate limit 240/phút kiểm trên site thật (250 request: 240 × 200, 10 × 429), Caddy 256 MB, log api không còn IP, log reranker đủ trường. Lần deploy đầu dừng ở `setfacl` vì `postgres-report.json` do container (uid 10001) tạo lúc nạp dữ liệu; đã `chown` về `deploy` qua container tạm rồi deploy lại. **Deploy tạo lại container api và caddy nên log đợt 1 bị mất** (không lưu trước); số liệu đợt 1 ở trên là bản phân tích trước khi deploy.
+
+**Đợt 2** (log lưu ở `~/incident/*-2026-11-22-2244.log` trên VPS, quyền 600, có IP): cùng IP `42.113.159.79`, từ 22:34 giờ VN, user-agent `fasthttp` và `Python-urllib/3.11` (549 `POST /chat/stream`, 101 lượt trả 200 nên đã tốn token DeepSeek/Jina). Api nhận ~252.000 request trong ~10 phút: 238.515 `GET /answer-shares` và 10.932 `POST /chat/stream` bị **429**; PostgreSQL gần như không tải (0,06% CPU). Nhưng mọi request vẫn qua Caddy (TLS, DNS `api`, proxy): Caddy lên 254/256 MB, site timeout. Kết luận: giới hạn ở api bảo vệ DB và tiền LLM, không bảo vệ Caddy; phải chặn trước Caddy.
+
+**Xử lý** (TV1 yêu cầu Claude làm qua SSH; user `deploy` không có sudo nên dùng container đặc quyền `nsenter` vào namespace máy chủ):
+- `DOCKER-USER` trước đó **trống** (lần chặn trước bằng ufw không có tác dụng). Thêm `DROP` cho `42.113.159.79` và hashlimit 20 kết nối mới/giây/IP vào 80/443; 10 giây đầu chặn 1.860 gói, tổng 16.370. Khởi động lại Caddy (còn giữ kết nối cũ): `/health` 200 trong 0,06–0,11 s, Caddy 10 MB.
+- Giữ rule qua khởi động lại: service `indexbeast-firewall` (`infra/firewall/`) cài ở `/usr/local/sbin/indexbeast-firewall.sh`, `/etc/systemd/system/indexbeast-firewall.service` (`WantedBy=docker.service`), danh sách IP `/etc/indexbeast/blocked-ips`. Đã chạy lại service và script hai lần: vẫn đúng 2 rule, không trùng. Không dùng `iptables-persistent` (lưu cả rule Docker tự sinh).
+- `docs/production.md` mục 7b: cài service, chặn thêm IP, gỡ IP, lưu log vào `~/incident/` trước khi deploy.
+
+**Chưa kiểm**: khởi động lại VPS thật để xác nhận service nạp rule sau Docker.
+
 ## Chưa làm
 
-- Chưa deploy: cần merge develop → main rồi `scripts/deploy.sh`.
-- iptables cần root: TV1 chạy theo runbook mục 7b. Chưa đưa vào `bootstrap.sh` (rule phải nạp sau khi Docker tạo chain `DOCKER-USER`; cần thử trên máy thật).
-- Chưa có lớp nhà mạng/CDN cho DDoS nhiều IP. Đã cân nhắc: Anti-DDoS Viettel IDC (hỏi nhà cung cấp) hoặc Cloudflare (chuyển nameserver cả `liemdai.io.vn`, ảnh hưởng dự án khác trên cPanel; cần kiểm SSE không bị đệm).
+- `scripts/deploy.sh`: tự lưu log api/caddy vào `~/incident/` trước khi tạo lại container; `setfacl` lỗi với file do container tạo (cần chown hoặc bỏ qua file không thuộc `deploy`).
+- Hỏi nhóm ai dùng IP `42.113.159.79` (fasthttp + script Python gửi câu hỏi thật vào production).
+- Chưa có lớp nhà mạng/CDN cho DDoS nhiều IP. Đã cân nhắc: Anti-DDoS Viettel IDC (hỏi nhà cung cấp, hotline 1800 8088) hoặc Cloudflare (chuyển nameserver cả `liemdai.io.vn`, ảnh hưởng dự án khác trên cPanel; cần chỉ nhận IP Cloudflare ở 80/443, đọc `CF-Connecting-IP` cho rate limit, kiểm SSE không bị đệm).
 - Caddy `unhealthy` không tự khởi động lại (Docker chỉ restart khi tiến trình thoát): cần ping ngoài báo về Discord (`docs/production.md` mục 7).
 - Observability của Viettel IDC (agent OpenTelemetry) chỉ giám sát, không chặn; có thể cài sau, giữ kín khóa trong lệnh cài.

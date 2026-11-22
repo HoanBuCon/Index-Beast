@@ -35,7 +35,12 @@ test("capabilities: auth is off unless the API says so, and failures never throw
   const fetchMock = t.mock.method(globalThis, "fetch", async () =>
     json({ auth_available: true, trace_available: true }),
   );
-  assert.deepEqual(await getCapabilities(), { authAvailable: true, searchAvailable: false, traceAvailable: true });
+  assert.deepEqual(await getCapabilities(), {
+    authAvailable: true,
+    googleAuthAvailable: false,
+    searchAvailable: false,
+    traceAvailable: true,
+  });
   fetchMock.mock.mockImplementation(async () => json({ auth_available: "yes" }));
   assert.equal((await getCapabilities()).authAvailable, false);
   fetchMock.mock.mockImplementation(async () => json({}, 500));
@@ -169,12 +174,15 @@ test("feedback buttons render under a finished real answer only", async () => {
   }
 });
 
-test("chat shell shows no Discord login or user box until the API reports auth", async () => {
+test("chat shell always offers its account menu and routes guests to the login page", async () => {
   const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
   try {
     const { default: App } = await server.ssrLoadModule("/src/App.tsx");
     const html = renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: ["/chat"] }, createElement(App)));
-    assert.doesNotMatch(html, /sidebar-account|Đăng nhập Discord|Đăng xuất/);
+    assert.match(html, /class="sidebar-account"/);
+    assert.match(html, /aria-haspopup="menu"/);
+    assert.match(html, /href="\/login\?next=%2Fchat"/);
+    assert.doesNotMatch(html, /Đăng xuất|Xóa tài khoản/);
   } finally {
     await server.close();
   }

@@ -130,7 +130,13 @@ test("confirm uses a native <dialog> and the menu shows a failed-logout error", 
   try {
     const { default: AccountMenu } = await server.ssrLoadModule("/src/components/layout/AccountMenu.tsx");
     const render = (props: object) =>
-      renderToStaticMarkup(createElement(AccountMenu, { name: "T", onLogout() {}, onDeleted() {}, ...props }));
+      renderToStaticMarkup(
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(AccountMenu, { name: "T", onLogout() {}, onDeleted() {}, ...props }),
+        ),
+      );
     assert.doesNotMatch(render({}), /<dialog/);
     assert.match(render({ initialConfirming: true }), /<dialog[^>]*aria-labelledby="account-confirm-title"/);
     assert.match(render({ logoutError: "Chưa đăng xuất được. Vui lòng thử lại." }), /role="alert">Chưa đăng xuất được/);

@@ -58,6 +58,13 @@ class RateLimitedError(AppError):
         super().__init__(message, headers=headers)
 
 
+class QuotaExceededError(RateLimitedError):
+    """Hết hạn mức ngày (câu hỏi hoặc token); khác `rate_limited` ở chỗ đợi vài giây không đủ."""
+
+    code = "quota_exceeded"
+    message = "Bạn đã dùng hết lượt hỏi hôm nay."
+
+
 class UpstreamError(AppError):
     """Dịch vụ bên ngoài (LLM, tìm web…) lỗi."""
 

@@ -219,25 +219,69 @@ Các lớp, từ ngoài vào:
 | Caddy | Kết nối chậm (slowloris), header lớn | `infra/Caddyfile.prod` (timeout `read_header` 10 s, `read_body` 30 s, `idle` 2 phút), `mem_limit` 256 MB |
 | api: `RATE_LIMIT_API_PER_MINUTE` (240) | Một IP gửi quá nhiều request `/api/*`, kể cả đường dẫn không tồn tại; trả 429 trước khi chạm DB | `app/middleware.py`, đếm trong Redis |
 | api: `RATE_LIMIT_PER_MINUTE` (10) | Câu hỏi tốn tiền LLM | `app/api/guard.py` |
+| api: hạn mức ngày (mục 7c) | Một IP hay tài khoản hỏi quá nhiều trong ngày, tổng token cả hệ thống | `app/services/quota.py`, đếm trong Redis |
 
-iptables (root, qua Console VNC hoặc sudo). Rule phải ở chain `DOCKER-USER`, không phải ufw:
+iptables: rule phải ở chain `DOCKER-USER`, không phải ufw. Rule nạp bằng service systemd `indexbeast-firewall` (file trong `infra/firewall/`), chạy sau `docker.service` nên còn sau khi khởi động lại; script kiểm tra trước khi thêm nên chạy lại không trùng. Không dùng `iptables-persistent`: nó lưu cả rule Docker tự sinh, khôi phục lúc khởi động có thể xung đột với Docker.
+
+- Mỗi IP tối đa ~20 kết nối mới/giây vào 80/443 (dư cho trình duyệt: HTTP/2 dùng chung một kết nối).
+- IP/CIDR chặn hẳn: `/etc/indexbeast/blocked-ips`, mỗi dòng một.
+
+Cài một lần (root; user `deploy` thuộc nhóm `docker` nên chạy được qua container đặc quyền, như dòng `R=` bên dưới):
 
 ```bash
-# Mỗi IP tối đa ~20 kết nối mới/giây vào 80/443 (dư cho trình duyệt: HTTP/2 dùng chung một kết nối)
-iptables -I DOCKER-USER -p tcp -m multiport --dports 80,443 -m conntrack --ctstate NEW   -m hashlimit --hashlimit-name web --hashlimit-mode srcip --hashlimit-above 20/second --hashlimit-burst 40 -j DROP
-# Chặn hẳn một IP khi đang bị dội
-iptables -I DOCKER-USER -s <ip> -j DROP
-# Lưu qua lần khởi động lại
-apt-get install -y iptables-persistent && netfilter-persistent save
-# Xem và gỡ
-iptables -L DOCKER-USER -n --line-numbers
-iptables -D DOCKER-USER <số dòng>
+# Từ ~/Index-Beast trên VPS. Không có sudo thì thay `sudo` bằng:
+#   R="docker run --rm --privileged --pid=host --network host --entrypoint nsenter caddy:2.11.7-alpine -t 1 -m -u -n -i"
+# và chạy lệnh dạng: $R sh -c "<lệnh>" (đường dẫn /tmp của máy chủ dùng chung được)
+sudo install -m 0755 infra/firewall/indexbeast-firewall.sh /usr/local/sbin/indexbeast-firewall.sh
+sudo install -m 0644 infra/firewall/indexbeast-firewall.service /etc/systemd/system/indexbeast-firewall.service
+sudo install -d -m 0755 /etc/indexbeast && sudo install -m 0644 infra/firewall/blocked-ips.example /etc/indexbeast/blocked-ips
+sudo systemctl daemon-reload && sudo systemctl enable --now indexbeast-firewall
+```
+
+Khi đang bị dội:
+
+```bash
+echo 203.0.113.7 | sudo tee -a /etc/indexbeast/blocked-ips && sudo systemctl restart indexbeast-firewall
+sudo iptables -L DOCKER-USER -n -v --line-numbers     # cột pkts của dòng chặn phải tăng
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app restart caddy   # bỏ kết nối cũ Caddy còn giữ
+# Gỡ một IP: xóa dòng trong blocked-ips, rồi `iptables -D DOCKER-USER -s <ip> -j DROP` (restart service chỉ thêm, không gỡ)
+```
+
+**Lưu log trước khi deploy hay tạo lại container** (log Docker mất cùng container; sự cố 22/11 mất log đợt 1 vì deploy lại):
+
+```bash
+mkdir -p ~/incident && chmod 700 ~/incident
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --no-log-prefix caddy > ~/incident/caddy-$(date +%F-%H%M).log
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --no-log-prefix api > ~/incident/api-$(date +%F-%H%M).log
 ```
 
 Truy nguồn khi site chậm hoặc timeout (Caddy chỉ ghi lỗi, không ghi access log; api không ghi IP):
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --no-log-prefix --since 30m caddy   | python3 -c "import sys,json,collections as c; n=c.Counter(json.loads(l).get('request',{}).get('client_ip') for l in sys.stdin if l.startswith('{')); print(n.most_common(5))"
+```
+
+## 7c. Hạn mức hỏi đáp mỗi ngày
+
+Sự cố 22/11/2026: một IP lạ nhận 234 câu trả lời thật (~2,34 triệu token prompt, 112 nghìn token completion, 115 lượt tìm corpus có Jina rerank, 10 lượt Tavily) vì giới hạn mỗi phút không chặn được người hỏi chậm đều. Từ nay có thêm hạn mức theo ngày (giờ Việt Nam, làm mới 0 giờ):
+
+| Đối tượng | Câu hỏi/ngày | Token/ngày | Biến |
+|---|---|---|---|
+| Khách (theo IP) | 5 | 100.000 | `CHAT_GUEST_DAILY_QUESTIONS`, `CHAT_GUEST_DAILY_TOKENS` |
+| Tài khoản đăng nhập Discord | 30 | 500.000 | `CHAT_USER_DAILY_QUESTIONS`, `CHAT_USER_DAILY_TOKENS` |
+| Cả hệ thống (kể cả bot, trừ admin) | không | 5.000.000 | `CHAT_DAILY_TOKEN_BUDGET` |
+| Admin (`AUTH_ADMIN_DISCORD_IDS`) | không giới hạn | không giới hạn | |
+
+Hết hạn mức: API trả 429 `quota_exceeded` + `Retry-After` (giây đến 0 giờ VN). `0` = tắt giới hạn đó. Token chỉ được cộng sau khi trả lời xong nên ngân sách có thể vượt tối đa một câu trả lời. Redis lỗi thì `/chat` trả 503.
+
+Đổi hạn mức: sửa biến trong `.env` rồi `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app up -d api`.
+
+Xóa bộ đếm của một người (`<khóa>` là `user:<uuid>` hoặc `guest:<ip>`; `<YYYYMMDD>` theo giờ VN):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli DEL quota:questions:<khóa>:<YYYYMMDD> quota:tokens:<khóa>:<YYYYMMDD>
+# Xem bộ đếm hiện có
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis-cli --scan --pattern 'quota:*'
 ```
 
 ## 8. Xử lý sự cố
