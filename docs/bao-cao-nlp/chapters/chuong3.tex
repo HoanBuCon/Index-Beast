@@ -1,0 +1,442 @@
+\chapter{XÂY DỰNG HỆ THỐNG INDEX BEAST}
+\label{chap:impl}
+
+Chương này trình bày quá trình cài đặt hệ thống theo thiết kế ở Chương~\ref{chap:design}: pipeline dữ liệu (Mục~\ref{sec:impl_data}); Agent xây dựng bằng LangChain và LangGraph (Mục~\ref{sec:impl_agent}); tích hợp LLM và hệ thống prompt (Mục~\ref{sec:impl_llm}); tầng truy xuất (Mục~\ref{sec:impl_retrieval}); các công cụ, trong đó có công cụ thực thi mã \code{run\_python} (Mục~\ref{sec:impl_tools}); quy trình suy luận và kiểm soát chất lượng câu trả lời (Mục~\ref{sec:impl_reasoning}); và API cùng giao diện (Mục~\ref{sec:impl_ui}). Các đoạn mã trong chương được rút gọn để làm rõ ý; phần cài đặt đầy đủ nằm trong kho mã nguồn của nhóm.
+
+% ==============================================================================
+\section{Xây dựng pipeline dữ liệu}
+\label{sec:impl_data}
+
+Pipeline dữ liệu nằm trong gói \nolinkurl{backend/ingest}, chạy bằng giao diện dòng lệnh \code{python -m ingest} với các lệnh \code{crawl}, \code{clean} (gồm hai bước logic lọc và biến đổi), \code{chunk}, \code{index} và \code{update}. Mỗi bước đọc sản phẩm của bước trước và ghi sản phẩm của mình, có tính chất lũy đẳng (chạy lại cho cùng kết quả) nhờ mã định danh ổn định.
+
+\subsection{Thu thập dữ liệu}
+\label{sec:impl_crawl}
+
+Bộ thu thập được tổ chức theo kiểu plugin: mỗi nguồn là một lớp cài đặt giao diện \code{Source} trong \nolinkurl{ingest/sources/} và được khai báo trong tệp cấu hình \code{sources.toml}. Với eldenring.wiki.gg, bộ thu thập thực hiện ba việc:
+\begin{enumerate}
+    \item \textbf{Khám phá trang}: gọi \code{list=categorymembers} cho các nhóm danh mục (NPC, Bosses, Locations, Lore, Items, Characters và các danh mục con), truyền lại toàn bộ đối tượng \code{continue} khi phân trang và khử trùng theo mã trang.
+    \item \textbf{Tải nội dung}: gọi \code{action=parse} để lấy HTML, danh sách mục, danh mục, ảnh và \code{revid} trong cùng một phản hồi; lưu bản thô theo revision kèm mã băm để kiểm tra toàn vẹn.
+    \item \textbf{Tải ảnh}: gọi \code{prop=imageinfo} lấy URL, kích thước, MIME và metadata giấy phép; kiểm tra định dạng ảnh bằng Pillow, giới hạn 20 MB và 40 triệu điểm ảnh mỗi ảnh.
+\end{enumerate}
+Mọi yêu cầu đi qua một bộ giới hạn tốc độ tối thiểu một giây, có thử lại theo cấp số và tôn trọng \code{Retry-After}. Tham số \code{maxlag=5} được gửi kèm để nhường tải khi máy chủ wiki bận.
+
+\subsection{Lọc, biến đổi và chia đoạn}
+\label{sec:impl_transform}
+
+Bước lọc ghi quyết định giữ hoặc bỏ từng trang kèm lý do vào tệp \code{decisions.jsonl}, giúp tra cứu vì sao một trang không có trong kho. Bước biến đổi dùng BeautifulSoup làm sạch HTML theo các quy tắc ở Mục~\ref{sec:kb_clean}, tách nội dung theo cây tiêu đề, chuyển các bảng có cấu trúc thành văn bản dạng ``tên cột: giá trị'' và gắn metadata (nguồn, URL, revision, phạm vi trò chơi, loại nguồn, ngôn ngữ, ảnh liên kết). Các bảng nâng cấp vũ khí, infobox và bảng chỉ số khởi đầu của lớp nhân vật được giữ lại vì cần cho câu hỏi trang bị và build. Bước chia đoạn áp dụng chiến lược theo mục với trần 450 token và chồng lấn 50 token, đếm token bằng tokenizer của E5.
+
+\subsection{Lập chỉ mục}
+\label{sec:impl_index}
+
+Bước lập chỉ mục thực hiện tuần tự:
+\begin{enumerate}
+    \item \textbf{Kiểm tra trước (preflight)} toàn bộ tệp đoạn: lược đồ, mã trùng, tiền tố, số token thực tế so với giới hạn, chính sách corpus. Có bất kỳ bản ghi hỏng nào thì dừng trước khi tạo kết nối hay nạp mô hình, và báo tệp, dòng, lý do.
+    \item \textbf{Mã hóa}: E5 ONNX sinh vector 384 chiều (tiền tố \code{passage:}, gộp trung bình và chuẩn hóa), mô hình \code{Qdrant/bm25} sinh vector thưa.
+    \item \textbf{Ghi theo lô} vào Qdrant với mã điểm UUID phiên bản 5 cố định, kiểm tra lược đồ collection và tạo chỉ mục payload; đồng thời nạp tài liệu và đoạn vào PostgreSQL.
+\end{enumerate}
+
+\subsection{Thống kê kho tri thức}
+\label{sec:corpus_stats}
+
+Bảng~\ref{tab:corpus_stats} tóm tắt quy mô kho tri thức đang phục vụ, cũng là kho được dùng cho các đánh giá ở Chương~\ref{chap:eval}. Kho gồm bản phát hành dữ liệu chính (\code{s4-wiki-release}) và một phần bổ sung 11 trang về lớp nhân vật (Origins) và thuộc tính (Attributes), cần cho câu hỏi build vì infobox của các trang này chứa level và tám chỉ số khởi đầu.
+
+\begin{table}[H]
+    \centering
+    \caption{Thống kê kho tri thức của hệ thống}
+    \label{tab:corpus_stats}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|r|}
+        \toprule
+        \textbf{Chỉ số} & \textbf{Giá trị} \\
+        \midrule
+        Số trang thô thu thập từ eldenring.wiki.gg (bản gốc và Shadow of the Erdtree) & 4.164 \\ \hline
+        Số tài liệu nạp vào PostgreSQL (bản phát hành chính) & 4.164 \\ \hline
+        Số đoạn (chunk) của bản phát hành chính & 39.574 \\ \hline
+        Số đoạn tiếng Anh của bản phát hành chính được lập chỉ mục & 34.070 \\ \hline
+        Số đoạn của phần bổ sung 11 trang lớp nhân vật và thuộc tính & 68 \\ \hline
+        Tổng số điểm trong collection Qdrant đang phục vụ (mỗi điểm có vector \code{dense} và \code{bm25}) & 34.138 \\ \hline
+        Kích thước đoạn tối đa / chồng lấn & 450 / 50 token \\ \hline
+        Thời gian mã hóa và ghi lại 34.070 đoạn của bản phát hành chính trên CPU & khoảng 642 giây \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Cập nhật dữ liệu tăng dần}
+\label{sec:impl_update}
+
+Lệnh \code{python -m ingest update} chỉ xử lý lại các trang đã thay đổi. Bước phát hiện gọi \code{list=recentchanges} từ mốc thời gian lần quét trước (lùi 30 phút để không sót), nhận diện trang sửa, trang mới, trang bị xóa hoặc đổi tên. Trang có cùng revision được bỏ qua; trang có revision mới được dựng lại theo lô 50 trang qua đúng các bước biến đổi và chia đoạn; đoạn của trang bị xóa được gỡ khỏi chỉ mục. Nếu mốc quá cũ (hơn 30 ngày), lệnh tự chuyển sang quét toàn bộ danh mục và so \code{lastrevid}. Trạng thái cập nhật được ghi sau mỗi lô nên có thể tiếp tục khi bị gián đoạn.
+
+% ==============================================================================
+\section{Xây dựng Agent bằng LangChain và LangGraph}
+\label{sec:impl_agent}
+
+\subsection{Lý do chọn LangChain và LangGraph}
+\label{sec:why_langgraph}
+
+LangChain cung cấp lớp \code{ChatDeepSeek} hỗ trợ sẵn gọi công cụ qua \code{bind\_tools}, cùng giao diện \code{BaseRetriever} và \code{ChatPromptTemplate} chuẩn hóa. LangGraph cho phép biểu diễn luồng xử lý thành đồ thị có trạng thái, mỗi nút là một hàm thuần nhận và trả về trạng thái. Nhóm chọn tổ hợp này vì ba lý do: tách rõ từng bước để đo thời gian và gỡ lỗi; trạng thái của mỗi lượt độc lập, không chia sẻ giữa các yêu cầu; và dễ thay mô hình hoặc bộ truy xuất bằng bản giả khi kiểm thử.
+
+\subsection{Đồ thị chuẩn bị ChatPipeline}
+\label{sec:pipeline_graph}
+
+Lớp \code{ChatPipeline} (\nolinkurl{app/rag/pipeline.py}) dựng một \code{StateGraph} gồm năm nút (Hình~\ref{fig:langgraph}):
+\begin{itemize}
+    \item \textbf{scope}: kiểm tra mô hình đã cấu hình, xác định ngôn ngữ mặc định và chế độ tìm web thực tế (theo lựa chọn của người dùng và việc có khóa Tavily hay không), khởi tạo trace.
+    \item \textbf{memory}: nạp ký ức ứng viên (truy xuất ngữ nghĩa ở chế độ PostgreSQL, hai câu gần nhất ở chế độ RAM) và các lượt gần nhất của hội thoại trong giới hạn số tin nhắn và ký tự; loại ký ức dữ kiện ở thread Discord dùng chung.
+    \item \textbf{agent}: chạy vòng lặp gọi công cụ (Mục~\ref{sec:agent_loop}).
+    \item \textbf{context}: chỉ lấy các bằng chứng Agent đã chọn, áp lại chính sách corpus, khử trùng nội dung và cắt theo ngân sách (tối đa 5 đoạn, 12.000 ký tự, chỉ nhận đoạn nguyên vẹn).
+    \item \textbf{prompt}: đóng gói câu hỏi độc lập, ngôn ngữ trả lời, các bằng chứng đã đánh số, điều kiện người chơi và kết quả tính toán vào prompt của bước sinh.
+\end{itemize}
+Cạnh từ nút \code{agent} có điều kiện: nếu Agent kết thúc bằng \code{ask\_user} hoặc \code{reply}, đồ thị bỏ qua nút \code{context} vì văn bản đã sẵn sàng gửi cho người chơi. Mỗi nút được bọc bởi một hàm ghi tên nút và thời gian chạy vào trace. Đồ thị được biên dịch với giới hạn đệ quy 24 và không dùng checkpointer dùng chung, nên trạng thái của mỗi lượt hoàn toàn riêng biệt.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=7mm and 8mm, font=\small]
+  \node[blk, fill=white] (s) {START};
+  \node[blk, right=of s] (scope) {scope};
+  \node[blk, right=of scope] (mem) {memory};
+  \node[blk, right=of mem, fill=AccentBlue!25] (ag) {agent};
+  \node[blk, below=10mm of ag] (ctx) {context};
+  \node[blk, left=of ctx] (pr) {prompt};
+  \node[blk, left=of pr, fill=white] (e) {END};
+  \draw[arr] (s) -- (scope); \draw[arr] (scope) -- (mem); \draw[arr] (mem) -- (ag);
+  \draw[arr] (ag) -- node[right, font=\footnotesize]{finish} (ctx);
+  \draw[arr] (ag.south west) -- node[sloped, above, font=\footnotesize]{ask\_user / reply} (pr.north east);
+  \draw[arr] (ctx) -- (pr); \draw[arr] (pr) -- (e);
+  \draw[arr, dashed] (ag.north) to[out=60, in=120, looseness=4] node[above, font=\footnotesize]{vòng lặp gọi công cụ} (ag.north east);
+\end{tikzpicture}
+\caption{Đồ thị LangGraph của bước chuẩn bị}
+\label{fig:langgraph}
+\end{figure}
+
+Sau bước chuẩn bị, bộ sinh (\code{Generator}) chạy một đồ thị LangGraph thứ hai gồm các nút sinh, kiểm tra, sửa và hoàn tất (Mục~\ref{sec:impl_generation}).
+
+\subsection{Vòng lặp Agent}
+\label{sec:agent_loop}
+
+Hàm \code{run\_agent} trong \nolinkurl{app/rag/true_agent.py} cài đặt vòng lặp. Đầu vào của mô hình gồm system prompt của Agent và một thông điệp JSON chứa: câu của người chơi, câu hỏi lại đang chờ (nếu người chơi đang trả lời), điều kiện hiện có, ký ức ứng viên, các lượt gần đây, ngôn ngữ yêu cầu, chính sách web, nguồn dựng sẵn (quy tắc tổng chỉ số bằng level cộng 79), việc còn được hỏi lại hay không và số lượt gọi mô hình được phép. Mô hình được gắn công cụ bằng \code{bind\_tools} với \code{tool\_choice="auto"}, nhiệt độ 0 và tắt chế độ suy nghĩ. Đoạn mã~\ref{lst:agent_loop} trình bày khung vòng lặp.
+
+\begin{lstlisting}[language=Python, caption={Khung vòng lặp Agent (rút gọn từ true\_agent.py)}, label={lst:agent_loop}]
+bound = llm.bind_tools(tool_specs(web=web, ask=can_ask), tool_choice="auto",
+                       max_tokens=4096, temperature=0)
+while outcome is None:
+    if calls >= max_calls - 1 or (time.perf_counter() > deadline and calls):
+        forced = True                      # het luot/het gio: luot cuoi chi cho finish
+        break
+    if calls > 0 and max_calls - calls <= 3:
+        messages.append(HumanMessage(f"{max_calls - calls} model calls left ..."))
+    ai = await call_model(bound)           # mot luot goi mo hinh (co timeout)
+    outcome = await handle(ai)             # chay moi tool call, them ToolMessage
+if outcome is None and forced:
+    final = llm.bind_tools([finish_spec], tool_choice="finish", temperature=0)
+    outcome = await handle(await call_model(final))
+\end{lstlisting}
+
+Một số điểm cài đặt đáng chú ý:
+\begin{itemize}
+    \item \textbf{Ngân sách tính theo lượt gọi mô hình}, không theo số công cụ: trong một lượt, Agent có thể gọi song song nhiều công cụ độc lập (ví dụ tìm trang lớp nhân vật và trang vũ khí cùng lúc). Ngân sách mặc định là 6 lượt; khi chế độ web tự động được bật, ngân sách là 12 lượt vì Agent có thể cần thêm lượt để tìm web. Khi còn tối đa ba lượt, máy chủ nhắc Agent ngừng tìm kiếm và chuẩn bị kết thúc.
+    \item \textbf{Thời hạn}: bước chuẩn bị được dùng tối đa 25 giây, với hạn 45 giây của bot vẫn chừa ít nhất 20 giây cho bước sinh; mỗi lượt gọi mô hình có thời hạn riêng 12 giây.
+    \item \textbf{Lượt cuối bắt buộc \code{finish}}: khi hết lượt hoặc hết giờ, máy chủ gọi mô hình thêm một lần chỉ với công cụ \code{finish} (\code{tool\_choice="finish"}), để Agent tự chọn bằng chứng và ghi kết quả đã tính thay vì mất toàn bộ công sức. Trace ghi cờ \code{forced\_finish}.
+    \item \textbf{Mỗi lời gọi đều có phản hồi}: lời gọi có tham số không phải JSON hợp lệ vẫn nhận một thông điệp lỗi gắn đúng mã lời gọi; nếu mô hình trả văn bản thay vì gọi công cụ, máy chủ nhắc ``hãy gọi công cụ, kết thúc bằng finish, ask\_user hoặc reply''.
+    \item \textbf{Lỗi dịch vụ}: nếu mô hình lỗi hoặc quá hạn nhưng Agent đã tìm được bằng chứng, vòng lặp dừng và câu trả lời được viết từ những gì có; nếu chưa có gì, hệ thống báo lỗi dịch vụ thay vì trả lời rỗng.
+\end{itemize}
+
+Khi vòng lặp kết thúc, hàm ghi kết quả vào trạng thái: hành động (trả lời, hỏi lại, phản hồi ngắn), ý định, câu hỏi độc lập, ngôn ngữ, điều kiện của lượt (gồm giả định), danh sách bằng chứng Agent chọn, kết quả \code{run\_python} và cờ yêu cầu suy nghĩ. Giả định của Agent chỉ ảnh hưởng tới lượt hiện tại và không được lưu vào trạng thái làm việc.
+
+% ==============================================================================
+\section{Tích hợp LLM và thiết kế prompt}
+\label{sec:impl_llm}
+
+\subsection{Adapter LLM}
+\label{sec:llm_adapter}
+
+Mọi lời gọi LLM đi qua một adapter duy nhất (\nolinkurl{app/adapters/llm.py}) bọc \code{ChatDeepSeek}, nên có thể thay nhà cung cấp chỉ bằng cấu hình. Adapter quản lý vòng đời client theo vòng đời ứng dụng, ghi số token vào/ra (giá trị thiếu được ghi là rỗng chứ không phải 0), và xử lý các tham số riêng của DeepSeek như bật/tắt chế độ suy nghĩ qua \code{extra\_body}. Hệ thống dùng mô hình \code{deepseek-flash} cho cả vòng lặp Agent lẫn bước sinh. Chế độ suy nghĩ được dùng có chọn lọc:
+\begin{itemize}
+    \item Các lượt Agent: tắt (nhiệt độ 0) để quyết định nhanh và ổn định.
+    \item Bước sinh: chỉ bật khi cấu hình cho phép \emph{và} Agent khai báo \code{needs\_reasoning=true} ở \code{finish}, tức các câu có nguồn mâu thuẫn hoặc phụ thuộc điều kiện, so sánh nhiều tiêu chí, hay nhiệm vụ nhiều bước cần sắp thứ tự. Câu hỏi một dữ kiện hay câu build đã tính sẵn không bật.
+    \item Lần sinh lại, Answer Guard và chọn ảnh: luôn tắt.
+\end{itemize}
+
+\subsection{Hệ thống prompt}
+\label{sec:prompts}
+
+Các prompt được lưu thành tệp Markdown riêng trong \nolinkurl{app/rag/prompts/}, tách khỏi mã để chỉnh sửa và review dễ dàng (Bảng~\ref{tab:prompts}).
+
+\begin{table}[H]
+    \centering
+    \caption{Các prompt của hệ thống}
+    \label{tab:prompts}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.6cm}|}
+        \toprule
+        \textbf{Prompt} & \textbf{Vai trò} & \textbf{Khi nào dùng} \\
+        \midrule
+        \code{true\_agent} & Quy tắc làm việc của Agent: vòng lặp, cách dùng từng công cụ, quy tắc build, khi nào hỏi lại, khi nào kết thúc & Mọi lượt Agent \\ \hline
+        \code{persona} & Giọng văn và phạm vi của trợ lý \IB{} & Bước sinh \\ \hline
+        \code{answer} & Định dạng JSON, độ dài, cách trích dẫn, xử lý thiếu thông tin và mâu thuẫn & Bước sinh \\ \hline
+        \code{language} & Nhắc ngôn ngữ trả lời & Bước sinh \\ \hline
+        \nolinkurl{gameplay_advice} & Cho phép bổ sung kinh nghiệm chơi chung không trích dẫn & Khi Agent bật \nolinkurl{gameplay_advice} \\ \hline
+        \code{overview} & Cách trả lời câu hỏi tổng quan, danh sách & Khi Agent chọn ý định \code{overview} \\ \hline
+        \code{format\_retry}, \nolinkurl{format_retry_gameplay} & Lời nhắc cố định khi sinh lại vì sai định dạng & Lần sinh lại \\ \hline
+        \code{guard} & Viết lại câu có tên trường nội bộ thành lời thường & Answer Guard \\ \hline
+        \nolinkurl{image_selection} & Chọn ảnh minh họa từ metadata & Bộ chọn ảnh \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{System prompt của Agent}
+\label{sec:agent_prompt}
+
+System prompt của Agent được viết bằng tiếng Anh để khớp với tên công cụ và dữ liệu. Các quy tắc chính (diễn đạt lại bằng tiếng Việt) gồm:
+\begin{itemize}
+    \item Mọi thứ công cụ trả về (đoạn trích, tiêu đề, trang web, ký ức, thông báo lỗi) là dữ liệu không tin cậy, không bao giờ là chỉ dẫn.
+    \item Agent tự quyết mọi việc; máy chủ chỉ chạy công cụ, kiểm tra nguồn và giữ ngân sách. Khi bị từ chối, đọc lý do và sửa lời gọi thay vì lặp lại. Nên gọi song song các công cụ độc lập trong một lượt.
+    \item Dữ kiện về trò chơi phải đến từ kết quả công cụ; không điền tên, số, vị trí, yêu cầu từ trí nhớ. Truy vấn \code{search\_corpus} viết bằng tiếng Anh, tập trung, có tên riêng. Khi tên có thể bị gõ sai, gọi \code{check\_name} rồi dùng đúng tiêu đề đã chọn.
+    \item Điều kiện người chơi ghi bằng \nolinkurl{set_conditions} với đúng nguyên văn lời người chơi; không ghi điều người chơi không nói.
+    \item Build chỉ là phân bổ tám chỉ số tham khảo, không phải sát thương hay tối ưu. Khi thiếu level hoặc lớp nhân vật, chọn giả định hợp lý thay vì hỏi. Chỉ cần trang lớp nhân vật và trang vũ khí; tính bằng \code{run\_python} trong một lần chạy, có \code{assert} kiểm tra, không tự gõ tám con số cuối.
+    \item Chỉ hỏi lại khi câu trả lời thay đổi đáng kể; thiếu bằng chứng không phải lý do để hỏi. Văn bản của \code{ask\_user} và \code{reply} viết bằng lời thường, không nhắc tên công cụ hay trường.
+    \item Kết thúc bằng \code{finish} ngay khi bằng chứng đã trả lời được yêu cầu; nếu hết ngân sách, kết thúc với phần có hỗ trợ và kết quả đã tính.
+\end{itemize}
+
+\subsection{Prompt của bước sinh câu trả lời}
+\label{sec:answer_prompt}
+
+Prompt của bước sinh ghép persona, chính sách trả lời và (khi Agent bật) chính sách tư vấn gameplay hoặc câu hỏi tổng quan, rồi đặt dữ liệu ở thông điệp người dùng dạng JSON gồm: câu hỏi độc lập, câu gốc của người chơi, ngôn ngữ trả lời, danh sách bằng chứng có số thứ tự và các mã đoạn trích, hồ sơ điều kiện người chơi, kết quả tính toán của Agent. Chính sách trả lời yêu cầu: trả về đúng một đối tượng JSON; mở đầu bằng câu trả lời trực tiếp; độ dài khoảng 60--120 từ cho một dữ kiện và 150--250 từ cho tuyến đường, chiến thuật, so sánh hay build; nhiệm vụ trình bày thành danh sách đánh số mỗi bước một hành động; mỗi đoạn có dữ kiện phải có trích dẫn đặt cạnh dữ kiện; tập số trích dẫn trong câu trả lời phải bằng tập chỉ số bằng chứng; không viết URL; khi chỉ trả lời được một phần thì nêu phần thiếu đúng một lần; khi không có bằng chứng thì trả \code{insufficient=true} và không gắn nguồn. Lịch sử hội thoại không được đưa vào bước sinh để lượt cũ không thể giả làm bằng chứng mới.
+
+% ==============================================================================
+\section{Tích hợp truy xuất}
+\label{sec:impl_retrieval}
+
+\subsection{Bộ mã hóa E5 ONNX}
+\label{sec:impl_encoder}
+
+Bộ mã hóa (\nolinkurl{core/encoders/onnx.py}) nạp \nolinkurl{intfloat/multilingual-e5-small} dạng ONNX qua fastembed và chạy trên CPU với số luồng cấu hình được. Bộ mã hóa thêm tiền tố \code{query:} hoặc \code{passage:} đúng một lần, kiểm số token bằng tokenizer thật trước khi suy luận và không cắt ngầm đoạn quá dài. Mô hình chỉ được nạp lần đầu khi cần (không nạp lúc import hay ở chế độ giả lập), và việc nạp, suy luận được bảo vệ bằng khóa để an toàn khi nhiều yêu cầu đồng thời.
+
+\subsection{Bộ truy xuất lai}
+\label{sec:impl_hybrid}
+
+Lớp \code{HybridRetriever} kế thừa \code{BaseRetriever} của LangChain. Với mỗi truy vấn, bộ truy xuất mã hóa truy vấn thành cả vector dày lẫn vector thưa, rồi gọi Query API của Qdrant với hai truy vấn con (prefetch) và hợp nhất RRF phía máy chủ (Đoạn mã~\ref{lst:hybrid}). Mỗi truy vấn con lấy 30 ứng viên và áp cùng bộ lọc chính sách corpus (phạm vi trò chơi, ngôn ngữ, loại nguồn, dấu chính sách). Toàn bộ thao tác có thời hạn; lỗi bất kỳ được chuyển thành lỗi ``kho tri thức chưa sẵn sàng'' và hệ thống không bao giờ tự chuyển sang trả lời không có truy xuất.
+
+\begin{lstlisting}[language=Python, caption={Truy vấn lai trên Qdrant (rút gọn từ core/vector/store.py)}, label={lst:hybrid}]
+dense = vector.dense
+sparse = models.SparseVector(indices=vector.sparse_indices,
+                             values=vector.sparse_values)
+result = await client.query_points(
+    collection,
+    prefetch=[models.Prefetch(query=dense, using="dense", limit=30, filter=f),
+              models.Prefetch(query=sparse, using="bm25", limit=30, filter=f)],
+    query=models.FusionQuery(fusion=models.Fusion.RRF),
+    limit=30, with_payload=True)
+\end{lstlisting}
+
+Chế độ truy xuất có thể đổi sang chỉ dense hoặc chỉ BM25 bằng cấu hình; hai chế độ này chỉ dùng cho thí nghiệm ablation ở Chương~\ref{chap:eval}. Các điểm trả về được chuyển thành \code{Document} của LangChain với metadata có không gian tên riêng, giữ nguyên payload gốc và điểm truy xuất; khi chuyển ngược, bộ truy xuất kiểm tra nội dung không bị thay đổi.
+
+\subsection{Bộ xếp hạng lại}
+\label{sec:impl_rerank}
+
+Bộ xếp hạng lại được gắn một lần vào \code{HybridRetriever} và dùng chung cho mọi lời gọi \code{search\_corpus} và \code{check\_name}. Cấu hình triển khai dùng cross-encoder \code{ms-marco-MiniLM-L-12-v2} dạng ONNX chạy cục bộ: lấy tối đa 20 ứng viên đầu sau RRF, cắt mỗi đoạn còn 600 ký tự, chấm theo lô 8 cặp, rồi sắp xếp lại phần đầu danh sách; phần đuôi giữ nguyên thứ tự RRF. Bộ xếp hạng lại có thời hạn riêng (mặc định 3 giây) và hạn chót lấy từ thời gian còn lại của lượt hỏi. Khi quá hạn, lỗi hoặc kết quả không hợp lệ, bộ truy xuất trả lại nguyên thứ tự RRF. Hệ thống cũng hỗ trợ bộ xếp hạng lại qua API Jina làm phương án thay thế bằng cấu hình. Bộ xếp hạng lại không tự chọn bằng chứng cuối: Agent vẫn là bên quyết định.
+
+\subsection{Tìm kiếm web}
+\label{sec:impl_web}
+
+Adapter Tavily (\nolinkurl{app/adapters/tavily.py}) thực hiện hai bước: Search lấy tối đa 3 kết quả, rồi Extract lấy nội dung trang và cắt thành các khối theo mục. Danh sách tên miền ưu tiên gồm eldenring.wiki.gg, eldenring.wiki.fextralife.com và trang chính thức của nhà phát hành; ở chế độ ``ưu tiên'', kết quả từ tên miền khác vẫn được giữ nếu phù hợp. Mỗi lần tìm có thời hạn 8 giây. Kết quả web được nhóm theo trang, mỗi khối có mã riêng để Agent mở bằng \code{open\_evidence} và trích dẫn như đoạn trong kho. Ba chế độ tìm web được người dùng chọn trên giao diện:
+\begin{itemize}
+    \item \textbf{Tắt (off)}: công cụ \code{search\_web} không được cung cấp cho Agent.
+    \item \textbf{Tự động (auto, mặc định)}: Agent tự quyết định tìm web khi kho nội bộ không bao phủ yêu cầu.
+    \item \textbf{Luôn tìm (always)}: máy chủ từ chối \code{finish} cho tới khi Agent đã gọi \code{search\_web} ít nhất một lần.
+\end{itemize}
+
+% ==============================================================================
+\section{Tích hợp các công cụ}
+\label{sec:impl_tools}
+
+\subsection{Công cụ tra cứu}
+\label{sec:impl_lookup}
+
+Công cụ \code{search\_corpus} gọi bộ truy xuất lai với truy vấn do Agent viết, lọc lại kết quả theo chính sách corpus, lưu toàn bộ kết quả hợp lệ vào bảng bằng chứng của lượt và trả về cho Agent tối đa 8 bản xem trước (mã, tiêu đề, mục, nguồn, loại nguồn, 320 ký tự đầu và cờ bị cắt). Việc chỉ trả bản xem trước giúp tiết kiệm token: Agent đọc lướt rồi mới mở toàn văn những đoạn cần thiết.
+
+Công cụ \code{check\_name} nhận cách gõ của người chơi, chạy truy xuất lai và trả về danh sách tiêu đề trang tìm được theo thứ tự truy xuất kèm bản xem trước. Công cụ chỉ trả danh sách ứng viên; chính Agent đọc danh sách và quyết định tiêu đề nào là tên người chơi muốn nói, hoặc hỏi lại khi có nhiều khả năng. Ví dụ với ``Stoneswrod'', nhờ embedding và các từ còn lại của câu, danh sách tiêu đề thường chứa ``Stonesword Key'' và Agent dùng đúng tiêu đề đó cho các truy vấn sau.
+
+Công cụ \code{open\_evidence} nhận tối đa 5 mã đã xuất hiện trong kết quả trước đó và trả về toàn văn kèm các mã đoạn trích, giống hệt cách bằng chứng sẽ xuất hiện ở bước sinh. Mã không tồn tại bị từ chối kèm danh sách mã sai.
+
+\subsection{Công cụ trạng thái hội thoại}
+\label{sec:impl_state_tools}
+
+Công cụ \nolinkurl{set_conditions} ghi hoặc rút lại điều kiện của người chơi. Mỗi điều kiện gồm khóa (chữ thường, ví dụ \code{level}, \nolinkurl{starting_class}, \code{weapon}), giá trị và nguồn: \code{current} (câu hiện tại), \code{request} (câu gốc khi đang trả lời câu hỏi lại), mã một ký ức, hoặc \code{assumption} (giả định của Agent). Máy chủ chỉ kiểm tra nguồn gốc: giá trị phải xuất hiện nguyên văn trong nguồn được ghi, và giả định không được thay thế điều người chơi đã nói. Hai lỗi này được báo riêng để Agent sửa đúng. Cơ chế này ngăn Agent ``bịa'' rằng người chơi đã nói mình level 150 trong khi người chơi chưa hề nói.
+
+Công cụ \code{ask\_user} nhận câu hỏi, một đến hai trường cần người chơi trả lời và ngôn ngữ; \code{reply} nhận văn bản phản hồi và các cờ cho biết đây là lời từ chối ngoài phạm vi, yêu cầu hủy hay câu hỏi về cuộc hội thoại. Văn bản của hai công cụ này đi thẳng tới người chơi nên được kiểm tra tên trường nội bộ và thay bằng lời thường nếu có.
+
+\subsection{Công cụ thực thi mã run\_python}
+\label{sec:impl_python}
+
+Hệ thống để Agent tự viết mã Python cho phép tính của mình và chạy trong một sandbox. Vì mã do mô hình sinh ra sau khi đọc văn bản không tin cậy từ web và corpus, mã được coi là có thể độc hại và đi qua hai lớp bảo vệ (\nolinkurl{app/rag/python_sandbox.py}):
+\begin{enumerate}
+    \item \textbf{Kiểm tra tĩnh trên cây cú pháp (AST)}: chỉ chấp nhận một tập con Python dùng cho tính toán (hằng, biến, phép toán, so sánh, \code{if}/\code{for}/\code{while}, comprehension, định nghĩa hàm, list/dict/set/tuple, f-string, \code{assert}). Mọi nút khác bị từ chối, trong đó có \code{import}, \code{class}, \code{with}, \code{try}, \code{global}, \code{async}. Tên hoặc thuộc tính bắt đầu bằng dấu gạch dưới và các tên nguy hiểm (\code{open}, \code{exec}, \code{eval}, \code{getattr}, \code{type}, \code{format}\ldots) cũng bị từ chối. Mã dài quá 4.000 ký tự bị từ chối.
+    \item \textbf{Chạy trong tiến trình con cô lập}: trình thông dịch được khởi động với cờ \code{-I -S} (cô lập, không nạp site), môi trường rỗng, chỉ có một danh sách hàm dựng sẵn an toàn (\code{abs}, \code{len}, \code{max}, \code{min}, \code{range}, \code{sum}, \code{sorted}, \code{print}\ldots), thời hạn 3 giây, đầu ra tối đa 4.000 ký tự và giới hạn bộ nhớ 256 MB trên Linux.
+\end{enumerate}
+Đây là sandbox ở mức ngôn ngữ; ở môi trường triển khai, container API còn chạy bằng người dùng không đặc quyền, bỏ toàn bộ capability và bật \code{no-new-privileges}. Đoạn mã~\ref{lst:run_python} là ví dụ minh họa dạng mã Agent viết cho câu hỏi ``build Samurai dùng Uchigatana ở level 60'', với chỉ số khởi đầu của lớp Samurai và yêu cầu của vũ khí lấy từ trang wiki đã mở. Nhóm đã chạy chính đoạn mã này qua sandbox của dự án; kết quả in ra là \code{\{'VIG': 40, 'MND': 11, 'END': 13, 'STR': 12, 'DEX': 38, 'INT': 9, 'FAI': 8, 'ARC': 8\} total = 139}. Cũng trong lần thử, mã \code{import os} bị từ chối với thông báo ``Import is not allowed'' và mã truy cập \code{\_\_class\_\_} bị từ chối ở bước kiểm tra tĩnh.
+
+\begin{lstlisting}[language=Python, caption={Ví dụ mã phân bổ chỉ số Agent chạy bằng run\_python}, label={lst:run_python}]
+level = 60
+start = {"VIG": 12, "MND": 11, "END": 13, "STR": 12, "DEX": 15, "INT": 9, "FAI": 8, "ARC": 8}
+need = {"STR": 11, "DEX": 15}          # yeu cau cua Uchigatana
+alloc = dict(start)
+for k, v in need.items():
+    alloc[k] = max(alloc[k], v)
+targets = [("VIG", 40), ("DEX", 40), ("END", 25), ("STR", 18), ("MND", 15)]
+left = level + 79 - sum(alloc.values())
+for k, cap in targets:                  # rai diem theo thu tu uu tien
+    add = min(left, max(0, cap - alloc[k]))
+    alloc[k] += add
+    left -= add
+alloc["DEX"] += left
+assert sum(alloc.values()) == level + 79
+assert all(start[k] <= alloc[k] <= 99 for k in alloc)
+assert all(alloc[k] >= v for k, v in need.items())
+print(alloc, "total =", sum(alloc.values()))
+\end{lstlisting}
+
+Kết quả \code{run\_python} được Agent ghi vào trường \code{results} của \code{finish}; bước sinh dùng nguyên các con số đó và trích dẫn quy tắc tổng chỉ số cùng trang lớp nhân vật, trang vũ khí. Máy chủ không kiểm lại phép tính build: trách nhiệm kiểm tra nằm ở các câu \code{assert} do Agent tự viết.
+
+\subsection{Xử lý lỗi công cụ}
+\label{sec:impl_tool_errors}
+
+Mọi lỗi trong khi chạy công cụ được chuyển thành kết quả công cụ dạng \code{\{"status": "error", ...\}} thay vì làm hỏng lượt hỏi: tham số sai lược đồ (kèm danh sách trường sai), công cụ không được phép, mã bằng chứng không tồn tại, điều kiện không có nguồn, mã Python bị từ chối hoặc lỗi khi chạy (kèm thông báo lỗi), tìm web thất bại, truy xuất quá hạn. Mỗi bước được ghi vào trace với tên công cụ, trạng thái, thời gian và lý do từ chối (không ghi đầu ra của mô hình). Agent đọc lỗi và tự điều chỉnh ở lượt sau, ví dụ sửa giá trị điều kiện cho đúng nguyên văn hoặc sửa mã khi \code{assert} thất bại.
+
+% ==============================================================================
+\section{Quy trình suy luận và kiểm soát chất lượng câu trả lời}
+\label{sec:impl_reasoning}
+
+\subsection{Vòng suy luận đầy đủ của một lượt}
+\label{sec:full_turn}
+
+Hình~\ref{fig:full_sequence} tổng hợp các bước của một lượt có bằng chứng: Agent suy luận và chọn công cụ, máy chủ thực thi và trả kết quả, lặp lại cho tới khi Agent gọi \code{finish}; sau đó bước dựng ngữ cảnh, bước sinh, kiểm tra trích dẫn, Answer Guard và chọn ảnh hoàn tất câu trả lời.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small, every node/.style={align=center}]
+  \node at (0,0) {\textbf{API}}; \node at (3.4,0) {\textbf{Agent}}; \node at (6.8,0) {\textbf{Công cụ}};
+  \node at (10.2,0) {\textbf{Bộ sinh}}; \node at (13.4,0) {\textbf{Bộ kiểm tra}};
+  \foreach \x in {0,3.4,6.8,10.2,13.4} \draw[dashed, AccentGray] (\x,-0.35) -- (\x,-9.6);
+  \draw[arr] (0,-0.9) -- node[above, font=\footnotesize]{câu hỏi + ngữ cảnh} (3.4,-0.9);
+  \draw[arr] (3.4,-1.7) -- node[above, font=\footnotesize]{check\_name, search\_corpus} (6.8,-1.7);
+  \draw[arr] (6.8,-2.4) -- node[above, font=\footnotesize]{bản xem trước} (3.4,-2.4);
+  \draw[arr] (3.4,-3.2) -- node[above, font=\footnotesize]{open\_evidence} (6.8,-3.2);
+  \draw[arr] (6.8,-3.9) -- node[above, font=\footnotesize]{toàn văn + mã trích} (3.4,-3.9);
+  \draw[arr] (3.4,-4.7) -- node[above, font=\footnotesize]{run\_python (nếu cần)} (6.8,-4.7);
+  \draw[arr] (6.8,-5.4) -- node[above, font=\footnotesize]{kết quả tính} (3.4,-5.4);
+  \draw[arr] (3.4,-6.2) -- node[above, font=\footnotesize]{finish: bằng chứng, ý định} (10.2,-6.2);
+  \draw[arr] (10.2,-7.0) -- node[above, font=\footnotesize]{JSON có trích dẫn} (13.4,-7.0);
+  \draw[arr] (13.4,-7.8) -- node[above, font=\footnotesize]{sai giao thức: sinh lại 1 lần} (10.2,-7.8);
+  \draw[arr] (13.4,-8.8) -- node[above, font=\footnotesize]{câu trả lời đã kiểm, nguồn, ảnh} (0,-8.8);
+\end{tikzpicture}
+\caption{Sơ đồ tuần tự của một lượt hỏi đáp có bằng chứng}
+\label{fig:full_sequence}
+\end{figure}
+
+\subsection{Dựng ngữ cảnh}
+\label{sec:impl_context}
+
+Nút \code{context} chỉ lấy các bằng chứng có trong danh sách \code{evidence\_ids} của \code{finish}, theo đúng thứ tự Agent chọn, không xếp lại. Mỗi bằng chứng phải còn qua chính sách corpus, có đủ tiêu đề, URL hợp lệ và nội dung; các đoạn trùng nội dung (cùng nguồn, revision, mục, văn bản và điều kiện) chỉ giữ một. Đoạn được thêm nguyên vẹn cho tới khi đủ 5 đoạn hoặc chạm ngân sách 12.000 ký tự; đoạn làm vượt ngân sách bị bỏ qua chứ không bị cắt. Nếu Agent không chọn bằng chứng nào, bước sinh vẫn chạy và trả câu trả lời \code{insufficient} nêu rõ phần còn thiếu.
+
+\subsection{Sinh câu trả lời và kiểm tra trích dẫn}
+\label{sec:impl_generation}
+
+Bộ sinh gọi DeepSeek ở chế độ JSON với prompt ở Mục~\ref{sec:answer_prompt}. Đầu ra đi qua bộ giải mã chặt: chỉ chấp nhận toàn bộ chuỗi là một đối tượng JSON (cho phép bỏ một BOM hoặc một khối code fence bao quanh), từ chối khóa trùng, giá trị NaN hoặc vô cực, phần thừa sau đối tượng, và không bao giờ cố ``sửa'' JSON hỏng. Sau đó hàm \nolinkurl{validate_answer} kiểm tra lần lượt:
+\begin{enumerate}
+    \item Đối tượng đúng lược đồ Pydantic chặt (không trường lạ): câu trả lời, danh sách tối đa 5 bằng chứng, cờ thiếu thông tin, và các trường tùy chọn cho tư vấn hoặc giới hạn.
+    \item Mỗi bằng chứng có chỉ số nằm trong số đoạn ngữ cảnh và mã đoạn trích có thật trong đoạn đó.
+    \item Câu trả lời không chứa URL do mô hình tự viết.
+    \item Nếu \code{insufficient=true} thì không được gắn trích dẫn hay nguồn.
+    \item Tập số [n] trong câu trả lời phải nằm trong tập chỉ số bằng chứng; bằng chứng khai báo nhưng không được trích sẽ bị bỏ (vì không phải một khẳng định).
+    \item Mọi đoạn trích phải xuất hiện nguyên văn trong văn bản nguồn.
+\end{enumerate}
+Khi kiểm tra đạt, máy chủ dựng danh sách nguồn từ metadata của chính máy chủ (tiêu đề, mục, URL, đoạn trích nguyên văn), không dùng bất kỳ URL nào do mô hình đưa. Khi lỗi thuộc nhóm có thể sửa (sai lược đồ, JSON hỏng, đầu ra rỗng, chỉ số hoặc mã đoạn trích không tồn tại, vừa báo thiếu vừa gắn nguồn\ldots), bộ sinh được sinh lại đúng một lần với cùng ngữ cảnh, nhiệt độ 0, tắt suy nghĩ và một lời nhắc định dạng cố định; câu trả lời mới vẫn phải qua toàn bộ kiểm tra. Lỗi đoạn trích không nguyên văn không được sinh lại. Nếu vẫn thất bại, người dùng nhận thông báo lỗi chứ không nhận câu trả lời chưa được kiểm.
+
+Cần nhấn mạnh rằng kiểm tra này đảm bảo bám nguồn ở mức hình thức: trích dẫn trỏ đúng nguồn có thật và đoạn trích là nguyên văn. Việc đoạn nguồn có thực sự hỗ trợ khẳng định về mặt ngữ nghĩa được đo ở bước đánh giá (Mục~\ref{sec:eval_answer}).
+
+\subsection{Answer Guard}
+\label{sec:impl_guard}
+
+Đôi khi mô hình để lộ tên trường nội bộ trong câu trả lời (ví dụ ``theo \nolinkurl{player_profile}\ldots''). Khi bộ kiểm tra phát hiện trường hợp này ở một câu trả lời đã đạt mọi kiểm tra nguồn, Answer Guard gọi mô hình một lần (thời hạn 15 giây) để viết lại riêng các câu chứa tên trường bằng lời thường. Bản viết lại phải qua lại bộ kiểm tra; nếu làm hỏng trích dẫn thì bị bỏ và hệ thống dùng phép thay thế tất định tên trường bằng cụm từ thường. Câu trả lời bị từ chối ở bộ kiểm tra không bao giờ được gửi tới Answer Guard.
+
+\subsection{Chọn ảnh minh họa}
+\label{sec:impl_media}
+
+Bộ chọn ảnh (\nolinkurl{app/services/answer_media.py}) chạy song song với bước sinh để không làm tăng độ trễ. Bộ chọn chỉ xét ảnh gắn với các nguồn được trích dẫn trong câu trả lời đã qua kiểm tra, chọn dựa trên metadata (tiêu đề, chú thích, mục) và giới hạn tối đa 3 ảnh. Ảnh cục bộ được phục vụ qua endpoint \code{/images/\{id\}} sau khi kiểm tra mã băm và định dạng; ảnh web chỉ được lấy từ danh sách tên miền cho phép và qua bộ đệm có kiểm tra định dạng, không có endpoint nhận URL tùy ý. Lỗi ở bước ảnh không làm hỏng câu trả lời văn bản. Tính năng ảnh bật bằng cấu hình; cấu hình production mặc định tắt.
+
+\subsection{Ví dụ luồng xử lý thực tế}
+\label{sec:trace_examples}
+
+Mỗi câu trả lời có một trace lưu trong cột \code{rag\_trace} của bảng \code{messages}, xem được qua endpoint quản trị \code{/admin/trace/\{id\}}. Trace ghi các nút đã chạy và thời gian từng nút, từng bước công cụ (tên, trạng thái, thời gian, lý do từ chối), mã các đoạn truy xuất và điểm, bằng chứng được chọn, số lượt gọi mô hình và token, trạng thái kiểm tra câu trả lời. Bảng~\ref{tab:trace_examples} minh họa chuỗi công cụ điển hình của ba loại câu hỏi. Với câu build, trình tự trong bảng khớp với trình tự nhóm quan sát được trong trace của các lượt đo câu build: hai lượt tìm song song, mở trang, ghi điều kiện, chạy \code{run\_python} một lần rồi \code{finish}. Hai dòng còn lại mô tả luồng mà prompt và công cụ hướng tới, không phải bản sao của một trace cụ thể.
+
+\begin{table}[H]
+    \centering
+    \caption{Chuỗi công cụ điển hình của ba loại câu hỏi}
+    \label{tab:trace_examples}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|c|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.0cm}|}
+        \toprule
+        \textbf{Câu hỏi} & \textbf{Lượt} & \textbf{Công cụ Agent gọi} & \textbf{Kết thúc} \\
+        \midrule
+        Lore, tên gõ sai: ``Chìa Stoneswrod dùng với tượng nào?'' & 1 & \code{check\_name("Stoneswrod")} và \code{search\_corpus("Stonesword Key imp statue seal")} song song & \\
+         & 2 & \code{open\_evidence} đoạn trang Stonesword Key & \\
+         & 3 & & \code{finish} (ý định \code{acquisition}, 1--2 bằng chứng, tiếng Việt) \\ \hline
+        Build: ``Build Samurai dùng Uchigatana level 60'' & 1 & Hai \code{search\_corpus} song song: trang lớp Samurai và trang Uchigatana & \\
+         & 2 & \code{open\_evidence} hai trang; \nolinkurl{set_conditions} (level, lớp, vũ khí, nguồn \code{current}) & \\
+         & 3 & \code{run\_python} (mã như Đoạn mã~\ref{lst:run_python}) & \\
+         & 4 & & \code{finish} (ý định \code{build}, bằng chứng gồm quy tắc level, kết quả ghi vào \code{results}) \\ \hline
+        Thiếu dữ kiện: ``Build cho nhân vật của tôi để đánh boss cuối'' khi người chơi muốn phân bổ chính xác & 1 & & \code{ask\_user} (hỏi level và lớp nhân vật) \\
+         & -- & Người chơi trả lời; lượt mới tiếp tục như câu build & \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+% ==============================================================================
+\section{Xây dựng API, giao diện web và Discord bot}
+\label{sec:impl_ui}
+
+\subsection{API FastAPI}
+\label{sec:impl_api}
+
+Ứng dụng FastAPI được tạo bằng hàm factory, quản lý mọi tài nguyên dùng chung (client cơ sở dữ liệu, Qdrant, Redis, mô hình, HTTP client) theo vòng đời ứng dụng và tự đưa chúng vào kiểm tra sức khỏe. Lớp middleware gắn mã yêu cầu (\code{X-Request-ID}) vào mọi dòng log JSON để theo dõi một yêu cầu từ web hoặc bot tới API. Trước khi gọi dịch vụ hỏi đáp, lớp bảo vệ \nolinkurl{enforce_chat_limits} kiểm tra lần lượt:
+\begin{itemize}
+    \item Kênh Discord phải gửi đúng token dịch vụ (so sánh thời gian hằng).
+    \item Quản trị viên (xác định qua danh sách mã Discord được cấu hình) được miễn giới hạn.
+    \item Giới hạn tần suất mỗi phút trong Redis: mặc định 10 yêu cầu/phút theo IP với web hoặc theo kênh với bot, và 30 yêu cầu/phút theo server Discord.
+    \item Hạn mức hằng ngày theo giờ Việt Nam: khách 5 câu hỏi và 100.000 token, tài khoản đăng nhập 30 câu và 500.000 token, cùng trần chung 5 triệu token mỗi ngày cho toàn hệ thống. Hết hạn mức trả HTTP 429 kèm \code{Retry-After} tới 0 giờ.
+\end{itemize}
+Dịch vụ hỏi đáp giữ khóa theo hội thoại để hai câu hỏi của cùng hội thoại không xử lý chồng nhau, áp thời hạn 45 giây cho mỗi câu qua API JSON (bot) và 90 giây qua SSE (web), lưu tin nhắn và trace sau khi trả lời thành công, và chỉ ghi trạng thái làm việc khi lượt thành công.
+
+\subsection{Giao diện web}
+\label{sec:impl_web_ui}
+
+Giao diện web được viết bằng React 19 và TypeScript, đóng gói bằng Vite, định kiểu bằng Tailwind CSS với chủ đề tối mang phong cách Elden Ring. Màn hình chính gồm thanh bên chứa danh sách hội thoại và khung chat. Các tính năng chính:
+\begin{itemize}
+    \item Gửi câu hỏi và nhận câu trả lời qua SSE; trong lúc chờ hiển thị trạng thái xử lý; có nút dừng và thử lại.
+    \item Câu trả lời hiển thị dạng Markdown; mỗi số trích dẫn [n] là một nút mở popover chứa tiêu đề, mục, đoạn trích nguyên văn và liên kết tới trang nguồn; ảnh minh họa hiển thị kèm câu trả lời.
+    \item Nút ba trạng thái cho chế độ tìm web: OFF, ON (tự động), ALWAYS.
+    \item Lịch sử hội thoại lưu ở trình duyệt cho khách; đăng nhập bằng Discord để đồng bộ lịch sử lên máy chủ, nhận về các hội thoại khách đang có, xóa từng hội thoại hoặc xóa tài khoản.
+    \item Chia sẻ một câu trả lời qua đường dẫn (bản chụp lưu 24 giờ).
+    \item Nút thích/không thích dưới mỗi câu trả lời, câu hỏi gợi ý trên màn hình trống, trang giới thiệu ghi công nguồn wiki.gg theo giấy phép CC BY-SA.
+    \item Trang quản trị xem hội thoại gần đây, phản hồi, trạng thái thu thập dữ liệu, kết quả đánh giá và trace chi tiết của từng câu trả lời.
+\end{itemize}
+Giao diện được kiểm tra hiển thị ở chiều rộng 360 px cho thiết bị di động.
+
+\subsection{Discord bot}
+\label{sec:impl_bot}
+
+Discord bot viết bằng discord.js 14 và TypeScript, chạy trực tiếp trên Node.js 24. Bot cung cấp các lệnh:
+\begin{itemize}
+    \item \code{/ask <câu hỏi>}: bot gọi \code{deferReply} ngay trong 3 giây đầu theo yêu cầu của Discord, gọi API rồi cập nhật câu trả lời dạng embed có danh sách nguồn; câu trả lời dài được chia thành nhiều embed.
+    \item Nhắc tên bot (\code{@Index Beast <câu hỏi>}) và nhắn trong kênh đã bật: bot trả lời mà không cần lệnh.
+    \item \code{/setup enable <kênh>}, \code{/setup disable <kênh>}, \code{/setup disable-all}: quản trị viên server bật hoặc tắt kênh tự trả lời.
+    \item \code{/clear user [thành viên]}: xóa ký ức hội thoại của chính mình (quản trị viên server có thể chọn thành viên khác); \code{/clear all}: quản trị viên xóa ký ức của cả server.
+    \item \code{/help}, \code{/about}, \code{/ping}: hướng dẫn, giới thiệu nguồn và giấy phép, kiểm tra hoạt động.
+\end{itemize}
+Mỗi kênh, thread hoặc người dùng có mã tham chiếu ngoài (\code{external\_ref}) riêng để hội thoại không lẫn vào nhau. Bot gọi API bằng token dịch vụ và gửi chế độ tìm web tự động.
+
+% ==============================================================================
+\section{Tóm tắt chương}
+\label{sec:ch3_summary}
+
+Chương này đã trình bày cách cài đặt toàn bộ hệ thống: pipeline dữ liệu năm bước tạo kho 34.138 đoạn tiếng Anh có vector lai; đồ thị LangGraph năm nút với vòng lặp Agent có ngân sách và lượt kết thúc bắt buộc; adapter DeepSeek với chế độ suy nghĩ có chọn lọc; bộ truy xuất lai RRF với bộ xếp hạng lại MiniLM chạy cục bộ; chín công cụ trong đó \code{run\_python} chạy mã của Agent trong sandbox hai lớp; bước sinh JSON có kiểm tra trích dẫn nguyên văn, sinh lại có giới hạn và Answer Guard; cùng API, giao diện web và Discord bot. Chương~\ref{chap:eval} đánh giá hệ thống đã xây dựng.

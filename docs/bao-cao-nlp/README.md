@@ -1,32 +1,27 @@
-# Báo cáo môn Xử lý ngôn ngữ tự nhiên: Index Beast
+# Báo cáo NLP — Hệ thống Agentic RAG hỏi đáp lore Elden Ring
 
-Báo cáo dự án theo mẫu LaTeX của khoa CNTT, trường ĐH CNTT và Truyền thông (ICTU). Nội dung chỉ dùng số liệu đã có trong repo (Sprint 1); không chạy lại notebook hay gọi LLM để viết báo cáo.
+Báo cáo môn Xử lý ngôn ngữ tự nhiên của nhóm 4 Hollows, viết bằng LaTeX theo định dạng báo cáo học phần
+(lớp `ictureport.cls`, XeLaTeX + Biber). Bản xuất: [PDF](BaoCao_NLP_IndexBeast.pdf) · [DOCX](BaoCao_NLP_IndexBeast.docx).
+
+| Tệp / thư mục | Nội dung |
+|---|---|
+| `main.tex`, `metadata.tex`, `preamble.tex`, `ictureport.cls` | Khung tài liệu, trang bìa, cấu hình |
+| `frontmatter/` | Lời cảm ơn, phân công nhiệm vụ, từ viết tắt |
+| `chapters/` | Mở đầu, Chương 1–4, Kết luận, Phụ lục |
+| `references.bib` | 30 tài liệu tham khảo (đã kiểm chứng qua arXiv API và Crossref ngày 23/11/2026) |
+| `tools/export_docx.py` | Xuất DOCX từ mã LaTeX (cần main.pdf, main.aux, main.bbl đã biên dịch) |
+| `khung-*.md` | Khung báo cáo dùng để viết |
 
 ## Biên dịch
 
-Cần XeLaTeX (MiKTeX hoặc TeX Live) và phông Times New Roman.
-
-```bash
-xelatex main.tex && xelatex main.tex && xelatex main.tex
+```powershell
+xelatex main; biber main; xelatex main; xelatex main
 ```
 
-Chạy ba lần để mục lục, danh mục hình và bảng được cập nhật. Kết quả: `main.pdf`.
+Xuất DOCX (cần Pandoc, `pip install pymupdf python-docx`):
 
-## Cấu trúc
+```powershell
+python tools/export_docx.py --pandoc <pandoc.exe> --xelatex <xelatex.exe>
+```
 
-| Tệp | Nội dung |
-|---|---|
-| `main.tex` | Khai báo gói, macro bảng, kiểu sơ đồ TikZ |
-| `bia.tex` | Trang bìa |
-| `mo_dau.tex` | Mở đầu |
-| `chuong1.tex` | Chương 1: Cơ sở lý thuyết |
-| `chuong2.tex` | Chương 2: Bài toán, phương pháp và mô hình |
-| `chuong3.tex` | Chương 3: Thử nghiệm và đánh giá |
-| `tai_lieu.tex` | Tài liệu tham khảo |
-| `assets/` | Logo trường |
-
-## Cần điền trước khi nộp
-
-- Họ tên thành viên 3 và 4, giáo viên hướng dẫn trong `bia.tex`.
-- Xác nhận tên học phần ở trang bìa.
-- Thử nghiệm Chương 3 là trên tập con 240 bản ghi `armors.csv`, chấm tay có hỗ trợ AI; đã nêu giới hạn trong báo cáo.
+Bản DOCX có mục lục dạng trường: mở bằng Word rồi nhấn F9 để cập nhật số trang.

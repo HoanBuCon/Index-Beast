@@ -1,0 +1,200 @@
+\unnumberedchapter{PHỤ LỤC}
+\label{chap:appendix}
+
+\renewcommand{\thesection}{\Alph{section}}
+\setcounter{section}{0}
+\renewcommand{\thetable}{\Alph{section}.\arabic{table}}
+\renewcommand{\thelstlisting}{\Alph{section}.\arabic{lstlisting}}
+
+\section{Tổ chức mã nguồn}
+\label{app:source}
+
+Bảng~\ref{tab:source_tree} mô tả các thư mục chính của kho mã nguồn và thành viên phụ trách. Trong quá trình tìm hiểu mã nguồn để viết báo cáo, nhóm dùng công cụ GitNexus để lập bản đồ tri thức của kho mã (khoảng 8.700 nút và 17.600 cạnh gồm hàm, lớp, tệp và quan hệ gọi), giúp tra nhanh nơi gọi và nơi được gọi của các hàm như \code{run\_agent} hay \code{ChatService}.
+
+\begin{table}[H]
+    \centering
+    \caption{Tổ chức thư mục mã nguồn}
+    \label{tab:source_tree}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.2cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{2.4cm}|}
+        \toprule
+        \textbf{Thư mục} & \textbf{Vai trò} & \textbf{Phụ trách} \\
+        \midrule
+        \code{backend/core/} & Dùng chung: cấu hình, cơ sở dữ liệu, Qdrant, bộ mã hóa, xử lý văn bản, chính sách corpus & TV1, TV2, TV3 \\ \hline
+        \nolinkurl{backend/app/api/} & Route, lược đồ, xác thực, giới hạn tần suất, hạn mức & TV1 \\ \hline
+        \nolinkurl{backend/app/services/} & Dịch vụ hỏi đáp, bộ nhớ, ảnh, xác thực & TV1, TV3 \\ \hline
+        \nolinkurl{backend/app/rag/} & Đồ thị LangGraph, vòng lặp Agent, truy xuất, xếp hạng lại, bộ sinh, kiểm tra, sandbox, prompt & TV3 \\ \hline
+        \nolinkurl{backend/app/adapters/} & DeepSeek, Tavily, Redis & TV1, TV3 \\ \hline
+        \nolinkurl{backend/ingest/} & Pipeline ngoại tuyến: crawl, filter, transform, chunk, index, update & TV2, TV3 \\ \hline
+        \code{backend/eval/} & Bộ câu hỏi, rubric, đo truy xuất, tổng hợp điểm & TV2, TV3 \\ \hline
+        \nolinkurl{backend/tests/} & Unit test và integration test & Cả nhóm \\ \hline
+        \code{web/} & Giao diện React & TV4 \\ \hline
+        \code{bot/} & Discord bot & TV4 \\ \hline
+        \code{infra/}, \code{scripts/}, \code{docker-compose*.yml} & Caddy, triển khai, sao lưu & TV1 \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Cài đặt lõi}
+\label{app:core}
+
+\subsection{Thực thi công cụ trong vòng lặp Agent}
+
+Đoạn mã~\ref{lst:execute} trích phần thực thi công cụ (rút gọn), cho thấy cách máy chủ kiểm tra lời gọi và trả lỗi về cho Agent.
+
+\begin{lstlisting}[language=Python, caption={Thực thi công cụ (rút gọn từ true\_agent.py)}, label={lst:execute}]
+async def execute(name: str, raw: dict):
+    if (name not in TOOLS or (name == "search_web" and not web)
+            or (name == "ask_user" and not can_ask) or (forced and name != "finish")):
+        return {"status": "error", "error": f"Tool {name} is not available"}, None
+    try:
+        args = TOOLS[name][0].model_validate(raw)
+    except ValidationError as exc:
+        fields = [".".join(map(str, e["loc"])) + ": " + e["type"] for e in exc.errors()][:5]
+        return {"status": "error", "error": "Invalid arguments", "fields": fields}, None
+    if name == "search_corpus":
+        found = admit(await local(args.query))      # loc theo chinh sach corpus
+        return {"status": "ok", "results": [_preview(h) for h in found[:8]]}, None
+    if name == "set_conditions":
+        rejected = [c for c in args.set if not stated(c)]   # phai co nguyen van trong nguon
+        if rejected:
+            return {"status": "error", "error": "...", "keys": [c.key for c in rejected]}, None
+        ...
+    if name == "run_python":
+        return await asyncio.to_thread(run_python, args.code), None
+    if name == "finish" and search_mode == "always" and not web_calls and web:
+        return {"status": "error", "error": "Web policy is always: call search_web before finish"}, None
+    return {"status": "ok"}, (name, args)          # cong cu ket thuc
+\end{lstlisting}
+
+\subsection{Mã đoạn trích do máy chủ cấp}
+
+Đoạn mã~\ref{lst:evidence_units} cắt một nguồn thành các đoạn trích có mã, dùng cho cả \code{open\_evidence} lẫn bước sinh.
+
+\begin{lstlisting}[language=Python, caption={Sinh mã đoạn trích (evidence.py)}, label={lst:evidence_units}]
+def evidence_units(text: str) -> dict[str, str]:
+    if 8 <= len(text) <= 2000:
+        return {"q0": text}
+    units, start = {}, 0
+    while start < len(text):
+        end = min(start + 2000, len(text))
+        if end < len(text):
+            boundary = max(text.rfind("\n", start + 1000, end),
+                           text.rfind(". ", start + 1000, end))
+            if boundary > start:
+                end = boundary + 1
+        fragment = text[start:end].strip()
+        if len(fragment) >= 8:
+            units[f"q{len(units) + 1}"] = fragment
+        start = end
+    return units
+\end{lstlisting}
+
+\subsection{Kiểm tra tĩnh của sandbox}
+
+\begin{lstlisting}[language=Python, caption={Kiểm tra tĩnh mã Python của Agent (rút gọn từ python\_sandbox.py)}, label={lst:check_code}]
+def check_code(code: str) -> None:
+    if len(code) > MAX_CODE_CHARS:
+        raise SandboxError(f"Code is longer than {MAX_CODE_CHARS} characters")
+    tree = ast.parse(code, mode="exec")
+    for node in ast.walk(tree):
+        if not isinstance(node, ALLOWED_NODES):
+            raise SandboxError(f"{type(node).__name__} is not allowed")
+        name = node.id if isinstance(node, ast.Name) else \
+               node.attr if isinstance(node, ast.Attribute) else None
+        if name is not None and (name.startswith("_") or name in FORBIDDEN_NAMES):
+            raise SandboxError(f"'{name}' is not allowed")
+\end{lstlisting}
+
+\section{Cấu hình chính của hệ thống}
+\label{app:config}
+
+\begin{table}[H]
+    \centering
+    \caption{Các tham số cấu hình chính và giá trị mặc định}
+    \label{tab:config}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{6.4cm}|>{\raggedright\arraybackslash}X|}
+        \toprule
+        \textbf{Tham số} & \textbf{Giá trị / ý nghĩa} \\
+        \midrule
+        \code{LLM\_MODEL} & \code{deepseek-flash} \\ \hline
+        \nolinkurl{RAG_RETRIEVAL_MODE} & \code{hybrid} (\code{dense}, \code{bm25} chỉ dùng cho ablation) \\ \hline
+        \code{RAG\_PREFETCH} / \code{RAG\_TOP\_K} / \nolinkurl{RAG_CONTEXT_CHARS} & 30 / 5 / 12.000 \\ \hline
+        \nolinkurl{RAG_RERANKER_PROVIDER}, \nolinkurl{.._LOCAL_MODEL} & \code{local}, \nolinkurl{Xenova/ms-marco-MiniLM-L-12-v2} \\ \hline
+        \nolinkurl{RAG_RERANKER_LOCAL_MAX_CANDIDATES} / \code{..\_MAX\_CHARS} / timeout & 20 / 600 / 3 giây \\ \hline
+        \nolinkurl{RAG_THINKING_ENABLED} & Mặc định tắt; nếu bật, bước sinh chỉ suy nghĩ khi Agent đặt \code{needs\_reasoning} \\ \hline
+        \nolinkurl{CHAT_AGENT_MAX_CALLS} / \nolinkurl{CHAT_COVERAGE_MAX_CALLS} & 6 / 12 lượt gọi mô hình (12 khi web tự động) \\ \hline
+        \nolinkurl{CHAT_AGENT_TIMEOUT_SECONDS} & 12 giây mỗi lượt gọi mô hình \\ \hline
+        \nolinkurl{CHAT_TIMEOUT_SECONDS} / \nolinkurl{CHAT_STREAM_TIMEOUT_SECONDS} / \nolinkurl{CHAT_PREPARE_TIMEOUT_SECONDS} & 45 (JSON, bot) / 90 (SSE, web) / 25 giây \\ \hline
+        \nolinkurl{CHAT_CLARIFICATION_MAX_ROUNDS} & 3 lượt hỏi lại \\ \hline
+        \nolinkurl{CHAT_HISTORY_MESSAGES} / \nolinkurl{CHAT_HISTORY_CHARS} & 8 tin nhắn / 8.000 ký tự \\ \hline
+        \nolinkurl{CHAT_MEMORY_CANDIDATES} & 6 ký ức ứng viên \\ \hline
+        \nolinkurl{WEB_SEARCH_MODE} / \nolinkurl{.._MAX_RESULTS} / timeout & \code{auto} / 3 / 8 giây \\ \hline
+        \nolinkurl{RATE_LIMIT_PER_MINUTE} / \nolinkurl{.._GUILD_PER_MINUTE} & 10 / 30 \\ \hline
+        Hạn mức ngày: khách / tài khoản / trần chung & 5 câu, 100.000 token / 30 câu, 500.000 token / 5.000.000 token \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\section{Hướng dẫn cài đặt và tái lập}
+\label{app:install}
+
+\subsection{Yêu cầu}
+
+Git, Python 3.11.9, Node.js 24 LTS, Docker có Compose v2; khóa API DeepSeek (bắt buộc để chạy chế độ RAG) và Tavily (tùy chọn, để tìm web). Mọi cấu hình nằm trong một tệp \code{.env} ở gốc kho mã, sao chép từ \code{.env.example}.
+
+\subsection{Chạy môi trường phát triển}
+
+\begin{lstlisting}[language=bash, caption={Cài đặt và chạy môi trường phát triển}, label={lst:dev}]
+git clone https://github.com/HoanBuCon/Index-Beast.git && cd Index-Beast
+git switch develop
+cp .env.example .env                    # dien khoa API khi can
+cd backend && python -m venv .venv && source .venv/Scripts/activate
+pip install -r requirements-dev.txt -c constraints.txt && cd ..
+(cd web && npm ci) && (cd bot && npm ci)
+make dev        # bat PostgreSQL, Qdrant, Redis, chay API va web
+make migrate    # tao bang PostgreSQL (alembic upgrade head)
+\end{lstlisting}
+
+Mặc định API chạy ở \nolinkurl{http://127.0.0.1:18000} và web ở \nolinkurl{http://localhost:15173}. Chế độ \code{CHAT\_MODE=mock} cho dữ liệu giả để thử giao diện; đặt \code{CHAT\_MODE=rag} sau khi đã nạp kho tri thức.
+
+\subsection{Nạp kho tri thức}
+
+\begin{lstlisting}[language=bash, caption={Các lệnh của pipeline dữ liệu (chạy trong backend/)}, label={lst:ingest}]
+python -m ingest crawl --source wikigg          # tai ban tho
+python -m ingest clean                          # loc va bien doi
+python -m ingest chunk                          # chia doan
+python -m ingest index --input data/chunk_runs/<ban>/chunks.jsonl \
+    --policy pilot --languages en --collection <ten-collection> --dry-run
+python -m ingest update                         # cap nhat tang dan
+\end{lstlisting}
+
+Bỏ \code{--dry-run} để ghi thật vào Qdrant. Lệnh lập chỉ mục chạy suy luận E5 trên CPU và có thể tải mô hình nếu bộ đệm chưa có.
+
+\subsection{Tái lập đánh giá}
+
+\begin{lstlisting}[language=bash, caption={Tái lập đánh giá truy xuất và đánh giá đầu cuối (chạy trong backend/)}, label={lst:eval}]
+# Kiem tra bo cau hoi voi du lieu da nap
+python -m eval.validate_golden --corpus data/chunk_runs/s4-wiki-release/chunks.jsonl
+# Do truy xuat (hybrid | dense | bm25), co hoac khong xep hang lai
+RAG_RERANKER_PROVIDER=local python -m eval.measure_retrieval \
+    --manifest ../docs/testing/2026-11-24_golden-200-ablation/manifest.json \
+    --output <tep-moi>.json --mode hybrid --rerank
+# Chay 200 cau qua API cho mot cau hinh
+CHAT_PERSISTENCE=memory RATE_LIMIT_PER_MINUTE=1000 RAG_RETRIEVAL_MODE=hybrid \
+RAG_RERANKER_ENABLED=true RAG_RERANKER_PROVIDER=local \
+python -m scripts.run_live_manifest ../docs/testing/2026-11-24_golden-200-ablation/manifest.json \
+    data/research_runs/<ten-luot> --web auto --resume
+# Tong hop ket qua cac luot da cham
+python -m eval.summarize_ablation --manifest <manifest> --runs data/research_runs/<thu-muc> --output summary.json
+\end{lstlisting}
+
+\subsection{Triển khai production}
+
+Trên VPS đã cài Docker, sao chép \code{.env.prod.example} thành \code{.env} (quyền 600), điền tên miền và các secret, nạp dữ liệu, rồi chạy \nolinkurl{scripts/deploy.sh}. Script kiểm tra cấu hình, sao lưu PostgreSQL nếu đang chạy, build và khởi động các container với overlay \code{docker-compose.prod.yml}, rồi chờ API báo khỏe. Rollback bằng \code{scripts/deploy.sh <tag-cũ>}.
+
+\section{Biên dịch báo cáo}
+\label{app:build}
+
+Báo cáo được soạn bằng LaTeX với lớp tài liệu \code{ictureport}, biên dịch bằng XeLaTeX và Biber: \code{xelatex main}, \code{biber main}, rồi \code{xelatex main} hai lần (hoặc \code{latexmk -xelatex main}). Mã nguồn báo cáo nằm trong thư mục \nolinkurl{docs/bao-cao-nlp} của kho mã.

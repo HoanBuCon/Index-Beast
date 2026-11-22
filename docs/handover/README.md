@@ -275,3 +275,4 @@ Không ghi secret (token, mật khẩu, key) vào tài liệu bàn giao.
 - [TV4 · Câu hỏi động và hai nút trong bảng bổ sung (14/11/2026)](2026-11-14_s4-tv4_cau-hoi-va-hai-nut-bo-sung.md)
 - [TV4 · Dọn ảnh không sử dụng (14/11/2026)](2026-11-14_s4-tv4_don-anh-khong-su-dung.md)
 - [TV4 · Web: đăng nhập Discord, feedback, admin, xóa tài khoản (16/11/2026, TV1 làm hộ)](2026-11-16_s5-tv4_web-dang-nhap-feedback-admin.md)
+- [TV2 · Báo cáo NLP bằng LaTeX theo định dạng học phần (23/11/2026)](2026-11-23_s6-tv2_bao-cao-nlp-latex.md)

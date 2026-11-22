@@ -1,0 +1,62 @@
+% ==============================================================================
+% CẤU HÌNH BỔ SUNG: tài liệu tham khảo, liên kết, macro của đề tài
+% ==============================================================================
+
+% Tài liệu tham khảo dạng [n] (IEEE) qua BibLaTeX/Biber
+\usepackage[
+    backend=biber,
+    style=ieee,
+    sorting=none,
+    doi=false,
+    isbn=false,
+    url=false
+]{biblatex}
+\addbibresource{references.bib}
+\setlength{\bibitemsep}{3pt}
+
+% Liên kết nội bộ (không tô màu, giống bản in Word)
+\usepackage{hyperref}
+\hypersetup{
+    hidelinks,
+    pdfauthor={Nhóm 4 Hollows - Trần Trọng Hoàn, Nông Hữu Thịnh, Nguyễn Quang Minh, Vũ Ngọc Quý},
+    pdftitle={\projectTitle},
+    pdfsubject={Báo cáo dự án học phần Xử lý ngôn ngữ tự nhiên},
+    pdfkeywords={Xử lý ngôn ngữ tự nhiên, RAG, Agentic RAG, LLM, hybrid search, Elden Ring}
+}
+
+% Macro tiện ích
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\IB}{Index Beast}
+
+\usetikzlibrary{positioning,arrows.meta,fit,calc,shapes.geometric,shapes.misc,backgrounds}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{bm}
+\usepackage{float}
+\usepackage{pifont}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% Ghi chú đặt ngay dưới bảng/hình
+\newcommand{\tablenote}[1]{\par\vspace{3pt}{\centering\small #1\par}}
+\newcommand{\fignote}[1]{\par\vspace{2pt}{\centering\small #1\par}}
+\usepackage{xurl}
+\setcounter{biburlnumpenalty}{100}
+\setcounter{biburllcpenalty}{100}
+\setcounter{biburlucpenalty}{100}
+
+% Kiểu khối cho sơ đồ TikZ
+\tikzset{
+  blk/.style={draw, rounded corners=2pt, fill=AccentLightBlue!60, align=center, font=\small, minimum height=8mm, inner sep=4pt},
+  dat/.style={draw, cylinder, shape border rotate=90, aspect=0.18, fill=AccentGray!20, align=center, font=\small, minimum height=10mm, inner sep=3pt},
+  dec/.style={draw, diamond, aspect=2.2, fill=white, align=center, font=\small, inner sep=1pt},
+  arr/.style={-{Stealth[length=2.2mm]}, line width=0.6pt},
+  grp/.style={draw, dashed, rounded corners=3pt, inner sep=6pt}
+}
+
+% Mã JSON/Python trong listings
+\lstdefinelanguage{json}{
+  basicstyle=\fontsize{8.5}{10.5}\selectfont\ttfamily,
+  string=[s]{"}{"},
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}

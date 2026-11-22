@@ -1,0 +1,711 @@
+\chapter{PHÂN TÍCH BÀI TOÁN VÀ THIẾT KẾ HỆ THỐNG AGENTIC RAG}
+\label{chap:design}
+
+Chương này trình bày phần phân tích và thiết kế của hệ thống \IB{}: phát biểu bài toán và các khó khăn đặc thù (Mục~\ref{sec:problem}); mục tiêu, phạm vi và yêu cầu (Mục~\ref{sec:goals}); quy trình nghiệp vụ trực tuyến và ngoại tuyến (Mục~\ref{sec:workflow}); vai trò và nhiệm vụ của Agent (Mục~\ref{sec:agent_role}); kiến trúc tổng thể (Mục~\ref{sec:arch}); thiết kế công cụ và API (Mục~\ref{sec:tools_api}); thiết kế kho tri thức (Mục~\ref{sec:kb}) và thiết kế bộ nhớ (Mục~\ref{sec:memory_design}). Phần cài đặt chi tiết được trình bày ở Chương~\ref{chap:impl}.
+
+% ==============================================================================
+\section{Phân tích và mô tả bài toán}
+\label{sec:problem}
+
+\subsection{Phát biểu bài toán}
+\label{sec:problem_statement}
+
+Bài toán của đề tài là xây dựng một trợ lý hỏi đáp về Elden Ring (gồm bản mở rộng Shadow of the Erdtree) cho người chơi Việt Nam, hoạt động trên website và Discord.
+
+\begin{itemize}
+    \item \textbf{Đầu vào}: câu hỏi bằng tiếng Việt hoặc tiếng Anh, có thể gõ sai tên riêng, không dấu, viết tắt; kèm lịch sử của cuộc hội thoại hiện tại và lựa chọn chế độ tìm web của người dùng.
+    \item \textbf{Đầu ra}: một trong ba dạng: (1) câu trả lời đúng ngôn ngữ người hỏi, mỗi đoạn có trích dẫn tới nguồn kiểm chứng được, kèm ảnh minh họa nếu có; (2) một câu hỏi lại khi thiếu dữ kiện thật sự cần thiết; (3) một lời từ chối ngắn khi yêu cầu không liên quan đến Elden Ring.
+\end{itemize}
+
+Phân tích các câu hỏi thực tế của người chơi, nhóm xác định sáu khó khăn chính mà hệ thống phải giải quyết:
+\begin{itemize}
+    \item \textbf{(K1) Khác ngôn ngữ.} Kho tri thức gần như hoàn toàn bằng tiếng Anh, trong khi phần lớn người dùng hỏi bằng tiếng Việt.
+    \item \textbf{(K2) Gõ sai và không chuẩn.} Tên riêng tiếng Anh rất dễ gõ sai (``Golden Sead'' thay cho ``Golden Seed'', ``Death Night'' thay cho ``Death Knight''); câu tiếng Việt có thể không dấu, sót phím Telex hoặc viết tắt.
+    \item \textbf{(K3) Câu nhiều bước.} Câu hỏi về nhiệm vụ hoặc tuyến đường cần nối thông tin từ nhiều trang, ví dụ tìm nửa còn lại của một huy chương rồi biết dùng ở đâu.
+    \item \textbf{(K4) Câu cần tính toán.} Câu hỏi về phân bổ chỉ số cần biết chỉ số khởi đầu của lớp nhân vật, yêu cầu của vũ khí và quy tắc tổng tám chỉ số bằng level cộng 79.
+    \item \textbf{(K5) Câu mơ hồ hoặc thiếu dữ kiện.} Tham chiếu như ``hiệp sĩ đó'', ``bản cộng đó'' có nhiều cách hiểu; câu hỏi build cho chính nhân vật của người chơi nhưng không nêu level.
+    \item \textbf{(K6) Nguy cơ bịa.} LLM dễ bịa chi tiết của trò chơi; người chơi cần nguồn để kiểm chứng.
+\end{itemize}
+
+\subsection{Phân loại câu hỏi}
+\label{sec:question_types}
+
+Dựa trên bộ câu hỏi đánh giá 200 câu do nhóm xây dựng (Mục~\ref{sec:eval_setup}), các câu hỏi được chia thành chín nhóm như Bảng~\ref{tab:question_types}.
+
+\begin{table}[H]
+    \centering
+    \caption{Phân loại câu hỏi và yêu cầu xử lý}
+    \label{tab:question_types}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.6cm}|c|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{4.0cm}|}
+        \toprule
+        \textbf{Nhóm} & \textbf{Số câu} & \textbf{Ví dụ (giữ nguyên cách gõ)} & \textbf{Yêu cầu xử lý} \\
+        \midrule
+        Nhiều bước (multi\_hop) & 39 & ``dang co nua phai huy chuong bi mat, can di dau lay nua con lai\ldots'' & Tìm nhiều lần, nối nhiều trang \\ \hline
+        Trang bị (equipment) & 34 & ``Chìa Stoneswrod dùng với tượng nào?'' & Kiểm tên, trích trang vật phẩm \\ \hline
+        Nhiệm vụ (quest) & 32 & ``Boggart bán Boiled Crab ở đâu sau khi chuyển chỗ?'' & Sắp xếp các bước theo thứ tự \\ \hline
+        Vị trí (location) & 26 & ``Ở Gatefront Ruins, Whetstone Knife nằm chỗ nào?'' & Trích đoạn vị trí chính xác \\ \hline
+        Cơ chế (mechanics) & 23 & ``\ldots Golden Sead để làm gì?'' & Giải thích cơ chế có nguồn \\ \hline
+        Nhân vật (character) & 21 & ``con rua o church of vows la ai\ldots'' & Tổng hợp lore từ nhiều đoạn \\ \hline
+        Sự kiện (event) & 8 & ``Đối đầu Romina ở địa danh cụ thể nào\ldots'' & Trích địa điểm và phần thưởng \\ \hline
+        Thiếu dữ kiện & 11 & ``\ldots gặp hiệp sĩ ở chỗ thánh giá. Phải về mốc nào?'' & Hỏi lại hoặc nêu các khả năng \\ \hline
+        Ngoài phạm vi & 6 & ``Có thể đặt lịch cắt tóc tối nay hộ mình không?'' & Từ chối ngắn gọn \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Ngoài chín nhóm nội dung trên, hệ thống còn phải xử lý lời chào, cảm ơn, yêu cầu hủy và câu hỏi về chính cuộc hội thoại (``nãy tôi hỏi gì?''), và câu hỏi tư vấn build có tính toán.
+
+\subsection{Hạn chế của các giải pháp hiện có}
+\label{sec:existing_limits}
+
+\textbf{Wiki và FAQ.} Người chơi phải tự dịch câu hỏi sang tiếng Anh, tự chọn từ khóa và tự đọc nhiều trang. Ô tìm kiếm của wiki không chịu được lỗi chính tả trong tên riêng và không trả lời câu hỏi cần tổng hợp.
+
+\textbf{Chatbot dựa trên luật.} Chỉ trả lời được các mẫu câu đã viết sẵn; không thể bao phủ hàng nghìn vật phẩm, nhân vật và địa điểm của trò chơi.
+
+\textbf{RAG truyền thống.} Truy xuất một lần theo nguyên văn câu hỏi. Ví dụ câu ``Chìa Stoneswrod dùng với tượng nào?'': tên vật phẩm bị gõ sai và phần còn lại bằng tiếng Việt, nên BM25 không khớp từ nào và embedding chỉ khớp một phần; nếu top-5 không chứa trang Stonesword Key, mô hình sẽ trả lời từ những đoạn không liên quan. Với câu build ``build Samurai dùng katana ở level 60'', RAG truyền thống không có cơ chế lấy đúng chỉ số khởi đầu và yêu cầu vũ khí rồi tính phân bổ, nên mô hình tự nghĩ ra tám con số.
+
+\subsection{Sự cần thiết của Agentic RAG}
+\label{sec:why_agentic}
+
+Mỗi khó khăn ở Mục~\ref{sec:problem_statement} tương ứng với một năng lực mà Agent cần có và một công cụ hỗ trợ năng lực đó (Bảng~\ref{tab:k_to_agent}). Đây là cơ sở để nhóm chọn kiến trúc Agentic RAG thay cho RAG truyền thống.
+
+\begin{table}[H]
+    \centering
+    \caption{Ánh xạ khó khăn sang năng lực của Agent và công cụ tương ứng}
+    \label{tab:k_to_agent}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.6cm}|}
+        \toprule
+        \textbf{Khó khăn} & \textbf{Năng lực của Agent} & \textbf{Công cụ} \\
+        \midrule
+        K1 Khác ngôn ngữ & Tự viết truy vấn tiếng Anh giữ nguyên tên riêng; trả lời theo ngôn ngữ người hỏi & \code{search\_corpus}, \code{finish} \\ \hline
+        K2 Gõ sai & Tra tên theo cách gõ của người chơi, tự chọn tiêu đề đúng rồi tìm lại & \code{check\_name} \\ \hline
+        K3 Nhiều bước & Tìm nhiều lần, mở toàn văn đoạn cần đọc, tìm web khi kho nội bộ chưa đủ & \code{search\_corpus}, \code{open\_evidence}, \code{search\_web} \\ \hline
+        K4 Tính toán & Tự viết mã Python tính phân bổ và tự kiểm tra ràng buộc & \code{run\_python} \\ \hline
+        K5 Mơ hồ, thiếu dữ kiện & Ghi điều kiện người chơi; giả định hợp lý khi có thể; hỏi lại khi câu trả lời thay đổi đáng kể & \nolinkurl{set_conditions}, \code{ask\_user} \\ \hline
+        K6 Nguy cơ bịa & Chỉ dùng dữ kiện từ kết quả công cụ; chọn bằng chứng để trích dẫn; máy chủ kiểm nguyên văn & \code{finish} + bộ kiểm trích dẫn \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+% ==============================================================================
+\section{Mục tiêu, phạm vi và yêu cầu}
+\label{sec:goals}
+
+\subsection{Mục tiêu}
+\label{sec:objectives}
+
+Đề tài đặt ra bốn mục tiêu:
+\begin{itemize}
+    \item \textbf{(M1)} Xây dựng kho tri thức Elden Ring sạch, có nguồn gốc rõ ràng cho từng đoạn, được lập chỉ mục lai (dense và sparse).
+    \item \textbf{(M2)} Xây dựng Agent tự điều khiển việc truy xuất và dùng công cụ; mọi câu trả lời có dữ kiện đều kèm trích dẫn được máy chủ kiểm tra.
+    \item \textbf{(M3)} Phục vụ người dùng trên web và Discord, có bộ nhớ hội thoại và trả lời trong giới hạn thời gian của từng kênh.
+    \item \textbf{(M4)} Đánh giá định lượng trên bộ câu hỏi có đáp án tham chiếu, gồm chỉ số truy xuất, chất lượng câu trả lời, độ trễ và chi phí.
+\end{itemize}
+
+\subsection{Câu hỏi nghiên cứu}
+\label{sec:rq}
+
+Để định hướng phần đánh giá, nhóm đặt ba câu hỏi nghiên cứu:
+\begin{itemize}
+    \item \textbf{RQ1}: Truy xuất lai E5 + BM25 hợp nhất bằng RRF có tốt hơn từng phương pháp đơn lẻ trên kho tri thức của đề tài không?
+    \item \textbf{RQ2}: Bộ xếp hạng lại cross-encoder chạy cục bộ trên CPU có cải thiện truy xuất và câu trả lời đủ để bù cho độ trễ tăng thêm không?
+    \item \textbf{RQ3}: Việc luôn tìm web có cải thiện câu trả lời so với để Agent tự quyết định khi nào tìm web không?
+\end{itemize}
+
+\subsection{Phạm vi}
+\label{sec:scope}
+
+Bảng~\ref{tab:scope} tóm tắt phạm vi thực hiện của đề tài.
+
+\begin{table}[H]
+    \centering
+    \caption{Phạm vi thực hiện của đề tài}
+    \label{tab:scope}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.0cm}|c|>{\raggedright\arraybackslash}X|}
+        \toprule
+        \textbf{Nội dung} & \textbf{Thực hiện} & \textbf{Ghi chú} \\
+        \midrule
+        Elden Ring bản gốc và Shadow of the Erdtree & Có & Gồm lore, vị trí, nhiệm vụ, trang bị, cơ chế, boss \\ \hline
+        Tư vấn build & Có & Chỉ phân bổ tám chỉ số có kiểm tra, không tính sát thương, AR hay DPS \\ \hline
+        Câu hỏi tiếng Việt và tiếng Anh & Có & Trả lời theo ngôn ngữ người hỏi hoặc ngôn ngữ được chọn \\ \hline
+        Lập chỉ mục tài liệu tiếng Anh & Có & Chỉ đoạn tiếng Anh được đưa vào chỉ mục \\ \hline
+        Tìm kiếm web bổ sung & Có & Ba chế độ: tắt, tự động, luôn tìm \\ \hline
+        Giao diện web và Discord bot & Có & Web dùng SSE; bot trả lời bằng embed \\ \hline
+        Bộ tối ưu build, tính sát thương & Không & Cần dữ liệu bảng số đầy đủ và mô phỏng công thức game, ngoài phạm vi học phần \\ \hline
+        Các trò chơi khác của FromSoftware & Không & Có thể mở rộng nhờ kiến trúc nguồn dữ liệu dạng plugin \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Yêu cầu chức năng và phi chức năng}
+\label{sec:requirements}
+
+Từ đặc tả yêu cầu phần mềm của dự án, Bảng~\ref{tab:fr} và Bảng~\ref{tab:nfr} tóm lược các yêu cầu chính.
+
+\begin{table}[H]
+    \centering
+    \caption{Yêu cầu chức năng chính}
+    \label{tab:fr}
+    \small
+    \begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}X|}
+        \toprule
+        \textbf{Mã} & \textbf{Nội dung} \\
+        \midrule
+        FR-ING & Thu thập trang từ eldenring.wiki.gg qua MediaWiki API, lưu bản thô kèm URL và revision; làm sạch, chia đoạn theo mục; gắn metadata; tạo vector dày E5 và vector thưa BM25; cập nhật tăng dần theo revision \\ \hline
+        FR-RET & Truy xuất lai dense + BM25 hợp nhất bằng RRF; xếp hạng lại tùy chọn; lọc theo chính sách corpus; tìm web qua Tavily khi kho nội bộ chưa đủ \\ \hline
+        FR-GEN & Câu trả lời chỉ dựa trên bằng chứng, kèm trích dẫn [n] ánh xạ tới tiêu đề và URL; đúng ngôn ngữ người hỏi; streaming SSE cho web; từ chối yêu cầu ngoài phạm vi \\ \hline
+        FR-CHAT & Tạo và tiếp tục hội thoại; dùng lịch sử liên quan; mỗi kênh có hội thoại riêng; giới hạn tần suất; hạn mức câu hỏi và token mỗi ngày \\ \hline
+        FR-WEB & Khung chat Markdown streaming; xem đoạn nguồn khi bấm số trích dẫn; lịch sử hội thoại; đăng nhập Discord; trang quản trị \\ \hline
+        FR-BOT & Lệnh \code{/ask}; trả lời trong 3 giây đầu bằng \code{deferReply}; hỏi tiếp trong thread; trả lời khi được nhắc tên; \code{/setup}, \code{/clear}, \code{/help}, \code{/about} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Yêu cầu phi chức năng chính}
+    \label{tab:nfr}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}X|}
+        \toprule
+        \textbf{Nhóm} & \textbf{Yêu cầu} \\
+        \midrule
+        Hiệu năng & Mỗi câu hỏi qua Discord bot hoặc API JSON có hạn 45 giây (nhỏ hơn giới hạn 60 giây phía bot), qua web SSE có hạn 90 giây; mục tiêu câu trả lời hoàn chỉnh p95 $\leq$ 10 giây với $\leq$ 20 người dùng đồng thời \\ \hline
+        Chất lượng & Recall@5 $\geq$ 0,80; độ đúng $\geq$ 70\%; độ bám nguồn $\geq$ 85\% trên bộ đánh giá \\ \hline
+        Tải & Chịu khoảng 50 người dùng đồng thời (cho phép xếp hàng) \\ \hline
+        Bảo mật & Không lưu secret trong mã; HTTPS; tách chỉ dẫn với dữ liệu để chống prompt injection; endpoint quản trị cần xác thực \\ \hline
+        Riêng tư & Lưu định danh Discord dạng băm; giới hạn thời gian lưu hội thoại và trace; người dùng xóa được dữ liệu của mình \\ \hline
+        Chi phí & Chi phí LLM $\leq$ 30 USD/tháng ở mức 1.000 câu/ngày \\ \hline
+        Tài nguyên & Toàn bộ container chạy trên một VPS 4 vCPU, 8 GB RAM \\ \hline
+        Bảo trì & Lint và test tự động trên CI; cấu hình và prompt tách khỏi mã \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Đóng góp của đề tài}
+\label{sec:contributions}
+
+\begin{itemize}
+    \item Xây dựng một kho tri thức Elden Ring có nguồn gốc cho từng đoạn và lập chỉ mục lai trên Qdrant.
+    \item Thiết kế một Agent dùng một vòng lặp gọi công cụ duy nhất với chín công cụ, trong đó máy chủ chỉ giữ các ràng buộc tất định (lược đồ, chính sách, ngân sách, trích dẫn).
+    \item Đề xuất cách kiểm trích dẫn nguyên văn bằng mã đoạn trích do máy chủ cấp, khiến mô hình không thể ``chép sai'' nguồn.
+    \item Tích hợp công cụ thực thi mã Python trong sandbox để Agent tự tính phân bổ chỉ số build và tự kiểm tra ràng buộc.
+    \item Xây dựng bộ đánh giá 200 câu song ngữ có câu gõ sai, câu thiếu dữ kiện và câu ngoài phạm vi; thực hiện ablation trên 11 cấu hình truy xuất, xếp hạng lại và tìm web.
+\end{itemize}
+
+% ==============================================================================
+\section{Phân tích quy trình nghiệp vụ}
+\label{sec:workflow}
+
+\subsection{Quy trình hỏi đáp trực tuyến}
+\label{sec:workflow_online}
+
+Hình~\ref{fig:workflow_online} mô tả một lượt hỏi đáp. Người chơi gửi câu hỏi từ web hoặc Discord. API kiểm tra quyền, giới hạn tần suất và hạn mức. Hệ thống nạp các ký ức liên quan và các lượt gần đây của hội thoại, rồi chuyển cho Agent. Agent phân tích ý định và lặp lại việc gọi công cụ: tìm trong kho, kiểm tên, mở bằng chứng, tìm web, ghi điều kiện, tính toán. Khi đủ thông tin, Agent kết thúc theo một trong ba cách: chọn bằng chứng để viết câu trả lời, hỏi lại người chơi, hoặc trả lời ngắn không cần dữ kiện game (chào hỏi, từ chối). Với nhánh có bằng chứng, bước sinh viết câu trả lời JSON có trích dẫn, máy chủ kiểm tra rồi mới gửi về giao diện kèm nguồn và ảnh.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small]
+  \node[blk, text width=4.2cm] (u) at (0,0) {Người chơi hỏi (Web / Discord)};
+  \node[blk, text width=4.2cm] (api) at (0,-1.3) {API: xác thực, giới hạn tần suất, hạn mức};
+  \node[blk, text width=4.2cm] (mem) at (0,-2.6) {Nạp ký ức và các lượt gần đây};
+  \node[blk, text width=4.2cm, fill=AccentBlue!20] (ag) at (0,-3.9) {Agent phân tích ý định và gọi công cụ};
+  \node[blk, text width=4.0cm] (tools) at (5.6,-3.9) {Công cụ: tìm kho, kiểm tên, mở bằng chứng, tìm web, ghi điều kiện, tính toán};
+  \node[dec] (end) at (0,-5.6) {Agent kết thúc?};
+  \node[blk, text width=2.6cm] (ask) at (-4.6,-7.3) {Hỏi lại người chơi};
+  \node[blk, text width=4.2cm] (gen) at (0,-7.3) {Sinh câu trả lời JSON từ bằng chứng đã chọn};
+  \node[blk, text width=2.6cm] (rep) at (4.6,-7.3) {Trả lời ngắn (chào, từ chối)};
+  \node[blk, text width=4.2cm] (chk) at (0,-8.6) {Kiểm trích dẫn, Answer Guard, chọn ảnh};
+  \node[blk, text width=4.2cm] (out) at (0,-9.9) {Trả lời kèm nguồn và ảnh};
+  \draw[arr] (u) -- (api); \draw[arr] (api) -- (mem); \draw[arr] (mem) -- (ag);
+  \draw[arr] ([yshift=2mm]ag.east) -- node[above, font=\footnotesize]{gọi công cụ} ([yshift=2mm]tools.west);
+  \draw[arr] ([yshift=-2mm]tools.west) -- node[below, font=\footnotesize]{kết quả} ([yshift=-2mm]ag.east);
+  \draw[arr] (ag) -- (end);
+  \draw[arr] (end.west) -| node[above, font=\footnotesize, pos=0.25]{ask\_user} (ask.north);
+  \draw[arr] (end) -- node[right, font=\footnotesize]{finish} (gen);
+  \draw[arr] (end.east) -| node[above, font=\footnotesize, pos=0.25]{reply} (rep.north);
+  \draw[arr] (gen) -- (chk); \draw[arr] (chk) -- (out);
+\end{tikzpicture}
+\caption{Quy trình một lượt hỏi đáp trực tuyến}
+\label{fig:workflow_online}
+\end{figure}
+
+\subsection{Quy trình hỏi lại nhiều lượt}
+\label{sec:workflow_clarify}
+
+Khi Agent gọi \code{ask\_user}, hệ thống lưu một yêu cầu bổ sung đang chờ gồm mã định danh, câu hỏi, các trường cần người chơi cung cấp và thời điểm hết hạn (30 phút). Câu hỏi được gửi thẳng cho người chơi mà không qua bước sinh. Khi người chơi trả lời kèm mã yêu cầu bổ sung, Agent nhận cả câu hỏi gốc, câu hỏi lại và câu trả lời mới, ghi điều kiện từ câu trả lời rồi tiếp tục tìm kiếm như một lượt bình thường (Hình~\ref{fig:workflow_clarify}). Số lượt hỏi lại cho một yêu cầu có giới hạn (mặc định ba lượt) để tránh hỏi vòng quanh; hết lượt thì công cụ \code{ask\_user} không còn được cung cấp cho Agent.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small, every node/.style={align=center}]
+  \node (P) at (0,0) {\textbf{Người chơi}};
+  \node (S) at (5,0) {\textbf{Máy chủ}};
+  \node (A) at (10,0) {\textbf{Agent}};
+  \foreach \x in {0,5,10} \draw[dashed, AccentGray] (\x,-0.35) -- (\x,-8.2);
+  \draw[arr] (0,-0.9) -- node[above, font=\footnotesize]{``Build cho nhân vật của tôi''} (5,-0.9);
+  \draw[arr] (5,-1.6) -- node[above, font=\footnotesize]{câu hỏi + ký ức + lượt gần đây} (10,-1.6);
+  \draw[arr] (10,-2.4) -- node[above, font=\footnotesize]{ask\_user(level, lớp nhân vật)} (5,-2.4);
+  \node[draw, fill=AccentLightBlue!50, font=\footnotesize, anchor=west] at (5.15,-3.1) {lưu yêu cầu chờ, hạn 30 phút};
+  \draw[arr] (5,-3.8) -- node[above, font=\footnotesize]{câu hỏi lại} (0,-3.8);
+  \draw[arr] (0,-4.6) -- node[above, font=\footnotesize]{``level 80, Samurai'' + mã yêu cầu} (5,-4.6);
+  \draw[arr] (5,-5.4) -- node[above, font=\footnotesize]{câu gốc + câu hỏi lại + câu trả lời} (10,-5.4);
+  \node[draw, fill=AccentLightBlue!50, font=\footnotesize, anchor=east] at (9.85,-6.15) {set\_conditions, tìm kiếm, run\_python, finish};
+  \draw[arr] (10,-6.9) -- node[above, font=\footnotesize]{bằng chứng + kết quả tính} (5,-6.9);
+  \draw[arr] (5,-7.7) -- node[above, font=\footnotesize]{câu trả lời có trích dẫn} (0,-7.7);
+\end{tikzpicture}
+\caption{Sơ đồ tuần tự của một lượt hỏi lại}
+\label{fig:workflow_clarify}
+\end{figure}
+
+Cần lưu ý rằng hỏi lại chỉ dùng khi câu trả lời thay đổi đáng kể theo thông tin bổ sung. Với câu hỏi build không nêu level, Agent được hướng dẫn chọn một giả định hợp lý (ví dụ level phổ biến cuối game cho PvE), nêu rõ giả định trong câu trả lời và mời người chơi cho biết level thật để điều chỉnh, thay vì hỏi ngay.
+
+\subsection{Quy trình dữ liệu ngoại tuyến}
+\label{sec:workflow_offline}
+
+Kho tri thức được xây dựng bằng một pipeline ngoại tuyến gồm năm bước nối tiếp, mỗi bước đọc sản phẩm (artifact) của bước trước và ghi sản phẩm của mình ra đĩa (Hình~\ref{fig:workflow_offline}). Nhờ đó có thể chạy lại riêng một bước, ví dụ chỉ chia đoạn lại khi đổi kích thước đoạn mà không cần thu thập lại. Mỗi lần chạy ghi một bản ghi công việc kèm số lượng vào, ra, lỗi và thời gian.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=5mm and 4mm, font=\small]
+  \node[blk] (c) {1. Thu thập\\(crawl)};
+  \node[blk, right=of c] (f) {2. Lọc\\(filter)};
+  \node[blk, right=of f] (t) {3. Biến đổi\\(transform)};
+  \node[blk, right=of t] (k) {4. Chia đoạn\\(chunk)};
+  \node[blk, right=of k] (i) {5. Lập chỉ mục\\(index)};
+  \node[dat, below=10mm of i, xshift=-14mm] (qd) {Qdrant\\dense + BM25};
+  \node[dat, below=10mm of i, xshift=14mm] (pg) {PostgreSQL\\tài liệu, đoạn};
+  \node[dat, below=10mm of c] (raw) {Bản thô\\HTML, revision};
+  \draw[arr] (c) -- (f); \draw[arr] (f) -- (t); \draw[arr] (t) -- (k); \draw[arr] (k) -- (i);
+  \draw[arr] (c) -- (raw); \draw[arr] (i) -- (qd); \draw[arr] (i) -- (pg);
+  \node[blk, above=9mm of t, fill=white] (u) {Cập nhật tăng dần: chỉ xử lý lại trang có revision mới};
+  \draw[arr, dashed] (u.west) -| (c.north);
+\end{tikzpicture}
+\caption{Quy trình xây dựng kho tri thức ngoại tuyến}
+\label{fig:workflow_offline}
+\end{figure}
+
+\subsection{Tác nhân và ca sử dụng}
+\label{sec:usecase}
+
+Hệ thống có ba tác nhân chính (Hình~\ref{fig:usecase}): người chơi trên web, người chơi trên Discord và quản trị viên. Người chơi trên web có thể đặt câu hỏi, xem nguồn trích dẫn, chọn chế độ tìm web, xem lại lịch sử, đăng nhập bằng Discord để đồng bộ lịch sử và xóa hội thoại hoặc tài khoản. Người chơi trên Discord hỏi bằng \code{/ask}, nhắc tên bot hoặc nhắn trong kênh đã bật; quản trị viên server Discord dùng \code{/setup} để bật kênh tự trả lời; mỗi thành viên có thể xóa ký ức của chính mình bằng \code{/clear user}, còn quản trị viên server xóa được ký ức của người khác hoặc của cả server. Quản trị viên hệ thống xem trace từng câu trả lời và thống kê tổng hợp.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[font=\small,
+  uc/.style={draw, ellipse, fill=AccentLightBlue!45, minimum width=4.4cm, minimum height=7mm, inner sep=1pt, align=center},
+  actor/.style={align=center}]
+  \node[actor] (web) at (0,0) {\Large\ding{110}\\Người chơi web};
+  \node[actor] (dc) at (0,-4.6) {\Large\ding{110}\\Người chơi Discord};
+  \node[actor] (ad) at (13,-2.3) {\Large\ding{110}\\Quản trị viên};
+  \node[uc] (u1) at (6.2,1.2) {Đặt câu hỏi, xem câu trả lời};
+  \node[uc] (u2) at (6.2,0.2) {Xem đoạn nguồn trích dẫn};
+  \node[uc] (u3) at (6.2,-0.8) {Chọn chế độ tìm web};
+  \node[uc] (u4) at (6.2,-1.8) {Đăng nhập, xem và xóa lịch sử};
+  \node[uc] (u5) at (6.2,-2.8) {Trả lời câu hỏi lại};
+  \node[uc] (u6) at (6.2,-3.8) {/ask, nhắc tên bot};
+  \node[uc] (u7) at (6.2,-4.8) {/setup (admin), /clear};
+  \node[uc] (u8) at (6.2,-5.8) {Xem trace và thống kê};
+  \draw (2.6,1.9) rectangle (9.8,-6.5);
+  \node[font=\footnotesize\itshape] at (8.6,1.65) {Hệ thống \IB{}};
+  \foreach \u in {u1,u2,u3,u4,u5} \draw (web) -- (\u.west);
+  \foreach \u in {u1,u5,u6,u7} \draw (dc) -- (\u.west);
+  \draw (ad) -- (u8.east); \draw (ad) -- (u4.east);
+\end{tikzpicture}%
+}
+\caption{Biểu đồ ca sử dụng của hệ thống}
+\label{fig:usecase}
+\end{figure}
+
+% ==============================================================================
+\section{Vai trò và nhiệm vụ của Agent}
+\label{sec:agent_role}
+
+\subsection{Kiến trúc một Agent}
+\label{sec:single_agent}
+
+Hệ thống dùng một Agent duy nhất chạy vòng lặp gọi công cụ gốc của LLM, còn việc viết câu trả lời cuối giao cho một bước sinh riêng có kiểm tra. Agent nhìn thấy toàn bộ ngữ cảnh của lượt (câu hỏi, điều kiện, ký ức, kết quả mọi công cụ) nên tự quyết được mọi việc mang tính ngữ nghĩa mà không mất thông tin khi chuyển giữa các bước. Bước sinh tách riêng giúp câu trả lời luôn đúng định dạng JSON và kiểm trích dẫn được chặt chẽ. Với phạm vi hỏi đáp của đề tài, một Agent với bộ công cụ rõ ràng đủ đáp ứng yêu cầu, ít lượt gọi mô hình hơn và dễ gỡ lỗi hơn so với kiến trúc nhiều Agent (Mục~\ref{sec:single_multi}).
+
+\subsection{Nhiệm vụ của Agent}
+\label{sec:agent_tasks}
+
+Agent chịu trách nhiệm toàn bộ các quyết định mang tính ngữ nghĩa trong một lượt:
+\begin{itemize}
+    \item Hiểu người chơi hỏi gì, kể cả câu tham chiếu tới lượt trước, và xác định ngôn ngữ trả lời.
+    \item Viết truy vấn tìm kiếm tiếng Anh tập trung, giữ nguyên tên riêng và điều kiện của người chơi; tìm lại bằng truy vấn khác khi kết quả chưa đủ.
+    \item Quyết định có cần tìm web hay không, trong phạm vi chính sách người chơi chọn.
+    \item Xác định đúng tên thực thể khi người chơi gõ sai, bằng cách chọn trong các tiêu đề trang mà công cụ trả về.
+    \item Ghi lại điều kiện người chơi đã nêu (level, lớp nhân vật, vũ khí, mục tiêu) hoặc giả định của mình khi cần.
+    \item Tự tính phân bổ chỉ số build bằng mã Python và tự kiểm tra kết quả.
+    \item Chọn tối đa năm đoạn bằng chứng hỗ trợ câu trả lời; đánh dấu khi bước viết cần suy nghĩ thêm hoặc được bổ sung kinh nghiệm chơi chung.
+    \item Hỏi lại khi thật sự cần, từ chối yêu cầu ngoài phạm vi, và trả lời lời chào.
+\end{itemize}
+
+\subsection{Phân chia trách nhiệm giữa Agent và máy chủ}
+\label{sec:guards}
+
+Nguyên tắc thiết kế là \textbf{Agent quyết định, máy chủ kiểm tra}. Máy chủ không đoán ý định hay viết truy vấn thay Agent; nó chỉ giữ các ràng buộc tất định, tức là các kiểm tra có đáp án đúng sai rõ ràng, không phụ thuộc cách hiểu ngôn ngữ (Bảng~\ref{tab:guards}). Khi một lời gọi bị từ chối, máy chủ trả lý do cụ thể về cho Agent dưới dạng kết quả công cụ để Agent tự sửa ở lượt sau.
+
+\begin{table}[H]
+    \centering
+    \caption{Các ràng buộc tất định phía máy chủ}
+    \label{tab:guards}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.3cm}|>{\raggedright\arraybackslash}p{4.0cm}|}
+        \toprule
+        \textbf{Ràng buộc} & \textbf{Vị trí} & \textbf{Lý do} \\
+        \midrule
+        Tham số công cụ đúng lược đồ; công cụ không có trong chính sách (web tắt, hết lượt hỏi lại) bị từ chối & Bộ thực thi công cụ & Hợp đồng công cụ \\ \hline
+        Điều kiện người chơi phải xuất hiện nguyên văn trong nguồn được ghi; giả định không được đè lời người chơi & \nolinkurl{set_conditions} & Chống bịa dữ kiện về người chơi \\ \hline
+        Mọi kết quả từ kho nội bộ phải qua chính sách corpus (phạm vi game, ngôn ngữ, loại nguồn) & Bước nhận kết quả và bước dựng ngữ cảnh & Giữ đúng phạm vi dữ liệu \\ \hline
+        Chế độ web ``luôn tìm'' bắt buộc gọi \code{search\_web} trước \code{finish} & Bộ thực thi công cụ & Tôn trọng lựa chọn của người chơi \\ \hline
+        Nhắc một lần khi \code{finish} không chọn bằng chứng dù đã tìm được nguồn & Bộ thực thi công cụ & Agent tự quyết lại \\ \hline
+        Ngân sách lượt gọi mô hình và thời gian; lượt cuối chỉ cho phép \code{finish} & Vòng lặp Agent & Hạn xử lý mỗi câu (45 giây với bot) \\ \hline
+        JSON đúng lược đồ; trích dẫn khớp bằng chứng; đoạn trích nguyên văn; không URL do mô hình viết & Bộ kiểm câu trả lời & Bám nguồn ở mức hình thức \\ \hline
+        Ký ức loại dữ kiện không dùng trong thread Discord chung & Bước nạp bộ nhớ & Quyền riêng tư \\ \hline
+        Tên trường nội bộ trong văn bản gửi người chơi được thay bằng lời thường & Bộ kiểm câu trả lời, Answer Guard & Không lộ chi tiết nội bộ \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+% ==============================================================================
+\section{Thiết kế kiến trúc hệ thống}
+\label{sec:arch}
+
+\subsection{Nguyên tắc thiết kế}
+\label{sec:arch_principles}
+
+Kiến trúc được xây dựng theo bốn nguyên tắc:
+\begin{itemize}
+    \item \textbf{Agent quyết định, máy chủ kiểm tra}: phần ngữ nghĩa thuộc về Agent, phần tất định thuộc về máy chủ.
+    \item \textbf{Một luồng xử lý duy nhất}: mọi câu hỏi ở chế độ RAG đi qua cùng một đồ thị, không có nhánh đặc biệt theo loại câu hỏi hay cờ cấu hình ẩn.
+    \item \textbf{Mọi dữ kiện truy được nguồn}: mỗi đoạn mang URL, tiêu đề, mục, revision và metadata phạm vi; câu trả lời chỉ trích dẫn đoạn đã được đưa vào ngữ cảnh.
+    \item \textbf{Hạ tầng tối giản}: chỉ dùng PostgreSQL, Qdrant, Redis và một tiến trình API; mô hình embedding và xếp hạng lại chạy trên CPU.
+\end{itemize}
+
+\subsection{Kiến trúc tổng thể}
+\label{sec:arch_overview}
+
+Hình~\ref{fig:architecture} trình bày kiến trúc tổng thể. Hai giao diện (web React và Discord bot) gọi API qua Caddy. API FastAPI xác thực, giới hạn tần suất rồi chuyển cho dịch vụ hỏi đáp. Dịch vụ này quản lý hội thoại, thời hạn xử lý và gọi đồ thị LangGraph \code{ChatPipeline}. Nút \code{agent} trong đồ thị chạy vòng lặp gọi công cụ với DeepSeek; các công cụ truy cập Qdrant (kho tri thức), Tavily (web) và sandbox Python. Sau đó bộ sinh viết câu trả lời, bộ kiểm tra trích dẫn và Answer Guard rà soát, bộ chọn ảnh chạy song song.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small]
+  % cột giữa: luồng chính
+  \node[blk, text width=2.4cm] (web) at (-1.6,0) {Web React (SSE)};
+  \node[blk, text width=2.4cm] (bot) at (1.6,0) {Discord bot};
+  \node[blk, text width=5.6cm] (caddy) at (0,-1.4) {Caddy: HTTPS, web tĩnh, proxy /api};
+  \node[blk, text width=5.6cm] (api) at (0,-2.7) {FastAPI: xác thực, giới hạn tần suất, hạn mức};
+  \node[blk, text width=5.6cm] (svc) at (0,-4.0) {Dịch vụ hỏi đáp: hội thoại, thời hạn, trace};
+  \node[blk, text width=5.6cm, fill=AccentBlue!20] (graph) at (0,-5.5) {LangGraph ChatPipeline\\scope $\to$ memory $\to$ \textbf{agent} $\to$ context $\to$ prompt};
+  \node[blk, text width=5.6cm] (gen) at (0,-7.1) {Bộ sinh JSON $\to$ kiểm trích dẫn $\to$ Answer Guard (song song: chọn ảnh)};
+  % cột phải: lưu trữ và LLM
+  \node[dat, text width=2.6cm] (rd) at (5.3,-2.7) {Redis};
+  \node[dat, text width=2.6cm] (pg) at (5.3,-4.0) {PostgreSQL};
+  \node[blk, text width=2.6cm] (llm) at (5.3,-6.3) {DeepSeek (deepseek-flash)};
+  % cột trái: công cụ
+  \node[blk, text width=2.6cm] (tools) at (-5.3,-5.5) {9 công cụ của Agent};
+  \node[dat, text width=2.6cm] (qd) at (-5.3,-7.4) {Qdrant: corpus, ký ức};
+  \node[blk, text width=2.6cm] (tav) at (-5.3,-3.9) {Tavily (web)};
+  \node[blk, text width=2.6cm] (py) at (-5.3,-2.6) {Sandbox Python};
+  \draw[arr] (web) -- (caddy); \draw[arr] (bot) -- (caddy);
+  \draw[arr] (caddy) -- (api); \draw[arr] (api) -- (svc); \draw[arr] (svc) -- (graph); \draw[arr] (graph) -- (gen);
+  \draw[arr, <->] (api) -- (rd); \draw[arr, <->] (svc) -- (pg);
+  \draw[arr, <->] (graph.east) -- ++(0.6,0) |- (llm.west);
+  \draw[arr, <->] (gen.east) -- ++(0.6,0) |- (llm.west);
+  \draw[arr, <->] (graph) -- (tools);
+  \draw[arr] (tools) -- (qd); \draw[arr] (tools) -- (tav);
+  \draw[arr] (tools.west) -- ++(-0.4,0) |- (py.west);
+\end{tikzpicture}
+\caption{Kiến trúc tổng thể của hệ thống \IB{}}
+\label{fig:architecture}
+\end{figure}
+
+\subsection{Các thành phần chính}
+\label{sec:components}
+
+Bảng~\ref{tab:components} mô tả vai trò, công nghệ và vị trí mã nguồn của từng thành phần. Mã nguồn backend tuân theo quy tắc phụ thuộc một chiều: tầng API chỉ gọi tầng dịch vụ, tầng dịch vụ gọi lõi RAG, lõi RAG gọi hệ thống bên ngoài qua các adapter; phần dùng chung (\code{core}) không phụ thuộc phần trực tuyến (\code{app}) hay phần ngoại tuyến (\code{ingest}).
+
+\begin{table}[H]
+    \centering
+    \caption{Các thành phần của hệ thống}
+    \label{tab:components}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.1cm}|}
+        \toprule
+        \textbf{Thành phần} & \textbf{Trách nhiệm} & \textbf{Công nghệ} & \textbf{Thư mục mã} \\
+        \midrule
+        Giao diện web & Khung chat streaming, nguồn, ảnh, lịch sử, trang quản trị & React, Vite, Tailwind & \code{web/} \\ \hline
+        Discord bot & Lệnh và tin nhắn, chia embed, thread & discord.js & \code{bot/} \\ \hline
+        API gateway & HTTPS, xác thực, giới hạn tần suất, hạn mức & Caddy, FastAPI, Redis & \code{infra/}, \nolinkurl{backend/app/api/} \\ \hline
+        Dịch vụ hỏi đáp & Hội thoại, khóa đồng thời, thời hạn, lưu trace & Python asyncio & \nolinkurl{backend/app/services/} \\ \hline
+        Bộ điều khiển Agent & Đồ thị chuẩn bị và vòng lặp công cụ & LangGraph, LangChain & \nolinkurl{backend/app/rag/} \\ \hline
+        Tầng truy xuất & E5 + BM25, RRF, xếp hạng lại & Qdrant, fastembed, ONNX & \nolinkurl{backend/app/rag/}, \nolinkurl{backend/core/vector/} \\ \hline
+        Tầng công cụ & Tìm web, kiểm tên, mở bằng chứng, sandbox & Tavily, subprocess & \nolinkurl{backend/app/rag/}, \nolinkurl{backend/app/adapters/} \\ \hline
+        Bộ sinh và kiểm tra & Viết JSON, kiểm trích dẫn, sinh lại, Answer Guard & DeepSeek, Pydantic & \nolinkurl{backend/app/rag/generator.py} \\ \hline
+        Kho tri thức & Pipeline ngoại tuyến và chỉ mục & BeautifulSoup, Qdrant, PostgreSQL & \nolinkurl{backend/ingest/} \\ \hline
+        Bộ nhớ & Hội thoại, trạng thái làm việc, ký ức ngữ nghĩa & PostgreSQL, Qdrant & \nolinkurl{backend/app/services/}, \nolinkurl{backend/app/rag/} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Kiến trúc triển khai}
+\label{sec:deploy_arch}
+
+Hệ thống được triển khai trên một VPS bằng Docker Compose (Hình~\ref{fig:deployment}). Chỉ Caddy mở cổng 80 và 443 ra Internet; các dịch vụ còn lại nằm trong mạng nội bộ của Docker. Container \code{api} chạy FastAPI và nạp sẵn mô hình E5 cùng cross-encoder; container \code{bot} gọi API qua mạng nội bộ bằng token dịch vụ. Mỗi container có giới hạn bộ nhớ và chính sách tự khởi động lại; các dịch vụ có mở cổng còn có kiểm tra sức khỏe.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small, node distance=5mm and 6mm]
+  \node[blk] (net) {Internet\\(trình duyệt, Discord)};
+  \node[blk, below=8mm of net] (caddy) {caddy\\:80, :443};
+  \node[blk, below=of caddy] (api) {api (FastAPI)\\E5 + MiniLM ONNX};
+  \node[blk, left=14mm of api] (bot) {bot\\(discord.js)};
+  \node[dat, below left=8mm and 2mm of api] (pg) {postgres};
+  \node[dat, below=8mm of api] (qd) {qdrant};
+  \node[dat, below right=8mm and 2mm of api] (rd) {redis};
+  \node[blk, right=14mm of api] (ext) {Dịch vụ ngoài:\\DeepSeek, Tavily};
+  \draw[arr] (net) -- (caddy); \draw[arr] (caddy) -- (api); \draw[arr] (bot) -- node[above, font=\footnotesize]{token} (api);
+  \draw[arr] (api) -- (pg); \draw[arr] (api) -- (qd); \draw[arr] (api) -- (rd); \draw[arr] (api) -- (ext);
+  \draw[arr, dashed] (bot.north) |- node[above, font=\footnotesize, pos=0.75]{gateway Discord} (net.west);
+  \node[grp, fit=(caddy)(api)(bot)(pg)(qd)(rd), label={[font=\footnotesize\itshape]below:Mạng nội bộ Docker Compose trên VPS}] {};
+\end{tikzpicture}
+\caption{Kiến trúc triển khai bằng Docker Compose}
+\label{fig:deployment}
+\end{figure}
+
+% ==============================================================================
+\section{Thiết kế công cụ và API}
+\label{sec:tools_api}
+
+\subsection{Danh sách công cụ của Agent}
+\label{sec:tool_list}
+
+Agent có chín công cụ (Bảng~\ref{tab:tools}). Sáu công cụ đầu là công cụ ``quan sát'': kết quả được trả về cho Agent và vòng lặp tiếp tục. Ba công cụ cuối là công cụ ``kết thúc'': khi được gọi hợp lệ, vòng lặp dừng.
+
+\begin{table}[H]
+    \centering
+    \caption{Danh sách công cụ của Agent}
+    \label{tab:tools}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{3.2cm}|}
+        \toprule
+        \textbf{Công cụ} & \textbf{Mục đích} & \textbf{Tham số chính} & \textbf{Kết quả trả về} \\
+        \midrule
+        \code{search\_corpus} & Tìm trong kho tri thức tiếng Anh bằng truy xuất lai & \code{query} (tối đa 300 ký tự) & Tối đa 8 bản xem trước: mã, tiêu đề, mục, 320 ký tự đầu \\ \hline
+        \code{search\_web} & Tìm web khi kho nội bộ chưa đủ (chỉ khi chính sách cho phép) & \code{query} & Các khối nội dung nhóm theo trang \\ \hline
+        \code{check\_name} & Tra một tên riêng có thể gõ sai & \code{name} (cách gõ của người chơi) & Danh sách tiêu đề trang tìm được theo thứ tự truy xuất \\ \hline
+        \code{open\_evidence} & Mở toàn văn và mã đoạn trích của bằng chứng đã thấy & \code{ids} (1--5 mã) & Toàn văn và các mã đoạn trích \\ \hline
+        \nolinkurl{set_conditions} & Ghi hoặc rút lại điều kiện của người chơi & \code{set} (khóa, giá trị, nguồn), \code{retire} & Danh sách điều kiện hiện tại \\ \hline
+        \code{run\_python} & Chạy phép tính Python ngắn & \code{code} (tối đa 4.000 ký tự) & Văn bản được \code{print} hoặc lỗi \\ \hline
+        \code{ask\_user} & Hỏi lại người chơi và dừng & \code{question}, \code{missing} (1--2 trường), ngôn ngữ & (kết thúc) \\ \hline
+        \code{reply} & Trả lời không chứa dữ kiện game và dừng & \code{text}, cờ ngoài phạm vi, hủy, hỏi về hội thoại & (kết thúc) \\ \hline
+        \code{finish} & Chốt bằng chứng để viết câu trả lời & câu hỏi độc lập, ý định, ngôn ngữ, \code{evidence\_ids} ($\leq$ 5), cờ suy nghĩ, kết quả đã tính & (kết thúc) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Hợp đồng công cụ}
+\label{sec:tool_contract}
+
+Tham số của mỗi công cụ được định nghĩa bằng một lớp Pydantic với \code{extra="forbid"} (không nhận trường lạ) và các ràng buộc độ dài, mẫu, giới hạn số phần tử. Lược đồ JSON Schema gửi cho mô hình được sinh tự động từ lớp này, nên mô tả cho mô hình và bộ kiểm tra phía máy chủ luôn khớp nhau. Đoạn mã~\ref{lst:finish_schema} trích lược đồ của công cụ \code{finish}.
+
+\begin{lstlisting}[language=Python, caption={Lược đồ tham số của công cụ finish (rút gọn)}, label={lst:finish_schema}]
+class FinishArgs(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    request: str = Field(min_length=1, max_length=1000)   # câu hỏi độc lập
+    intent: Literal["lore", "acquisition", "mechanics", "build", "route",
+                    "quest", "comparison", "overview", "other"]
+    answer_language: Literal["vi", "en"]
+    evidence_ids: list[str] = Field(default_factory=list, max_length=5)
+    gameplay_advice: bool = False    # cho phép bổ sung kinh nghiệm chơi chung
+    needs_reasoning: bool = False    # bước viết cần cân nhắc (nguồn mâu thuẫn...)
+    results: str = Field(default="", max_length=3000)  # kết quả run_python
+\end{lstlisting}
+
+Khi tham số sai lược đồ, máy chủ không ném ngoại lệ mà trả về kết quả công cụ dạng \code{\{"status": "error", "error": "Invalid arguments", "fields": [...]\}} chỉ rõ trường nào sai. Khi lời gọi có tham số không phải JSON hợp lệ, máy chủ vẫn phải trả lời đúng mã lời gọi đó bằng thông báo yêu cầu gửi lại. Cách làm này biến mọi lỗi thành một quan sát mà Agent có thể đọc và tự sửa.
+
+\subsection{Thiết kế API}
+\label{sec:api}
+
+API được thiết kế theo REST, có tiền tố \code{/api/v1} và được mô tả bằng tài liệu OpenAPI sinh tự động. Bảng~\ref{tab:api} liệt kê các endpoint chính.
+
+\begin{table}[H]
+    \centering
+    \caption{Các endpoint chính của API}
+    \label{tab:api}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{5.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{2.6cm}|}
+        \toprule
+        \textbf{Phương thức và đường dẫn} & \textbf{Mô tả} & \textbf{Xác thực} \\
+        \midrule
+        \code{POST /chat} & Hỏi đáp, trả kết quả một lần (bot) & Token dịch vụ với kênh Discord \\ \hline
+        \code{POST /chat/stream} & Hỏi đáp, trả dạng SSE (web) & Không bắt buộc \\ \hline
+        \code{GET /chat/capabilities} & Khả năng hiện có (tìm web\ldots) & Không \\ \hline
+        \code{GET /conversations/\{id\}} & Lịch sử một hội thoại & Token hội thoại hoặc phiên \\ \hline
+        \code{POST /feedback} & Gửi đánh giá thích/không thích & Như trên \\ \hline
+        \code{GET /images/\{id\}} & Ảnh cục bộ đã kiểm tra mã băm và định dạng & Không \\ \hline
+        \code{POST /answer-shares}, \code{GET /answer-shares} & Tạo và đọc bản chia sẻ một câu trả lời (lưu trong Redis, hết hạn sau 24 giờ) & Không \\ \hline
+        \code{GET /auth/discord/login}, \code{.../callback}, \code{POST /auth/logout}, \code{GET /auth/me} & Đăng nhập bằng Discord OAuth2 & Cookie phiên \\ \hline
+        \code{GET /me/conversations}, \code{POST /me/conversations/claim}, \code{DELETE /me/conversations/\{id\}}, \code{DELETE /me} & Quản lý hội thoại và tài khoản của người dùng & Cookie phiên \\ \hline
+        \code{GET/PUT/DELETE} \nolinkurl{/discord/guilds/{gid}/channels/...}, \code{POST} \nolinkurl{.../memory/clear} & Cấu hình kênh bot và xóa ký ức theo server & Token dịch vụ \\ \hline
+        \code{GET /admin/trace/\{id\}}, \code{GET /admin/stats} & Trace một câu trả lời, thống kê tổng hợp & Token hoặc phiên quản trị \\ \hline
+        \code{GET /health} & Kiểm tra sức khỏe PostgreSQL, Redis, Qdrant & Không \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Định dạng câu trả lời}
+\label{sec:answer_format}
+
+Bước sinh phải trả về đúng một đối tượng JSON gồm câu trả lời dạng Markdown có các số trích dẫn [n], danh sách bằng chứng và cờ thiếu thông tin (Đoạn mã~\ref{lst:answer_json}). Điểm quan trọng là mô hình không chép lại đoạn trích mà chỉ chọn mã đoạn trích (\code{quote\_ids}) do máy chủ cấp. Mỗi nguồn dài được máy chủ cắt sẵn thành các đoạn con có mã \code{q1}, \code{q2},\ldots{} (tối đa 2.000 ký tự, cắt ở ranh giới câu hoặc dòng); nguồn ngắn có một mã \code{q0} cho toàn văn. Máy chủ dùng mã để lấy đúng đoạn văn gốc hiển thị cho người dùng, nên đoạn trích hiển thị luôn khớp nguyên văn nguồn.
+
+\begin{lstlisting}[language=json, caption={Định dạng JSON của câu trả lời}, label={lst:answer_json}]
+{
+  "answer": "Stonesword Key dùng để mở các tượng Imp có sương mù [1]. ...",
+  "evidence": [ {"index": 1, "quote_ids": ["q0"]} ],
+  "insufficient": false
+}
+\end{lstlisting}
+
+Với web, câu trả lời được gửi qua SSE theo thứ tự: sự kiện \code{status} trong lúc xử lý, sự kiện \code{token} chứa nội dung, sự kiện \code{sources} chứa nguồn và ảnh, rồi sự kiện \code{done}; lỗi giữa chừng được báo bằng sự kiện \code{error}. Toàn bộ câu trả lời chỉ được gửi sau khi đã qua bước kiểm tra, nên người dùng không bao giờ thấy một câu trả lời bị từ chối giữa chừng.
+
+% ==============================================================================
+\section{Thiết kế kho tri thức}
+\label{sec:kb}
+
+\subsection{Nguồn dữ liệu}
+\label{sec:kb_sources}
+
+Nhóm khảo sát các nguồn công khai về Elden Ring và chọn nguồn theo ba tiêu chí: độ đầy đủ, khả năng truy cập hợp lệ qua API và giấy phép nội dung (Bảng~\ref{tab:sources}).
+
+\begin{table}[H]
+    \centering
+    \caption{Các nguồn dữ liệu đã khảo sát}
+    \label{tab:sources}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{3.3cm}|>{\raggedright\arraybackslash}p{3.0cm}|}
+        \toprule
+        \textbf{Nguồn} & \textbf{Mục đích} & \textbf{Cách truy cập} & \textbf{Kết quả} \\
+        \midrule
+        eldenring.wiki.gg & Nguồn chính cho kho tri thức & MediaWiki API (\code{parse}, \nolinkurl{categorymembers}, \code{imageinfo}) & Dùng; nội dung CC BY-SA 4.0, lưu URL và revision để ghi công \\ \hline
+        eldenring.\allowbreak fanapis.com & Dữ liệu có cấu trúc (boss, vật phẩm, vũ khí\ldots) & REST API công khai & Đã khảo sát, chưa đưa vào kho vì giấy phép tái phân phối chưa rõ \\ \hline
+        Fandom & Đối chiếu nội dung & Kiểm tra robots.txt & Không dùng: robots.txt trả HTTP 403 \\ \hline
+        Web (Fextralife, trang chính thức\ldots) & Bổ sung khi kho chưa đủ, ghi chú bản vá & Tavily Search + Extract tại thời điểm hỏi & Dùng trực tuyến, không lưu vào kho \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Bộ thu thập chạy tuần tự, giãn cách tối thiểu một giây giữa các yêu cầu, thử lại tối đa hai lần với lỗi mạng hoặc HTTP 429/5xx và tôn trọng tiêu đề \code{Retry-After}. Không dùng LLM để tạo hay bổ sung dữ liệu nguồn.
+
+\subsection{Làm sạch và chuẩn hóa}
+\label{sec:kb_clean}
+
+HTML của trang wiki được làm sạch theo các quy tắc: bỏ thanh điều hướng, hộp mẫu trang trí, các mục ``Gallery'', ``References'', ``External links'', ``See also''; giữ phần mô tả, lore, lời thoại; chuyển bảng (infobox, bảng chỉ số khởi đầu của lớp nhân vật, bảng yêu cầu vũ khí) thành văn bản có cấu trúc thay vì bỏ đi, vì đây là dữ liệu cần cho câu hỏi build. Mỗi trang được gán nhãn phạm vi (\code{game\_scope}) dựa trên các dấu hiệu của bản mở rộng; khi chưa đủ căn cứ, giá trị phạm vi phát hành được giữ là \code{unknown} thay vì đoán. Trang có nội dung quá ngắn sau khi làm sạch (dưới 200 ký tự) bị loại.
+
+\subsection{Chiến lược chia đoạn}
+\label{sec:kb_chunk}
+
+Văn bản được chia theo cấu trúc tiêu đề mục của trang: mỗi mục là một đơn vị, mục dài được chia tiếp thành các đoạn tối đa 450 token với 50 token chồng lấn; tiêu đề trang và tên mục được giữ trong metadata của mỗi đoạn. Trần 450 token đảm bảo đoạn văn kèm tiền tố \code{passage:} vẫn nằm trong giới hạn 512 token của E5, đồng thời đủ dài để giữ trọn một ý (một mục ``Location'', một đoạn lời thoại). Số token được kiểm bằng chính tokenizer của E5 trước khi mã hóa; đoạn vượt giới hạn bị báo lỗi chứ không bị cắt ngầm.
+
+\subsection{Lược đồ chỉ mục}
+\label{sec:kb_index}
+
+Mỗi đoạn tiếng Anh trở thành một điểm trong collection Qdrant với hai vector có tên: \code{dense} (E5, 384 chiều, cosine) và \code{bm25} (vector thưa, IDF do Qdrant tính). Mã điểm được sinh ổn định bằng UUID phiên bản 5 từ mã tài liệu và mã đoạn, nên chạy lại cùng dữ liệu không tạo điểm trùng. Payload giữ toàn bộ metadata nguồn (Bảng~\ref{tab:payload}); một số trường được đánh chỉ mục để lọc nhanh.
+
+\begin{table}[H]
+    \centering
+    \caption{Các trường payload chính của mỗi điểm trong Qdrant}
+    \label{tab:payload}
+    \small
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.6cm}|>{\raggedright\arraybackslash}X|c|}
+        \toprule
+        \textbf{Trường} & \textbf{Ý nghĩa} & \textbf{Chỉ mục} \\
+        \midrule
+        \code{text} & Nội dung đoạn & \\ \hline
+        \code{title}, \code{section}, \code{url} & Tiêu đề trang, tên mục, đường dẫn nguồn & \\ \hline
+        \code{document\_id}, \code{chunk\_id}, \code{ordinal} & Mã tài liệu, mã đoạn, thứ tự đoạn & \ding{51} (\code{document\_id}) \\ \hline
+        \code{source}, \code{revision\_id} & Nguồn và revision của trang & \\ \hline
+        \code{lang} & Ngôn ngữ đoạn & \ding{51} \\ \hline
+        \code{game\_scope}, \code{release\_scope} & Phạm vi trò chơi, bản gốc hay bản mở rộng & \ding{51} (\code{game\_scope}) \\ \hline
+        \code{source\_type} & Văn bản trong game, văn wiki hay suy đoán & \ding{51} \\ \hline
+        \code{review\_status}, \nolinkurl{indexbeast_admission} & Trạng thái duyệt, dấu chính sách nạp & \ding{51} \\ \hline
+        \code{image\_ids} & Ảnh liên kết với trang hoặc mục & \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Một chính sách corpus dùng chung cho cả bước lập chỉ mục, bộ lọc truy vấn và bước dựng ngữ cảnh: chỉ nhận đoạn thuộc phạm vi Elden Ring, đúng loại nguồn được hỗ trợ, đúng ngôn ngữ được chọn và mang dấu chính sách đúng. Nhờ vậy một điểm không đạt chính sách không thể lọt vào câu trả lời dù được truy xuất.
+
+\subsection{Lược đồ cơ sở dữ liệu quan hệ}
+\label{sec:erd}
+
+PostgreSQL lưu tài liệu và đoạn (nguồn sự thật song song với Qdrant), hội thoại, tin nhắn kèm trace, trạng thái làm việc, ký ức, phản hồi, người dùng và phiên đăng nhập, công việc thu thập dữ liệu và kết quả đánh giá. Hình~\ref{fig:erd} trình bày các bảng chính và quan hệ giữa chúng.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[font=\footnotesize,
+  tbl/.style={draw, fill=AccentLightBlue!40, align=left, inner sep=3pt, rounded corners=1pt}]
+  \node[tbl] (doc) at (0,0) {\textbf{documents}\\id, source, title, url\\revision\_id, game\_scope};
+  \node[tbl] (chk) at (0,-2.6) {\textbf{chunks}\\id, document\_id\\section, text, lang};
+  \node[tbl] (usr) at (5,1.0) {\textbf{users}\\id, provider\\provider\_user\_hash};
+  \node[tbl] (ses) at (10,1.0) {\textbf{auth\_sessions}\\id, user\_id\\token\_hash, expires\_at};
+  \node[tbl] (cnv) at (5,-1.6) {\textbf{conversations}\\id, channel, external\_ref\\client\_user\_ref, user\_id};
+  \node[tbl] (msg) at (10,-1.6) {\textbf{messages}\\id, conversation\_id, role\\content, sources, grounded\\rag\_trace, latency\_ms\\tokens\_in, tokens\_out};
+  \node[tbl] (rt) at (5,-4.4) {\textbf{conversation\_runtime}\\conversation\_id\\state, revision};
+  \node[tbl] (mem) at (10,-4.4) {\textbf{conversation\_memories}\\id, conversation\_id\\kind (topic/fact), key\\content, revision};
+  \node[tbl] (fb) at (14,-1.6) {\textbf{feedback}\\message\_id\\rating, reason};
+  \node[tbl] (job) at (0,-5.2) {\textbf{ingestion\_jobs}, \textbf{eval\_runs}\\\textbf{discord\_guild\_channels}};
+  \draw[arr] (chk) -- node[left]{n:1} (doc);
+  \draw[arr] (ses) -- node[above]{n:1} (usr);
+  \draw[arr] (cnv) -- node[left]{n:1} (usr);
+  \draw[arr] (msg) -- node[above]{n:1} (cnv);
+  \draw[arr] (rt) -- node[left]{1:1} (cnv);
+  \draw[arr] (mem) -- node[above, pos=0.3]{n:1} (cnv);
+  \draw[arr] (fb) -- node[above]{n:1} (msg);
+\end{tikzpicture}%
+}
+\caption{Lược đồ quan hệ các bảng chính trong PostgreSQL}
+\label{fig:erd}
+\end{figure}
+
+% ==============================================================================
+\section{Thiết kế bộ nhớ}
+\label{sec:memory_design}
+
+\subsection{Bộ nhớ hội thoại và trạng thái làm việc}
+\label{sec:mem_conv}
+
+Hệ thống có hai chế độ lưu trữ hội thoại. Chế độ bộ nhớ trong (RAM) dùng khi phát triển: hội thoại mất khi khởi động lại, và Agent chỉ nhận hai câu gần nhất của người dùng làm ký ức ứng viên. Chế độ PostgreSQL dùng khi triển khai: lưu tin nhắn, trace và trạng thái làm việc của từng hội thoại. Trạng thái làm việc gồm các điều kiện người chơi đã nêu, yêu cầu bổ sung đang chờ, ngôn ngữ và ý định của lượt trước. Trạng thái được cập nhật bằng khóa lạc quan theo cột \code{revision}: một lượt chỉ ghi được nếu \code{revision} chưa bị lượt khác thay đổi, tránh hai yêu cầu đồng thời ghi đè nhau. Trạng thái chỉ được ghi khi lượt trả lời thành công và hết hiệu lực sau 30 phút không hoạt động.
+
+Ngoài ký ức, Agent còn nhận các lượt gần nhất của hội thoại (cả người chơi và trợ lý, trong giới hạn 8 tin nhắn và 8.000 ký tự) để hiểu tham chiếu ngược và trả lời câu hỏi về chính cuộc hội thoại. Các lượt này không bao giờ được dùng làm bằng chứng về trò chơi và không được đưa vào bước sinh.
+
+\subsection{Ký ức ngữ nghĩa}
+\label{sec:mem_semantic}
+
+Sau mỗi lượt trả lời thành công có nội dung về trò chơi, hệ thống ghi hai loại mục nhớ:
+\begin{itemize}
+    \item \textbf{Chủ đề (topic)}: câu hỏi độc lập mà Agent đã viết lại ở \code{finish}, cho biết người chơi đang quan tâm điều gì.
+    \item \textbf{Dữ kiện (fact)}: mỗi điều kiện người chơi đã nêu, như level hay vũ khí, kèm khóa để thay thế khi người chơi thay đổi. Khi một điều kiện bị rút lại hoặc thay mới, mục cũ chuyển sang trạng thái bị thay thế.
+\end{itemize}
+Mỗi mục được mã hóa bằng E5 và lưu trong một collection Qdrant riêng (\nolinkurl{conversation_memories}), tách biệt với collection corpus. Khi có câu hỏi mới, hệ thống truy xuất tối đa sáu mục gần nghĩa nhất trong đúng hội thoại và đúng chủ sở hữu, rồi đối chiếu từng kết quả với bản ghi gốc trong PostgreSQL theo \code{revision}: mục đã bị sửa hoặc không thuộc chủ sở hữu bị loại. PostgreSQL là nguồn sự thật, còn Qdrant chỉ là chỉ mục tìm kiếm.
+
+\subsection{Quyền riêng tư}
+\label{sec:privacy}
+
+Thiết kế bộ nhớ tuân theo các nguyên tắc riêng tư sau:
+\begin{itemize}
+    \item Trong thread Discord dùng chung, bot không có danh tính người gửi đã xác minh, nên ký ức loại dữ kiện và trạng thái làm việc không được dùng, tránh lộ dữ kiện của người này cho người khác.
+    \item Định danh Discord được lưu dưới dạng băm HMAC, không lưu nguyên văn.
+    \item Người dùng đăng nhập có thể xóa từng hội thoại hoặc toàn bộ tài khoản; trên Discord, mỗi thành viên có thể xóa ký ức của chính mình bằng \code{/clear user}, quản trị viên server có thể xóa ký ức của người khác hoặc cả server. Xóa hội thoại xóa luôn tin nhắn, phản hồi, ký ức và vector tương ứng.
+    \item Log ứng dụng không ghi nội dung câu hỏi, câu trả lời, prompt hay phần suy luận của mô hình; chỉ ghi mã lỗi và chỉ số.
+\end{itemize}
+
+% ==============================================================================
+\section{Tóm tắt chương}
+\label{sec:ch2_summary}
+
+Chương này đã phân tích bài toán hỏi đáp Elden Ring với sáu khó khăn chính và chỉ ra vì sao Agentic RAG phù hợp hơn RAG truyền thống. Hệ thống được thiết kế quanh một Agent duy nhất với chín công cụ, theo nguyên tắc Agent quyết định phần ngữ nghĩa còn máy chủ giữ các ràng buộc tất định. Kiến trúc gồm giao diện web và Discord, API FastAPI, đồ thị LangGraph, tầng truy xuất lai trên Qdrant, bước sinh có kiểm trích dẫn, kho tri thức xây bằng pipeline ngoại tuyến năm bước và bộ nhớ hai tầng. Chương~\ref{chap:impl} trình bày cách các thiết kế này được cài đặt.
