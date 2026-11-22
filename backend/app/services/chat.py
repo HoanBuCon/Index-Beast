@@ -4,6 +4,7 @@ Phụ trách: TV3 · [S3] Chat integration
 """
 
 import asyncio
+import hmac
 import logging
 import secrets
 import time
@@ -89,6 +90,7 @@ class ConversationState:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     player: object = None
     owner: str = ""
+    user_id: UUID | None = None  # chủ tài khoản (ADR-005), chỉ dùng cho kiểm quyền đọc ở chế độ memory
     revision: int = 0
     token: str | None = field(default=None, repr=False)
 
@@ -162,7 +164,12 @@ class LiveChatService:
 
     async def _load_state(self, req):
         if self.repository is None:
-            return self._state(req)
+            state = self._state(req)
+            if req.channel == "web" and not state.owner:
+                # Chế độ memory cũng cấp capability cho hội thoại web mới: chỉ băm vào RAM, token chỉ trả cho client
+                state.token = secrets.token_urlsafe(32)
+                state.owner, state.user_id = owner_hash(state.token), req.user_id
+            return state
         if req.channel == "web" and req.external_ref is not None:
             raise BadRequestError("Web dùng conversation token, không dùng external_ref làm danh tính.")
         async with self._registry_lock:
@@ -236,7 +243,7 @@ class LiveChatService:
 
     async def stored_history(self, conversation_id, *, token=None, trusted_service=False, user_id=None):
         if self.repository is None:
-            return self.history(conversation_id)
+            return self._memory_history(conversation_id, token, trusted_service, user_id)
         # Read the channel/ref by ID internally, but never return messages before capability/service auth.
         from core.db.models import Conversation
 
@@ -257,9 +264,28 @@ class LiveChatService:
         )
         return stored.conversation
 
+    def _memory_history(self, conversation_id, token, trusted_service, user_id) -> ConversationOut:
+        """Cùng hợp đồng phân quyền với `MemoryRepository.load` + `stored_history`: Discord chỉ service tin cậy; web cần
+        token của hội thoại hoặc là tài khoản chủ sở hữu; không đúng thì 401 (hội thoại không có thì 404)."""
+        state = self._conversations.get(conversation_id)
+        if state is None:
+            raise NotFoundError("Không tìm thấy hội thoại.")
+        channel = state.conversation.channel
+        if channel == "discord" and not trusted_service:
+            raise UnauthorizedError("Cần service token để đọc hội thoại Discord.")
+        if channel == "web":
+            owned_by_user = user_id is not None and state.user_id == user_id
+            if not owned_by_user and (not token or not hmac.compare_digest(owner_hash(token), state.owner)):
+                raise UnauthorizedError("Cần token của hội thoại này.")
+        return state.conversation.model_copy(deep=True)
+
     async def stored_has_message(self, message_id, *, token=None, trusted_service=False, user_id=None):
         if self.repository is None:
-            return self.has_message(message_id)
+            for state in self._conversations.values():
+                if any(m.id == message_id and m.role == "assistant" for m in state.conversation.messages):
+                    self._memory_history(state.conversation.id, token, trusted_service, user_id)
+                    return True
+            return False
         from core.db.models import Message
 
         try:
@@ -438,7 +464,7 @@ class LiveChatService:
             latency_ms=latency_ms,
             images=images or [],
             clarification=prepared.clarification,
-            conversation_token=state.token if self.repository is not None and req.channel == "web" else None,
+            conversation_token=state.token if req.channel == "web" else None,
         )
 
     async def answer(self, req: ChatRequest) -> ChatResponse:

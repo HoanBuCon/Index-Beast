@@ -435,9 +435,14 @@ def test_live_json_api_and_feedback_remain_compatible(settings, ctx):
         assert response.status_code == 200
         result = response.json()
         assert result["grounded"] is True and result["sources"]
-        assert client.get(f"/api/v1/conversations/{result['conversation_id']}").status_code == 200
+        headers = {"X-Conversation-Token": result["conversation_token"]}
+        assert client.get(f"/api/v1/conversations/{result['conversation_id']}", headers=headers).status_code == 200
+        assert client.get(f"/api/v1/conversations/{result['conversation_id']}").status_code == 401
         assert (
-            client.post("/api/v1/feedback", json={"message_id": result["message_id"], "rating": 1}).status_code == 204
+            client.post(
+                "/api/v1/feedback", json={"message_id": result["message_id"], "rating": 1}, headers=headers
+            ).status_code
+            == 204
         )
         llm.data = {"answer": "Ranni [1]."}  # Bước sinh sai schema: không bao giờ là thành công giả.
         response = client.post("/api/v1/chat", json=BODY)
