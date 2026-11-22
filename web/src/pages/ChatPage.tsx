@@ -20,7 +20,7 @@ import {
   stampOwner,
 } from "../lib/accountData";
 import AccountMenu from "../components/layout/AccountMenu";
-import { claimGuestConversations, toLocalConversation } from "../api/auth";
+import { claimGuestConversations, deleteMyConversation, toLocalConversation } from "../api/auth";
 import { getConversation } from "../api/client";
 import MessageInput from "../components/chat/MessageInput";
 import type { SearchMode } from "../components/chat/searchMode";
@@ -119,6 +119,24 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const localServerIds = new Set(history.conversations.map((c) => c.serverId));
   const remoteOnly = auth.myConversations.filter((c) => !localServerIds.has(c.id));
   const [openError, setOpenError] = useState("");
+  // Xóa hội thoại. Hội thoại thuộc tài khoản phải xóa cả trên server: trước đây chỉ xóa bản trong trình duyệt nên nó
+  // hiện lại ở mục "Của tài khoản" mà không có cách xóa.
+  const accountServerIds = new Set(auth.myConversations.map((c) => c.id));
+  async function deleteFromAccount(serverId: string): Promise<boolean> {
+    setOpenError("");
+    if (!(await deleteMyConversation(serverId))) {
+      setOpenError("Không xóa được hội thoại trên tài khoản. Vui lòng thử lại.");
+      return false;
+    }
+    auth.forgetConversation(serverId);
+    return true;
+  }
+  async function removeConversation(c: Conversation) {
+    const owned = auth.user && c.serverId && (c.ownerUserId === auth.user.id || accountServerIds.has(c.serverId));
+    if (owned && c.serverId && !(await deleteFromAccount(c.serverId))) return;
+    history.remove(c.id);
+    if (active === c.id) reset();
+  }
   async function openRemote(id: string, title: string) {
     setOpenError("");
     const requestedBy = userId;
@@ -313,10 +331,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                     disabled={stream.busy}
                     className="delete"
                     aria-label={`${"Xóa"} ${c.title}`}
-                    onClick={() => {
-                      history.remove(c.id);
-                      if (active === c.id) reset();
-                    }}
+                    onClick={() => void removeConversation(c)}
                   >
                     ×
                   </button>
@@ -336,6 +351,14 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                   <button disabled={stream.busy} onClick={() => void openRemote(c.id, c.title)}>
                     <span>{c.title}</span>
                     <small>{new Date(c.created_at).toLocaleDateString("vi-VN")}</small>
+                  </button>
+                  <button
+                    disabled={stream.busy}
+                    className="delete"
+                    aria-label={`Xóa ${c.title}`}
+                    onClick={() => void deleteFromAccount(c.id)}
+                  >
+                    ×
                   </button>
                 </div>
               ))}
