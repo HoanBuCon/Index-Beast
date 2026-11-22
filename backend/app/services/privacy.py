@@ -1,7 +1,7 @@
 """Quyền riêng tư (FR-AUTH-08, NFR-PRIV-01): xóa tài khoản và xóa dữ liệu quá hạn lưu giữ.
 
 Hai việc dùng chung các hàm xóa hội thoại: điểm ngữ nghĩa trong Qdrant xóa TRƯỚC, PostgreSQL xóa SAU. Qdrant lỗi thì
-không xóa gì và người dùng thử lại được; ngược lại sẽ để lại vector mồ côi mà không còn cách tìm ra chúng.
+phần còn lại chưa bị xóa và người dùng thử lại được; ngược lại sẽ để lại vector mồ côi mà không còn cách tìm ra chúng.
 
 Lưu ý hợp nhất: PR #110 thêm `MemoryVectors.delete_conversations(ids)` làm cùng việc với `VectorPurger` ở đây (cùng
 tên, cùng đối số); khi merge, thay `VectorPurger(client, collection)` bằng `MemoryVectors(...)` rồi xóa lớp này.
@@ -89,13 +89,14 @@ async def delete_account(sessionmaker, qdrant, memory_collection: str, user_id: 
     """Xóa người dùng, mọi phiên, mọi hội thoại gắn `user_id` (gồm cả hội thoại khách đã nhận) kèm tin nhắn, feedback,
     ký ức và điểm Qdrant. Idempotent: người dùng đã mất thì trả 0, không lỗi.
 
-    Thứ tự chống đua: xóa phiên TRƯỚC (không còn ghi mới bằng tài khoản này), rồi xóa hội thoại theo lô, cuối cùng xóa
-    nốt hội thoại còn sót cùng dòng người dùng trong một transaction (nếu không, khóa ngoại SET NULL sẽ biến hội thoại
-    sót thành hội thoại khách mà vẫn còn dữ liệu)."""
+    Phiên đăng nhập được GIỮ tới bước cuối cùng: mọi lỗi giữa chừng (Qdrant hoặc PostgreSQL) để phiên còn hiệu lực nên
+    `DELETE /me` gọi lại được, và vòng sau nhặt đúng phần còn sót (hội thoại còn trong PostgreSQL). Mỗi lô: xóa vector
+    TRƯỚC, hàng PostgreSQL SAU. Bước cuối: xóa vector của hội thoại còn sót, rồi trong MỘT transaction xóa nốt hội thoại
+    (gồm hội thoại mới tạo xen vào), mọi phiên và dòng người dùng (nếu không, khóa ngoại SET NULL sẽ biến hội thoại sót
+    thành hội thoại khách mà vẫn còn dữ liệu). Vector của hội thoại tạo sát bước cuối được `SemanticMemory.sync` dọn qua
+    `conversation_exists` (rag/semantic_memory.py) vì dòng hội thoại đã mất."""
     purger, total = VectorPurger(qdrant, memory_collection), Counts()
     try:
-        async with sessionmaker() as session, session.begin():
-            await session.execute(delete(AuthSession).where(AuthSession.user_id == user_id))
         while True:
             async with sessionmaker() as session:
                 found = select(Conversation.id).where(Conversation.user_id == user_id).limit(BATCH_SIZE)
@@ -105,14 +106,25 @@ async def delete_account(sessionmaker, qdrant, memory_collection: str, user_id: 
             await purger.delete_conversations(ids)
             async with sessionmaker() as session, session.begin():
                 total.add(await _delete_conversations(session, ids, count=False))
+        async with sessionmaker() as session:
+            remaining = list(
+                (await session.execute(select(Conversation.id).where(Conversation.user_id == user_id))).scalars()
+            )
+        await purger.delete_conversations(remaining)
         async with sessionmaker() as session, session.begin():
             leftover = delete(Conversation).where(Conversation.user_id == user_id).returning(Conversation.id)
             stragglers = list((await session.execute(leftover)).scalars())
             total.conversations += len(stragglers)
+            total.sessions = (await session.execute(delete(AuthSession).where(AuthSession.user_id == user_id))).rowcount
             total.users = (await session.execute(delete(User).where(User.id == user_id))).rowcount
-        await purger.delete_conversations(stragglers)  # hiếm: hội thoại tạo xen giữa vòng lặp và giao dịch cuối
     except SQLAlchemyError:
         raise UnavailableError("Không xóa được tài khoản. Hãy thử lại.") from None
+    late = [i for i in stragglers if i not in set(remaining)]
+    if late:  # hiếm: tạo giữa lần chọn cuối và transaction cuối; người dùng đã mất nên chỉ dọn best-effort
+        try:
+            await purger.delete_conversations(late)
+        except UnavailableError:
+            log.warning("late memory vectors left for the indexer cleanup", extra={"conversations": len(late)})
     return total
 
 
