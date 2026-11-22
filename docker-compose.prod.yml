@@ -50,6 +50,10 @@ services:
       AUTH_REDIRECT_URI: https://${DOMAIN:-tarnished.liemdai.io.vn}/api/v1/auth/discord/callback
       AUTH_COOKIE_SECURE: "true"
       RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-false}
+      # Reranker chạy trong api (cross-encoder MiniLM-L12 ONNX, không key): Hybrid + L12 là cấu hình TV3 chọn. Tắt: RAG_RERANKER_ENABLED=false.
+      # Model phải có sẵn trong backend/models/fastembed trước deploy (docs/production.md mục 4.1); thiếu thì giữ thứ tự RRF.
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-true}
+      RAG_RERANKER_PROVIDER: ${RAG_RERANKER_PROVIDER:-local}
     volumes:
       - ./backend/models:/app/models
     security_opt: ["no-new-privileges:true"]

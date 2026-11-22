@@ -27,6 +27,7 @@ bot Discord ──────────────────────�
 
 Quyết định đáng biết:
 
+- **Cổng nội bộ 18000 của api là hợp đồng cố định, không phải biến cấu hình.** Nó nằm ở bốn nơi phải cùng giá trị: `backend/Dockerfile` (`--port`, `EXPOSE`), `infra/caddy/snippets.caddy` (`reverse_proxy api:18000`), healthcheck và `BOT_API_URL` trong `docker-compose.yml` (mỗi nơi có comment trỏ về đây). `backend/tests/unit/test_ports.py` kiểm chúng khớp nhau. Đổi cổng = sửa cả bốn nơi trong cùng một commit, không thêm biến môi trường (sai lệch giữa các nơi chỉ lộ ra khi deploy). `API_PORT` trong `.env` chỉ dành cho chạy api ngoài Docker.
 - `ENVIRONMENT`, `CHAT_MODE`, `CHAT_PERSISTENCE` đặt **cứng** trong overlay (cờ `CHAT_AGENT_ENABLED` đã bị bỏ: `rag` luôn dùng Agent); `WEB_URL`, `CORS_ORIGINS`, `AUTH_REDIRECT_URI` **suy ra từ `DOMAIN`**. Đặt chúng ở `.env` không có tác dụng, nên một `.env` sao từ máy dev không làm production chạy mock hay `dev`.
 - Log container ghi bằng driver `local` (xoay vòng 5×20 MB) để còn xem được khi sự cố. API không ghi access log và Caddy không ghi access log mặc định, nên IP người dùng không lưu lại. Muốn tắt hẳn: `DOCKER_LOG_DRIVER=none`.
 - uvicorn chạy với `--forwarded-allow-ips "*"` (trong `backend/Dockerfile`): chấp nhận được vì api không công khai cổng, chỉ Caddy trong mạng Docker chạm tới nó, và Caddy ghi đè `X-Forwarded-For`. Nếu sau này có thêm service khác trong mạng, đổi `*` thành IP của Caddy.
@@ -37,6 +38,8 @@ Quyết định đáng biết:
 ## 2. Ngân sách tài nguyên
 
 Như staging: api 3 GB / 2,5 CPU, Qdrant 1 GB / 1,5, PostgreSQL 1 GB / 1,0, Redis 192 MB / 0,5, bot 192 MB / 0,5, Caddy 64 MB / 0,5. Tổng giới hạn RAM ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành. Số liệu đo thật ở [`staging.md`](staging.md) mục 7; nếu OOM giảm `API_WORKERS=1` trước.
+
+**Reranker chạy trong api (Hybrid + MiniLM-L12 ONNX, mặc định của overlay prod):** mỗi worker uvicorn nạp một bản model riêng, tốn thêm **~0,3-0,4 GB RAM mỗi worker** (đo process đầy đủ ở handover TV3: ~1,27 GB so với ~0,9 GB khi chỉ RRF). Với `API_WORKERS=2`, thêm ~0,6-0,8 GB vào trần `mem_limit: 3g` của api: còn dư nhưng không rộng, theo dõi `docker stats` sau deploy đầu và giảm `API_WORKERS=1` hoặc đặt `RAG_RERANKER_ENABLED=false` nếu api gần chạm trần. Model **phải có sẵn trong `backend/models/fastembed` (cache FastEmbed) trước khi deploy**: container chỉ đọc thư mục này nên không tự tải được; thiếu model thì reranker lỗi nạp và giữ thứ tự RRF (câu trả lời vẫn chạy, chất lượng tìm giảm; xem log `jina_reranker_outcome`). Chuẩn bị trên máy dev: chạy một lần reranker (`eval/measure_retrieval.py --rerank`, hoặc nạp `Xenova/ms-marco-MiniLM-L-12-v2` qua FastEmbed với `RAG_MODELS_DIR=models/fastembed`) để cache có model (~120 MB), rồi `rsync` như mục 4.1.
 
 ## 3. Chuẩn bị một lần
 
@@ -98,6 +101,8 @@ Làm như [`staging.md`](staging.md) mục 4, thay `docker-compose.staging.yml` 
 # Máy dev: model E5 (~465 MB)
 rsync -a backend/models/ deploy@<ip-vps>:~/Index-Beast/backend/models/
 ```
+
+`backend/models` phải chứa cả model encoder E5 lẫn model reranker L12 (mục 2). `deploy.sh` cấp quyền ĐỌC cho uid 10001 (user `app` của container api) trên `backend/data` và `backend/models` bằng ACL (`setfacl -R -m u:10001:rX`, cả ACL mặc định cho file mới), hoặc `chgrp -R 10001` + `g+rX` nếu máy không có `setfacl`; không mở quyền cho "other" nên dữ liệu không world-readable. Nên `sudo apt install acl` trên VPS. Quyền "other" có sẵn từ lần deploy cũ (bản trước dùng `chmod o+r`) không tự bị gỡ: thu lại một lần bằng `chmod -R o-rwx backend/data backend/models` sau khi ACL đã đặt.
 
 Chạy deploy lần đầu để có schema và Qdrant (api sẽ chưa có dữ liệu, trả lời rỗng cho tới khi nạp xong):
 
@@ -173,13 +178,21 @@ Tạo thư mục `~/indexbeast-backups` trước (`mkdir -p` rồi `chmod 700`),
 
 ```bash
 scripts/restore.sh list
-scripts/restore.sh pg ~/indexbeast-backups/pg-20261122-031500.dump          # dừng api/bot, DROP SCHEMA public, pg_restore, bật lại (bot chỉ bật nếu có DISCORD_TOKEN)
+scripts/restore.sh pg ~/indexbeast-backups/pg-20261122-031500.dump          # nạp DB tạm, kiểm tra, rồi dừng api/bot, đổi tên DB, bật lại (bot chỉ bật nếu có DISCORD_TOKEN)
 scripts/restore.sh qdrant ~/indexbeast-backups/qdrant-lore_chunks-20261122-040000.snapshot
 ```
 
 Cả hai hỏi xác nhận (gõ `restore`) và chỉ nhận file nằm trong `BACKUP_DIR`.
 
-Khôi phục PostgreSQL xóa hẳn schema `public` (`DROP SCHEMA public CASCADE`) rồi nạp lại, không dùng `pg_restore --clean`: `--clean` chỉ xóa bảng có trong bản dump nên bảng do migration mới hơn sẽ còn sót, và `alembic upgrade head` của api sẽ lỗi "relation already exists" rồi restart liên tục. Sau khôi phục api chạy lại migration để đưa schema về khớp mã hiện tại.
+Khôi phục PostgreSQL **không đụng DB đang chạy cho tới khi bản khôi phục đã được kiểm chứng**:
+
+1. Tạo lại DB tạm `${POSTGRES_DB}_restore` (xóa bản cũ cùng tên nếu có), `pg_restore --no-owner --exit-on-error` vào đó. Lúc này api/bot vẫn chạy.
+2. Kiểm tra DB tạm: `pg_restore` thoát 0, có bảng `alembic_version` và các bảng lõi (`documents`, `chunks`, `conversations`, `messages`); in phiên bản alembic và số dòng từng bảng để đối chiếu với DB hiện tại.
+3. Chỉ khi đạt: dừng api/bot, ngắt kết nối còn lại, `ALTER DATABASE` đổi `${POSTGRES_DB}` thành `${POSTGRES_DB}_prev_<thời-gian>` rồi `${POSTGRES_DB}_restore` thành `${POSTGRES_DB}`, bật lại api (bot nếu có `DISCORD_TOKEN`). Api chạy `alembic upgrade head` nên schema khớp mã hiện tại.
+
+Lỗi ở bước 1-2 thì DB đang chạy nguyên vẹn và dịch vụ không dừng. Lỗi lúc đổi tên thì script tự đưa DB cũ về chỗ cũ và bật lại dịch vụ. Cách này cũng thay `DROP SCHEMA public` trước đây, và không dùng `pg_restore --clean` (chỉ xóa bảng có trong dump nên bảng của migration mới hơn còn sót, `alembic upgrade head` báo "relation already exists").
+
+**Quay lại DB trước khi khôi phục** (script in sẵn lệnh): `docker compose ... stop api bot`, vào `psql -d postgres`, ngắt kết nối tới `${POSTGRES_DB}`, `ALTER DATABASE "<db>" RENAME TO "<db>_bad"; ALTER DATABASE "<db>_prev_<thời-gian>" RENAME TO "<db>";`, rồi `up -d api bot`. DB `_prev_` chiếm đĩa: sau khi yên tâm thì `DROP DATABASE "<db>_prev_<thời-gian>";`. Mỗi lần khôi phục thêm một DB `_prev_`, nhớ dọn. Cần dung lượng đĩa dư gấp đôi DB trong lúc khôi phục.
 
 **Thử khôi phục một lần (thẻ 5.3, bắt buộc trước khi tin backup):** sau khi chạy `backup.sh all` lần đầu, (1) ghi số dòng bảng chính: `docker compose ... exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select count(*) from chunks"'`; (2) `scripts/restore.sh pg <dump mới nhất>`; (3) đếm lại, phải bằng; (4) hỏi một câu RAG qua web để chắc api đọc được. Làm trước khi mở cho người dùng thật, hoặc trên một VPS tạm. Với Qdrant: `restore.sh qdrant` bản mới nhất rồi hỏi một câu RAG. Ghi ngày và kết quả vào handover.
 
@@ -196,6 +209,7 @@ Khôi phục PostgreSQL xóa hẳn schema `public` (`DROP SCHEMA public CASCADE`
 | Triệu chứng | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
 | Trình duyệt báo chứng chỉ sai / không vào được | DNS chưa trỏ, cổng 80 bị chặn, Let's Encrypt giới hạn | `dig`, `ufw status`, `docker compose ... logs caddy`; đợi, đừng deploy dồn dập |
+| `deploy.sh` thoát 1 sau "CHƯA qua được HTTPS" | DNS chưa trỏ hoặc Caddy chưa lấy được chứng chỉ | Dịch vụ đã chạy nhưng chưa tới được người dùng nên deploy tính là lỗi. Lần deploy ĐẦU (bootstrap chứng chỉ): `ALLOW_HTTPS_PENDING=1 scripts/deploy.sh` (cảnh báo và thoát 0); sau đó kiểm tra HTTPS bằng tay. Các lần sau không dùng cờ này |
 | `deploy.sh`: ".env đang có quyền ..." | quyền file | `chmod 600 .env` |
 | `deploy.sh`: "Working tree có thay đổi" | sửa tay trên VPS | `git status`; hoàn tác (`git restore <file>`) hoặc commit từ máy dev. Không sửa tay trên VPS |
 | api không lên, log có `change-me` | `ENVIRONMENT=prod` từ chối giá trị mẫu | điền biến đã nêu trong log (chỉ in tên biến) |
@@ -205,5 +219,6 @@ Khôi phục PostgreSQL xóa hẳn schema `public` (`DROP SCHEMA public CASCADE`
 | Đăng nhập xong vẫn như chưa đăng nhập | cookie không `Secure`, hoặc truy cập qua `http://` | luôn dùng https; xem `AUTH_COOKIE_SECURE` (overlay đặt true) |
 | Chữ trả lời hiện một lần thay vì chạy dần | Cloudflare/proxy trung gian đệm SSE | tắt proxy (đám mây xám) hoặc tắt buffering cho `/api/*` |
 | Console trình duyệt báo `Refused to ...` (CSP) | nguồn ngoài chưa được cho phép | xem directive trong `infra/Caddyfile.prod`; nới tối thiểu |
+| `restore.sh pg`: dừng ở bước 1-3 với "DB đang chạy chưa bị đụng" | dump hỏng/thiếu bảng lõi, hoặc hết đĩa | dịch vụ vẫn chạy; xem thông báo, thử bản dump khác. DB tạm `_restore` tự bị xóa ở lần chạy sau |
 | `restore.sh`: "File phải nằm trong ..." | file ngoài `BACKUP_DIR` | `mv` file vào `BACKUP_DIR` (hoặc đặt `BACKUP_DIR`) |
 | Hết dung lượng đĩa | log, ảnh Docker cũ, backup | `docker system df`, `docker image prune -f`, giảm `KEEP_DAILY` |

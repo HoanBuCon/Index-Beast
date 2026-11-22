@@ -1,5 +1,11 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Sửa review hệ thống: vận hành, restore an toàn, deploy, cổng 18000, reranker trong compose (22/11/2026)](2026-11-22_s5-tv1_sua-review-ops.md)
+- [TV1 · Sửa review hệ thống: quyền đọc lịch sử chế độ memory, xóa tài khoản gọi lại được (22/11/2026)](2026-11-22_s5-tv1_sua-review-rieng-tu.md)
+- [TV1 · Sửa review hệ thống: chính sách domain web, catalog ảnh, phân lớp adapter, schema Qdrant (22/11/2026)](2026-11-22_s5-tv1_sua-review-rag-config.md)
+- [TV1 · Sửa review hệ thống: lịch sử theo tài khoản trên web (22/11/2026)](2026-11-22_s5-tv1_sua-review-web.md)
+- [TV1 · Sửa review hệ thống: redact ID trong /ask, cache kênh, thời hạn link chia sẻ (22/11/2026)](2026-11-22_s5-tv1_sua-review-bot.md)
+- [TV1 · Sửa review hệ thống: giới hạn trang của ingest update, tokenizer dùng chung (22/11/2026)](2026-11-22_s5-tv1_sua-review-ingest.md)
 - [TV3 · Đo lại golden 200 với reranker L12 chạy trên máy, đủ 9 cấu hình (24/11/2026)](2026-11-24_s5-tv3_do-l12-ablation.md)
 - [TV3 · Reranker chạy trên máy (MiniLM-L12) thay API Jina, chống tràn RAM (24/11/2026)](2026-11-24_s5-tv3_reranker-cuc-bo.md)
 - [TV3 (làm thay TV2) · Duyệt golden set 200 câu, bổ sung câu gõ nhầm (24/11/2026)](2026-11-24_s5-tv3_duyet-golden-200.md)
