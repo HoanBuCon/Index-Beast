@@ -61,7 +61,7 @@ Người dùng báo ở cửa sổ ~530 px (chia đôi màn hình): tiêu đề 
 
 ## Ghi chú dưới ô nhập (22/11)
 
-Theo yêu cầu người dùng, ghi chú dưới ô chat (`ChatPage.tsx`, `.chat-ai-note`) đổi từ "AI có thể mắc sai sót." thành **"INDEX-BEAST có thể mắc sai sót."** Người dùng gõ "sai xót"; dùng chính tả đúng "sai sót". Các câu tương tự ở trang chia sẻ (`SharedAnswerPage.tsx`), trang Về dự án và lệnh `/about`, `/help` của bot giữ nguyên vì không nằm trong yêu cầu. Đã xem trên browser; `npm test` 79/79, `build`, `format:check` đạt.
+Theo yêu cầu người dùng, ghi chú dưới ô chat (`ChatPage.tsx`, `.chat-ai-note`) đổi từ "AI có thể mắc sai sót." thành **"INDEX BEAST có thể mắc sai sót."** (bản đầu ghi nhầm "INDEX-BEAST", người dùng sửa lại bỏ dấu gạch ngang). Người dùng gõ "sai xót"; dùng chính tả đúng "sai sót". Các câu tương tự ở trang chia sẻ (`SharedAnswerPage.tsx`), trang Về dự án và lệnh `/about`, `/help` của bot giữ nguyên vì không nằm trong yêu cầu. Đã xem trên browser; `npm test` 79/79, `build`, `format:check` đạt.
 
 ## Bố cục điện thoại: thanh tiêu đề + ngăn kéo (22/11)
 
