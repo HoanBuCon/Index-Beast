@@ -13,6 +13,16 @@ function cut(text: string, limit: number) {
   return `${text.slice(0, end)}…`;
 }
 
+// Thời hạn còn lại của link chia sẻ theo expires_at của API ("6 giờ", "45 phút"); null nếu không đọc được.
+export function shareTtlLabel(expiresAt: string, now: number = Date.now()): string | null {
+  const ms = Date.parse(expiresAt) - now;
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return `${Math.max(1, minutes)} phút`;
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours} giờ` : `${Math.round(hours / 24)} ngày`;
+}
+
 export function answerEmbed(question: string, response: ChatResponse) {
   const lines: string[] = [];
   let used = 0;

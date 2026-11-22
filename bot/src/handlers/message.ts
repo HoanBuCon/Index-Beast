@@ -13,6 +13,7 @@ import { answerEmbeds } from "../utils/format.ts";
 import type { GuildChannelCache } from "../utils/guildChannelCache.ts";
 import { externalRef } from "../utils/identity.ts";
 import { errorName, log } from "../utils/logger.ts";
+import { sanitizeMentions } from "../utils/redact.ts";
 import { createUserRateLimiter } from "../utils/rateLimit.ts";
 import type { UserRateLimiter } from "../utils/rateLimit.ts";
 import { FollowupError, followupThreads } from "../interactions/followup.ts";
@@ -20,14 +21,6 @@ import type { FollowupThreads } from "../interactions/followup.ts";
 
 // Không bao giờ ping ai: tên người dùng/role trong câu trả lời chỉ là chữ.
 const NO_MENTIONS = { parse: [] as never[], repliedUser: false };
-
-// Không lưu ID Discord thô của người khác (NFR-PRIV-01): thay bằng chỗ giữ chỗ trung tính trước khi gửi backend/LLM.
-export function sanitizeMentions(text: string): string {
-  return text
-    .replace(/<@[!&]?\d+>/g, "@ai đó")
-    .replace(/<#\d+>/g, "#kênh")
-    .replace(/<a?:(\w+):\d+>/g, ":$1:");
-}
 
 export interface MessageHandlerDeps {
   cache?: Pick<GuildChannelCache, "has">;
