@@ -1,4 +1,4 @@
-// TV4: Google bị khóa (chưa có backend), Discord chỉ hiện khi capabilities báo auth_available; không có phiên giả.
+// TV4: provider chỉ bật theo capabilities; điều hướng dùng thử độc lập với OAuth.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
@@ -12,12 +12,12 @@ test("login preview offers clickable providers without pretending to authenticat
     const { default: LoginPage } = await server.ssrLoadModule("/src/pages/LoginPage.tsx");
     const { default: App } = await server.ssrLoadModule("/src/App.tsx");
     const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(LoginPage)));
-    // SSR chưa chạy effect nên chưa biết auth_available: chỉ còn nút Google bị khóa, không có Discord giả.
-    assert.equal((html.match(/<button\b/g) ?? []).length, 1);
+    // SSR chưa chạy effect, cả hai provider đều chưa khả dụng.
+    assert.equal((html.match(/<button\b/g) ?? []).length, 2);
     assert.match(html, /<button\b[^>]*disabled/);
     assert.match(html, /Đăng nhập bằng Google/);
-    assert.match(html, /sắp có/);
-    assert.doesNotMatch(html, /Đăng nhập bằng Discord/);
+    assert.match(html, /chưa khả dụng/);
+    assert.match(html, /Đăng nhập bằng Discord/);
     assert.match(html, /Đăng nhập hiện chưa khả dụng/);
     assert.match(html, /href="\/chat"[^>]*>[\s\S]*?<span>Dùng thử/);
     assert.doesNotMatch(html, /login-footer|login-guest-note|class="login-availability"/);

@@ -8,6 +8,7 @@ import type { AuthUser, MyConversation } from "../api/auth";
 export interface AuthState {
   loading: boolean;
   authAvailable: boolean;
+  googleAuthAvailable: boolean;
   searchAvailable: boolean;
   traceAvailable: boolean;
   user: AuthUser | null;
@@ -21,7 +22,12 @@ export interface AuthState {
 
 export function useAuth(): AuthState {
   const [loading, setLoading] = useState(true);
-  const [caps, setCaps] = useState({ authAvailable: false, searchAvailable: false, traceAvailable: false });
+  const [caps, setCaps] = useState({
+    authAvailable: false,
+    googleAuthAvailable: false,
+    searchAvailable: false,
+    traceAvailable: false,
+  });
   const [user, setUser] = useState<AuthUser | null>(null);
   const [myConversations, setMyConversations] = useState<MyConversation[]>([]);
   const [logoutError, setLogoutError] = useState("");

@@ -759,9 +759,184 @@ body {
   }
 }
 
+/* TV4 · Màn rộng: ảnh nền vẫn kéo đầy khung chat (100 % × 100 %), nên chữ logo kết thúc ở ~26 % chiều cao
+   khung. Neo lời chào ngay dưới mốc đó thay vì canh giữa dọc, để tiêu đề không chạm logo.
+   Cửa sổ thấp thu gọn khoảng cách để ô nhập và gợi ý vẫn nằm trong màn hình. */
+@media (min-width: 701px) {
+  .chat-empty .welcome {
+    margin: 0 auto auto;
+    padding-top: calc(100dvh * 0.29);
+    padding-bottom: 40px;
+  }
+}
+
+@media (min-width: 701px) and (max-height: 759px) {
+  .chat-empty .welcome {
+    padding-top: calc(100dvh * 0.28);
+    padding-bottom: 16px;
+  }
+
+  .chat-empty .welcome h1 {
+    margin-bottom: 6px;
+    font-size: 30px;
+  }
+
+  .chat-empty .welcome .intro {
+    margin-bottom: 18px;
+  }
+
+  .chat-empty .scope-note {
+    margin-top: 12px;
+  }
+}
+
+/* TV4 · Thanh tiêu đề điện thoại: chỉ hiện ở ≤ 700 px (xem media query bên dưới). */
+.mobile-topbar {
+  display: none;
+}
+
+.mobile-topbar__toggle-space {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.mobile-topbar__brand {
+  flex: 1;
+  min-width: 0;
+  color: var(--ui-text);
+  font-size: 16px;
+  letter-spacing: 0.05em;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mobile-topbar__brand strong {
+  color: #e0c58c;
+  font-weight: 600;
+}
+
+.mobile-topbar__new {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.mobile-topbar__new img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.mobile-topbar__new:hover:not(:disabled) {
+  border-color: #d9bc7855;
+  background: #d9bc7814;
+}
+
+.mobile-topbar__new:focus-visible {
+  outline: 2px solid #d9bc78;
+  outline-offset: -2px;
+}
+
+/* TV4 · Màn hẹp (cửa sổ chia đôi, tablet dọc): khung chat chỉ còn ~470–640 px.
+   Quy tắc 700 px trong index.css bị file này ghi đè, nên đặt lại ở đây.
+   Ảnh nền không kéo giãn dọc nữa: phủ theo chiều ngang, neo ở trên để chữ logo
+   nằm phía trên lời chào thay vì đè lên tiêu đề. */
+@media (max-width: 700px) {
+  /* Bố cục điện thoại: thanh tiêu đề trên cùng + nội dung rộng hết màn; không còn cột icon 62 px.
+     Sidebar chỉ hiện dưới dạng ngăn kéo phủ lên nội dung khi bấm nút menu (quy tắc 900 px ở trên). */
+  .workspace,
+  .workspace.sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  .workspace.sidebar-collapsed .sidebar {
+    display: none;
+  }
+
+  .workspace:not(.sidebar-collapsed) .sidebar {
+    width: min(300px, calc(100% - 56px));
+    padding-top: 76px;
+  }
+
+  .workspace > .chat-panel,
+  .workspace > .document-panel,
+  .workspace:not(.sidebar-collapsed) > .chat-panel,
+  .workspace:not(.sidebar-collapsed) > .document-panel {
+    grid-row: 2;
+    grid-column: 1;
+  }
+
+  .mobile-topbar {
+    display: flex;
+    grid-row: 1;
+    grid-column: 1;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    background: var(--ui-ground);
+    border-bottom: 1px solid var(--ui-rule);
+  }
+
+  .workspace > .sidebar-toggle {
+    top: 12px;
+    left: 12px;
+    width: 32px;
+    height: 32px;
+  }
+
+  /* Ngăn kéo đang mở: nút menu nằm trong đầu ngăn kéo, cùng hàng với logo. */
+  .workspace:not(.sidebar-collapsed) > .sidebar-toggle {
+    top: 24px;
+    left: 16px;
+  }
+
+  .workspace .chat-panel::before {
+    background-size: 100% auto;
+    background-position: center top;
+  }
+
+  /* Ảnh 1054×1459 phủ ngang khung chat (rộng 100vw); chữ logo kết thúc ở ~26 % chiều cao ảnh,
+     tức ~0,36 × chiều rộng. Neo lời chào ngay dưới đó thay vì canh giữa dọc (sẽ trượt lên logo). */
+  .chat-empty .welcome {
+    margin-top: 0;
+    padding: max(40px, calc(100vw * 0.38)) 20px 40px;
+  }
+
+  .chat-empty .welcome h1 {
+    font-size: 28px;
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
+  .chat-empty .welcome .intro {
+    margin-bottom: 28px;
+    font-size: 17px;
+  }
+
+  .chat-empty .suggestions {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .chat-empty .suggestions button {
+    min-height: 56px;
+    padding: 14px 20px;
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 520px) {
   .chat-empty .welcome {
-    padding: 36px 16px;
+    padding: max(36px, calc(100vw * 0.38)) 16px 36px;
   }
 
   .chat-empty .welcome h1 {

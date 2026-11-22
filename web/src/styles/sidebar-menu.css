@@ -220,29 +220,4 @@
   }
 }
 
-/* Tài khoản: tên Discord + Đăng xuất ở cuối thanh bên; thu gọn thì ẩn cùng các mục phụ. */
-.sidebar-account {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 4px;
-  font-size: 13px;
-  color: #b9bcae;
-}
-.sidebar-account__name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.sidebar-account button,
-.sidebar-account a {
-  flex-shrink: 0;
-  min-height: 32px;
-  padding: 4px 8px;
-  font-size: 12px;
-}
-.workspace.sidebar-collapsed .sidebar-account {
-  display: none;
-}
+/* Tài khoản dùng account.css: nút cuối sidebar luôn hiện, kể cả khi thu gọn. */

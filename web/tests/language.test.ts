@@ -44,7 +44,7 @@ test("UI renders on HTTP LAN without randomUUID, old English preference or block
     assert.match(render("invalid"), /TRÒ CHUYỆN MỚI/);
     assert.match(render(null, true), /TRÒ CHUYỆN MỚI/);
     assert.match(savedEnglish, /aria-label="VỀ DỰ ÁN"/);
-    assert.match(savedEnglish, /aria-label="QUẢN TRỊ"/);
+    assert.match(savedEnglish, /aria-label="Menu tài khoản: Khách"/);
     // Trạng thái rỗng chỉ có một ô nhập, nằm trước các gợi ý như bố cục tham khảo.
     const chat = renderToStaticMarkup(
       createElement(MemoryRouter, { initialEntries: ["/chat"] }, createElement(ChatPage)),
