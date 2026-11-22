@@ -3,6 +3,8 @@
 # Cổng chỉ mở trên 127.0.0.1 — ra Internet duy nhất qua Caddy (80/443).
 # Cổng phía máy = cổng gốc + 10000, lấy từ *_PORT trong .env. Bên trong mạng Docker, PostgreSQL/Qdrant/Redis
 # giữ cổng gốc (không ai bên ngoài chạm tới); api nghe 18000 (docs/quy_uoc.md → "Quy ước cổng").
+# 18000 là HỢP ĐỒNG CỐ ĐỊNH của container api, không phải biến cấu hình: backend/Dockerfile, infra/caddy/snippets.caddy,
+# healthcheck và BOT_API_URL dưới đây phải cùng giá trị (backend/tests/unit/test_ports.py kiểm; docs/production.md mục 1).
 # Biến ${...} lấy từ file .env ở gốc repo; mỗi service chỉ nhận đúng biến liệt kê trong `environment:`.
 
 name: index-beast
@@ -121,7 +123,13 @@ services:
       WEB_SEARCH_DOMAINS_MODE: ${WEB_SEARCH_DOMAINS_MODE:-prefer}
       RAG_RETRIEVAL_TIMEOUT_SECONDS: ${RAG_RETRIEVAL_TIMEOUT_SECONDS:-20}
       JINA_API_KEY: ${JINA_API_KEY:-}
-      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}   # prod overlay bật mặc định
+      RAG_RERANKER_PROVIDER: ${RAG_RERANKER_PROVIDER:-local}   # local = MiniLM-L12 ONNX trong api (không key); jina = API
+      RAG_RERANKER_LOCAL_MODEL: ${RAG_RERANKER_LOCAL_MODEL:-Xenova/ms-marco-MiniLM-L-12-v2}
+      RAG_RERANKER_LOCAL_THREADS: ${RAG_RERANKER_LOCAL_THREADS:-2}
+      RAG_RERANKER_LOCAL_MAX_CANDIDATES: ${RAG_RERANKER_LOCAL_MAX_CANDIDATES:-20}
+      RAG_RERANKER_LOCAL_MAX_CHARS: ${RAG_RERANKER_LOCAL_MAX_CHARS:-600}
+      RAG_RERANKER_LOCAL_BATCH_SIZE: ${RAG_RERANKER_LOCAL_BATCH_SIZE:-8}
       RAG_RERANKER_MODEL: ${RAG_RERANKER_MODEL:-jina-reranker-v2-base-multilingual}
       RAG_RERANKER_TIMEOUT_SECONDS: ${RAG_RERANKER_TIMEOUT_SECONDS:-3}
       RAG_RERANKER_MAX_CANDIDATES: ${RAG_RERANKER_MAX_CANDIDATES:-30}
@@ -131,7 +139,7 @@ services:
       RAG_BATCH_SIZE: ${RAG_BATCH_SIZE:-32}
       RAG_ENCODER_THREADS: ${RAG_ENCODER_THREADS:-2}
       RAG_IMAGES_ENABLED: ${RAG_IMAGES_ENABLED:-true}
-      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/clean_runs/s2-full-v2/images.csv}
+      RAG_IMAGES_CATALOG: ${RAG_IMAGES_CATALOG:-data/delivery/final/clean/images.csv}
       RAG_IMAGES_DOCUMENTS: ${RAG_IMAGES_DOCUMENTS:-data/chunk_runs/s2-full-v1/documents.jsonl}
       RAG_IMAGES_ROOT: ${RAG_IMAGES_ROOT:-data/media/blobs}
       RAG_IMAGES_MANIFESTS: ${RAG_IMAGES_MANIFESTS:-data/crawl_runs/s2-full-20261028/media}
@@ -144,6 +152,7 @@ services:
       qdrant: { condition: service_healthy }
       redis: { condition: service_healthy }
     healthcheck:
+      # 18000: cổng nội bộ cố định của api (xem đầu file)
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18000/api/v1/health')"]
       interval: 15s
       start_period: 60s
@@ -160,7 +169,7 @@ services:
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       API_SERVICE_TOKEN: ${API_SERVICE_TOKEN:-change-me}
-      BOT_API_URL: http://api:18000
+      BOT_API_URL: http://api:18000   # cổng nội bộ cố định của api (xem đầu file)
       WEB_URL: ${WEB_URL:-http://localhost:15173}
     depends_on:
       api: { condition: service_healthy }

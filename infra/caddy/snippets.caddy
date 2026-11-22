@@ -1,7 +1,8 @@
 # Đoạn dùng chung cho infra/Caddyfile, Caddyfile.staging, Caddyfile.prod (nạp bằng `import /etc/caddy/snippets.caddy`).
 # File này được COPY vào image Caddy ở infra/caddy.Dockerfile (cần `--build` khi sửa).
 
-# Proxy /api sang FastAPI
+# Proxy /api sang FastAPI. 18000 là cổng nội bộ CỐ ĐỊNH của container api (backend/Dockerfile, healthcheck và BOT_API_URL
+# trong docker-compose.yml phải khớp; backend/tests/unit/test_ports.py kiểm). Không đặt thành biến.
 (api_proxy) {
 	reverse_proxy api:18000 {
 		flush_interval -1    # SSE: đẩy token về trình duyệt ngay, không đệm

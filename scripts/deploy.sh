@@ -4,7 +4,9 @@
 #   scripts/deploy.sh              cập nhật nhánh hiện tại: git pull --ff-only (VPS nên đứng ở nhánh main)
 #   scripts/deploy.sh v1.0.1       checkout tag/commit/nhánh đó rồi deploy (rollback = deploy lại tag cũ)
 # Migration: api tự chạy `alembic upgrade head` khi khởi động (backend/Dockerfile).
-# Biến tùy chọn: SKIP_PRE_BACKUP=1 bỏ qua backup trước deploy; HEALTH_TIMEOUT=300 (giây) chờ api healthy.
+# Biến tùy chọn: SKIP_PRE_BACKUP=1 bỏ qua backup trước deploy; HEALTH_TIMEOUT=300 (giây) chờ api healthy;
+#   ALLOW_HTTPS_PENDING=1 chỉ cho lần deploy ĐẦU (DNS chưa trỏ / Caddy đang xin chứng chỉ): kiểm tra HTTPS lỗi thì cảnh báo và thoát 0.
+#   Mặc định kiểm tra HTTPS lỗi => thoát khác 0 (deploy chưa xong, chưa tới được người dùng).
 # Hướng dẫn đầy đủ và rollback: docs/production.md. Phụ trách: TV1 · [S5] Script deploy đơn giản
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -56,10 +58,22 @@ fi
 NEW=$(git rev-parse --short HEAD)
 git log -1 --format='    %h %s'
 
-# --- Bind mount phải tồn tại. Container (uid 10001) chỉ ĐỌC model và dữ liệu nên chỉ cần quyền đọc cho "other" ---
+# --- Bind mount phải tồn tại. Container api (uid 10001, backend/Dockerfile) chỉ ĐỌC model và dữ liệu ---
+# Chỉ cấp quyền đọc cho đúng uid/gid đó, KHÔNG mở cho "other" (dữ liệu không được world-readable). Các thư mục api mount:
+# backend/data (compose gốc) và backend/models (overlay prod). Ưu tiên ACL (user deploy không cần là root hay thuộc nhóm 10001);
+# không có setfacl thì dùng chgrp (cần root hoặc user deploy thuộc nhóm 10001). Quyền "other" đã có sẵn thì không bị gỡ ở đây.
+APP_ID=10001
 mkdir -p backend/data backend/models
-find backend/data backend/models -type d ! -perm -o+rx -exec chmod o+rx {} +
-find backend/data backend/models -type f ! -perm -o+r -exec chmod o+r {} +
+if command -v setfacl >/dev/null 2>&1; then
+  # rX: đọc mọi file, vào thư mục; -d: file mới tạo sau này (rsync, ingest) cũng đọc được
+  setfacl -R -m "u:${APP_ID}:rX" backend/data backend/models \
+    && setfacl -R -d -m "u:${APP_ID}:rX" backend/data backend/models \
+    || die "setfacl lỗi trên backend/data hoặc backend/models (hệ thống file có hỗ trợ ACL không?)."
+else
+  chgrp -R "$APP_ID" backend/data backend/models 2>/dev/null \
+    || die "Không chgrp được sang nhóm ${APP_ID}. Cài ACL (sudo apt install acl) rồi chạy lại, hoặc: sudo chgrp -R ${APP_ID} backend/data backend/models"
+  chmod -R g+rX backend/data backend/models
+fi
 
 # --- Backup trước khi đổi: migration chỉ đi tới, quay lại cần bản này (bỏ qua ở lần deploy đầu, khi chưa có PostgreSQL) ---
 if [ "${SKIP_PRE_BACKUP:-0}" != 1 ] && [ -n "$("${COMPOSE[@]}" ps -q --status running postgres 2>/dev/null)" ]; then
@@ -99,6 +113,12 @@ if curl -fsS --max-time 15 "https://${DOMAIN}/api/v1/health" >/dev/null; then
   echo "    OK: https://${DOMAIN}/api/v1/health"
 else
   echo "    CHƯA qua được HTTPS: DNS chưa trỏ về VPS hoặc Caddy đang xin chứng chỉ (xem: ${COMPOSE[*]} logs caddy)." >&2
+  if [ "${ALLOW_HTTPS_PENDING:-0}" = 1 ]; then
+    echo "    CẢNH BÁO: ALLOW_HTTPS_PENDING=1 nên bỏ qua. Deploy CHƯA được xác nhận từ ngoài; kiểm tra lại HTTPS trước khi báo xong." >&2
+  else
+    echo "Rollback: scripts/deploy.sh $PREV. Lần deploy đầu (chứng chỉ chưa có): chạy lại với ALLOW_HTTPS_PENDING=1 scripts/deploy.sh" >&2
+    exit 1
+  fi
 fi
 
 echo

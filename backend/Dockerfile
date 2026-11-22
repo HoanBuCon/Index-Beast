@@ -25,6 +25,7 @@ USER app
 # Migration lỗi thì container thoát và restart lặp lại: lỗi hiện rõ trong log, không chạy trên schema cũ.
 # Lệnh khác (`docker compose run --rm api python -m ingest ...`, `alembic ...`) ghi đè CMD nên không bị ảnh hưởng.
 # Số worker: biến WEB_CONCURRENCY (compose đặt từ API_WORKERS trong .env)
-# Cổng nội bộ 18000 (không dùng 8000 mặc định của uvicorn — docs/quy_uoc.md → "Quy ước cổng")
+# Cổng nội bộ 18000 là hợp đồng CỐ ĐỊNH (không có biến): infra/caddy/snippets.caddy, healthcheck và BOT_API_URL trong compose phải khớp
+# (backend/tests/unit/test_ports.py kiểm; docs/production.md mục 1). Không dùng 8000 mặc định của uvicorn (docs/quy_uoc.md → "Quy ước cổng").
 EXPOSE 18000
 CMD ["sh", "-c", "alembic upgrade head && exec uvicorn --factory app.main:create_app --host 0.0.0.0 --port 18000 --proxy-headers --forwarded-allow-ips '*' --no-access-log"]
