@@ -93,6 +93,37 @@ test("ask thread reference uses channel ID without raw user identity", async () 
   }).execute(mock.value);
 });
 
+test("ask redacts Discord user/role/channel/emoji IDs before sending the question to the backend", async () => {
+  const mock = interaction(
+    "  <@123456789012345678> <@&222222222222222222> ở <#333333333333333333> <a:dance:444444444444444444>?  ",
+  );
+  let sent = "";
+  await createAskCommand(async (body) => {
+    sent = body.message;
+    return response;
+  }).execute(mock.value);
+  assert.equal(sent, "@ai đó @ai đó ở #kênh :dance:?");
+});
+
+test("share notices use the TTL from expires_at, not a hardcoded 24 hours", async () => {
+  const mock = interaction("Marika?");
+  await createAskCommand(
+    async () => response,
+    {
+      webUrl: "https://example.test",
+      createShare: async () => ({
+        token: "a".repeat(43),
+        expires_at: new Date(Date.now() + 6 * 3600_000 + 30_000).toISOString(),
+      }),
+    },
+    createFollowupThreads(),
+  ).execute(mock.value);
+  const payload = JSON.stringify(mock.replies[0]);
+  assert.match(payload, /trong 6 giờ/);
+  assert.match(payload, /web · 6 giờ/);
+  assert.doesNotMatch(payload, /24 giờ/);
+});
+
 test("blank and oversized questions never call backend", async () => {
   for (const question of ["  ", "x".repeat(2001)]) {
     const mock = interaction(question);

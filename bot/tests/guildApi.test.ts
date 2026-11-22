@@ -116,6 +116,29 @@ test("channel cache fetches once per TTL, shares in-flight loads, serves stale o
   await assert.rejects(cold.has(GUILD, CHANNEL));
 });
 
+test("a load in flight before invalidate() cannot write the old channel set back", async () => {
+  let current = ["old"];
+  const gates: (() => void)[] = [];
+  const cache = createGuildChannelCache(async () => {
+    const snapshot = [...current];
+    await new Promise<void>((resolve) => gates.push(resolve));
+    return snapshot;
+  });
+  const stale = cache.has(GUILD, "old");
+  await Promise.resolve();
+  current = ["new"];
+  cache.invalidate(GUILD); // /setup đổi cấu hình trong lúc lần tải cũ còn chạy
+  const fresh = cache.has(GUILD, "new");
+  await Promise.resolve();
+  assert.equal(gates.length, 2, "invalidate drops the in-flight load, so has() starts a new one");
+  gates[1]();
+  assert.equal(await fresh, true);
+  gates[0](); // lần tải cũ xong muộn hơn
+  await stale;
+  assert.equal(await cache.has(GUILD, "new"), true, "old result must not overwrite the fresh entry");
+  assert.equal(await cache.has(GUILD, "old"), false);
+});
+
 test("rate limiter allows max per window, warns once, then denies and recovers", () => {
   let now = 0;
   const limiter = createUserRateLimiter({ max: 2, windowMs: 1000, now: () => now });

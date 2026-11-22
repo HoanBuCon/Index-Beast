@@ -6,9 +6,10 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, SlashCommand
 import { ApiError, createApiClient } from "../api/client.ts";
 import type { ChatRequest, ChatResponse } from "../api/types.ts";
 import { MAX_MESSAGE_CHARS } from "../api/types.ts";
-import { answerEmbeds } from "../utils/format.ts";
+import { answerEmbeds, shareTtlLabel } from "../utils/format.ts";
 import { externalRef } from "../utils/identity.ts";
 import { errorName, log } from "../utils/logger.ts";
+import { sanitizeMentions } from "../utils/redact.ts";
 import type { Command } from "./index.ts";
 import { loadWebUrl } from "../config.ts";
 import type { AnswerShareCreated } from "../api/types.ts";
@@ -40,7 +41,8 @@ export function createAskCommand(
       await interaction.deferReply();
       const requestId = randomUUID();
       try {
-        const question = interaction.options.getString("question", true).trim();
+        // Cùng mức redact với tin nhắn thường: không gửi ID Discord thô tới backend.
+        const question = sanitizeMentions(interaction.options.getString("question", true)).trim();
         if (!question || [...question].length > MAX_MESSAGE_CHARS) {
           await interaction.editReply({
             content: `Câu hỏi cần có từ 1 đến ${MAX_MESSAGE_CHARS} ký tự.`,
@@ -88,16 +90,20 @@ export function createAskCommand(
             if (!/^[A-Za-z0-9_-]{43}$/.test(share.token)) throw new Error("Invalid share token");
             const url = new URL("/answer", webUrl);
             url.hash = share.token;
+            // Thời hạn lấy từ API (expires_at), không cố định trong bot.
+            const ttl = shareTtlLabel(share.expires_at);
             components.push(
               new ActionRowBuilder<ButtonBuilder>().addComponents(
                 new ButtonBuilder()
                   .setStyle(ButtonStyle.Link)
-                  .setLabel("Xem đầy đủ trên web · 24 giờ")
+                  .setLabel(ttl ? `Xem đầy đủ trên web · ${ttl}` : "Xem đầy đủ trên web")
                   .setURL(url.href),
               ),
             );
             const footer = first.data.footer?.text;
-            first.setFooter({ text: `${footer ? `${footer} ` : ""}Ai có link có thể đọc câu trả lời trong 24 giờ.` });
+            first.setFooter({
+              text: `${footer ? `${footer} ` : ""}Ai có link có thể đọc câu trả lời ${ttl ? `trong ${ttl}` : "trong thời gian giới hạn"}.`,
+            });
           } catch (error) {
             // Link phụ lỗi không được làm mất câu trả lời đã nhận từ backend.
             log("warn", "Chưa tạo được link xem đầy đủ.", { request_id: requestId, error: errorName(error) });
