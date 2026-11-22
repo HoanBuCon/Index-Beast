@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -243,7 +244,7 @@ def run(run_dir, output, limit=None, *, gameplay=False, structured_tables=False,
         for s in sections:
             names[s["section"]].add(s["location"])
         for image in media["images"]:
-            name = __import__("re").sub(r"\s*\[\s*edit\s*\]", "", image["section"], flags=__import__("re").I).strip()
+            name = re.sub(r"\s*\[\s*edit\s*\]", "", image["section"], flags=re.I).strip()
             local = ""
             if image.get("path") and image["status"] in {"downloaded", "cached"}:
                 file = inside(root, image["path"])

@@ -83,6 +83,13 @@ def settings_of(config):
     return {**DEFAULTS, **config.get("update", {})}
 
 
+def require_positive(name, value):
+    """Giới hạn trang phải là số nguyên dương: bước lô <= 0 làm vòng lặp rỗng nhưng vẫn báo hoàn tất và đẩy mốc."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"{name} phải là số nguyên dương (positive integer), nhận {value!r}")
+    return value
+
+
 def category_names(page):
     return {c["title"].removeprefix("Category:") for c in page.get("categories", [])}
 
@@ -205,6 +212,9 @@ async def run_update(
     state=None,
 ):
     cfg = settings_of(config)
+    require_positive("batch_pages", cfg["batch_pages"] if batch_pages is None else batch_pages)
+    if max_pages is not None:
+        require_positive("max_pages", max_pages)
     path = state_path(config, source.name)
     if state is None:
         state = load_state(path)

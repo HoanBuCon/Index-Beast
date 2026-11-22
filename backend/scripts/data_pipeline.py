@@ -32,7 +32,6 @@ from pathlib import Path
 BACKEND = Path(__file__).resolve().parents[1]
 DATA = BACKEND / "data"
 DEFAULT_CRAWL_RUN = "s2-full-20261028"
-TOKENIZER_GLOB = "models/fastembed/models--intfloat--multilingual-e5-small/snapshots/*/tokenizer.json"
 
 
 def stamp() -> str:
@@ -79,10 +78,14 @@ def latest_chunk() -> Path | None:
 
 
 def tokenizer() -> Path:
-    found = sorted(BACKEND.glob(TOKENIZER_GLOB))
-    if not found:
+    # Cùng chỗ với `ingest update`: settings.rag_models_dir (một helper chung, không glob đường dẫn riêng).
+    from core.config import BACKEND_ROOT, get_settings
+    from ingest.update_builder import tokenizer_path
+
+    try:
+        return tokenizer_path(BACKEND_ROOT / get_settings().rag_models_dir)
+    except ValueError:
         sys.exit("Không tìm thấy tokenizer E5. Chạy index một lần để FastEmbed tải model, hoặc truyền --tokenizer.")
-    return found[-1]
 
 
 def need(path: Path | None, what: str) -> Path:
