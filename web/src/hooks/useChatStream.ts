@@ -8,16 +8,30 @@ import { replyEvents } from "../api/chat";
 import type { ChatOptions } from "../api/chat";
 import { createUuid } from "../lib/uuid.ts";
 import { answerSources } from "./chatState.ts";
+// turnId chỉ thuộc đầu vào của hook (dùng lại ID lượt khi thử lại), không đi vào option của transport.
+export interface SendOptions extends ChatOptions {
+  turnId?: string;
+}
 // S2 bổ sung JSON /chat, giữ nguyên luồng sự kiện SSE đã có cho S3.
-export function useChatStream(update: (conversation: Conversation) => void) {
+// identity: định danh người xem (id tài khoản hoặc "guest"); đổi định danh thì hủy luồng đang chạy và bỏ cập nhật muộn.
+export function useChatStream(update: (conversation: Conversation) => void, identity = "guest") {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const controller = useRef<AbortController | null>(null);
+  const generation = useRef(0);
   useEffect(() => () => controller.current?.abort(), []);
-  async function send(base: Conversation, text: string, options: ChatOptions = {}) {
+  useEffect(() => {
+    generation.current += 1;
+    controller.current?.abort();
+  }, [identity]);
+  async function send(base: Conversation, text: string, options: SendOptions = {}) {
     if (controller.current) return false;
     const abort = new AbortController();
     controller.current = abort;
+    const mine = generation.current;
+    const emit = (conversation: Conversation) => {
+      if (mine === generation.current) update(conversation);
+    };
     setBusy(true);
     setError("");
     const answerId = createUuid();
@@ -33,10 +47,10 @@ export function useChatStream(update: (conversation: Conversation) => void) {
         { id: answerId, role: "assistant", content: "", sources: [], incomplete: true },
       ],
     };
-    update(current);
+    emit(current);
     const changeAnswer = (patch: Partial<Conversation["messages"][number]>) => {
       current = { ...current, messages: current.messages.map((m) => (m.id === answerId ? { ...m, ...patch } : m)) };
-      update(current);
+      emit(current);
     };
     try {
       const request = {

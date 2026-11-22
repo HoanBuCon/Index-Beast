@@ -66,24 +66,30 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
       requestAnimationFrame(() => toggleRef.current?.focus());
     }
   }
-  const history = useConversations();
   const [mode, setMode] = useState<Conversation["mode"]>("api-stream");
   const [searchMode, setSearchMode] = useState<SearchMode>("auto");
   // Capabilities và đăng nhập tải một lần ở App (AuthContext), không gọi lặp ở đây.
   const auth = useAuthContext();
+  const userId = auth.user?.id ?? null;
+  // Chỉ hiện hội thoại khách hoặc của tài khoản hiện tại; bản của chủ khác bị dọn khi auth đã biết.
+  const history = useConversations({ loading: auth.loading, userId });
+  const identity = useRef(userId);
+  identity.current = userId;
   const { searchAvailable, traceAvailable } = auth;
   const [draft, setDraft] = useState(() => fresh("api-stream"));
   const [active, setActive] = useState(draft.id);
   const conversation = history.conversations.find((c) => c.id === active) ?? draft;
   // Hội thoại tạo khi đang đăng nhập được gắn chủ để xóa khỏi trình duyệt lúc đăng xuất/xóa tài khoản.
-  const stream = useChatStream((c) =>
-    history.update(
-      stampOwner(
-        history.conversations.find((x) => x.id === c.id),
-        c,
-        auth.user?.id,
+  const stream = useChatStream(
+    (c) =>
+      history.update(
+        stampOwner(
+          history.conversations.find((x) => x.id === c.id),
+          c,
+          auth.user?.id,
+        ),
       ),
-    ),
+    userId ?? "guest",
   );
   // Nhận hội thoại khách vào tài khoản chỉ sau khi người dùng đồng ý; chọn "Không" được nhớ trong phiên trình duyệt.
   const [declined, setDeclined] = useState(() => claimDeclined());
@@ -94,6 +100,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     if (!user) return;
     setClaiming(true);
     const done = new Set(await claimGuestConversations(claimable));
+    if (identity.current !== user.id) return setClaiming(false); // đổi danh tính khi đang chờ: bỏ kết quả
     claimable.filter((c) => c.serverId && done.has(c.serverId)).forEach((c) => history.update(markClaimed(c, user.id)));
     setClaiming(false);
   }
@@ -113,12 +120,14 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
   const [openError, setOpenError] = useState("");
   async function openRemote(id: string, title: string) {
     setOpenError("");
+    const requestedBy = userId;
     try {
       // Không gửi X-Conversation-Token: server nhận ra chủ sở hữu qua cookie phiên.
       const loaded = {
         ...toLocalConversation(await getConversation(id), title),
-        ...(auth.user ? { ownerUserId: auth.user.id } : {}),
+        ...(requestedBy ? { ownerUserId: requestedBy } : {}),
       };
+      if (identity.current !== requestedBy) return; // phản hồi của danh tính cũ: không ghi vào lịch sử hiện tại
       history.update(loaded);
       setActive(loaded.id);
       setMode(loaded.mode);

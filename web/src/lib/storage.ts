@@ -4,6 +4,7 @@
 import type { Conversation } from "../api/types";
 import { isSource, isConversationToken } from "../api/types.ts";
 import { readChatImages } from "../api/images.ts";
+import { readClarification } from "../api/clarification.ts";
 const KEY = "indexbeast.conversations.v1";
 export function readConversations(): Conversation[] {
   try {
@@ -37,15 +38,27 @@ export function readConversations(): Conversation[] {
       .slice(0, 30)
       .map((conversation) => ({
         ...conversation,
-        messages: conversation.messages.map((message) =>
-          message.images === undefined
-            ? message
-            : { ...message, images: readChatImages(message.images, message.sources) },
-        ),
+        messages: conversation.messages.map(restoreMessage),
       }));
   } catch {
     return [];
   }
+}
+// Ảnh và clarification lưu cũ/hỏng bị bỏ (giữ nguyên tin nhắn) để MessageList không vỡ khi render.
+function restoreMessage(message: Conversation["messages"][number]): Conversation["messages"][number] {
+  let { clarification, images, ...rest } = message;
+  if (clarification !== undefined) {
+    try {
+      clarification = readClarification(clarification);
+    } catch {
+      clarification = undefined;
+    }
+  }
+  return {
+    ...rest,
+    ...(images === undefined ? {} : { images: readChatImages(images, message.sources) }),
+    ...(clarification === undefined ? {} : { clarification }),
+  };
 }
 export function saveConversations(conversations: Conversation[]): boolean {
   try {
