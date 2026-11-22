@@ -5,22 +5,22 @@
 
 Đối chiếu với bốn mục tiêu đặt ra ở Mục~\ref{sec:objectives}, đề tài đã đạt được các kết quả sau:
 \begin{itemize}
-    \item \textbf{(M1) Kho tri thức}: xây dựng pipeline ngoại tuyến năm bước (thu thập, lọc, biến đổi, chia đoạn, lập chỉ mục) có cập nhật tăng dần; kho tri thức gồm 4.164 trang wiki với 34.138 đoạn tiếng Anh được lập chỉ mục lai E5 + BM25 trên Qdrant, mỗi đoạn mang đầy đủ nguồn, revision và metadata phạm vi.
-    \item \textbf{(M2) Agent và trích dẫn}: xây dựng một Agent dùng vòng lặp gọi công cụ gốc của LLM với chín công cụ, trong đó có công cụ thực thi mã Python trong sandbox để tính phân bổ chỉ số build; mọi câu trả lời có dữ kiện đều có trích dẫn được máy chủ kiểm nguyên văn (100\% câu trả về ở cấu hình mặc định có trích dẫn hợp lệ).
-    \item \textbf{(M3) Phục vụ người dùng}: hệ thống chạy trên web (SSE, xem nguồn, ảnh, đăng nhập Discord, trang quản trị) và Discord bot (\code{/ask}, nhắc tên, kênh tự trả lời), có bộ nhớ hội thoại hai tầng; không câu nào trong bộ đánh giá vượt hạn 45 giây; đã triển khai trên VPS bằng Docker Compose với HTTPS và CI.
-    \item \textbf{(M4) Đánh giá định lượng}: xây dựng bộ 200 câu song ngữ và đánh giá 11 cấu hình. Cấu hình mặc định đạt Recall@5 86,6\%, MRR@5 0,739, độ đúng hoàn toàn 97,8\%, faithfulness 96,2\%, độ trễ p50 6,6 giây.
+    \item (M1) Kho tri thức: xây dựng pipeline ngoại tuyến năm bước (thu thập, lọc, biến đổi, chia đoạn, lập chỉ mục) có cập nhật tăng dần; kho tri thức gồm 4.164 trang wiki với 34.138 đoạn tiếng Anh được lập chỉ mục lai E5 + BM25 trên Qdrant, mỗi đoạn mang đầy đủ nguồn, revision và metadata phạm vi.
+    \item (M2) Agent và trích dẫn: xây dựng một Agent dùng vòng lặp gọi công cụ gốc của LLM với chín công cụ, trong đó có công cụ thực thi mã Python trong sandbox để tính phân bổ chỉ số build; mọi câu trả lời có dữ kiện đều có trích dẫn được máy chủ kiểm nguyên văn (100\% câu trả về ở cấu hình mặc định có trích dẫn hợp lệ).
+    \item (M3) Phục vụ người dùng: hệ thống chạy trên web (SSE, xem nguồn, ảnh, đăng nhập Discord, trang quản trị) và Discord bot (\code{/ask}, nhắc tên, kênh tự trả lời), có bộ nhớ hội thoại hai tầng; không câu nào trong bộ đánh giá vượt hạn 45 giây; đã triển khai trên VPS bằng Docker Compose với HTTPS và CI.
+    \item (M4) Đánh giá định lượng: xây dựng bộ 200 câu song ngữ và đánh giá 11 cấu hình. Cấu hình mặc định đạt Recall@5 86,6\%, MRR@5 0,739, độ đúng hoàn toàn 97,8\%, faithfulness 96,2\%, độ trễ p50 6,6 giây.
 \end{itemize}
 Kết quả nổi bật nhất là hệ thống xử lý tốt câu tiếng Việt và câu gõ sai trên kho tri thức tiếng Anh (độ đúng 96,9\% với câu tiếng Việt và 98,0\% với câu gõ không chuẩn). Các kết quả chưa như kỳ vọng gồm hành vi với câu mơ hồ (70,6\%), độ trễ p95 (15,1 giây so với mục tiêu 10 giây) và việc chưa có kiểm thử tải thật.
 
 \plainheading{2. Bài học kinh nghiệm}
 
 \begin{itemize}
-    \item \textbf{Một Agent với đầy đủ ngữ cảnh tốt hơn nhiều vai rời rạc.} Khi mỗi bước chỉ thấy một phần thông tin, lỗi tích lũy và cần thêm nhiều luật để nối các bước; để một Agent tự quyết với bộ công cụ rõ ràng giúp hệ thống đơn giản và dễ gỡ lỗi hơn.
-    \item \textbf{Máy chủ chỉ nên giữ các kiểm tra tất định.} Những gì có đáp án đúng sai rõ (lược đồ, nguồn gốc điều kiện, ngân sách, trích dẫn nguyên văn) nên do mã đảm nhận; những gì phụ thuộc cách hiểu ngôn ngữ nên giao cho Agent. Thông báo lỗi cụ thể giúp Agent tự sửa thay vì thất bại.
-    \item \textbf{Để mô hình chọn mã đoạn trích thay vì chép đoạn trích.} Cách này loại bỏ hẳn lỗi trích dẫn không nguyên văn và giúp kiểm tra tự động trở nên đơn giản.
-    \item \textbf{Giao phép tính cho trình thông dịch.} LLM viết mã có \code{assert} đáng tin hơn LLM tính nhẩm; sandbox cho phép làm điều đó an toàn.
-    \item \textbf{Chất lượng kho tri thức quyết định trần chất lượng.} Một số câu build chỉ trả lời được sau khi bổ sung các trang lớp nhân vật có infobox đầy đủ; truy xuất tốt không thể bù cho dữ liệu thiếu.
-    \item \textbf{Cố định tập đo và cách đo trước khi so sánh.} Chạy tuần tự, cùng phiên bản mã và dữ liệu, và ghi rõ người chấm là điều kiện để số liệu có thể so sánh; ngay cả script chấm cũng cần được kiểm tra lại.
+    \item Một Agent với đầy đủ ngữ cảnh tốt hơn nhiều vai rời rạc. Khi mỗi bước chỉ thấy một phần thông tin, lỗi tích lũy và cần thêm nhiều luật để nối các bước; để một Agent tự quyết với bộ công cụ rõ ràng giúp hệ thống đơn giản và dễ gỡ lỗi hơn.
+    \item Máy chủ chỉ nên giữ các kiểm tra tất định. Những gì có đáp án đúng sai rõ (lược đồ, nguồn gốc điều kiện, ngân sách, trích dẫn nguyên văn) nên do mã đảm nhận; những gì phụ thuộc cách hiểu ngôn ngữ nên giao cho Agent. Thông báo lỗi cụ thể giúp Agent tự sửa thay vì thất bại.
+    \item Để mô hình chọn mã đoạn trích thay vì chép đoạn trích. Cách này loại bỏ hẳn lỗi trích dẫn không nguyên văn và giúp kiểm tra tự động trở nên đơn giản.
+    \item Giao phép tính cho trình thông dịch. LLM viết mã có \code{assert} đáng tin hơn LLM tính nhẩm; sandbox cho phép làm điều đó an toàn.
+    \item Chất lượng kho tri thức quyết định trần chất lượng. Một số câu build chỉ trả lời được sau khi bổ sung các trang lớp nhân vật có infobox đầy đủ; truy xuất tốt không thể bù cho dữ liệu thiếu.
+    \item Cố định tập đo và cách đo trước khi so sánh. Chạy tuần tự, cùng phiên bản mã và dữ liệu, và ghi rõ người chấm là điều kiện để số liệu có thể so sánh; ngay cả script chấm cũng cần được kiểm tra lại.
 \end{itemize}
 
 \plainheading{3. Tác động dự kiến}

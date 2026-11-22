@@ -55,11 +55,11 @@ Có hai cách dùng Transformer quan trọng với đề tài. Bộ mã hóa hai
 
 Mặc dù rất mạnh, LLM có một số hạn chế ảnh hưởng trực tiếp đến bài toán hỏi đáp về một trò chơi cụ thể:
 \begin{itemize}
-    \item \textbf{Kiến thức tĩnh.} Tri thức của mô hình bị ``đóng băng'' tại thời điểm thu thập dữ liệu huấn luyện; các bản vá cân bằng vũ khí hay nội dung mới của bản mở rộng có thể không có trong tham số.
-    \item \textbf{Ảo giác (hallucination).} Mô hình có thể sinh nội dung trôi chảy nhưng sai hoặc không có căn cứ~\cite{ji2023hallucination}. Với Elden Ring, lỗi điển hình là bịa vị trí vật phẩm, nhầm yêu cầu chỉ số vũ khí hoặc ghép nhầm hai nhân vật có tên gần giống.
-    \item \textbf{Không trích dẫn được nguồn.} Tri thức nằm phân tán trong hàng tỷ tham số nên mô hình không chỉ ra được câu trả lời dựa trên tài liệu nào, khiến người dùng khó kiểm chứng.
-    \item \textbf{Giới hạn ngữ cảnh.} Dù cửa sổ ngữ cảnh ngày càng dài, mô hình không dùng đều mọi vị trí: thông tin nằm giữa ngữ cảnh dài dễ bị bỏ qua hơn thông tin ở đầu hoặc cuối~\cite{liu2024lost}. Vì vậy đưa ít đoạn bằng chứng nhưng đúng trọng tâm thường tốt hơn đưa thật nhiều.
-    \item \textbf{Tính toán kém tin cậy.} Các phép cộng trừ nhiều bước, như phân bổ tám chỉ số sao cho tổng đúng bằng level cộng 79, dễ sai khi mô hình ``tính nhẩm'' trong văn bản.
+    \item Kiến thức tĩnh. Tri thức của mô hình bị ``đóng băng'' tại thời điểm thu thập dữ liệu huấn luyện; các bản vá cân bằng vũ khí hay nội dung mới của bản mở rộng có thể không có trong tham số.
+    \item Ảo giác (hallucination). Mô hình có thể sinh nội dung trôi chảy nhưng sai hoặc không có căn cứ~\cite{ji2023hallucination}. Với Elden Ring, lỗi điển hình là bịa vị trí vật phẩm, nhầm yêu cầu chỉ số vũ khí hoặc ghép nhầm hai nhân vật có tên gần giống.
+    \item Không trích dẫn được nguồn. Tri thức nằm phân tán trong hàng tỷ tham số nên mô hình không chỉ ra được câu trả lời dựa trên tài liệu nào, khiến người dùng khó kiểm chứng.
+    \item Giới hạn ngữ cảnh. Dù cửa sổ ngữ cảnh ngày càng dài, mô hình không dùng đều mọi vị trí: thông tin nằm giữa ngữ cảnh dài dễ bị bỏ qua hơn thông tin ở đầu hoặc cuối~\cite{liu2024lost}. Vì vậy đưa ít đoạn bằng chứng nhưng đúng trọng tâm thường tốt hơn đưa thật nhiều.
+    \item Tính toán kém tin cậy. Các phép cộng trừ nhiều bước, như phân bổ tám chỉ số sao cho tổng đúng bằng level cộng 79, dễ sai khi mô hình ``tính nhẩm'' trong văn bản.
 \end{itemize}
 Các mục tiếp theo trình bày những kỹ thuật được dùng để khắc phục từng hạn chế: truy xuất để bổ sung tri thức có nguồn, kiểm tra trích dẫn để chống bịa, chọn lọc bằng chứng để tiết kiệm ngữ cảnh, và giao phép tính cho trình thông dịch.
 
@@ -68,10 +68,10 @@ Các mục tiếp theo trình bày những kỹ thuật được dùng để kh�
 
 Prompt là văn bản đầu vào điều khiển hành vi của LLM. Trong ứng dụng hội thoại, prompt thường chia thành thông điệp hệ thống (system prompt) mô tả vai trò và quy tắc, thông điệp người dùng chứa câu hỏi và dữ liệu, và các thông điệp trợ lý trước đó. Một số kỹ thuật được hệ thống sử dụng:
 \begin{itemize}
-    \item \textbf{Tách chỉ dẫn và dữ liệu.} Quy tắc nằm ở system prompt; đoạn bằng chứng, lịch sử và kết quả công cụ được đóng gói trong JSON ở thông điệp người dùng và được khai báo rõ là ``dữ liệu không tin cậy'', giảm nguy cơ văn bản trong tài liệu ghi đè chỉ dẫn (prompt injection).
-    \item \textbf{Đầu ra có cấu trúc.} Yêu cầu mô hình trả về một đối tượng JSON theo lược đồ cố định (câu trả lời, danh sách bằng chứng, cờ thiếu thông tin) giúp máy chủ kiểm tra tự động từng trường.
-    \item \textbf{Suy luận từng bước.} Chain-of-thought~\cite{wei2022cot} khuyến khích mô hình nêu các bước trung gian trước khi kết luận, cải thiện chất lượng với câu hỏi nhiều bước. Một số API, trong đó có DeepSeek, cung cấp ``chế độ suy nghĩ'' (thinking mode) sinh phần suy luận riêng trước câu trả lời; chế độ này tốn thêm token và thời gian nên hệ thống chỉ bật khi Agent đánh giá câu hỏi thật sự cần cân nhắc.
-    \item \textbf{Gọi công cụ gốc (native tool calling).} Ứng dụng khai báo danh sách công cụ kèm lược đồ JSON Schema của tham số; mô hình trả về lời gọi công cụ thay vì văn bản; ứng dụng chạy công cụ và gửi kết quả lại cho mô hình ở lượt sau.
+    \item Tách chỉ dẫn và dữ liệu. Quy tắc nằm ở system prompt; đoạn bằng chứng, lịch sử và kết quả công cụ được đóng gói trong JSON ở thông điệp người dùng và được khai báo rõ là ``dữ liệu không tin cậy'', giảm nguy cơ văn bản trong tài liệu ghi đè chỉ dẫn (prompt injection).
+    \item Đầu ra có cấu trúc. Yêu cầu mô hình trả về một đối tượng JSON theo lược đồ cố định (câu trả lời, danh sách bằng chứng, cờ thiếu thông tin) giúp máy chủ kiểm tra tự động từng trường.
+    \item Suy luận từng bước. Chain-of-thought~\cite{wei2022cot} khuyến khích mô hình nêu các bước trung gian trước khi kết luận, cải thiện chất lượng với câu hỏi nhiều bước. Một số API, trong đó có DeepSeek, cung cấp ``chế độ suy nghĩ'' (thinking mode) sinh phần suy luận riêng trước câu trả lời; chế độ này tốn thêm token và thời gian nên hệ thống chỉ bật khi Agent đánh giá câu hỏi thật sự cần cân nhắc.
+    \item Gọi công cụ gốc (native tool calling). Ứng dụng khai báo danh sách công cụ kèm lược đồ JSON Schema của tham số; mô hình trả về lời gọi công cụ thay vì văn bản; ứng dụng chạy công cụ và gửi kết quả lại cho mô hình ở lượt sau.
 \end{itemize}
 
 % ==============================================================================
@@ -136,10 +136,10 @@ Bộ mã hóa trong truy xuất dày (bi-encoder) mã hóa truy vấn và đoạ
 
 Cơ sở dữ liệu vector lưu vector kèm dữ liệu mô tả (payload) và hỗ trợ tìm láng giềng gần nhất có lọc theo payload. Hệ thống dùng Qdrant với các khái niệm chính sau:
 \begin{itemize}
-    \item \textbf{Collection}: tập các điểm (point) cùng cấu hình vector, tương tự một bảng.
-    \item \textbf{Named vectors}: mỗi điểm có thể có nhiều vector đặt tên, ví dụ một vector dày \code{dense} (384 chiều, khoảng cách cosine) và một vector thưa \code{bm25} (chỉ lưu các chiều khác 0, Qdrant tự áp dụng IDF).
-    \item \textbf{Payload}: dữ liệu JSON đi kèm mỗi điểm (tiêu đề, mục, URL, ngôn ngữ, phạm vi trò chơi\ldots), có thể đánh chỉ mục để lọc.
-    \item \textbf{Prefetch và fusion}: Query API cho phép chạy nhiều truy vấn con (ví dụ một truy vấn dày và một truy vấn thưa) rồi hợp nhất kết quả bằng RRF ngay trong một lần gọi phía máy chủ.
+    \item Collection: tập các điểm (point) cùng cấu hình vector, tương tự một bảng.
+    \item Named vectors: mỗi điểm có thể có nhiều vector đặt tên, ví dụ một vector dày \code{dense} (384 chiều, khoảng cách cosine) và một vector thưa \code{bm25} (chỉ lưu các chiều khác 0, Qdrant tự áp dụng IDF).
+    \item Payload: dữ liệu JSON đi kèm mỗi điểm (tiêu đề, mục, URL, ngôn ngữ, phạm vi trò chơi\ldots), có thể đánh chỉ mục để lọc.
+    \item Prefetch và fusion: Query API cho phép chạy nhiều truy vấn con (ví dụ một truy vấn dày và một truy vấn thưa) rồi hợp nhất kết quả bằng RRF ngay trong một lần gọi phía máy chủ.
 \end{itemize}
 
 \subsection{Chỉ số đánh giá truy xuất}
@@ -188,8 +188,8 @@ Tài liệu thường quá dài để mã hóa thành một vector (E5 chỉ nh�
 
 Grounding (bám nguồn) là yêu cầu mọi khẳng định trong câu trả lời phải được hỗ trợ bởi bằng chứng đã truy xuất. Trích dẫn nguồn cho phép người dùng kiểm chứng và giúp phát hiện khi mô hình nói vượt quá bằng chứng. Gao và cộng sự~\cite{gao2023alce} xây dựng bộ đánh giá ALCE cho bài toán sinh văn bản kèm trích dẫn và cho thấy ngay cả các mô hình mạnh vẫn thường xuyên trích dẫn không đầy đủ hoặc trích dẫn đoạn không hỗ trợ khẳng định. Có hai mức kiểm tra trích dẫn:
 \begin{itemize}
-    \item \textbf{Kiểm tra hình thức} (có thể tự động hóa tất định): số trích dẫn trỏ tới bằng chứng có thật, đoạn trích dẫn có xuất hiện nguyên văn trong nguồn, không có đường dẫn do mô hình tự viết.
-    \item \textbf{Kiểm tra ngữ nghĩa} (khó hơn): đoạn nguồn có thực sự hàm ý (entail) khẳng định hay không, thường cần một mô hình đánh giá hoặc con người.
+    \item Kiểm tra hình thức (có thể tự động hóa tất định): số trích dẫn trỏ tới bằng chứng có thật, đoạn trích dẫn có xuất hiện nguyên văn trong nguồn, không có đường dẫn do mô hình tự viết.
+    \item Kiểm tra ngữ nghĩa (khó hơn): đoạn nguồn có thực sự hàm ý (entail) khẳng định hay không, thường cần một mô hình đánh giá hoặc con người.
 \end{itemize}
 Hệ thống \IB{} thực hiện đầy đủ kiểm tra hình thức ở máy chủ và để kiểm tra ngữ nghĩa cho bước đánh giá (Chương~\ref{chap:eval}).
 
@@ -198,11 +198,11 @@ Hệ thống \IB{} thực hiện đầy đủ kiểm tra hình thức ở máy c
 
 RAG truyền thống ``truy xuất một lần rồi sinh'' bộc lộ nhiều hạn chế với bài toán của đề tài:
 \begin{itemize}
-    \item \textbf{Truy vấn một lần, theo nguyên văn.} Câu tiếng Việt không dấu hoặc gõ sai tên riêng (``Malenia'' thành ``Melania'') được đưa thẳng vào bộ truy xuất, làm BM25 thất bại và embedding kém chính xác.
-    \item \textbf{Không biết mình thiếu bằng chứng.} Nếu top-$k$ không chứa đáp án, hệ thống vẫn sinh câu trả lời từ những gì có, dễ dẫn tới bịa.
-    \item \textbf{Không hỏi lại.} Với câu mơ hồ như ``hiệp sĩ đó ở Roundtable Hold'', hệ thống chọn đại một cách hiểu.
-    \item \textbf{Không suy luận nhiều bước.} Câu hỏi nhiệm vụ cần nối thông tin từ nhiều trang, hoặc cần tìm thêm sau khi đọc kết quả đầu, vượt quá một lượt truy xuất.
-    \item \textbf{Không tính toán.} Câu hỏi về phân bổ chỉ số cần số liệu của lớp nhân vật, yêu cầu của vũ khí và một phép tính có kiểm tra.
+    \item Truy vấn một lần, theo nguyên văn. Câu tiếng Việt không dấu hoặc gõ sai tên riêng (``Malenia'' thành ``Melania'') được đưa thẳng vào bộ truy xuất, làm BM25 thất bại và embedding kém chính xác.
+    \item Không biết mình thiếu bằng chứng. Nếu top-$k$ không chứa đáp án, hệ thống vẫn sinh câu trả lời từ những gì có, dễ dẫn tới bịa.
+    \item Không hỏi lại. Với câu mơ hồ như ``hiệp sĩ đó ở Roundtable Hold'', hệ thống chọn đại một cách hiểu.
+    \item Không suy luận nhiều bước. Câu hỏi nhiệm vụ cần nối thông tin từ nhiều trang, hoặc cần tìm thêm sau khi đọc kết quả đầu, vượt quá một lượt truy xuất.
+    \item Không tính toán. Câu hỏi về phân bổ chỉ số cần số liệu của lớp nhân vật, yêu cầu của vũ khí và một phép tính có kiểm tra.
 \end{itemize}
 Các biến thể RAG nâng cao như viết lại truy vấn, tự đánh giá độ liên quan của tài liệu~\cite{yan2024crag} hay mô hình tự quyết định khi nào cần truy xuất~\cite{asai2024selfrag} giải quyết từng phần. Hướng tổng quát hơn là để một tác tử điều khiển toàn bộ quá trình, gọi là Agentic RAG.
 
@@ -269,9 +269,9 @@ Hệ thống nhiều tác tử (multi-agent) chia công việc cho các tác t�
 
 Bộ nhớ giúp tác tử duy trì mạch hội thoại và cá nhân hóa câu trả lời~\cite{wang2024agentsurvey}. Có thể chia thành:
 \begin{itemize}
-    \item \textbf{Bộ nhớ ngắn hạn}: các lượt gần nhất của hội thoại hiện tại, được đưa thẳng vào prompt để tác tử hiểu các tham chiếu như ``con boss đó''.
-    \item \textbf{Bộ nhớ dài hạn hay bộ nhớ ngữ nghĩa}: các mục nhớ được mã hóa thành vector và lưu trong cơ sở dữ liệu; khi có câu hỏi mới, hệ thống truy xuất các mục liên quan bằng độ tương đồng thay vì đưa toàn bộ lịch sử. MemGPT~\cite{packer2023memgpt} đề xuất quản lý bộ nhớ của LLM theo phân cấp giống hệ điều hành, chuyển thông tin giữa ngữ cảnh chính và bộ nhớ ngoài.
-    \item \textbf{Trạng thái làm việc}: dữ kiện có cấu trúc của nhiệm vụ đang làm, ví dụ level, lớp nhân vật, vũ khí người chơi đã nêu.
+    \item Bộ nhớ ngắn hạn: các lượt gần nhất của hội thoại hiện tại, được đưa thẳng vào prompt để tác tử hiểu các tham chiếu như ``con boss đó''.
+    \item Bộ nhớ dài hạn hay bộ nhớ ngữ nghĩa: các mục nhớ được mã hóa thành vector và lưu trong cơ sở dữ liệu; khi có câu hỏi mới, hệ thống truy xuất các mục liên quan bằng độ tương đồng thay vì đưa toàn bộ lịch sử. MemGPT~\cite{packer2023memgpt} đề xuất quản lý bộ nhớ của LLM theo phân cấp giống hệ điều hành, chuyển thông tin giữa ngữ cảnh chính và bộ nhớ ngoài.
+    \item Trạng thái làm việc: dữ kiện có cấu trúc của nhiệm vụ đang làm, ví dụ level, lớp nhân vật, vũ khí người chơi đã nêu.
 \end{itemize}
 Một nguyên tắc quan trọng là bộ nhớ chỉ cho biết người dùng đã nói gì, không phải nguồn tri thức về trò chơi; dữ kiện về game vẫn phải lấy từ tài liệu có trích dẫn.
 
@@ -281,9 +281,9 @@ Một nguyên tắc quan trọng là bộ nhớ chỉ cho biết người dùng 
 
 Đánh giá hệ thống RAG cần tách riêng chất lượng truy xuất và chất lượng câu trả lời~\cite{gao2023ragsurvey,es2024ragas}. Truy xuất được đo bằng các chỉ số ở Mục~\ref{sec:ir_metrics} trên tập câu hỏi có gắn nhãn nguồn đúng. Câu trả lời thường được đánh giá theo ba khía cạnh:
 \begin{itemize}
-    \item \textbf{Độ đúng (correctness)}: câu trả lời có khớp với đáp án tham chiếu về các ý chính hay không.
-    \item \textbf{Độ bám nguồn (faithfulness hoặc groundedness)}: các khẳng định có được nguồn đã trích hỗ trợ hay không. RAGAS~\cite{es2024ragas} đề xuất đo faithfulness bằng cách tách câu trả lời thành các mệnh đề rồi dùng LLM kiểm tra từng mệnh đề có suy ra được từ ngữ cảnh.
-    \item \textbf{Hành vi đúng}: với câu ngoài phạm vi phải từ chối, với câu thiếu dữ kiện phải hỏi lại hoặc nêu rõ các khả năng.
+    \item Độ đúng (correctness): câu trả lời có khớp với đáp án tham chiếu về các ý chính hay không.
+    \item Độ bám nguồn (faithfulness hoặc groundedness): các khẳng định có được nguồn đã trích hỗ trợ hay không. RAGAS~\cite{es2024ragas} đề xuất đo faithfulness bằng cách tách câu trả lời thành các mệnh đề rồi dùng LLM kiểm tra từng mệnh đề có suy ra được từ ngữ cảnh.
+    \item Hành vi đúng: với câu ngoài phạm vi phải từ chối, với câu thiếu dữ kiện phải hỏi lại hoặc nêu rõ các khả năng.
 \end{itemize}
 
 Chấm tay chính xác nhưng tốn công, nên nhiều nghiên cứu dùng LLM làm người chấm (LLM-as-a-judge). Zheng và cộng sự~\cite{zheng2023judge} cho thấy các LLM mạnh đạt mức đồng thuận với người chấm tương đương mức đồng thuận giữa hai người, nhưng cũng chỉ ra các thiên lệch như ưu tiên câu trả lời dài, ưu tiên vị trí và ưu tiên câu do chính mô hình đó sinh. Vì vậy cần một rubric rõ ràng, đối chiếu một phần với người chấm và ghi rõ người chấm khi báo cáo.
@@ -323,25 +323,25 @@ Bảng~\ref{tab:techstack} liệt kê các công nghệ chính của hệ thốn
     \end{tabularx}
 \end{table}
 
-\textbf{DeepSeek.} DeepSeek là họ mô hình ngôn ngữ lớn có API tương thích định dạng OpenAI. Báo cáo kỹ thuật DeepSeek-V3~\cite{deepseek2024v3} mô tả kiến trúc Mixture-of-Experts của dòng mô hình này, trong đó mỗi token chỉ kích hoạt một phần tham số, giúp chi phí suy luận thấp. Hệ thống dùng mô hình \code{deepseek-flash} qua API với hai tính năng chính: gọi công cụ gốc cho vòng lặp Agent và chế độ trả về JSON cho bước sinh câu trả lời. Chế độ suy nghĩ được tắt ở các lượt Agent và chỉ được phép bật ở bước viết với những câu Agent đánh dấu cần cân nhắc.
+DeepSeek. DeepSeek là họ mô hình ngôn ngữ lớn có API tương thích định dạng OpenAI. Báo cáo kỹ thuật DeepSeek-V3~\cite{deepseek2024v3} mô tả kiến trúc Mixture-of-Experts của dòng mô hình này, trong đó mỗi token chỉ kích hoạt một phần tham số, giúp chi phí suy luận thấp. Hệ thống dùng mô hình \code{deepseek-flash} qua API với hai tính năng chính: gọi công cụ gốc cho vòng lặp Agent và chế độ trả về JSON cho bước sinh câu trả lời. Chế độ suy nghĩ được tắt ở các lượt Agent và chỉ được phép bật ở bước viết với những câu Agent đánh dấu cần cân nhắc.
 
-\textbf{LangChain và LangGraph.} LangChain cung cấp lớp trừu tượng thống nhất cho mô hình, prompt và bộ truy xuất; hệ thống dùng \code{ChatDeepSeek}, \code{ChatPromptTemplate} và giao diện \code{BaseRetriever}. LangGraph biểu diễn luồng xử lý thành đồ thị có trạng thái (\code{StateGraph}): mỗi nút là một hàm nhận và cập nhật trạng thái, các cạnh (kể cả cạnh có điều kiện) quyết định nút tiếp theo. Cách tổ chức này giúp tách từng bước, ghi thời gian từng nút vào trace và dễ kiểm thử.
+LangChain và LangGraph. LangChain cung cấp lớp trừu tượng thống nhất cho mô hình, prompt và bộ truy xuất; hệ thống dùng \code{ChatDeepSeek}, \code{ChatPromptTemplate} và giao diện \code{BaseRetriever}. LangGraph biểu diễn luồng xử lý thành đồ thị có trạng thái (\code{StateGraph}): mỗi nút là một hàm nhận và cập nhật trạng thái, các cạnh (kể cả cạnh có điều kiện) quyết định nút tiếp theo. Cách tổ chức này giúp tách từng bước, ghi thời gian từng nút vào trace và dễ kiểm thử.
 
-\textbf{Qdrant.} Qdrant là cơ sở dữ liệu vector mã nguồn mở viết bằng Rust, hỗ trợ đồng thời vector dày và vector thưa trên cùng một điểm, lọc theo payload và hợp nhất RRF phía máy chủ qua Query API. Nhờ đó toàn bộ truy xuất lai chỉ cần một lần gọi.
+Qdrant. Qdrant là cơ sở dữ liệu vector mã nguồn mở viết bằng Rust, hỗ trợ đồng thời vector dày và vector thưa trên cùng một điểm, lọc theo payload và hợp nhất RRF phía máy chủ qua Query API. Nhờ đó toàn bộ truy xuất lai chỉ cần một lần gọi.
 
-\textbf{FastAPI, React và discord.js.} FastAPI là framework web bất đồng bộ của Python, sinh tài liệu OpenAPI tự động từ lược đồ Pydantic. React kết hợp Vite và Tailwind CSS dùng cho giao diện web; luồng SSE được đọc bằng \code{fetch} và \code{ReadableStream}. Discord bot viết bằng discord.js và TypeScript, chạy trực tiếp trên Node.js 24.
+FastAPI, React và discord.js. FastAPI là framework web bất đồng bộ của Python, sinh tài liệu OpenAPI tự động từ lược đồ Pydantic. React kết hợp Vite và Tailwind CSS dùng cho giao diện web; luồng SSE được đọc bằng \code{fetch} và \code{ReadableStream}. Discord bot viết bằng discord.js và TypeScript, chạy trực tiếp trên Node.js 24.
 
-\textbf{Docker Compose và Caddy.} Toàn bộ dịch vụ (PostgreSQL, Qdrant, Redis, API, Caddy, bot) được đóng gói bằng Docker Compose. Caddy làm reverse proxy, tự cấp chứng chỉ HTTPS, phục vụ web tĩnh và chuyển tiếp \code{/api} mà không đệm luồng SSE.
+Docker Compose và Caddy. Toàn bộ dịch vụ (PostgreSQL, Qdrant, Redis, API, Caddy, bot) được đóng gói bằng Docker Compose. Caddy làm reverse proxy, tự cấp chứng chỉ HTTPS, phục vụ web tĩnh và chuyển tiếp \code{/api} mà không đệm luồng SSE.
 
 % ==============================================================================
 \section{Các nghiên cứu và sản phẩm liên quan}
 \label{sec:related}
 
-\textbf{Wiki cộng đồng.} Các wiki như eldenring.wiki.gg hay Fextralife là nguồn tra cứu chính của người chơi. Chúng có nội dung chi tiết và được cập nhật thường xuyên, nhưng chỉ tìm kiếm theo từ khóa tiếng Anh, không tổng hợp thông tin từ nhiều trang và không trả lời trực tiếp một câu hỏi tự nhiên.
+Wiki cộng đồng. Các wiki như eldenring.wiki.gg hay Fextralife là nguồn tra cứu chính của người chơi. Chúng có nội dung chi tiết và được cập nhật thường xuyên, nhưng chỉ tìm kiếm theo từ khóa tiếng Anh, không tổng hợp thông tin từ nhiều trang và không trả lời trực tiếp một câu hỏi tự nhiên.
 
-\textbf{Chatbot tổng quát.} Các trợ lý như ChatGPT trả lời bằng tiếng Việt trôi chảy, nhưng với chi tiết cụ thể của trò chơi thường sai lệch và không kèm nguồn kiểm chứng được, đúng với các hạn chế đã nêu ở Mục~\ref{sec:llm_limits}.
+Chatbot tổng quát. Các trợ lý như ChatGPT trả lời bằng tiếng Việt trôi chảy, nhưng với chi tiết cụ thể của trò chơi thường sai lệch và không kèm nguồn kiểm chứng được, đúng với các hạn chế đã nêu ở Mục~\ref{sec:llm_limits}.
 
-\textbf{Các hệ RAG và Agentic RAG trong nghiên cứu.} RAG gốc~\cite{lewis2020rag} và các biến thể như Self-RAG~\cite{asai2024selfrag}, Corrective RAG~\cite{yan2024crag} tập trung vào bộ dữ liệu hỏi đáp mở tiếng Anh như Wikipedia. Các bài tổng quan~\cite{gao2023ragsurvey,singh2025agenticrag} hệ thống hóa kỹ thuật nhưng không đi vào một miền cụ thể với câu hỏi song ngữ, gõ sai và yêu cầu tính toán.
+Các hệ RAG và Agentic RAG trong nghiên cứu. RAG gốc~\cite{lewis2020rag} và các biến thể như Self-RAG~\cite{asai2024selfrag}, Corrective RAG~\cite{yan2024crag} tập trung vào bộ dữ liệu hỏi đáp mở tiếng Anh như Wikipedia. Các bài tổng quan~\cite{gao2023ragsurvey,singh2025agenticrag} hệ thống hóa kỹ thuật nhưng không đi vào một miền cụ thể với câu hỏi song ngữ, gõ sai và yêu cầu tính toán.
 
 Bảng~\ref{tab:related} tóm tắt các giải pháp và khoảng trống mà \IB{} hướng tới.
 

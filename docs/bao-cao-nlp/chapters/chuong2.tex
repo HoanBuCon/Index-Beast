@@ -13,18 +13,18 @@ Chương này trình bày phần phân tích và thiết kế của hệ thống
 Bài toán của đề tài là xây dựng một trợ lý hỏi đáp về Elden Ring (gồm bản mở rộng Shadow of the Erdtree) cho người chơi Việt Nam, hoạt động trên website và Discord.
 
 \begin{itemize}
-    \item \textbf{Đầu vào}: câu hỏi bằng tiếng Việt hoặc tiếng Anh, có thể gõ sai tên riêng, không dấu, viết tắt; kèm lịch sử của cuộc hội thoại hiện tại và lựa chọn chế độ tìm web của người dùng.
-    \item \textbf{Đầu ra}: một trong ba dạng: (1) câu trả lời đúng ngôn ngữ người hỏi, mỗi đoạn có trích dẫn tới nguồn kiểm chứng được, kèm ảnh minh họa nếu có; (2) một câu hỏi lại khi thiếu dữ kiện thật sự cần thiết; (3) một lời từ chối ngắn khi yêu cầu không liên quan đến Elden Ring.
+    \item Đầu vào: câu hỏi bằng tiếng Việt hoặc tiếng Anh, có thể gõ sai tên riêng, không dấu, viết tắt; kèm lịch sử của cuộc hội thoại hiện tại và lựa chọn chế độ tìm web của người dùng.
+    \item Đầu ra: một trong ba dạng: (1) câu trả lời đúng ngôn ngữ người hỏi, mỗi đoạn có trích dẫn tới nguồn kiểm chứng được, kèm ảnh minh họa nếu có; (2) một câu hỏi lại khi thiếu dữ kiện thật sự cần thiết; (3) một lời từ chối ngắn khi yêu cầu không liên quan đến Elden Ring.
 \end{itemize}
 
 Phân tích các câu hỏi thực tế của người chơi, nhóm xác định sáu khó khăn chính mà hệ thống phải giải quyết:
 \begin{itemize}
-    \item \textbf{(K1) Khác ngôn ngữ.} Kho tri thức gần như hoàn toàn bằng tiếng Anh, trong khi phần lớn người dùng hỏi bằng tiếng Việt.
-    \item \textbf{(K2) Gõ sai và không chuẩn.} Tên riêng tiếng Anh rất dễ gõ sai (``Golden Sead'' thay cho ``Golden Seed'', ``Death Night'' thay cho ``Death Knight''); câu tiếng Việt có thể không dấu, sót phím Telex hoặc viết tắt.
-    \item \textbf{(K3) Câu nhiều bước.} Câu hỏi về nhiệm vụ hoặc tuyến đường cần nối thông tin từ nhiều trang, ví dụ tìm nửa còn lại của một huy chương rồi biết dùng ở đâu.
-    \item \textbf{(K4) Câu cần tính toán.} Câu hỏi về phân bổ chỉ số cần biết chỉ số khởi đầu của lớp nhân vật, yêu cầu của vũ khí và quy tắc tổng tám chỉ số bằng level cộng 79.
-    \item \textbf{(K5) Câu mơ hồ hoặc thiếu dữ kiện.} Tham chiếu như ``hiệp sĩ đó'', ``bản cộng đó'' có nhiều cách hiểu; câu hỏi build cho chính nhân vật của người chơi nhưng không nêu level.
-    \item \textbf{(K6) Nguy cơ bịa.} LLM dễ bịa chi tiết của trò chơi; người chơi cần nguồn để kiểm chứng.
+    \item (K1) Khác ngôn ngữ. Kho tri thức gần như hoàn toàn bằng tiếng Anh, trong khi phần lớn người dùng hỏi bằng tiếng Việt.
+    \item (K2) Gõ sai và không chuẩn. Tên riêng tiếng Anh rất dễ gõ sai (``Golden Sead'' thay cho ``Golden Seed'', ``Death Night'' thay cho ``Death Knight''); câu tiếng Việt có thể không dấu, sót phím Telex hoặc viết tắt.
+    \item (K3) Câu nhiều bước. Câu hỏi về nhiệm vụ hoặc tuyến đường cần nối thông tin từ nhiều trang, ví dụ tìm nửa còn lại của một huy chương rồi biết dùng ở đâu.
+    \item (K4) Câu cần tính toán. Câu hỏi về phân bổ chỉ số cần biết chỉ số khởi đầu của lớp nhân vật, yêu cầu của vũ khí và quy tắc tổng tám chỉ số bằng level cộng 79.
+    \item (K5) Câu mơ hồ hoặc thiếu dữ kiện. Tham chiếu như ``hiệp sĩ đó'', ``bản cộng đó'' có nhiều cách hiểu; câu hỏi build cho chính nhân vật của người chơi nhưng không nêu level.
+    \item (K6) Nguy cơ bịa. LLM dễ bịa chi tiết của trò chơi; người chơi cần nguồn để kiểm chứng.
 \end{itemize}
 
 \subsection{Phân loại câu hỏi}
@@ -59,11 +59,11 @@ Ngoài chín nhóm nội dung trên, hệ thống còn phải xử lý lời ch�
 \subsection{Hạn chế của các giải pháp hiện có}
 \label{sec:existing_limits}
 
-\textbf{Wiki và FAQ.} Người chơi phải tự dịch câu hỏi sang tiếng Anh, tự chọn từ khóa và tự đọc nhiều trang. Ô tìm kiếm của wiki không chịu được lỗi chính tả trong tên riêng và không trả lời câu hỏi cần tổng hợp.
+Wiki và FAQ. Người chơi phải tự dịch câu hỏi sang tiếng Anh, tự chọn từ khóa và tự đọc nhiều trang. Ô tìm kiếm của wiki không chịu được lỗi chính tả trong tên riêng và không trả lời câu hỏi cần tổng hợp.
 
-\textbf{Chatbot dựa trên luật.} Chỉ trả lời được các mẫu câu đã viết sẵn; không thể bao phủ hàng nghìn vật phẩm, nhân vật và địa điểm của trò chơi.
+Chatbot dựa trên luật. Chỉ trả lời được các mẫu câu đã viết sẵn; không thể bao phủ hàng nghìn vật phẩm, nhân vật và địa điểm của trò chơi.
 
-\textbf{RAG truyền thống.} Truy xuất một lần theo nguyên văn câu hỏi. Ví dụ câu ``Chìa Stoneswrod dùng với tượng nào?'': tên vật phẩm bị gõ sai và phần còn lại bằng tiếng Việt, nên BM25 không khớp từ nào và embedding chỉ khớp một phần; nếu top-5 không chứa trang Stonesword Key, mô hình sẽ trả lời từ những đoạn không liên quan. Với câu build ``build Samurai dùng katana ở level 60'', RAG truyền thống không có cơ chế lấy đúng chỉ số khởi đầu và yêu cầu vũ khí rồi tính phân bổ, nên mô hình tự nghĩ ra tám con số.
+RAG truyền thống. Truy xuất một lần theo nguyên văn câu hỏi. Ví dụ câu ``Chìa Stoneswrod dùng với tượng nào?'': tên vật phẩm bị gõ sai và phần còn lại bằng tiếng Việt, nên BM25 không khớp từ nào và embedding chỉ khớp một phần; nếu top-5 không chứa trang Stonesword Key, mô hình sẽ trả lời từ những đoạn không liên quan. Với câu build ``build Samurai dùng katana ở level 60'', RAG truyền thống không có cơ chế lấy đúng chỉ số khởi đầu và yêu cầu vũ khí rồi tính phân bổ, nên mô hình tự nghĩ ra tám con số.
 
 \subsection{Sự cần thiết của Agentic RAG}
 \label{sec:why_agentic}
@@ -98,10 +98,10 @@ Mỗi khó khăn ở Mục~\ref{sec:problem_statement} tương ứng với một
 
 Đề tài đặt ra bốn mục tiêu:
 \begin{itemize}
-    \item \textbf{(M1)} Xây dựng kho tri thức Elden Ring sạch, có nguồn gốc rõ ràng cho từng đoạn, được lập chỉ mục lai (dense và sparse).
-    \item \textbf{(M2)} Xây dựng Agent tự điều khiển việc truy xuất và dùng công cụ; mọi câu trả lời có dữ kiện đều kèm trích dẫn được máy chủ kiểm tra.
-    \item \textbf{(M3)} Phục vụ người dùng trên web và Discord, có bộ nhớ hội thoại và trả lời trong giới hạn thời gian của từng kênh.
-    \item \textbf{(M4)} Đánh giá định lượng trên bộ câu hỏi có đáp án tham chiếu, gồm chỉ số truy xuất, chất lượng câu trả lời, độ trễ và chi phí.
+    \item (M1) Xây dựng kho tri thức Elden Ring sạch, có nguồn gốc rõ ràng cho từng đoạn, được lập chỉ mục lai (dense và sparse).
+    \item (M2) Xây dựng Agent tự điều khiển việc truy xuất và dùng công cụ; mọi câu trả lời có dữ kiện đều kèm trích dẫn được máy chủ kiểm tra.
+    \item (M3) Phục vụ người dùng trên web và Discord, có bộ nhớ hội thoại và trả lời trong giới hạn thời gian của từng kênh.
+    \item (M4) Đánh giá định lượng trên bộ câu hỏi có đáp án tham chiếu, gồm chỉ số truy xuất, chất lượng câu trả lời, độ trễ và chi phí.
 \end{itemize}
 
 \subsection{Câu hỏi nghiên cứu}
@@ -109,9 +109,9 @@ Mỗi khó khăn ở Mục~\ref{sec:problem_statement} tương ứng với một
 
 Để định hướng phần đánh giá, nhóm đặt ba câu hỏi nghiên cứu:
 \begin{itemize}
-    \item \textbf{RQ1}: Truy xuất lai E5 + BM25 hợp nhất bằng RRF có tốt hơn từng phương pháp đơn lẻ trên kho tri thức của đề tài không?
-    \item \textbf{RQ2}: Bộ xếp hạng lại cross-encoder chạy cục bộ trên CPU có cải thiện truy xuất và câu trả lời đủ để bù cho độ trễ tăng thêm không?
-    \item \textbf{RQ3}: Việc luôn tìm web có cải thiện câu trả lời so với để Agent tự quyết định khi nào tìm web không?
+    \item RQ1: Truy xuất lai E5 + BM25 hợp nhất bằng RRF có tốt hơn từng phương pháp đơn lẻ trên kho tri thức của đề tài không?
+    \item RQ2: Bộ xếp hạng lại cross-encoder chạy cục bộ trên CPU có cải thiện truy xuất và câu trả lời đủ để bù cho độ trễ tăng thêm không?
+    \item RQ3: Việc luôn tìm web có cải thiện câu trả lời so với để Agent tự quyết định khi nào tìm web không?
 \end{itemize}
 
 \subsection{Phạm vi}
@@ -310,10 +310,10 @@ Nguyên tắc thiết kế là \textbf{Agent quyết định, máy chủ kiểm 
 
 Kiến trúc được xây dựng theo bốn nguyên tắc:
 \begin{itemize}
-    \item \textbf{Agent quyết định, máy chủ kiểm tra}: phần ngữ nghĩa thuộc về Agent, phần tất định thuộc về máy chủ.
-    \item \textbf{Một luồng xử lý duy nhất}: mọi câu hỏi ở chế độ RAG đi qua cùng một đồ thị, không có nhánh đặc biệt theo loại câu hỏi hay cờ cấu hình ẩn.
-    \item \textbf{Mọi dữ kiện truy được nguồn}: mỗi đoạn mang URL, tiêu đề, mục, revision và metadata phạm vi; câu trả lời chỉ trích dẫn đoạn đã được đưa vào ngữ cảnh.
-    \item \textbf{Hạ tầng tối giản}: chỉ dùng PostgreSQL, Qdrant, Redis và một tiến trình API; mô hình embedding và xếp hạng lại chạy trên CPU.
+    \item Agent quyết định, máy chủ kiểm tra: phần ngữ nghĩa thuộc về Agent, phần tất định thuộc về máy chủ.
+    \item Một luồng xử lý duy nhất: mọi câu hỏi ở chế độ RAG đi qua cùng một đồ thị, không có nhánh đặc biệt theo loại câu hỏi hay cờ cấu hình ẩn.
+    \item Mọi dữ kiện truy được nguồn: mỗi đoạn mang URL, tiêu đề, mục, revision và metadata phạm vi; câu trả lời chỉ trích dẫn đoạn đã được đưa vào ngữ cảnh.
+    \item Hạ tầng tối giản: chỉ dùng PostgreSQL, Qdrant, Redis và một tiến trình API; mô hình embedding và xếp hạng lại chạy trên CPU.
 \end{itemize}
 
 \subsection{Kiến trúc tổng thể}
@@ -559,8 +559,8 @@ Ngoài ký ức, Agent còn nhận các lượt gần nhất của hội thoại
 
 Sau mỗi lượt trả lời thành công có nội dung về trò chơi, hệ thống ghi hai loại mục nhớ:
 \begin{itemize}
-    \item \textbf{Chủ đề (topic)}: câu hỏi độc lập mà Agent đã viết lại ở \code{finish}, cho biết người chơi đang quan tâm điều gì.
-    \item \textbf{Dữ kiện (fact)}: mỗi điều kiện người chơi đã nêu, như level hay vũ khí, kèm khóa để thay thế khi người chơi thay đổi. Khi một điều kiện bị rút lại hoặc thay mới, mục cũ chuyển sang trạng thái bị thay thế.
+    \item Chủ đề (topic): câu hỏi độc lập mà Agent đã viết lại ở \code{finish}, cho biết người chơi đang quan tâm điều gì.
+    \item Dữ kiện (fact): mỗi điều kiện người chơi đã nêu, như level hay vũ khí, kèm khóa để thay thế khi người chơi thay đổi. Khi một điều kiện bị rút lại hoặc thay mới, mục cũ chuyển sang trạng thái bị thay thế.
 \end{itemize}
 Mỗi mục được mã hóa bằng E5 và lưu trong một collection Qdrant riêng (\nolinkurl{conversation_memories}), tách biệt với collection corpus. Khi có câu hỏi mới, hệ thống truy xuất tối đa sáu mục gần nghĩa nhất trong đúng hội thoại và đúng chủ sở hữu, rồi đối chiếu từng kết quả với bản ghi gốc trong PostgreSQL theo \code{revision}: mục đã bị sửa hoặc không thuộc chủ sở hữu bị loại. PostgreSQL là nguồn sự thật, còn Qdrant chỉ là chỉ mục tìm kiếm.
 

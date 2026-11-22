@@ -14,9 +14,9 @@ Pipeline dữ liệu nằm trong gói \nolinkurl{backend/ingest}, chạy bằng 
 
 Bộ thu thập được tổ chức theo kiểu plugin: mỗi nguồn là một lớp cài đặt giao diện \code{Source} trong \nolinkurl{ingest/sources/} và được khai báo trong tệp cấu hình \code{sources.toml}. Với eldenring.wiki.gg, bộ thu thập thực hiện ba việc:
 \begin{enumerate}
-    \item \textbf{Khám phá trang}: gọi \code{list=categorymembers} cho các nhóm danh mục (NPC, Bosses, Locations, Lore, Items, Characters và các danh mục con), truyền lại toàn bộ đối tượng \code{continue} khi phân trang và khử trùng theo mã trang.
-    \item \textbf{Tải nội dung}: gọi \code{action=parse} để lấy HTML, danh sách mục, danh mục, ảnh và \code{revid} trong cùng một phản hồi; lưu bản thô theo revision kèm mã băm để kiểm tra toàn vẹn.
-    \item \textbf{Tải ảnh}: gọi \code{prop=imageinfo} lấy URL, kích thước, MIME và metadata giấy phép; kiểm tra định dạng ảnh bằng Pillow, giới hạn 20 MB và 40 triệu điểm ảnh mỗi ảnh.
+    \item Khám phá trang: gọi \code{list=categorymembers} cho các nhóm danh mục (NPC, Bosses, Locations, Lore, Items, Characters và các danh mục con), truyền lại toàn bộ đối tượng \code{continue} khi phân trang và khử trùng theo mã trang.
+    \item Tải nội dung: gọi \code{action=parse} để lấy HTML, danh sách mục, danh mục, ảnh và \code{revid} trong cùng một phản hồi; lưu bản thô theo revision kèm mã băm để kiểm tra toàn vẹn.
+    \item Tải ảnh: gọi \code{prop=imageinfo} lấy URL, kích thước, MIME và metadata giấy phép; kiểm tra định dạng ảnh bằng Pillow, giới hạn 20 MB và 40 triệu điểm ảnh mỗi ảnh.
 \end{enumerate}
 Mọi yêu cầu đi qua một bộ giới hạn tốc độ tối thiểu một giây, có thử lại theo cấp số và tôn trọng \code{Retry-After}. Tham số \code{maxlag=5} được gửi kèm để nhường tải khi máy chủ wiki bận.
 
@@ -30,9 +30,9 @@ Bước lọc ghi quyết định giữ hoặc bỏ từng trang kèm lý do và
 
 Bước lập chỉ mục thực hiện tuần tự:
 \begin{enumerate}
-    \item \textbf{Kiểm tra trước (preflight)} toàn bộ tệp đoạn: lược đồ, mã trùng, tiền tố, số token thực tế so với giới hạn, chính sách corpus. Có bất kỳ bản ghi hỏng nào thì dừng trước khi tạo kết nối hay nạp mô hình, và báo tệp, dòng, lý do.
-    \item \textbf{Mã hóa}: E5 ONNX sinh vector 384 chiều (tiền tố \code{passage:}, gộp trung bình và chuẩn hóa), mô hình \code{Qdrant/bm25} sinh vector thưa.
-    \item \textbf{Ghi theo lô} vào Qdrant với mã điểm UUID phiên bản 5 cố định, kiểm tra lược đồ collection và tạo chỉ mục payload; đồng thời nạp tài liệu và đoạn vào PostgreSQL.
+    \item Kiểm tra trước (preflight) toàn bộ tệp đoạn: lược đồ, mã trùng, tiền tố, số token thực tế so với giới hạn, chính sách corpus. Có bất kỳ bản ghi hỏng nào thì dừng trước khi tạo kết nối hay nạp mô hình, và báo tệp, dòng, lý do.
+    \item Mã hóa: E5 ONNX sinh vector 384 chiều (tiền tố \code{passage:}, gộp trung bình và chuẩn hóa), mô hình \code{Qdrant/bm25} sinh vector thưa.
+    \item Ghi theo lô vào Qdrant với mã điểm UUID phiên bản 5 cố định, kiểm tra lược đồ collection và tạo chỉ mục payload; đồng thời nạp tài liệu và đoạn vào PostgreSQL.
 \end{enumerate}
 
 \subsection{Thống kê kho tri thức}
@@ -80,11 +80,11 @@ LangChain cung cấp lớp \code{ChatDeepSeek} hỗ trợ sẵn gọi công cụ
 
 Lớp \code{ChatPipeline} (\nolinkurl{app/rag/pipeline.py}) dựng một \code{StateGraph} gồm năm nút (Hình~\ref{fig:langgraph}):
 \begin{itemize}
-    \item \textbf{scope}: kiểm tra mô hình đã cấu hình, xác định ngôn ngữ mặc định và chế độ tìm web thực tế (theo lựa chọn của người dùng và việc có khóa Tavily hay không), khởi tạo trace.
-    \item \textbf{memory}: nạp ký ức ứng viên (truy xuất ngữ nghĩa ở chế độ PostgreSQL, hai câu gần nhất ở chế độ RAM) và các lượt gần nhất của hội thoại trong giới hạn số tin nhắn và ký tự; loại ký ức dữ kiện ở thread Discord dùng chung.
-    \item \textbf{agent}: chạy vòng lặp gọi công cụ (Mục~\ref{sec:agent_loop}).
-    \item \textbf{context}: chỉ lấy các bằng chứng Agent đã chọn, áp lại chính sách corpus, khử trùng nội dung và cắt theo ngân sách (tối đa 5 đoạn, 12.000 ký tự, chỉ nhận đoạn nguyên vẹn).
-    \item \textbf{prompt}: đóng gói câu hỏi độc lập, ngôn ngữ trả lời, các bằng chứng đã đánh số, điều kiện người chơi và kết quả tính toán vào prompt của bước sinh.
+    \item scope: kiểm tra mô hình đã cấu hình, xác định ngôn ngữ mặc định và chế độ tìm web thực tế (theo lựa chọn của người dùng và việc có khóa Tavily hay không), khởi tạo trace.
+    \item memory: nạp ký ức ứng viên (truy xuất ngữ nghĩa ở chế độ PostgreSQL, hai câu gần nhất ở chế độ RAM) và các lượt gần nhất của hội thoại trong giới hạn số tin nhắn và ký tự; loại ký ức dữ kiện ở thread Discord dùng chung.
+    \item agent: chạy vòng lặp gọi công cụ (Mục~\ref{sec:agent_loop}).
+    \item context: chỉ lấy các bằng chứng Agent đã chọn, áp lại chính sách corpus, khử trùng nội dung và cắt theo ngân sách (tối đa 5 đoạn, 12.000 ký tự, chỉ nhận đoạn nguyên vẹn).
+    \item prompt: đóng gói câu hỏi độc lập, ngôn ngữ trả lời, các bằng chứng đã đánh số, điều kiện người chơi và kết quả tính toán vào prompt của bước sinh.
 \end{itemize}
 Cạnh từ nút \code{agent} có điều kiện: nếu Agent kết thúc bằng \code{ask\_user} hoặc \code{reply}, đồ thị bỏ qua nút \code{context} vì văn bản đã sẵn sàng gửi cho người chơi. Mỗi nút được bọc bởi một hàm ghi tên nút và thời gian chạy vào trace. Đồ thị được biên dịch với giới hạn đệ quy 24 và không dùng checkpointer dùng chung, nên trạng thái của mỗi lượt hoàn toàn riêng biệt.
 
@@ -120,11 +120,11 @@ if outcome is None and forced:
 
 Một số điểm cài đặt đáng chú ý:
 \begin{itemize}
-    \item \textbf{Ngân sách tính theo lượt gọi mô hình}, không theo số công cụ: trong một lượt, Agent có thể gọi song song nhiều công cụ độc lập (ví dụ tìm trang lớp nhân vật và trang vũ khí cùng lúc). Ngân sách mặc định là 6 lượt; khi chế độ web tự động được bật, ngân sách là 12 lượt vì Agent có thể cần thêm lượt để tìm web. Khi còn tối đa ba lượt, máy chủ nhắc Agent ngừng tìm kiếm và chuẩn bị kết thúc.
-    \item \textbf{Thời hạn}: bước chuẩn bị được dùng tối đa 25 giây, với hạn 45 giây của bot vẫn chừa ít nhất 20 giây cho bước sinh; mỗi lượt gọi mô hình có thời hạn riêng 12 giây.
-    \item \textbf{Lượt cuối bắt buộc \code{finish}}: khi hết lượt hoặc hết giờ, máy chủ gọi mô hình thêm một lần chỉ với công cụ \code{finish} (\code{tool\_choice="finish"}), để Agent tự chọn bằng chứng và ghi kết quả đã tính thay vì mất toàn bộ công sức. Trace ghi cờ \code{forced\_finish}.
-    \item \textbf{Mỗi lời gọi đều có phản hồi}: lời gọi có tham số không phải JSON hợp lệ vẫn nhận một thông điệp lỗi gắn đúng mã lời gọi; nếu mô hình trả văn bản thay vì gọi công cụ, máy chủ nhắc ``hãy gọi công cụ, kết thúc bằng finish, ask\_user hoặc reply''.
-    \item \textbf{Lỗi dịch vụ}: nếu mô hình lỗi hoặc quá hạn nhưng Agent đã tìm được bằng chứng, vòng lặp dừng và câu trả lời được viết từ những gì có; nếu chưa có gì, hệ thống báo lỗi dịch vụ thay vì trả lời rỗng.
+    \item Ngân sách tính theo lượt gọi mô hình, không theo số công cụ: trong một lượt, Agent có thể gọi song song nhiều công cụ độc lập (ví dụ tìm trang lớp nhân vật và trang vũ khí cùng lúc). Ngân sách mặc định là 6 lượt; khi chế độ web tự động được bật, ngân sách là 12 lượt vì Agent có thể cần thêm lượt để tìm web. Khi còn tối đa ba lượt, máy chủ nhắc Agent ngừng tìm kiếm và chuẩn bị kết thúc.
+    \item Thời hạn: bước chuẩn bị được dùng tối đa 25 giây, với hạn 45 giây của bot vẫn chừa ít nhất 20 giây cho bước sinh; mỗi lượt gọi mô hình có thời hạn riêng 12 giây.
+    \item Lượt cuối bắt buộc \code{finish}: khi hết lượt hoặc hết giờ, máy chủ gọi mô hình thêm một lần chỉ với công cụ \code{finish} (\code{tool\_choice="finish"}), để Agent tự chọn bằng chứng và ghi kết quả đã tính thay vì mất toàn bộ công sức. Trace ghi cờ \code{forced\_finish}.
+    \item Mỗi lời gọi đều có phản hồi: lời gọi có tham số không phải JSON hợp lệ vẫn nhận một thông điệp lỗi gắn đúng mã lời gọi; nếu mô hình trả văn bản thay vì gọi công cụ, máy chủ nhắc ``hãy gọi công cụ, kết thúc bằng finish, ask\_user hoặc reply''.
+    \item Lỗi dịch vụ: nếu mô hình lỗi hoặc quá hạn nhưng Agent đã tìm được bằng chứng, vòng lặp dừng và câu trả lời được viết từ những gì có; nếu chưa có gì, hệ thống báo lỗi dịch vụ thay vì trả lời rỗng.
 \end{itemize}
 
 Khi vòng lặp kết thúc, hàm ghi kết quả vào trạng thái: hành động (trả lời, hỏi lại, phản hồi ngắn), ý định, câu hỏi độc lập, ngôn ngữ, điều kiện của lượt (gồm giả định), danh sách bằng chứng Agent chọn, kết quả \code{run\_python} và cờ yêu cầu suy nghĩ. Giả định của Agent chỉ ảnh hưởng tới lượt hiện tại và không được lưu vào trạng thái làm việc.
@@ -227,9 +227,9 @@ Bộ xếp hạng lại được gắn một lần vào \code{HybridRetriever} v
 
 Adapter Tavily (\nolinkurl{app/adapters/tavily.py}) thực hiện hai bước: Search lấy tối đa 3 kết quả, rồi Extract lấy nội dung trang và cắt thành các khối theo mục. Danh sách tên miền ưu tiên gồm eldenring.wiki.gg, eldenring.wiki.fextralife.com và trang chính thức của nhà phát hành; ở chế độ ``ưu tiên'', kết quả từ tên miền khác vẫn được giữ nếu phù hợp. Mỗi lần tìm có thời hạn 8 giây. Kết quả web được nhóm theo trang, mỗi khối có mã riêng để Agent mở bằng \code{open\_evidence} và trích dẫn như đoạn trong kho. Ba chế độ tìm web được người dùng chọn trên giao diện:
 \begin{itemize}
-    \item \textbf{Tắt (off)}: công cụ \code{search\_web} không được cung cấp cho Agent.
-    \item \textbf{Tự động (auto, mặc định)}: Agent tự quyết định tìm web khi kho nội bộ không bao phủ yêu cầu.
-    \item \textbf{Luôn tìm (always)}: máy chủ từ chối \code{finish} cho tới khi Agent đã gọi \code{search\_web} ít nhất một lần.
+    \item Tắt (off): công cụ \code{search\_web} không được cung cấp cho Agent.
+    \item Tự động (auto, mặc định): Agent tự quyết định tìm web khi kho nội bộ không bao phủ yêu cầu.
+    \item Luôn tìm (always): máy chủ từ chối \code{finish} cho tới khi Agent đã gọi \code{search\_web} ít nhất một lần.
 \end{itemize}
 
 % ==============================================================================
@@ -257,8 +257,8 @@ Công cụ \code{ask\_user} nhận câu hỏi, một đến hai trường cần 
 
 Hệ thống để Agent tự viết mã Python cho phép tính của mình và chạy trong một sandbox. Vì mã do mô hình sinh ra sau khi đọc văn bản không tin cậy từ web và corpus, mã được coi là có thể độc hại và đi qua hai lớp bảo vệ (\nolinkurl{app/rag/python_sandbox.py}):
 \begin{enumerate}
-    \item \textbf{Kiểm tra tĩnh trên cây cú pháp (AST)}: chỉ chấp nhận một tập con Python dùng cho tính toán (hằng, biến, phép toán, so sánh, \code{if}/\code{for}/\code{while}, comprehension, định nghĩa hàm, list/dict/set/tuple, f-string, \code{assert}). Mọi nút khác bị từ chối, trong đó có \code{import}, \code{class}, \code{with}, \code{try}, \code{global}, \code{async}. Tên hoặc thuộc tính bắt đầu bằng dấu gạch dưới và các tên nguy hiểm (\code{open}, \code{exec}, \code{eval}, \code{getattr}, \code{type}, \code{format}\ldots) cũng bị từ chối. Mã dài quá 4.000 ký tự bị từ chối.
-    \item \textbf{Chạy trong tiến trình con cô lập}: trình thông dịch được khởi động với cờ \code{-I -S} (cô lập, không nạp site), môi trường rỗng, chỉ có một danh sách hàm dựng sẵn an toàn (\code{abs}, \code{len}, \code{max}, \code{min}, \code{range}, \code{sum}, \code{sorted}, \code{print}\ldots), thời hạn 3 giây, đầu ra tối đa 4.000 ký tự và giới hạn bộ nhớ 256 MB trên Linux.
+    \item Kiểm tra tĩnh trên cây cú pháp (AST): chỉ chấp nhận một tập con Python dùng cho tính toán (hằng, biến, phép toán, so sánh, \code{if}/\code{for}/\code{while}, comprehension, định nghĩa hàm, list/dict/set/tuple, f-string, \code{assert}). Mọi nút khác bị từ chối, trong đó có \code{import}, \code{class}, \code{with}, \code{try}, \code{global}, \code{async}. Tên hoặc thuộc tính bắt đầu bằng dấu gạch dưới và các tên nguy hiểm (\code{open}, \code{exec}, \code{eval}, \code{getattr}, \code{type}, \code{format}\ldots) cũng bị từ chối. Mã dài quá 4.000 ký tự bị từ chối.
+    \item Chạy trong tiến trình con cô lập: trình thông dịch được khởi động với cờ \code{-I -S} (cô lập, không nạp site), môi trường rỗng, chỉ có một danh sách hàm dựng sẵn an toàn (\code{abs}, \code{len}, \code{max}, \code{min}, \code{range}, \code{sum}, \code{sorted}, \code{print}\ldots), thời hạn 3 giây, đầu ra tối đa 4.000 ký tự và giới hạn bộ nhớ 256 MB trên Linux.
 \end{enumerate}
 Đây là sandbox ở mức ngôn ngữ; ở môi trường triển khai, container API còn chạy bằng người dùng không đặc quyền, bỏ toàn bộ capability và bật \code{no-new-privileges}. Đoạn mã~\ref{lst:run_python} là ví dụ minh họa dạng mã Agent viết cho câu hỏi ``build Samurai dùng Uchigatana ở level 60'', với chỉ số khởi đầu của lớp Samurai và yêu cầu của vũ khí lấy từ trang wiki đã mở. Nhóm đã chạy chính đoạn mã này qua sandbox của dự án; kết quả in ra là \code{\{'VIG': 40, 'MND': 11, 'END': 13, 'STR': 12, 'DEX': 38, 'INT': 9, 'FAI': 8, 'ARC': 8\} total = 139}. Cũng trong lần thử, mã \code{import os} bị từ chối với thông báo ``Import is not allowed'' và mã truy cập \code{\_\_class\_\_} bị từ chối ở bước kiểm tra tĩnh.
 

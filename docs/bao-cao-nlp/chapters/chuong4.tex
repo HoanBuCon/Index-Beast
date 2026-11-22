@@ -56,23 +56,23 @@ Một câu có thể mang nhiều nhãn; tổng cộng 49 câu có ít nhất m�
 
 Đơn vị chấm là một câu hỏi chính, gồm cả lượt bổ sung nếu có. Mỗi câu dữ kiện được chấm theo rubric ba mức:
 \begin{itemize}
-    \item \textbf{Độ đúng} (0/1/2): 2 điểm khi đủ ý bắt buộc, đúng chủ thể, điều kiện và ngôn ngữ; 1 điểm khi có ý đúng nhưng thiếu ý quan trọng hoặc thêm chi tiết sai không đảo ngược kết luận; 0 điểm khi sai, lỗi hoặc không trả lời.
-    \item \textbf{Độ bám nguồn} (0/1/2): 2 điểm khi các khẳng định quan trọng được đoạn trích hỗ trợ trực tiếp; 1 điểm khi nguồn chỉ xác nhận một phần; 0 điểm khi khẳng định chính không có căn cứ.
-    \item \textbf{Hành vi} (đạt/không đạt) cho câu hành vi: câu ngoài phạm vi đạt khi được nhận diện và từ chối phù hợp; câu thiếu dữ kiện đạt khi hệ thống hỏi đúng thông tin cần để phân biệt, hoặc trả lời có điều kiện với ít nhất hai khả năng. Chỉ đưa ra một khả năng là không đạt.
+    \item Độ đúng (0/1/2): 2 điểm khi đủ ý bắt buộc, đúng chủ thể, điều kiện và ngôn ngữ; 1 điểm khi có ý đúng nhưng thiếu ý quan trọng hoặc thêm chi tiết sai không đảo ngược kết luận; 0 điểm khi sai, lỗi hoặc không trả lời.
+    \item Độ bám nguồn (0/1/2): 2 điểm khi các khẳng định quan trọng được đoạn trích hỗ trợ trực tiếp; 1 điểm khi nguồn chỉ xác nhận một phần; 0 điểm khi khẳng định chính không có căn cứ.
+    \item Hành vi (đạt/không đạt) cho câu hành vi: câu ngoài phạm vi đạt khi được nhận diện và từ chối phù hợp; câu thiếu dữ kiện đạt khi hệ thống hỏi đúng thông tin cần để phân biệt, hoặc trả lời có điều kiện với ít nhất hai khả năng. Chỉ đưa ra một khả năng là không đạt.
 \end{itemize}
 Từ điểm chấm, các chỉ số chính được tính như sau: \textbf{độ đúng hoàn toàn} (accuracy) là tỉ lệ câu dữ kiện đạt 2 điểm độ đúng trên toàn bộ 183 câu dữ kiện, kể cả câu lỗi; \textbf{faithfulness 2} là tỉ lệ câu dữ kiện đạt 2 điểm bám nguồn; \textbf{trích đúng nguồn gold} là tỉ lệ câu dữ kiện có trích dẫn ít nhất một trang gold; \textbf{behavior pass} là tỉ lệ câu hành vi đạt. Chỉ số truy xuất (Recall@5, MRR@5, Hit@5, Precision@5) được tính theo định nghĩa ở Mục~\ref{sec:ir_metrics} trên năm trang khác nhau đứng đầu, với câu hỏi nguyên văn. Chỉ số vận hành gồm độ trễ tới câu trả lời đầu tiên (p50, p95), số câu vượt 45 giây, số lần gọi công cụ và số token mỗi câu.
 
-\textbf{Người chấm.} Câu trả lời được chấm bởi một mô hình ngôn ngữ (Claude, chạy qua Claude Code) theo rubric và quy ước chấm viết sẵn, không dùng chính DeepSeek để tránh thiên lệch tự chấm~\cite{zheng2023judge}. Để kiểm tra độ tin cậy, nhóm so sánh với một bộ điểm độc lập do mô hình \code{deepseek-v4-pro} chấm trên cấu hình hybrid không xếp hạng lại, web tự động: hai người chấm khớp điểm độ đúng ở 181/183 câu và cho cùng độ đúng hoàn toàn 95,6\%.
+Người chấm. Câu trả lời được chấm bởi một mô hình ngôn ngữ (Claude, chạy qua Claude Code) theo rubric và quy ước chấm viết sẵn, không dùng chính DeepSeek để tránh thiên lệch tự chấm~\cite{zheng2023judge}. Để kiểm tra độ tin cậy, nhóm so sánh với một bộ điểm độc lập do mô hình \code{deepseek-v4-pro} chấm trên cấu hình hybrid không xếp hạng lại, web tự động: hai người chấm khớp điểm độ đúng ở 181/183 câu và cho cùng độ đúng hoàn toàn 95,6\%.
 
 \subsection{Cấu hình đo}
 \label{sec:eval_config}
 
 \begin{itemize}
-    \item \textbf{Mô hình}: \code{deepseek-flash} cho cả Agent và bước sinh; Agent tắt chế độ suy nghĩ; bước sinh được phép suy nghĩ khi Agent yêu cầu.
-    \item \textbf{Kho tri thức}: collection 34.138 điểm mô tả ở Bảng~\ref{tab:corpus_stats}.
-    \item \textbf{Cách chạy}: mỗi cấu hình chạy đủ 200 câu qua API thật (SSE), tuần tự từng câu, lưu hội thoại trong bộ nhớ, nâng giới hạn tần suất để không bị chặn. Không chạy song song vì các cấu hình có bộ xếp hạng lại cục bộ sẽ tranh CPU và vượt thời hạn 3 giây, làm sai lệch số đo.
-    \item \textbf{Các trục thay đổi}: kiểu truy xuất (dense E5, BM25, hybrid RRF); bộ xếp hạng lại (không có, MiniLM-L12 cục bộ, API Jina v2 làm số tham khảo); chế độ web (tắt, tự động, luôn tìm). Tổng cộng 11 cấu hình, mỗi cấu hình chỉ đổi một trục so với cấu hình lân cận.
-    \item \textbf{Cấu hình mặc định của hệ thống}: hybrid RRF + MiniLM-L12 + web tự động.
+    \item Mô hình: \code{deepseek-flash} cho cả Agent và bước sinh; Agent tắt chế độ suy nghĩ; bước sinh được phép suy nghĩ khi Agent yêu cầu.
+    \item Kho tri thức: collection 34.138 điểm mô tả ở Bảng~\ref{tab:corpus_stats}.
+    \item Cách chạy: mỗi cấu hình chạy đủ 200 câu qua API thật (SSE), tuần tự từng câu, lưu hội thoại trong bộ nhớ, nâng giới hạn tần suất để không bị chặn. Không chạy song song vì các cấu hình có bộ xếp hạng lại cục bộ sẽ tranh CPU và vượt thời hạn 3 giây, làm sai lệch số đo.
+    \item Các trục thay đổi: kiểu truy xuất (dense E5, BM25, hybrid RRF); bộ xếp hạng lại (không có, MiniLM-L12 cục bộ, API Jina v2 làm số tham khảo); chế độ web (tắt, tự động, luôn tìm). Tổng cộng 11 cấu hình, mỗi cấu hình chỉ đổi một trục so với cấu hình lân cận.
+    \item Cấu hình mặc định của hệ thống: hybrid RRF + MiniLM-L12 + web tự động.
 \end{itemize}
 
 % ==============================================================================
@@ -130,10 +130,10 @@ Truy xuất được đo độc lập với bước sinh trên 183 câu dữ ki�
 
 Một số nhận xét:
 \begin{itemize}
-    \item \textbf{Truy xuất lai tốt hơn từng phương pháp đơn lẻ} (RQ1). Không xếp hạng lại, hybrid RRF đạt Recall@5 83,1\%, cao hơn dense E5 (81,1\%) và BM25 (78,6\%). Về MRR@5, hybrid (0,706) xấp xỉ dense (0,714) và cao hơn hẳn BM25 (0,584). Khi có MiniLM-L12, hybrid vẫn là tổ hợp tốt nhất trong các cấu hình không gọi API. Mọi cấu hình hybrid đều vượt yêu cầu Recall@5 $\geq$ 0,80.
-    \item \textbf{Bộ xếp hạng lại giúp mọi kiểu truy xuất}. MiniLM-L12 tăng Recall@5 của hybrid từ 83,1\% lên 86,6\% và MRR@5 từ 0,706 lên 0,739, tức khoảng một nửa mức tăng của API Jina (90,7\% và 0,789) mà không tốn phí API. Mức tăng lớn nhất ở BM25: MRR@5 từ 0,584 lên 0,718, vì BM25 xếp hạng kém nhưng vẫn kéo được trang đúng vào nhóm 30 ứng viên đầu, để cross-encoder đẩy lên.
-    \item \textbf{Chi phí thời gian}: truy xuất lai không xếp hạng lại chỉ mất khoảng 67 ms mỗi truy vấn; MiniLM-L12 trên CPU thêm khoảng 0,9 giây.
-    \item \textbf{Precision@5} ở mức 0,18--0,22 vì phần lớn câu chỉ có một đến hai trang gold; chỉ số này dùng để so sánh tương đối giữa các cấu hình.
+    \item Truy xuất lai tốt hơn từng phương pháp đơn lẻ (RQ1). Không xếp hạng lại, hybrid RRF đạt Recall@5 83,1\%, cao hơn dense E5 (81,1\%) và BM25 (78,6\%). Về MRR@5, hybrid (0,706) xấp xỉ dense (0,714) và cao hơn hẳn BM25 (0,584). Khi có MiniLM-L12, hybrid vẫn là tổ hợp tốt nhất trong các cấu hình không gọi API. Mọi cấu hình hybrid đều vượt yêu cầu Recall@5 $\geq$ 0,80.
+    \item Bộ xếp hạng lại giúp mọi kiểu truy xuất. MiniLM-L12 tăng Recall@5 của hybrid từ 83,1\% lên 86,6\% và MRR@5 từ 0,706 lên 0,739, tức khoảng một nửa mức tăng của API Jina (90,7\% và 0,789) mà không tốn phí API. Mức tăng lớn nhất ở BM25: MRR@5 từ 0,584 lên 0,718, vì BM25 xếp hạng kém nhưng vẫn kéo được trang đúng vào nhóm 30 ứng viên đầu, để cross-encoder đẩy lên.
+    \item Chi phí thời gian: truy xuất lai không xếp hạng lại chỉ mất khoảng 67 ms mỗi truy vấn; MiniLM-L12 trên CPU thêm khoảng 0,9 giây.
+    \item Precision@5 ở mức 0,18--0,22 vì phần lớn câu chỉ có một đến hai trang gold; chỉ số này dùng để so sánh tương đối giữa các cấu hình.
 \end{itemize}
 
 % ==============================================================================
@@ -351,11 +351,11 @@ Hệ thống được triển khai trên một VPS 4 vCPU, 8 GB RAM, chạy Ubun
 \label{sec:security}
 
 \begin{itemize}
-    \item \textbf{Mạng}: chỉ mở cổng 22 (SSH, chỉ đăng nhập bằng khóa), 80 và 443. Caddy tự cấp và gia hạn chứng chỉ HTTPS, thêm các header bảo mật (HSTS, CSP), chặn các đường dẫn tài liệu API và endpoint dành cho phát triển ở môi trường production, giới hạn kích thước thân yêu cầu 64 KB.
-    \item \textbf{Container}: api, bot và Caddy chạy với \code{no-new-privileges} và bỏ toàn bộ capability (Caddy chỉ thêm lại quyền mở cổng thấp).
-    \item \textbf{Xác thực}: bot dùng token dịch vụ; trang quản trị dùng token quản trị hoặc phiên của tài khoản Discord nằm trong danh sách quản trị; phiên người dùng là cookie \code{httpOnly} lưu dạng băm trong PostgreSQL; ứng dụng từ chối khởi động ở môi trường production nếu còn giá trị mặc định \code{change-me}.
-    \item \textbf{Chống lạm dụng}: giới hạn tần suất theo phút và hạn mức theo ngày cho mọi endpoint hỏi đáp, Redis lỗi thì từ chối thay vì cho qua.
-    \item \textbf{Riêng tư}: API và Caddy không ghi access log, nên địa chỉ IP người dùng không bị lưu; log ứng dụng không ghi nội dung hội thoại.
+    \item Mạng: chỉ mở cổng 22 (SSH, chỉ đăng nhập bằng khóa), 80 và 443. Caddy tự cấp và gia hạn chứng chỉ HTTPS, thêm các header bảo mật (HSTS, CSP), chặn các đường dẫn tài liệu API và endpoint dành cho phát triển ở môi trường production, giới hạn kích thước thân yêu cầu 64 KB.
+    \item Container: api, bot và Caddy chạy với \code{no-new-privileges} và bỏ toàn bộ capability (Caddy chỉ thêm lại quyền mở cổng thấp).
+    \item Xác thực: bot dùng token dịch vụ; trang quản trị dùng token quản trị hoặc phiên của tài khoản Discord nằm trong danh sách quản trị; phiên người dùng là cookie \code{httpOnly} lưu dạng băm trong PostgreSQL; ứng dụng từ chối khởi động ở môi trường production nếu còn giá trị mặc định \code{change-me}.
+    \item Chống lạm dụng: giới hạn tần suất theo phút và hạn mức theo ngày cho mọi endpoint hỏi đáp, Redis lỗi thì từ chối thay vì cho qua.
+    \item Riêng tư: API và Caddy không ghi access log, nên địa chỉ IP người dùng không bị lưu; log ứng dụng không ghi nội dung hội thoại.
 \end{itemize}
 
 \subsection{Tích hợp liên tục và quy trình phát hành}
@@ -385,9 +385,9 @@ Hướng dẫn cài đặt môi trường phát triển và tái lập đánh gi
 \section{Thảo luận}
 \label{sec:discussion}
 
-\textbf{Điểm mạnh.} Hệ thống đạt độ đúng 97,8\% và độ bám nguồn 96,2\% trên bộ 200 câu, vượt xa yêu cầu đặt ra; xử lý tốt câu tiếng Việt và câu gõ sai trên kho tri thức tiếng Anh; mọi câu trả lời có dữ kiện đều kèm trích dẫn được kiểm nguyên văn; không câu nào vượt hạn 45 giây. Việc tách rõ Agent (quyết định ngữ nghĩa) và máy chủ (kiểm tra tất định) giúp hệ thống vừa linh hoạt vừa an toàn: Agent có thể tìm lại, kiểm tên, tính toán, còn máy chủ đảm bảo không trích dẫn sai và không bịa điều kiện người chơi.
+Điểm mạnh. Hệ thống đạt độ đúng 97,8\% và độ bám nguồn 96,2\% trên bộ 200 câu, vượt xa yêu cầu đặt ra; xử lý tốt câu tiếng Việt và câu gõ sai trên kho tri thức tiếng Anh; mọi câu trả lời có dữ kiện đều kèm trích dẫn được kiểm nguyên văn; không câu nào vượt hạn 45 giây. Việc tách rõ Agent (quyết định ngữ nghĩa) và máy chủ (kiểm tra tất định) giúp hệ thống vừa linh hoạt vừa an toàn: Agent có thể tìm lại, kiểm tên, tính toán, còn máy chủ đảm bảo không trích dẫn sai và không bịa điều kiện người chơi.
 
-\textbf{Hạn chế.}
+Hạn chế.
 \begin{itemize}
     \item Hành vi với câu mơ hồ còn yếu (behavior pass 70,6\%): Agent thường chọn một cách hiểu thay vì hỏi lại.
     \item Độ trễ p95 (15,1 giây) chưa đạt mục tiêu 10 giây; token đầu vào của Agent lớn (khoảng 22.000 token mỗi câu) do mỗi lượt gửi lại toàn bộ lịch sử công cụ.
@@ -397,12 +397,12 @@ Hướng dẫn cài đặt môi trường phát triển và tái lập đánh gi
     \item Hệ thống phụ thuộc API bên ngoài (DeepSeek, Tavily); chưa có kiểm thử tải thật.
 \end{itemize}
 
-\textbf{Các yếu tố ảnh hưởng tới tính hợp lệ của đánh giá.}
+Các yếu tố ảnh hưởng tới tính hợp lệ của đánh giá.
 \begin{itemize}
-    \item \textbf{Kích thước tập đo}: 183 câu dữ kiện nên mỗi câu tương ứng 0,55 điểm phần trăm; khác biệt nhỏ giữa các cấu hình chưa có ý nghĩa thống kê, và mỗi cấu hình mới chạy một lần.
-    \item \textbf{Người chấm là LLM}: dù đã đối chiếu với một mô hình chấm khác (khớp 181/183 câu) và dùng mô hình khác với mô hình được đánh giá, việc chấm bằng LLM vẫn có thể có thiên lệch~\cite{zheng2023judge}; chưa có lượt chấm tay quy mô lớn.
-    \item \textbf{Bộ câu do nhóm tự xây dựng}: câu hỏi và nguồn gold do nhóm viết dựa trên chính kho tri thức, nên có thể dễ hơn câu hỏi thực tế của người chơi; lượt rà soát cuối có sự hỗ trợ của trợ lý AI.
-    \item \textbf{Điều kiện đo độ trễ}: đo tuần tự trên máy phát triển, không có tải đồng thời; độ trễ còn phụ thuộc tình trạng API DeepSeek tại thời điểm đo.
+    \item Kích thước tập đo: 183 câu dữ kiện nên mỗi câu tương ứng 0,55 điểm phần trăm; khác biệt nhỏ giữa các cấu hình chưa có ý nghĩa thống kê, và mỗi cấu hình mới chạy một lần.
+    \item Người chấm là LLM: dù đã đối chiếu với một mô hình chấm khác (khớp 181/183 câu) và dùng mô hình khác với mô hình được đánh giá, việc chấm bằng LLM vẫn có thể có thiên lệch~\cite{zheng2023judge}; chưa có lượt chấm tay quy mô lớn.
+    \item Bộ câu do nhóm tự xây dựng: câu hỏi và nguồn gold do nhóm viết dựa trên chính kho tri thức, nên có thể dễ hơn câu hỏi thực tế của người chơi; lượt rà soát cuối có sự hỗ trợ của trợ lý AI.
+    \item Điều kiện đo độ trễ: đo tuần tự trên máy phát triển, không có tải đồng thời; độ trễ còn phụ thuộc tình trạng API DeepSeek tại thời điểm đo.
 \end{itemize}
 
 % ==============================================================================
