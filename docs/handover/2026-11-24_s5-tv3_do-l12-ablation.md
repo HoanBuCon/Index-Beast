@@ -32,29 +32,37 @@ Nhánh `feature/s5-tv3-do-l12-ablation`, tạo từ `develop` sau PR #133. **Ch�
 
 | Cấu hình | Đúng hoàn toàn | Faithfulness 2 | p50 câu đầu |
 |---|---:|---:|---:|
-| Dense, không rerank, web off | 95,6% | 91,8% | 4,5 s |
-| Hybrid RRF, web auto | 95,6% | 91,3% | 5,2 s |
-| **Hybrid + L12, web auto (mặc định)** | **97,8%** | 89,1% | 6,6 s |
-| Hybrid + L12, web always | 96,7% | 82,5% | 14,6 s |
-| Hybrid + API Jina, web auto (tham khảo) | 96,7% | 91,3% | 6,0 s |
+| Dense, không rerank, web off | 95,6% | 96,7% | 4,5 s |
+| Hybrid RRF, web auto | 95,6% | 97,8% | 5,2 s |
+| **Hybrid + L12, web auto (mặc định)** | **97,8%** | 96,2% | 6,6 s |
+| Hybrid + L12, web always | 96,7% | 98,4% | 14,6 s |
+| Hybrid + API Jina, web auto (tham khảo) | 96,7% | 97,3% | 6,0 s |
 
 - Retrieval: Hybrid + L12 đạt Recall@5 86,6% và MRR 0,739. RRF đạt 83,1% / 0,706; API Jina đạt 90,7% / 0,789.
 - Mọi cấu hình đều nằm trong khoảng 95–98%. Khác biệt là 5 câu trên 183, phần lớn nằm trong nhiễu.
-- **Web always không đáng bật mặc định:** độ đúng không tăng, faithfulness tụt khoảng 8 điểm, độ trễ gấp đôi, chi phí tăng khoảng 50%.
+- **Web always không đáng bật mặc định:** độ đúng không tăng, độ trễ gấp đôi, chi phí tăng khoảng 50%, và có 1 câu lỗi 502.
 - Chi phí DeepSeek là 0,22–0,28 USD mỗi lượt, và khoảng 0,35 USD với web always. Tổng 7 lượt hết 1,91 USD; số dư còn 3,05 USD.
+
+## Đính chính lỗi chấm (24/11, sau commit 33e4262)
+
+- Bản đầu báo cáo một lỗi "trích số nguồn không tồn tại". **Đây là lỗi của script chấm, không phải lỗi app.**
+  - App chỉ trả các nguồn được trích và giữ số gốc trong `source.index`, ví dụ 1, 2, 4. Web và bot đều ghép `[n]` theo `source.index`.
+  - Script tạo gói chấm lại đánh số nguồn theo vị trí 1, 2, 3.
+  - Đếm lại bằng `source.index` trên cả 11 lượt: 0 câu sai.
+- Đã trả 175 câu về faithfulness 2, và sửa thêm IB-GS-278 của `hybrid-norerank-always` từ pass thành fail cho thống nhất với các lượt khác.
+- Sau khi sửa, faithfulness 2 là 96–99,5%. Bản cũ ghi 80–92%. Kết luận cũ "web always làm tụt faithfulness" là sai. Độ đúng hoàn toàn không đổi.
 
 ## Lỗi tìm thấy (chưa sửa, nên làm ở nhánh riêng)
 
-1. **Trích số nguồn không tồn tại.** Câu trả lời ghi `[n]` lớn hơn số nguồn trả về.
-   - Gặp ở 11–19 câu mỗi lượt. Với web always, con số này là 31–37 câu.
-   - Đây là lý do chính làm faithfulness tụt.
-   - Generator có bắt và thử lại, nhưng vẫn lọt.
-2. **IB-GS-300 trả 502 ở cả hai lượt web always.**
-   - Generator thử lại 2 lần đều hỏng: lần đầu `insufficient_with_citations`, lần sau `unknown_evidence_index`. Cuối cùng ứng dụng trả `upstream_error`.
-   - Lỗi tái hiện được. Có thể là cùng gốc với lỗi 1.
-3. **Câu thiếu dữ kiện đoán một giả thuyết thay vì hỏi lại.**
-   - Pass 70,6–76,5%. Gần như lượt nào cũng fail cùng một nhóm câu: IB-GS-277, 278, 279, 294 và 299.
-   - Đổi retrieval, reranker hay web không giúp được; đây là việc của prompt.
+1. **IB-GS-300 trả 502 ở cả hai lượt web always.**
+   - Với web off và web auto, câu này trả lời đúng.
+   - Validator từ chối vì `unknown_evidence_index`: model đưa evidence có index lớn hơn số đoạn context. Ở `hybrid-norerank-always`, lần đầu lỗi `insufficient_with_citations`.
+   - Chỉ được thử lại 1 lần (`format_retries` ≤ 1), sau đó trả `upstream_error`.
+   - Nguyên nhân gốc chưa rõ; cần tái hiện và ghi lại context đã đánh số.
+2. **Câu thiếu dữ kiện đoán một giả thuyết thay vì hỏi lại.**
+   - Pass 70,6–76,5%.
+   - Số lượt fail trên 11 lượt: IB-GS-299 và 278 fail ở cả 11 lượt; 279 và 294 ở 10 lượt; 277 ở 9 lượt.
+   - Đổi retrieval, reranker hay web không giúp được; đây là việc của prompt hoặc agent.
 
 ## Kiểm
 

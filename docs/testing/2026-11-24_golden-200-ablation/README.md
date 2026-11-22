@@ -11,11 +11,12 @@
   - Ở trọn luồng, L12 tăng độ đúng 1–2 điểm so với RRF, ở cả web off lẫn web auto. Đổi lại p50 chậm thêm khoảng 1,5 s.
 - **Web always không đáng bật mặc định.**
   - Độ đúng không tăng.
-  - Faithfulness 2 tụt từ khoảng 90% xuống 80–82%.
   - p50 tăng gấp đôi, từ khoảng 6 s lên 12–15 s.
   - Chi phí và token tăng khoảng 50%.
   - Mỗi câu gọi Tavily khoảng 1 lần, tức khoảng 190 lần mỗi lượt.
-- **Lỗi lớn nhất còn lại là trích số nguồn không tồn tại.** Lỗi này chiếm phần lớn số câu mất faithfulness; xem mục "Lỗi phát hiện khi chấm".
+  - Có 1 câu bị lỗi 502; xem mục "Lỗi phát hiện khi chấm".
+  - Faithfulness không tụt, vẫn ở mức 98–99%.
+- **Faithfulness 2 của mọi lượt nằm trong khoảng 96–99,5%.** Bản báo cáo trước ghi 80–92% là do lỗi chấm; xem mục "Đính chính".
 - **Cấu hình mặc định giữ nguyên là Hybrid RRF + L12 + web auto.** Cấu hình này có độ đúng cao nhất (97,8%) và độ trễ chấp nhận được.
 
 ## Mục tiêu
@@ -101,21 +102,21 @@ Nhận xét:
 
 | Cấu hình | Đúng hoàn toàn | Faithfulness 2 | Behavior pass | Trích đúng nguồn gold | p50 / p95 câu đầu | Reranker ok |
 |---|---:|---:|---:|---:|---:|---:|
-| Dense E5, không rerank, web off (mốc tối thiểu) | 95,6% | 91,8% | 70,6% | 95,1% | 4,5 / 10,7 s | — |
-| Dense E5 + L12, web auto | 97,3% | 92,9% | 76,5% | 95,6% | 7,3 / 18,7 s | 100% |
-| BM25 + L12, web auto | 96,2% | 92,3% | 70,6% | 94,5% | 7,8 / 19,6 s | 100% |
-| Hybrid RRF, web off | 95,1% | 89,6% | 70,6% | 95,1% | 5,0 / 12,8 s | — |
-| Hybrid RRF, web auto | 95,6% | 91,3% | 70,6% | 92,9% | 5,2 / 10,9 s | — |
-| Hybrid RRF, web always | 96,7% | 80,3% | 76,5% | 94,5% | 11,7 / 18,7 s | — |
-| Hybrid + L12, web off | 96,7% | 89,6% | 70,6% | 96,7% | 6,6 / 15,0 s | 100% |
-| **Hybrid + L12, web auto (mặc định)** | **97,8%** | 89,1% | 70,6% | 95,1% | 6,6 / 15,1 s | 99,8% |
-| Hybrid + L12, web always | 96,7% | 82,5% | 70,6% | 95,1% | 14,6 / 25,7 s | 100% |
-| Hybrid + API Jina, web off (tham khảo) | 96,2% | 90,2% | 76,5% | 95,1% | 5,9 / 14,0 s | 100% |
-| Hybrid + API Jina, web auto (tham khảo) | 96,7% | 91,3% | 70,6% | 95,6% | 6,0 / 13,1 s | 100% |
+| Dense E5, không rerank, web off (mốc tối thiểu) | 95,6% | 96,7% | 70,6% | 95,1% | 4,5 / 10,7 s | — |
+| Dense E5 + L12, web auto | 97,3% | 97,8% | 76,5% | 95,6% | 7,3 / 18,7 s | 100% |
+| BM25 + L12, web auto | 96,2% | 98,4% | 70,6% | 94,5% | 7,8 / 19,6 s | 100% |
+| Hybrid RRF, web off | 95,1% | 97,8% | 70,6% | 95,1% | 5,0 / 12,8 s | — |
+| Hybrid RRF, web auto | 95,6% | 97,8% | 70,6% | 92,9% | 5,2 / 10,9 s | — |
+| Hybrid RRF, web always | 96,7% | 99,5% | 70,6% | 94,5% | 11,7 / 18,7 s | — |
+| Hybrid + L12, web off | 96,7% | 98,4% | 70,6% | 96,7% | 6,6 / 15,0 s | 100% |
+| **Hybrid + L12, web auto (mặc định)** | **97,8%** | 96,2% | 70,6% | 95,1% | 6,6 / 15,1 s | 99,8% |
+| Hybrid + L12, web always | 96,7% | 98,4% | 70,6% | 95,1% | 14,6 / 25,7 s | 100% |
+| Hybrid + API Jina, web off (tham khảo) | 96,2% | 98,4% | 76,5% | 95,1% | 5,9 / 14,0 s | 100% |
+| Hybrid + API Jina, web auto (tham khảo) | 96,7% | 97,3% | 70,6% | 95,6% | 6,0 / 13,1 s | 100% |
 
 - Mọi lượt đều có 200/200 câu trả về, và không có lỗi 402.
 - Riêng hai lượt web always có 1 câu lỗi HTTP 502, đều là **IB-GS-300**:
-  - Generator thử lại 2 lần nhưng đều không qua bước kiểm trích dẫn: lần đầu `insufficient_with_citations`, lần sau `unknown_evidence_index`. Cuối cùng ứng dụng trả về `upstream_error`.
+  - Cả lần sinh đầu và lần thử lại đều không qua bước kiểm trích dẫn, nên ứng dụng trả về `upstream_error`. Chi tiết ở mục "Lỗi phát hiện khi chấm".
   - Câu này được chấm 0/0, nên `ok_pct` của hai lượt là 99,5%.
   - Lỗi lặp lại ở đúng câu này trên cả hai lượt, nên đây là lỗi có thể tái hiện chứ không phải lỗi mạng ngẫu nhiên.
 - Hai lượt web always kết thúc vòng lặp agent sớm (`forced_finish`) nhiều hơn hẳn: 18 câu ở Hybrid + L12 và 22 câu ở Hybrid RRF. Ở các lượt khác, con số này là 0–1 câu.
@@ -162,31 +163,61 @@ Bảng dưới có 55 câu dễ, 83 câu vừa, 45 câu khó, 49 câu gõ sai v�
 
 ## Lỗi phát hiện khi chấm
 
-### Trích số nguồn không tồn tại
+### Đính chính: "trích số nguồn không tồn tại" là lỗi của script chấm, không phải lỗi app
 
-Câu trả lời ghi `[n]` lớn hơn số nguồn trả về, ví dụ `[4]` khi chỉ có 3 nguồn. Theo quy ước chấm, câu bị lỗi này được faithfulness 1. Bảng dưới đếm số câu bị lỗi ở lượt đầu, tính trực tiếp từ `results.json`:
+- **App làm đúng.**
+  - `validate_answer` (`app/rag/generator.py`) chỉ trả về các nguồn được trích, và mỗi nguồn giữ số gốc trong `source.index`.
+  - Ví dụ ở IB-GS-203, nguồn trả về có index 1, 2 và 4, và câu trả lời trích `[4]` đúng nguồn Twin Axes.
+  - Web (`MessageList.tsx`, `SourceList.tsx`) và bot (`format.ts`) đều ghép `[n]` theo `source.index`.
+  - Đếm lại trên cả 11 lượt bằng `source.index`: **0 câu trích số không có thật**.
+- **Script chấm làm sai.**
+  - Gói chấm (`packets.py`, script trong scratchpad, không nằm trong repo) đánh số lại nguồn theo vị trí 1, 2, 3.
+  - Vì vậy những câu có danh sách nguồn bị hở số trông như trích `[4]` khi chỉ có 3 nguồn.
+  - Mỗi lượt có 11–37 câu như vậy. Lượt web always có nhiều hơn vì có nhiều nguồn hơn nên dễ hở số.
+- **Đã sửa điểm.**
+  - Trả 175 câu về faithfulness 2. 5 câu vẫn giữ faithfulness 1 vì còn lỗi bám nguồn khác.
+  - Correctness không đổi, nên độ đúng hoàn toàn không đổi.
+  - Bản sao lưu điểm trước khi sửa nằm ở scratchpad phiên. Quy ước mới ghi ở `judge/quy-uoc-cham.md`.
+- **Hệ quả: kết luận cũ "web always làm tụt faithfulness" là sai.** Sau khi sửa, faithfulness của hai lượt web always là 98,4% và 99,5%.
+- Số trích hở (ví dụ 1, 2, 4) chỉ là chuyện hiển thị, không làm sai nội dung. Có thể cân nhắc đánh lại số liền mạch, nhưng không bắt buộc.
 
-| Lượt | Số câu |
-|---|---:|
-| `dense-norerank-off`, `dense-l12-auto`, `bm25-l12-auto`, `hybrid-jina-auto` | 11 mỗi lượt |
-| `hybrid-norerank-auto` | 12 |
-| `hybrid-norerank-off`, `hybrid-l12-auto`, `hybrid-jina-off` | 16 mỗi lượt |
-| `hybrid-l12-off` | 19 |
-| `hybrid-l12-always` | 31 |
-| `hybrid-norerank-always` | 37 |
+### IB-GS-300 trả HTTP 502 khi bật web always
 
-- Log `Citation index mismatch` cho thấy generator có bắt lỗi và thử lại. Tuy vậy, lỗi vẫn lọt ở trường hợp số trích chỉ vượt 1–2 so với số nguồn.
-- Có thể nguyên nhân là model đánh số theo danh sách evidence đầy đủ, còn phần nguồn trả cho client đã bị cắt bớt. Giả thuyết này **chưa kiểm**.
-- Ở web always, số câu bị lỗi tăng gấp đôi. Đây là phần lớn lý do faithfulness của hai lượt này tụt xuống 80–82%.
-- IB-GS-300 là dạng nặng của cùng lỗi: validation bắt được, nhưng hai lần thử lại vẫn hỏng, nên ứng dụng trả 502.
-- **Đề xuất:** sửa ở `app/rag/generator.py`, theo một trong hai cách: đánh lại số trích cho khớp nguồn trả về, hoặc bỏ các `[n]` không hợp lệ thay vì trả lỗi. Việc sửa thuộc một nhánh riêng.
+- **Câu hỏi:** Samurai có dùng được Carian Slicer mà không tăng Intelligence không, và mở khóa phép thế nào?
+- Với web off và web auto, câu này trả lời đúng.
+- Với web always, cả hai lượt (L12 và RRF) đều trả 502 `upstream_error`, kèm thông báo "Câu trả lời RAG thiếu bằng chứng hoặc trích dẫn không hợp lệ".
+- **Diễn biến trong log:**
+  - `hybrid-l12-always`: lần đầu lỗi `unknown_evidence_index`, thử lại 1 lần vẫn `unknown_evidence_index`, rồi dừng.
+  - `hybrid-norerank-always`: lần đầu lỗi `insufficient_with_citations`, nghĩa là model vừa báo thiếu dữ kiện vừa gắn trích dẫn. Lần thử lại lỗi `unknown_evidence_index`.
+- **Nghĩa của `unknown_evidence_index`:** model đưa một mục `evidence` có `index` lớn hơn số đoạn context đã chọn (`len(prepared.hits)`). Validator từ chối, và chỉ được thử lại 1 lần (`format_retries` chỉ nhận 0 hoặc 1).
+- **Chưa rõ nguyên nhân gốc.**
+  - Có lẽ khi bật web always, context có thêm các đoạn web, và model đánh số evidence theo một danh sách khác với danh sách server đã chọn.
+  - Cần lấy prompt và context của câu này để kiểm. Code không log nội dung model, nên không thể xem lại từ log.
+- **Tác động:** người dùng nhận lỗi thay vì câu trả lời. Ở golden 200, lỗi chỉ gặp ở 1/200 câu và chỉ khi bật web always. Web always không phải chế độ mặc định.
+- **Hướng sửa** (nhánh riêng):
+  1. Tái hiện câu này với web always và ghi lại context đã đánh số.
+  2. Nếu lỗi do lệch số giữa web và corpus, sửa cách đánh số hoặc ghi rõ phạm vi số trong prompt.
+  3. Cân nhắc khi hết lượt thử lại thì trả câu "thiếu dữ kiện" thay vì 502.
 
 ### Câu thiếu dữ kiện
 
 - Tỉ lệ pass dao động 70,6–76,5%, tức chỉ khác nhau 1 câu trên 17.
-- Gần như lượt nào cũng fail cùng một nhóm câu: IB-GS-277, 278, 279, 294 và 299. IB-GS-299 fail ở cả 11 lượt.
-- Ở các câu này, model thường chọn một giả thuyết rồi trả lời luôn thay vì hỏi lại. Ví dụ, nó mặc định "hiệp sĩ ở Roundtable Hold" là Gideon.
-- Đổi retrieval, reranker hay web không giúp được. Đây là việc của prompt, không phải của retrieval.
+- Gần như lượt nào cũng fail cùng một nhóm câu. Bảng dưới đếm số lượt fail trên 11 lượt, và ví dụ lấy từ `hybrid-norerank-always`.
+- Lúc đầu IB-GS-278 ở lượt này bị chấm pass, lệch với 10 lượt còn lại. Đã sửa thành fail cho thống nhất.
+
+| Câu | Câu hỏi (rút gọn) | Số lượt fail | Model làm gì |
+|---|---|---:|---|
+| IB-GS-299 | "Vừa có remembrance đầu tiên, bước tiếp của quest NPC đó?" | 11/11 | Mặc định là Remembrance of the Grafted, bảo tới gặp Enia |
+| IB-GS-278 | "Talisman rồng bản cộng đó tăng bao nhiêu kháng?" | 11/11 | Tự cho là dòng Dragoncrest (kháng vật lý), rồi liệt kê các bậc +1, +2. Không hỏi là dòng drake nào (lửa, sét, phép, thánh...) |
+| IB-GS-279 | "Hiệp sĩ ở Roundtable Hold, quest dẫn đi đâu?" | 10/11 | Mặc định là Gideon Ofnir |
+| IB-GS-294 | "Rìu của kỵ sĩ chết và viên crystal tear xanh?" | 10/11 | Liệt kê đủ hai cây rìu, nhưng tự chọn Greenspill cho viên tear |
+| IB-GS-277 | "Sau tiếng báo Great Rune vỡ trong DLC, gặp lại hiệp sĩ ở chỗ thánh giá?" | 9/11 | Mặc định là Ansbach ở Main Gate Cross |
+| IB-GS-292 | "Vừa đánh xong một boss DLC, đi màn sương phía bắc?" | 2/11 | Thường hỏi lại đúng |
+
+- **Kiểu lỗi chung:** câu hỏi có một tham chiếu mơ hồ ("hiệp sĩ đó", "bản cộng đó", "remembrance đầu tiên"). Retrieval tìm được một ứng viên có vẻ hợp, và model trả lời luôn, có trích dẫn, thay vì hỏi lại hoặc nêu các khả năng có điều kiện.
+- Theo quy ước chấm, chỉ đưa một khả năng là fail, còn liệt kê có điều kiện từ 2 khả năng trở lên là pass.
+- Đổi retrieval, reranker hay web không giúp được. Đây là việc của prompt hoặc agent: cần nhận ra tham chiếu mơ hồ và hỏi lại, hoặc liệt kê các khả năng.
+- Câu trả lời của model không bịa. Nội dung đúng với giả thuyết nó chọn, nên correctness và faithfulness không bị ảnh hưởng. Lỗi nằm ở hành vi.
 
 ## Tái lập
 

@@ -36,7 +36,7 @@
 {"id": "IB-GS-136", "category": "mechanics", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-137", "category": "equipment", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-138", "category": "equipment", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-139", "category": "equipment", "difficulty": "easy", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích dẫn lệch chỉ số: [4]/[5] không khớp nguồn, [5] không tồn tại.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-139", "category": "equipment", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích dẫn lệch chỉ số: [4]/[5] không khớp nguồn, [5] không tồn tại. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-140", "category": "equipment", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-141", "category": "location", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-142", "category": "location", "difficulty": "easy", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
@@ -59,9 +59,9 @@
 {"id": "IB-GS-159", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-160", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-161", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-162", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-163", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-164", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-162", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-163", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-164", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-165", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-166", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-167", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
@@ -101,7 +101,7 @@
 {"id": "IB-GS-201", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-202", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-203", "category": "equipment", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-204", "category": "equipment", "difficulty": "medium", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-204", "category": "equipment", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-205", "category": "equipment", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-206", "category": "equipment", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-207", "category": "character", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
@@ -113,7 +113,7 @@
 {"id": "IB-GS-213", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-214", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-215", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-216", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [3] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-216", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [3] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-217", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-218", "category": "location", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-219", "category": "quest", "difficulty": "medium", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
@@ -134,14 +134,14 @@
 {"id": "IB-GS-234", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-235", "category": "quest", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-236", "category": "quest", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-237", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-237", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-238", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-239", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-240", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-240", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-241", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-242", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-243", "category": "mechanics", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-244", "category": "mechanics", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-243", "category": "mechanics", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-244", "category": "mechanics", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-245", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-246", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-247", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
@@ -156,12 +156,12 @@
 {"id": "IB-GS-256", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-257", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-258", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-259", "category": "quest", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [4]/[5] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-259", "category": "quest", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [4]/[5] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-260", "category": "quest", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-261", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-262", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-263", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
-{"id": "IB-GS-264", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 1, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn.", "judge": "Claude (Claude Code)"}
+{"id": "IB-GS-264", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "Trích [4] không tồn tại trong danh sách nguồn. [sửa 24/11: số trích khớp source.index, bỏ trừ faithfulness]", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-265", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-266", "category": "multi_hop", "difficulty": "hard", "correctness": 2, "faithfulness": 2, "behavior": null, "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
 {"id": "IB-GS-267", "category": "out_of_scope", "difficulty": "easy", "correctness": null, "faithfulness": null, "behavior": "pass", "followup": null, "reason": "", "judge": "Claude (Claude Code)"}
