@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.services import privacy
-from core.errors import UnavailableError
+from core.errors import NotFoundError, UnavailableError
 from tests.unit.test_privacy import FakeQdrant
 
 
@@ -69,7 +69,7 @@ class FakeSession:
         if db.fail_on and db.fail_on(sql):
             raise SQLAlchemyError("boom")
         if sql.startswith("SELECT conversations.id"):
-            mine = [c for c, u in db.convs.items() if u == params["user_id_1"]]
+            mine = [c for c, u in db.convs.items() if u == params["user_id_1"] and params.get("id_1", c) == c]
             return FakeResult(mine[: params.get("param_1") or len(mine)])
         if sql.startswith("DELETE FROM conversations") and "RETURNING" in sql:
             gone = [c for c, u in db.convs.items() if u == params["user_id_1"]]
@@ -175,3 +175,41 @@ async def test_vectors_are_purged_while_the_rows_still_exist():
 
     await privacy.delete_account(db, Spy(), "c", user)
     assert seen and all(row_and_session for row_and_session in seen)
+
+
+# ---------- xóa một hội thoại của tài khoản (DELETE /me/conversations/{id}) ----------
+
+
+async def test_deletes_only_the_owned_conversation_and_its_vectors_first():
+    user = uuid4()
+    keep, gone = uuid4(), uuid4()
+    db, qdrant = FakeDB(user, [keep, gone]), FakeQdrant()
+
+    await privacy.delete_conversation(db, qdrant, "c", user, gone)
+
+    assert set(db.convs) == {keep}
+    assert len(qdrant.deletes) == 1
+    assert db.users == {user} and db.sessions  # tài khoản và phiên còn nguyên
+
+
+async def test_someone_elses_conversation_is_not_found_and_untouched():
+    owner, stranger = uuid4(), uuid4()
+    conversation = uuid4()
+    db, qdrant = FakeDB(owner, [conversation]), FakeQdrant()
+
+    with pytest.raises(NotFoundError):
+        await privacy.delete_conversation(db, qdrant, "c", stranger, conversation)
+
+    assert conversation in db.convs and not qdrant.deletes
+
+
+async def test_vector_failure_keeps_the_row_so_a_retry_can_finish():
+    user, conversation = uuid4(), uuid4()
+    db = FakeDB(user, [conversation])
+
+    with pytest.raises(UnavailableError):
+        await privacy.delete_conversation(db, FakeQdrant(fail=True), "c", user, conversation)
+    assert conversation in db.convs
+
+    await privacy.delete_conversation(db, FakeQdrant(), "c", user, conversation)
+    assert not db.convs

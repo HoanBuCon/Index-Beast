@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { createServer } from "vite";
-import { deleteAccount } from "../src/api/auth.ts";
+import { deleteAccount, deleteMyConversation } from "../src/api/auth.ts";
 
 const callArgs = (mock: { mock: { calls: { arguments: unknown[] }[] } }, i: number) =>
   mock.mock.calls[i].arguments as [string, RequestInit];
@@ -66,6 +66,60 @@ test("about page summarises privacy: hashed Discord IDs, 90 days, deletion paths
     assert.match(html, /90 ngày/);
     assert.match(html, /Xóa tài khoản/);
     assert.match(html, /<code>\/clear<\/code>/);
+  } finally {
+    await server.close();
+  }
+});
+
+const ID = "3f2b8c1e-9a4d-4c7e-8b1a-2d5e6f7a8b9c";
+
+test("delete one account conversation calls DELETE /me/conversations/{id}; 404 counts as already gone", async (t) => {
+  const fetchMock = t.mock.method(globalThis, "fetch", async () => new Response(null, { status: 204 }));
+  assert.equal(await deleteMyConversation(ID), true);
+  const [url, init] = callArgs(fetchMock, 0);
+  assert.equal(url, `/api/v1/me/conversations/${ID}`);
+  assert.equal(init.method, "DELETE");
+  assert.equal(init.credentials, "same-origin");
+  fetchMock.mock.mockImplementation(async () => new Response(null, { status: 404 }));
+  assert.equal(await deleteMyConversation(ID), true);
+  for (const status of [401, 403, 500, 503]) {
+    fetchMock.mock.mockImplementation(async () => new Response(null, { status }));
+    assert.equal(await deleteMyConversation(ID), false, String(status));
+  }
+  fetchMock.mock.mockImplementation(async () => {
+    throw new TypeError("Failed to fetch");
+  });
+  assert.equal(await deleteMyConversation(ID), false);
+  const calls = fetchMock.mock.callCount();
+  assert.equal(await deleteMyConversation("../me"), false); // không phải UUID: không gửi gì
+  assert.equal(fetchMock.mock.callCount(), calls);
+});
+
+test("account-only conversations in the sidebar can be deleted", async () => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
+  try {
+    const { default: ChatPage } = await server.ssrLoadModule("/src/pages/ChatPage.tsx");
+    const { AuthContext, guestAuth } = await server.ssrLoadModule("/src/hooks/AuthContext.ts");
+    const html = renderToStaticMarkup(
+      createElement(
+        MemoryRouter,
+        { initialEntries: ["/chat"] },
+        createElement(
+          AuthContext.Provider,
+          {
+            value: {
+              ...guestAuth,
+              authAvailable: true,
+              user: { id: "u1", display_name: "Tarnished", is_admin: false },
+              myConversations: [{ id: ID, title: "Elden Ring là gì?", created_at: "2026-11-22T12:00:00Z" }],
+            },
+          },
+          createElement(ChatPage),
+        ),
+      ),
+    );
+    assert.match(html, /Của tài khoản/);
+    assert.match(html, /aria-label="Xóa Elden Ring là gì\?"/);
   } finally {
     await server.close();
   }

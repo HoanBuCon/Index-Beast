@@ -13,6 +13,7 @@ export interface AuthState {
   traceAvailable: boolean;
   user: AuthUser | null;
   myConversations: MyConversation[];
+  forgetConversation: (id: string) => void;
   // true khi phiên thật sự đã hết; false thì vẫn giữ người dùng và đặt logoutError.
   logout: () => Promise<boolean>;
   logoutError: string;
@@ -60,11 +61,16 @@ export function useAuth(): AuthState {
     return true;
   }, []);
 
+  // Bỏ một hội thoại khỏi danh sách "Của tài khoản" sau khi server đã xóa
+  const forgetConversation = useCallback((id: string) => {
+    setMyConversations((current) => current.filter((c) => c.id !== id));
+  }, []);
+
   const clearUser = useCallback(() => {
     setLogoutError("");
     setUser(null);
     setMyConversations([]);
   }, []);
 
-  return { loading, ...caps, user, myConversations, logout, logoutError, clearUser };
+  return { loading, ...caps, user, myConversations, forgetConversation, logout, logoutError, clearUser };
 }

@@ -11,6 +11,7 @@ export const guestAuth: AuthState = {
   traceAvailable: false,
   user: null,
   myConversations: [],
+  forgetConversation: () => {},
   logout: async () => false,
   logoutError: "",
   clearUser: () => {},

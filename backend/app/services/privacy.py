@@ -22,7 +22,7 @@ from sqlalchemy import delete, func, null, select, update
 from sqlalchemy.exc import SQLAlchemyError
 
 from core.db.models import AuthSession, Conversation, Feedback, IngestionJob, Message, User
-from core.errors import UnavailableError
+from core.errors import NotFoundError, UnavailableError
 
 log = logging.getLogger(__name__)
 
@@ -83,6 +83,25 @@ async def _delete_conversations(session, ids: Sequence[UUID], *, count: bool) ->
         ).scalar_one()
     counts.conversations = (await session.execute(delete(Conversation).where(Conversation.id.in_(ids)))).rowcount
     return counts
+
+
+async def delete_conversation(
+    sessionmaker, qdrant, memory_collection: str, user_id: UUID, conversation_id: UUID
+) -> None:
+    """Xóa MỘT hội thoại của tài khoản (DELETE /me/conversations/{id}) kèm tin nhắn, feedback, ký ức và điểm Qdrant.
+    Hội thoại không tồn tại hoặc của người khác đều trả 404 như nhau (không lộ hội thoại của người khác). Vector xóa
+    TRƯỚC, hàng PostgreSQL SAU: lỗi Qdrant để nguyên hội thoại nên người dùng xóa lại được."""
+    try:
+        async with sessionmaker() as session:
+            owned = select(Conversation.id).where(Conversation.id == conversation_id, Conversation.user_id == user_id)
+            ids = list((await session.execute(owned)).scalars())
+        if not ids:
+            raise NotFoundError("Không tìm thấy hội thoại.")
+        await VectorPurger(qdrant, memory_collection).delete_conversations(ids)
+        async with sessionmaker() as session, session.begin():
+            await _delete_conversations(session, ids, count=False)
+    except SQLAlchemyError:
+        raise UnavailableError("Không xóa được hội thoại. Hãy thử lại.") from None
 
 
 async def delete_account(sessionmaker, qdrant, memory_collection: str, user_id: UUID) -> Counts:
