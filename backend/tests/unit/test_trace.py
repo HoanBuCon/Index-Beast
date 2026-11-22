@@ -162,7 +162,7 @@ def test_admin_stats_matches_the_shape_the_web_client_validates(admin_client, mo
     client, auth = stats_client(
         admin_client,
         monkeypatch,
-        recent_conversations=[(uuid4(), "  Marika   là ai? " + "x" * 100, when), (uuid4(), None, when)],
+        recent_conversations=[(uuid4(), "  Marika   là ai? " + "x" * 100, when, None), (uuid4(), None, when, None)],
         recent_feedback=[
             SimpleNamespace(message_id=uuid4(), rating=-1, reason="sai"),
             SimpleNamespace(message_id=uuid4(), rating=1, reason=None),

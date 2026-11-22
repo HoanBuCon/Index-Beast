@@ -15,6 +15,11 @@ class AdminConversation(BaseModel):
     id: str
     title: str = Field(description="Câu hỏi đầu tiên của hội thoại, cắt còn 60 ký tự.")
     created_at: datetime
+    last_message_id: str | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Id câu trả lời cuối của hội thoại: dán vào ô tra cứu trace (id hội thoại cũng được chấp nhận).",
+    )
 
 
 class AdminFeedback(BaseModel):

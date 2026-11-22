@@ -28,6 +28,7 @@ router = APIRouter(tags=["admin"], dependencies=[Depends(require_admin)])
     response_model=TraceOut,
     responses={401: {"model": ErrorBody}, 404: {"model": ErrorBody}, 422: {"model": ErrorBody}},
     summary="Trace RAG của một câu trả lời",
+    description="Nhận id câu trả lời; nếu là id hội thoại thì trả trace của câu trả lời cuối của hội thoại đó.",
 )
 async def get_trace(message_id: UUID, service: ChatService = Depends(get_chat_service)) -> TraceOut:
     return TraceOut.model_validate(await service.trace(message_id))
@@ -61,7 +62,10 @@ async def get_stats(ctx: AppContext = Depends(get_ctx)) -> AdminStats:
     except SQLAlchemyError:
         raise UnavailableError("Không đọc được thống kê từ PostgreSQL.") from None
     return AdminStats(
-        conversations=[AdminConversation(id=str(i), title=_title(q), created_at=at) for i, q, at in conversations],
+        conversations=[
+            AdminConversation(id=str(i), title=_title(q), created_at=at, last_message_id=str(last) if last else None)
+            for i, q, at, last in conversations
+        ],
         feedback=[AdminFeedback(message_id=str(f.message_id), rating=f.rating, reason=f.reason) for f in feedback],
         ingestion_jobs=[AdminJob(id=j.external_id or str(j.id), status=j.status, pages_ok=j.pages_ok) for j in jobs],
         eval_runs=[

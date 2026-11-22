@@ -126,7 +126,7 @@ export interface Conversation {
   updatedAt: string;
 }
 export interface AdminStats {
-  conversations: { id: string; title: string; created_at: string }[];
+  conversations: { id: string; title: string; created_at: string; last_message_id?: string }[];
   feedback: { message_id: string; reason?: string; rating: number }[];
   ingestion_jobs: { id: string; status: string; pages_ok: number }[];
   eval_runs: { id: string; metrics: Record<string, number> }[];
