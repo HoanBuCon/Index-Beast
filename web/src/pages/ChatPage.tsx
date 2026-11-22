@@ -15,6 +15,7 @@ import {
   accountConversationIds,
   claimDeclined,
   claimableGuestConversations,
+  groupSidebarConversations,
   markClaimed,
   rememberClaimDeclined,
   stampOwner,
@@ -115,9 +116,8 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     ids.forEach((id) => history.remove(id));
     if (ids.includes(active)) reset();
   }
-  // Hội thoại trên server chưa có bản trong trình duyệt này (đăng nhập từ thiết bị khác).
-  const localServerIds = new Set(history.conversations.map((c) => c.serverId));
-  const remoteOnly = auth.myConversations.filter((c) => !localServerIds.has(c.id));
+  // Nhóm theo chủ sở hữu: mở một mục tải bản cục bộ nhưng không làm nó nhảy sang mục khác.
+  const groups = groupSidebarConversations(history.conversations, auth.myConversations, userId);
   const [openError, setOpenError] = useState("");
   // Xóa hội thoại. Hội thoại thuộc tài khoản phải xóa cả trên server: trước đây chỉ xóa bản trong trình duyệt nên nó
   // hiện lại ở mục "Của tài khoản" mà không có cách xóa.
@@ -136,6 +136,13 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
     if (owned && c.serverId && !(await deleteFromAccount(c.serverId))) return;
     history.remove(c.id);
     if (active === c.id) reset();
+  }
+  function openLocal(c: Conversation) {
+    setActive(c.id);
+    setMode(c.mode);
+    stream.clearError();
+    navigate("/chat");
+    closeMobileSidebar();
   }
   async function openRemote(id: string, title: string) {
     setOpenError("");
@@ -304,24 +311,46 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
           />
         </nav>
 
-        {history.conversations.length > 0 && (
-          <section className="conversation-history" aria-labelledby="conversation-history-title">
-            <h2 id="conversation-history-title" className="history-heading">
-              Tất cả
+        {groups.account.length > 0 && (
+          <section className="conversation-history" aria-labelledby="remote-history-title">
+            <h2 id="remote-history-title" className="history-heading">
+              Của tài khoản
             </h2>
             <div className="history">
-              {history.conversations.map((c) => (
+              {groups.account.map((item) => {
+                const c = item.local;
+                return (
+                  <div key={item.key} className={c && active === c.id ? "history-row selected" : "history-row"}>
+                    <button
+                      disabled={stream.busy}
+                      onClick={() => (c ? openLocal(c) : void openRemote(item.serverId ?? "", item.title))}
+                    >
+                      <span>{item.title}</span>
+                      <small>{new Date(item.time).toLocaleDateString("vi-VN")}</small>
+                    </button>
+                    <button
+                      disabled={stream.busy}
+                      className="delete"
+                      aria-label={`Xóa ${item.title}`}
+                      onClick={() => void (c ? removeConversation(c) : deleteFromAccount(item.serverId ?? ""))}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+        {groups.browser.length > 0 && (
+          <section className="conversation-history" aria-labelledby="conversation-history-title">
+            <h2 id="conversation-history-title" className="history-heading">
+              {userId ? "Trên trình duyệt này" : "Tất cả"}
+            </h2>
+            <div className="history">
+              {groups.browser.map((c) => (
                 <div key={c.id} className={active === c.id ? "history-row selected" : "history-row"}>
-                  <button
-                    disabled={stream.busy}
-                    onClick={() => {
-                      setActive(c.id);
-                      setMode(c.mode);
-                      stream.clearError();
-                      navigate("/chat");
-                      closeMobileSidebar();
-                    }}
-                  >
+                  <button disabled={stream.busy} onClick={() => openLocal(c)}>
                     <span>{c.title}</span>
                     <small>
                       {c.mode === "demo" ? "Xem thử" : "API"} · {new Date(c.updatedAt).toLocaleDateString("vi-VN")}
@@ -332,31 +361,6 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
                     className="delete"
                     aria-label={`${"Xóa"} ${c.title}`}
                     onClick={() => void removeConversation(c)}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-        {remoteOnly.length > 0 && (
-          <section className="conversation-history" aria-labelledby="remote-history-title">
-            <h2 id="remote-history-title" className="history-heading">
-              Của tài khoản
-            </h2>
-            <div className="history">
-              {remoteOnly.map((c) => (
-                <div key={c.id} className="history-row">
-                  <button disabled={stream.busy} onClick={() => void openRemote(c.id, c.title)}>
-                    <span>{c.title}</span>
-                    <small>{new Date(c.created_at).toLocaleDateString("vi-VN")}</small>
-                  </button>
-                  <button
-                    disabled={stream.busy}
-                    className="delete"
-                    aria-label={`Xóa ${c.title}`}
-                    onClick={() => void deleteFromAccount(c.id)}
                   >
                     ×
                   </button>
