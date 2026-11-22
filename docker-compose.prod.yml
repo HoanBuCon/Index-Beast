@@ -11,7 +11,7 @@
 #   - log container ghi bằng driver local (xoay vòng 5x20 MB) để còn xem được khi sự cố; đặt DOCKER_LOG_DRIVER=none để tắt
 #   - ảnh minh họa tắt mặc định (backend/data/media nặng ~7,5 GB); mount backend/models vào api (.dockerignore không đưa model vào image)
 #   - Caddy dùng infra/Caddyfile.prod: HTTPS tự động, header bảo mật, không basic auth
-#   - healthcheck cho mọi container có cổng (trừ bot, xem bên dưới); giới hạn CPU/RAM (tổng mem_limit ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành)
+#   - healthcheck cho mọi container có cổng (trừ bot, xem bên dưới); giới hạn CPU/RAM (tổng mem_limit ≈ 5,6 GB, chừa ~2,4 GB cho hệ điều hành)
 #   - api, bot, caddy: no-new-privileges + cap_drop ALL (Caddy thêm lại NET_BIND_SERVICE). PostgreSQL/Qdrant/Redis KHÔNG bỏ capability:
 #     entrypoint của image chown thư mục dữ liệu rồi hạ quyền (cần CHOWN/SETUID/SETGID/DAC_OVERRIDE), chưa thử trên VPS nên không liều
 # Cần Docker Compose >= 2.24 (thẻ !reset). Docker không tự khởi động lại container "unhealthy": restart: unless-stopped
@@ -86,3 +86,5 @@ services:
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]    # chỉ để nghe cổng 80/443
     cpus: 0.5
+    # 64 MB của compose gốc hết ngay khi bị dội request (sự cố 22/11/2026: treo ở 59-64 MB, unhealthy, ngừng nhận 443)
+    mem_limit: 256m

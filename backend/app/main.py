@@ -67,7 +67,7 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
     # Constructor is cheap/lazy: no artifact or image file reads during import/OpenAPI generation.
     app.state.image_catalog = ImageCatalog(settings)
     install_error_handlers(app)
-    install_middleware(app, settings, quiet_paths=[HEALTH_PATH])
+    install_middleware(app, settings, quiet_paths=[HEALTH_PATH], exempt_paths=[HEALTH_PATH])
     app.include_router(api_router)
     if not settings.is_prod:
         app.include_router(llm_test.router, prefix=API_PREFIX)

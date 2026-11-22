@@ -2,7 +2,9 @@
 
 Chạy IndexBeast thật tại **https://tarnished.liemdai.io.vn** trên **1 VPS Ubuntu 24.04, 4 vCPU, 8 GB RAM** (thẻ Sprint 5: 5.1, 5.2, 5.3). Dùng lại phần lớn công việc staging ([`staging.md`](staging.md)): cùng compose gốc, cùng script cài VPS, cùng ngân sách tài nguyên.
 
-> Trạng thái: toàn bộ file bên dưới đã kiểm cú pháp (`bash -n`, `docker compose config`) nhưng **chưa chạy trên VPS thật** và **Caddyfile.prod chưa qua `caddy validate`** (máy soạn không có Docker daemon). Lần deploy đầu tiên phải đi theo từng bước ở mục 3 và 4, và điền kết quả vào handover.
+> Trạng thái: **đã deploy lần đầu ngày 22/11/2026** (VPS Viettel IDC 4 vCPU / 8 GB, Ubuntu 24.04.3, `main` 825437f): `caddy validate` đạt, chứng chỉ Let's Encrypt, header và chặn đường dẫn đạt, corpus nạp đủ. Kết quả và các bước thật đã làm: [handover deploy](handover/2026-11-22_s5-tv1_deploy-production.md). Chưa chạy trên VPS thật: `restore.sh`, cron backup.
+>
+> Production dùng reranker **API Jina** (`RAG_RERANKER_PROVIDER=jina`, cần `JINA_API_KEY`) thay model L12 cục bộ, nên không cần chép model L12. `RAG_COLLECTION=indexbeast_s4_wiki_ca98c06b`.
 
 ## 1. Kiến trúc và file
 
@@ -37,7 +39,7 @@ Quyết định đáng biết:
 
 ## 2. Ngân sách tài nguyên
 
-Như staging: api 3 GB / 2,5 CPU, Qdrant 1 GB / 1,5, PostgreSQL 1 GB / 1,0, Redis 192 MB / 0,5, bot 192 MB / 0,5, Caddy 64 MB / 0,5. Tổng giới hạn RAM ≈ 5,4 GB, chừa ~2,6 GB cho hệ điều hành. Số liệu đo thật ở [`staging.md`](staging.md) mục 7; nếu OOM giảm `API_WORKERS=1` trước.
+Như staging: api 3 GB / 2,5 CPU, Qdrant 1 GB / 1,5, PostgreSQL 1 GB / 1,0, Redis 192 MB / 0,5, bot 192 MB / 0,5, Caddy 256 MB / 0,5 (overlay prod nâng từ 64 MB sau sự cố dội request 22/11/2026). Tổng giới hạn RAM ≈ 5,6 GB, chừa ~2,4 GB cho hệ điều hành. Số liệu đo thật ở [`staging.md`](staging.md) mục 7; nếu OOM giảm `API_WORKERS=1` trước.
 
 **Reranker chạy trong api (Hybrid + MiniLM-L12 ONNX, mặc định của overlay prod):** mỗi worker uvicorn nạp một bản model riêng, tốn thêm **~0,3-0,4 GB RAM mỗi worker** (đo process đầy đủ ở handover TV3: ~1,27 GB so với ~0,9 GB khi chỉ RRF). Với `API_WORKERS=2`, thêm ~0,6-0,8 GB vào trần `mem_limit: 3g` của api: còn dư nhưng không rộng, theo dõi `docker stats` sau deploy đầu và giảm `API_WORKERS=1` hoặc đặt `RAG_RERANKER_ENABLED=false` nếu api gần chạm trần. Model **phải có sẵn trong `backend/models/fastembed` (cache FastEmbed) trước khi deploy**: container chỉ đọc thư mục này nên không tự tải được; thiếu model thì reranker lỗi nạp và giữ thứ tự RRF (câu trả lời vẫn chạy, chất lượng tìm giảm; xem log `jina_reranker_outcome`). Chuẩn bị trên máy dev: chạy một lần reranker (`eval/measure_retrieval.py --rerank`, hoặc nạp `Xenova/ms-marco-MiniLM-L-12-v2` qua FastEmbed với `RAG_MODELS_DIR=models/fastembed`) để cache có model (~120 MB), rồi `rsync` như mục 4.1.
 
@@ -203,6 +205,40 @@ Lỗi ở bước 1-2 thì DB đang chạy nguyên vẹn và dịch vụ không 
 - **Log:** `docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --tail 100 api`. Disk: `df -h`, `docker system df` mỗi tuần; dọn ảnh cũ bằng `docker image prune -f` (an toàn, không đụng volume).
 - **Hết hạn chứng chỉ:** Caddy tự gia hạn; theo dõi bằng ping ngoài (chứng chỉ hỏng thì ping HTTPS lỗi).
 - Chưa làm: fail2ban, cập nhật bảo mật tự động (`unattended-upgrades`), GitHub Actions gọi `deploy.sh` qua SSH (mục tùy chọn của thẻ 5.2; cần khóa SSH deploy nằm trong GitHub Secrets nên chưa làm).
+
+## 7b. Chống DoS và dội request
+
+Sự cố 22/11/2026: một IP dùng công cụ `fasthttp` gửi ~1.400 request/phút vào `/api/v1/answer-shares`, `/api/v1/images/<id giả>` và `/chat/stream` trong gần 2 giờ. Caddy chạm trần 64 MB, unhealthy, ngừng nhận 443. `ufw deny` không có tác dụng vì Docker mở cổng bằng iptables riêng.
+
+Các lớp, từ ngoài vào:
+
+| Lớp | Chặn gì | Ở đâu |
+|---|---|---|
+| Nhà mạng / CDN (Anti-DDoS Viettel IDC, Cloudflare) | Tấn công băng thông, nhiều IP | Chưa có. Cloudflare cần chuyển nameserver của cả `liemdai.io.vn` |
+| iptables `DOCKER-USER` | Một IP mở quá nhiều kết nối mới | Root trên VPS, bên dưới |
+| Caddy | Kết nối chậm (slowloris), header lớn | `infra/Caddyfile.prod` (timeout `read_header` 10 s, `read_body` 30 s, `idle` 2 phút), `mem_limit` 256 MB |
+| api: `RATE_LIMIT_API_PER_MINUTE` (240) | Một IP gửi quá nhiều request `/api/*`, kể cả đường dẫn không tồn tại; trả 429 trước khi chạm DB | `app/middleware.py`, đếm trong Redis |
+| api: `RATE_LIMIT_PER_MINUTE` (10) | Câu hỏi tốn tiền LLM | `app/api/guard.py` |
+
+iptables (root, qua Console VNC hoặc sudo). Rule phải ở chain `DOCKER-USER`, không phải ufw:
+
+```bash
+# Mỗi IP tối đa ~20 kết nối mới/giây vào 80/443 (dư cho trình duyệt: HTTP/2 dùng chung một kết nối)
+iptables -I DOCKER-USER -p tcp -m multiport --dports 80,443 -m conntrack --ctstate NEW   -m hashlimit --hashlimit-name web --hashlimit-mode srcip --hashlimit-above 20/second --hashlimit-burst 40 -j DROP
+# Chặn hẳn một IP khi đang bị dội
+iptables -I DOCKER-USER -s <ip> -j DROP
+# Lưu qua lần khởi động lại
+apt-get install -y iptables-persistent && netfilter-persistent save
+# Xem và gỡ
+iptables -L DOCKER-USER -n --line-numbers
+iptables -D DOCKER-USER <số dòng>
+```
+
+Truy nguồn khi site chậm hoặc timeout (Caddy chỉ ghi lỗi, không ghi access log; api không ghi IP):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile app logs --no-log-prefix --since 30m caddy   | python3 -c "import sys,json,collections as c; n=c.Counter(json.loads(l).get('request',{}).get('client_ip') for l in sys.stdin if l.startswith('{')); print(n.most_common(5))"
+```
 
 ## 8. Xử lý sự cố
 

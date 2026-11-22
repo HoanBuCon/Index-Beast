@@ -33,9 +33,12 @@ def is_trusted_service(request: Request) -> bool:
 
 
 def _client_ip(request: Request) -> str:
+    return ip_key(request.client.host if request.client else "-")
+
+
+def ip_key(host: str) -> str:
     """Khóa IP cho rate limit. IPv6: một mạng /64 thường thuộc một thuê bao nên gộp về /64, không thì kẻ gọi đổi
     địa chỉ trong /64 để né giới hạn; IPv4-mapped (::ffff:a.b.c.d) quy về IPv4. Host không phải IP giữ nguyên."""
-    host = request.client.host if request.client else "-"
     try:
         address = ipaddress.ip_address(host)
     except ValueError:
@@ -47,7 +50,7 @@ def _client_ip(request: Request) -> str:
     return host
 
 
-def _retry_after() -> int:
+def retry_after() -> int:
     return WINDOW_SECONDS - int(time.time()) % WINDOW_SECONDS
 
 
@@ -64,7 +67,7 @@ async def ensure_admin_not_blocked(request: Request) -> None:
         log.warning("admin rate limit unavailable", exc_info=True)
         raise UnavailableError("Không kiểm tra được giới hạn tần suất.") from None
     if failures >= ctx.settings.rate_limit_per_minute:
-        raise RateLimitedError(retry_after=_retry_after())
+        raise RateLimitedError(retry_after=retry_after())
 
 
 async def record_admin_failure(request: Request) -> None:
@@ -94,7 +97,7 @@ async def enforce_login_limit(request: Request) -> None:
     ctx = request.app.state.ctx
     window = int(time.time()) // WINDOW_SECONDS
     if await _count(ctx, f"ratelimit:login:ip:{_client_ip(request)}:{window}") > ctx.settings.rate_limit_per_minute:
-        raise RateLimitedError(retry_after=_retry_after())
+        raise RateLimitedError(retry_after=retry_after())
 
 
 async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
@@ -111,8 +114,8 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
     who = f"ref:{body.external_ref or '-'}" if trusted else f"ip:{_client_ip(request)}"
     window = int(time.time()) // WINDOW_SECONDS
     if await _count(ctx, f"ratelimit:chat:{who}:{window}") > settings.rate_limit_per_minute:
-        raise RateLimitedError(retry_after=_retry_after())
+        raise RateLimitedError(retry_after=retry_after())
     # Trần thứ hai theo server Discord: nhiều thread hay nhiều người của một server không vượt được ngân sách chung
     guild_key = f"ratelimit:chat:guild:{body.guild_id}:{window}"
     if trusted and body.guild_id and await _count(ctx, guild_key) > settings.rate_limit_guild_per_minute:
-        raise RateLimitedError(retry_after=_retry_after())
+        raise RateLimitedError(retry_after=retry_after())
