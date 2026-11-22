@@ -1,6 +1,6 @@
 # TV4 · Điều hướng đăng nhập/chat và menu tài khoản
 
-Ngày 22/11/2026 (Asia/Saigon). Trợ lý thực hiện phần TV4 theo yêu cầu của người dùng. Làm trên nhánh cục bộ `feature/s5-tv4-menu-tai-khoan-auth-routing` (tách từ `origin/develop` tại `099639a`, chưa từng push); theo yêu cầu người dùng, toàn bộ thay đổi được commit trên nhánh mới `feature/s5-tv4-tai-khoan-auth-responsive`, rebase lên `origin/develop` mới nhất và push. Chưa mở PR. Không đưa vào nhánh: handover TV2 `2026-11-22_s5-tv2_chuyen-data-vao-backend.md` (việc của TV2) và ảnh có khung không dùng `MENU_FL_40135_Profile.png`.
+Ngày 22/11/2026 (Asia/Saigon). Trợ lý thực hiện phần TV4 theo yêu cầu của người dùng. Làm trên nhánh cục bộ `feature/s5-tv4-menu-tai-khoan-auth-routing` (tách từ `origin/develop` tại `099639a`, chưa từng push); theo yêu cầu người dùng, toàn bộ thay đổi được commit, rebase lên `origin/develop` mới nhất và push lên `feature/s5-tv4-tai-khoan-auth-responsive`; sau đó người dùng yêu cầu xóa nhánh đó và chuyển toàn bộ (kèm đổi ghi chú dưới ô nhập) sang nhánh `feature/s5-tv4-giao-dien-tai-khoan-responsive`. Chưa mở PR. Không đưa vào nhánh: handover TV2 `2026-11-22_s5-tv2_chuyen-data-vao-backend.md` (việc của TV2) và ảnh có khung không dùng `MENU_FL_40135_Profile.png`.
 
 ## Yêu cầu và phạm vi
 
@@ -58,6 +58,10 @@ Người dùng báo ở cửa sổ ~530 px (chia đôi màn hình): tiêu đề 
 - Đã xem bằng browser ở 375×812, 530×945, 680×900, 768×1024 và 1440×900: ở ≤700 px tiêu đề nằm dưới logo, nút gợi ý xếp dọc. Cỡ >700 px không đổi so với trước. `npm test` 79/79, `npm run build`, `format:check` đạt.
 - Bổ sung theo yêu cầu người dùng: màn rộng (> 700 px) giữ ảnh kéo đầy khung như thiết kế, nhưng chữ logo luôn kết thúc ở ~26 % chiều cao khung, nên lời chào neo ở `padding-top: 29dvh` (`margin: 0 auto auto`) thay vì canh giữa dọc. Cửa sổ thấp (≤ 759 px cao) dùng 28dvh và thu gọn khoảng cách tiêu đề/giới thiệu/ghi chú để không phát sinh thanh cuộn.
 - Đo bằng browser (đỉnh tiêu đề so với đáy chữ logo, thanh cuộn của `.chat-content`): 1920×1080 313/281, 1440×900 261/234, 1280×720 202/187, 1366×600 168/156, 1280×650 182/169, 1024×768 223/200, 820×1000 290/260, 530×945 178/168; tất cả không có thanh cuộn. Sau đó `npm test` 79/79, `build`, `format:check` đạt.
+
+## Ghi chú dưới ô nhập (22/11)
+
+Theo yêu cầu người dùng, ghi chú dưới ô chat (`ChatPage.tsx`, `.chat-ai-note`) đổi từ "AI có thể mắc sai sót." thành **"INDEX BEAST có thể mắc sai sót."** (bản đầu ghi nhầm "INDEX-BEAST", người dùng sửa lại bỏ dấu gạch ngang). Người dùng gõ "sai xót"; dùng chính tả đúng "sai sót". Các câu tương tự ở trang chia sẻ (`SharedAnswerPage.tsx`), trang Về dự án và lệnh `/about`, `/help` của bot giữ nguyên vì không nằm trong yêu cầu. Đã xem trên browser; `npm test` 79/79, `build`, `format:check` đạt.
 
 ## Bố cục điện thoại: thanh tiêu đề + ngăn kéo (22/11)
 
