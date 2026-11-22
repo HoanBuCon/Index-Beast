@@ -79,6 +79,9 @@ class Settings(BaseSettings):
     auth_admin_discord_ids: Annotated[list[str], NoDecode] = []  # .env: Discord ID, phân cách bằng dấu phẩy
     rate_limit_per_minute: int = Field(default=10, ge=1, le=1000)  # mỗi IP (web) hoặc mỗi external_ref (bot)
     rate_limit_guild_per_minute: int = Field(default=30, ge=1, le=10000)  # mỗi server Discord (bot gửi guild_id)
+    # Trần chung mọi request /api/* mỗi IP mỗi phút (chống dội request); bot có service token và /health không tính.
+    # 0 = tắt. Một lượt tải trang web gọi ~5 request, nên 240 vẫn rộng cho cả nhóm người dùng chung một IP (NAT).
+    rate_limit_api_per_minute: int = Field(default=240, ge=0, le=100000)
     chat_timeout_seconds: float = Field(default=45, gt=0)  # hạn cho một câu hỏi; phải nhỏ hơn timeout 60 s của bot
     # Hạn riêng của SSE web (tính cả chờ token đầu); web không có giới hạn 60 s như bot. JSON/Discord giữ 45 s.
     chat_stream_timeout_seconds: float = Field(default=90, gt=0, le=300)

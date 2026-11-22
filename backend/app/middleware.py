@@ -12,14 +12,15 @@ import time
 import uuid
 from collections.abc import Iterable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.api import guard
 from app.api.errors import error_response
 from core.config import Settings
-from core.errors import AppError
+from core.errors import AppError, RateLimitedError
 from core.logging import request_id_var
 
 log = logging.getLogger("app.http")
@@ -79,8 +80,48 @@ class RequestContextMiddleware:
             request_id_var.reset(token)
 
 
-def install_middleware(app: FastAPI, settings: Settings, *, quiet_paths: Iterable[str] = ()) -> None:
-    # Middleware thêm sau nằm ngoài cùng → RequestContext bọc cả CORS, nên mọi response đều có request id
+class ApiRateLimitMiddleware:
+    """Trần chung `rate_limit_api_per_minute` cho mọi request /api/* theo IP, đếm trong Redis (đúng cho nhiều worker).
+
+    Chặn trước router nên request dội vào đường dẫn không tồn tại hay tài nguyên giả cũng bị tính, và 429 trả ngay
+    không chạm PostgreSQL/Qdrant. Bỏ qua: `exempt_paths` (healthcheck) và bot có service token hợp lệ (bot gom request
+    của mọi người dùng Discord về một IP; /chat của bot đã có giới hạn riêng theo external_ref và guild).
+    Redis lỗi thì cho qua: lớp này chỉ chống dội request, còn /chat tốn tiền LLM vẫn đóng (503) ở app.api.guard.
+    """
+
+    def __init__(self, app: ASGIApp, exempt_paths: Iterable[str] = ()) -> None:
+        self.app = app
+        self.exempt_paths = frozenset(exempt_paths)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or not scope["path"].startswith("/api/") or scope["path"] in self.exempt_paths:
+            await self.app(scope, receive, send)
+            return
+        ctx = scope["app"].state.ctx
+        limit = ctx.settings.rate_limit_api_per_minute
+        if limit and not guard.is_trusted_service(Request(scope)):
+            client = scope.get("client")
+            window = int(time.time()) // guard.WINDOW_SECONDS
+            key = f"ratelimit:api:ip:{guard.ip_key(client[0] if client else '-')}:{window}"
+            try:
+                async with ctx.redis.pipeline(transaction=True) as pipe:
+                    count, _ = await pipe.incr(key).expire(key, guard.WINDOW_SECONDS * 2).execute()
+            except Exception:  # noqa: BLE001 - Redis lỗi không được làm sập toàn bộ API
+                log.warning("api rate limit unavailable")
+                count = 0
+            if count > limit:
+                error = RateLimitedError(retry_after=guard.retry_after())
+                await error_response(error.status_code, error.code, error.message, error.headers)(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
+def install_middleware(
+    app: FastAPI, settings: Settings, *, quiet_paths: Iterable[str] = (), exempt_paths: Iterable[str] = ()
+) -> None:
+    # Middleware thêm sau nằm ngoài cùng: RequestContext > CORS > ApiRateLimit. 429 vì thế vẫn có request id, được
+    # log, và có header CORS để web đọc được.
+    app.add_middleware(ApiRateLimitMiddleware, exempt_paths=exempt_paths)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
