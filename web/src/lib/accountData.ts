@@ -15,6 +15,18 @@ export function stampOwner(
   return owner ? { ...next, ownerUserId: owner } : next;
 }
 
+// Danh tính đang xem: userId null = khách; loading = chưa biết đăng nhập hay chưa (khi đó ẩn mọi bản có chủ).
+export interface Viewer {
+  loading: boolean;
+  userId: string | null;
+}
+
+// Chỉ hiện/khôi phục hội thoại khách (không ownerUserId) hoặc của đúng người dùng đang đăng nhập.
+// Dùng cho cả danh sách hiển thị lẫn việc dọn bản sao của chủ khác khỏi localStorage.
+export function viewerConversations(conversations: Conversation[], viewer: Viewer): Conversation[] {
+  return conversations.filter((c) => !c.ownerUserId || (!viewer.loading && c.ownerUserId === viewer.userId));
+}
+
 // Mọi bản lưu cục bộ thuộc tài khoản: có ownerUserId trùng, hoặc có serverId nằm trong danh sách server của tài khoản.
 export function accountConversationIds(
   conversations: Conversation[],
