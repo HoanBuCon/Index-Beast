@@ -1,0 +1,14 @@
+\unnumberedchapter{MỞ ĐẦU}
+\label{chap:introduction}
+
+Elden Ring là trò chơi nhập vai hành động của FromSoftware có thế giới rộng, cốt truyện (lore) được kể gián tiếp qua mô tả vật phẩm, lời thoại nhân vật và kiến trúc môi trường, cùng một hệ thống chỉ số và trang bị rất phong phú. Bản mở rộng Shadow of the Erdtree bổ sung thêm một vùng đất mới, hàng trăm vật phẩm và nhiều tuyến nhiệm vụ. Thông tin về trò chơi chủ yếu nằm rải rác trên các wiki cộng đồng bằng tiếng Anh. Người chơi Việt Nam muốn biết một nhân vật là ai, một vật phẩm lấy ở đâu hay nên cộng điểm thế nào cho một lối chơi thường phải mở nhiều trang, tự dịch và tự đối chiếu.
+
+Các mô hình ngôn ngữ lớn (LLM) như ChatGPT trả lời trôi chảy bằng tiếng Việt nhưng hay ``bịa'' chi tiết (hallucination): tên địa điểm sai, yêu cầu chỉ số sai, bước nhiệm vụ không tồn tại, và không cho biết thông tin lấy từ đâu~\cite{ji2023hallucination}. Kỹ thuật sinh văn bản tăng cường truy xuất (RAG) giảm hiện tượng này bằng cách tìm đoạn tài liệu liên quan rồi mới sinh câu trả lời~\cite{lewis2020rag,gao2023ragsurvey}. Tuy nhiên RAG truyền thống chỉ truy xuất một lần theo nguyên văn câu hỏi, nên gặp khó với câu hỏi tiếng Việt trên kho tài liệu tiếng Anh, câu gõ sai tên riêng, câu cần tổng hợp nhiều trang, câu thiếu dữ kiện cần hỏi lại và câu đòi hỏi tính toán.
+
+Từ thực tế đó, nhóm lựa chọn đề tài ``Hệ thống Agentic RAG hỏi đáp lore Elden Ring'' và xây dựng sản phẩm \IB{}. Trong hệ thống, một tác tử (Agent) dựa trên LLM tự điều khiển quá trình truy xuất qua một vòng lặp gọi công cụ: tự viết truy vấn tiếng Anh, tìm trong kho tri thức bằng truy xuất lai (dense E5 kết hợp BM25, hợp nhất bằng RRF), kiểm tên riêng, mở toàn văn bằng chứng, tìm web khi cần, tự viết mã Python để tính phân bổ chỉ số, hỏi lại người chơi khi thật sự thiếu dữ kiện, rồi chọn tối đa năm đoạn bằng chứng. Câu trả lời được sinh ở dạng JSON có trích dẫn, và máy chủ kiểm tra từng trích dẫn khớp nguyên văn với nguồn trước khi gửi cho người dùng. Hệ thống phục vụ trên website và Discord.
+
+Báo cáo gồm bốn chương. Chương~\ref{chap:theory} trình bày cơ sở lý thuyết về xử lý ngôn ngữ tự nhiên, truy xuất thông tin, RAG, tác tử AI và các công nghệ sử dụng. Chương~\ref{chap:design} phân tích bài toán, yêu cầu và thiết kế hệ thống Agentic RAG. Chương~\ref{chap:impl} trình bày quá trình xây dựng pipeline dữ liệu, Agent, các công cụ, bước sinh và kiểm tra câu trả lời, cùng giao diện. Chương~\ref{chap:eval} trình bày kết quả đánh giá trên bộ 200 câu hỏi và cách triển khai hệ thống. Phần Kết luận tổng kết kết quả, bài học kinh nghiệm và hướng phát triển.
+
+Đề tài khó tránh khỏi thiếu sót, chúng em rất mong nhận được góp ý của thầy cô và các bạn. Chúng em xin cảm ơn sâu sắc TS. Trần Văn Khánh đã tận tình hướng dẫn.
+
+Chúng em xin chân thành cảm ơn!

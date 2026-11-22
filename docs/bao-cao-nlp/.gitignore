@@ -8,3 +8,10 @@
 *.fls
 *.fdb_latexmk
 *.xdv
+*.bbl
+*.bcf
+*.blg
+*.run.xml
+*.lol
+main.pdf
+build-docx/

@@ -1,0 +1,37 @@
+\unnumberedchapter{PHÂN CÔNG NHIỆM VỤ}
+
+\noindent\textbf{Phân công nhiệm vụ theo tiến độ thực hiện:}
+
+\begingroup
+\setstretch{1.15}
+\noindent
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}p{4.2cm}|}
+\hline
+\textbf{Stt} & \centering\arraybackslash\textbf{Tên nhiệm vụ} & \centering\arraybackslash\textbf{Người thực hiện} \\ \hline
+1 & Tìm hiểu đề tài, chốt phạm vi Elden Ring và Shadow of the Erdtree, viết đặc tả yêu cầu & Cả nhóm \\ \hline
+2 & Nghiên cứu cơ sở lý thuyết: mô hình ngôn ngữ lớn, RAG, Agentic RAG, truy xuất lai & Nguyễn Quang Minh\newline Trần Trọng Hoàn \\ \hline
+3 & Khảo sát nguồn dữ liệu, thu thập, làm sạch, chia đoạn và xây dựng corpus & Nông Hữu Thịnh \\ \hline
+4 & Lập chỉ mục Qdrant (E5 và BM25), bộ truy xuất lai, bộ xếp hạng lại, tìm kiếm web & Nguyễn Quang Minh\newline Nông Hữu Thịnh \\ \hline
+5 & Thiết kế và cài đặt vòng lặp Agent, bộ công cụ, prompt, kiểm tra trích dẫn & Nguyễn Quang Minh \\ \hline
+6 & API FastAPI, lưu hội thoại, xác thực, giới hạn tần suất, hạn mức, Docker, CI, triển khai máy chủ & Trần Trọng Hoàn \\ \hline
+7 & Giao diện web React, Discord bot, trang quản trị xem trace & Vũ Ngọc Quý \\ \hline
+8 & Xây dựng bộ câu hỏi đánh giá 200 câu, rubric chấm, chạy đánh giá và ablation & Nông Hữu Thịnh\newline Nguyễn Quang Minh \\ \hline
+9 & Viết báo cáo, chuẩn bị slide và kịch bản demo & Cả nhóm \\ \hline
+\end{tabularx}
+\endgroup
+
+\clearpage
+\noindent\textbf{Phân công nhiệm vụ theo thành viên thực hiện:}
+
+\begingroup
+\setstretch{1.15}
+\noindent
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\raggedright\arraybackslash}p{3.6cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{2.2cm}|}
+\hline
+\textbf{Stt} & \centering\arraybackslash\textbf{Thành viên} & \centering\arraybackslash\textbf{Nhiệm vụ} & \textbf{Chữ ký} \\ \hline
+1 & Trần Trọng Hoàn\newline (trưởng nhóm) & - Kiến trúc mã nguồn, quy ước nhánh và review.\newline - API FastAPI, lược đồ PostgreSQL, migration.\newline - Trace, trang thống kê quản trị.\newline - Xác thực Discord OAuth, giới hạn tần suất, hạn mức hằng ngày.\newline - Docker Compose, Caddy, CI GitHub Actions, triển khai VPS.\newline - Báo cáo, thuyết trình. & \\ \hline
+2 & Nông Hữu Thịnh & - Khảo sát nguồn wiki.gg, fanapis.\newline - Crawler MediaWiki, làm sạch HTML, giữ bảng.\newline - Chia đoạn theo mục, metadata, kiểm chất lượng corpus.\newline - Cập nhật dữ liệu tăng dần.\newline - Xây dựng và duyệt nguồn bộ câu hỏi đánh giá (rà soát cuối có trợ lý AI hỗ trợ).\newline - Báo cáo, thuyết trình. & \\ \hline
+3 & Nguyễn Quang Minh & - Lập chỉ mục E5 và BM25 trên Qdrant, truy xuất lai RRF.\newline - Bộ xếp hạng lại, tìm web Tavily.\newline - Vòng lặp Agent, 9 công cụ, sandbox \code{run\_python}.\newline - Prompt, kiểm trích dẫn, Answer Guard, bộ nhớ ngữ nghĩa.\newline - Đánh giá, ablation, đo độ trễ và chi phí.\newline - Báo cáo, thuyết trình. & \\ \hline
+4 & Vũ Ngọc Quý & - Thiết kế giao diện theo chủ đề Elden Ring.\newline - Web React: khung chat SSE, nguồn trích dẫn, ảnh, trang quản trị.\newline - Discord bot: \code{/ask}, mention, \code{/setup}, \code{/clear}, thread.\newline - Trang giới thiệu, ghi công nguồn dữ liệu.\newline - Báo cáo, thuyết trình. & \\ \hline
+\end{tabularx}
+\endgroup
