@@ -34,7 +34,11 @@ test("account menu warns about permanent deletion before anything is sent, and o
     const { default: AccountMenu } = await server.ssrLoadModule("/src/components/layout/AccountMenu.tsx");
     const render = (initialConfirming: boolean) =>
       renderToStaticMarkup(
-        createElement(AccountMenu, { name: "Tarnished", onLogout() {}, onDeleted() {}, initialConfirming }),
+        createElement(
+          MemoryRouter,
+          null,
+          createElement(AccountMenu, { name: "Tarnished", onLogout() {}, onDeleted() {}, initialConfirming }),
+        ),
       );
     const closed = render(false);
     assert.match(closed, /Tarnished/);

@@ -6,6 +6,7 @@ import type { AuthState } from "./useAuth";
 export const guestAuth: AuthState = {
   loading: false,
   authAvailable: false,
+  googleAuthAvailable: false,
   searchAvailable: false,
   traceAvailable: false,
   user: null,

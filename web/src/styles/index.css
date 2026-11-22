@@ -1469,7 +1469,7 @@ input {
   flex-shrink: 0;
 }
 /* Giữ logo tại chỗ; khi đóng chỉ thu phần nội dung thành cột điều hướng. */
-.workspace.sidebar-collapsed .sidebar > :not(.sidebar-rail):not(.sidebar-admin) {
+.workspace.sidebar-collapsed .sidebar > :not(.sidebar-rail):not(.sidebar-account) {
   display: none;
 }
 .workspace .sidebar,

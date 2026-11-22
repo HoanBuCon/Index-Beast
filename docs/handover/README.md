@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV4 · Menu tài khoản, điều hướng đăng nhập/chat và tích hợp Auth phía web (22/11/2026)](2026-11-22_s5-tv4_menu-tai-khoan-auth-routing.md)
 - [TV1 · Chống DoS sau sự cố dội request: rate limit chung /api, timeout Caddy, runbook iptables (22/11/2026)](2026-11-22_s5-tv1_chong-dos.md)
 - [TV1 · Deploy production lần đầu tại tarnished.liemdai.io.vn, sửa access log có IP và log reranker (22/11/2026)](2026-11-22_s5-tv1_deploy-production.md)
 - [TV1 · Sửa review hệ thống: vận hành, restore an toàn, deploy, cổng 18000, reranker trong compose (22/11/2026)](2026-11-22_s5-tv1_sua-review-ops.md)
@@ -97,7 +98,6 @@
 - [TV4 · Bỏ link mở nguồn trùng bên ngoài (08/11/2026)](2026-11-08_s3-tv4_bo-link-nguon-trung.md)
 
 - [TV4 · Đồng bộ giao diện trang chia sẻ Discord (08/11/2026)](2026-11-08_s3-tv4_giao-dien-chia-se-discord.md)
-
 
 - [TV4 · Khối nguồn và link xem đầy đủ (08/11/2026)](2026-11-08_s3-tv4_nguon-va-link-xem-day-du.md)
 
