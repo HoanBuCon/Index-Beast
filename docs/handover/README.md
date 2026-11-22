@@ -1,5 +1,6 @@
 # Tài liệu bàn giao (`docs/handover/`)
 
+- [TV1 · Xóa từng hội thoại của tài khoản, sửa hội thoại không xóa được ở mục "Của tài khoản" (22/11/2026)](2026-11-22_s5-tv1_xoa-hoi-thoai-tai-khoan.md)
 - [TV1 · Hạn mức hỏi đáp mỗi ngày cho khách, tài khoản và ngân sách token chung (22/11/2026)](2026-11-22_s5-tv1_han-muc-hoi-dap.md)
 - [TV4 · Menu tài khoản, điều hướng đăng nhập/chat và tích hợp Auth phía web (22/11/2026)](2026-11-22_s5-tv4_menu-tai-khoan-auth-routing.md)
 - [TV1 · Chống DoS sau sự cố dội request: rate limit chung /api, timeout Caddy, runbook iptables (22/11/2026)](2026-11-22_s5-tv1_chong-dos.md)

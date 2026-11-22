@@ -8,12 +8,20 @@ Phụ trách: TV1 · [S4] Auth service
 
 import json
 import secrets
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from app.adapters.discord_oauth import DiscordOAuth
-from app.api.deps import get_ctx, get_discord_oauth, optional_user, require_same_origin, require_user
+from app.api.deps import (
+    get_chat_service,
+    get_ctx,
+    get_discord_oauth,
+    optional_user,
+    require_same_origin,
+    require_user,
+)
 from app.api.errors import ErrorBody
 from app.api.guard import enforce_login_limit
 from app.api.schemas.auth import AuthMe, AuthUserOut, ClaimRequest, MyConversation
@@ -192,6 +200,29 @@ async def claim_conversation(
     body: ClaimRequest, user: AuthUser = Depends(require_user), ctx: AppContext = Depends(get_ctx)
 ) -> Response:
     await auth.claim_conversation(ctx.sessionmaker, user.id, body.conversation_id, owner_hash(body.conversation_token))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/me/conversations/{conversation_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_same_origin)],
+    responses={**_ERRORS, 403: {"model": ErrorBody}},
+    summary="Xóa một hội thoại của tôi kèm tin nhắn, feedback và ký ức (không hoàn tác)",
+)
+async def delete_my_conversation(
+    conversation_id: UUID,
+    user: AuthUser = Depends(require_user),
+    ctx: AppContext = Depends(get_ctx),
+    service=Depends(get_chat_service),
+) -> Response:
+    """Trước đây web chỉ xóa bản lưu trong trình duyệt, bản trên server hiện lại ở mục "Của tài khoản" mà không xóa
+    được. Hội thoại của người khác hoặc không tồn tại đều 404."""
+    await privacy.delete_conversation(
+        ctx.sessionmaker, ctx.qdrant, ctx.settings.chat_memory_collection, user.id, conversation_id
+    )
+    if forget := getattr(service, "forget", None):
+        forget([conversation_id])
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

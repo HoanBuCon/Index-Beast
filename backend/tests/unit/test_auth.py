@@ -438,6 +438,58 @@ def test_delete_me_reports_a_failed_purge_without_clearing_the_cookie(harness, m
     assert response.status_code == 503 and "set-cookie" not in response.headers
 
 
+def test_delete_one_conversation_needs_a_session_and_same_origin(harness, monkeypatch):
+    from app.services import privacy
+
+    deleted = []
+
+    async def fake_delete(sessionmaker, qdrant, collection, user_id, conversation_id):
+        deleted.append(conversation_id)
+
+    monkeypatch.setattr(privacy, "delete_conversation", fake_delete)
+    h = harness(user=USER)
+    path = f"/api/v1/me/conversations/{uuid4()}"
+    assert h.client.delete(path).status_code == 401  # khách
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    assert h.client.delete(path, headers={"Origin": "https://evil.example"}).status_code == 403
+    assert deleted == []
+
+
+def test_delete_one_conversation_removes_it_for_the_caller_and_forgets_the_cache(harness, monkeypatch):
+    from app.services import privacy
+
+    deleted, forgotten = [], []
+
+    async def fake_delete(sessionmaker, qdrant, collection, user_id, conversation_id):
+        deleted.append((user_id, conversation_id))
+
+    monkeypatch.setattr(privacy, "delete_conversation", fake_delete)
+    h = harness(user=USER)
+    service = type("S", (), {"forget": staticmethod(lambda ids: forgotten.extend(ids))})()
+    h.client.app.dependency_overrides[get_chat_service] = lambda: service
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    conversation = uuid4()
+
+    response = h.client.delete(f"/api/v1/me/conversations/{conversation}")
+
+    assert response.status_code == 204
+    assert deleted == [(USER.id, conversation)]
+    assert forgotten == [conversation]  # lượt hỏi sau không dùng lại bản trong RAM
+
+
+def test_delete_someone_elses_conversation_is_404(harness, monkeypatch):
+    from app.services import privacy
+    from core.errors import NotFoundError
+
+    async def not_mine(*_args):
+        raise NotFoundError("Không tìm thấy hội thoại.")
+
+    monkeypatch.setattr(privacy, "delete_conversation", not_mine)
+    h = harness(user=USER)
+    h.client.cookies.set(SESSION_COOKIE, "raw-session-token")
+    assert h.client.delete(f"/api/v1/me/conversations/{uuid4()}").status_code == 404
+
+
 def test_a_non_admin_session_cannot_read_admin_stats(harness):
     h = harness(user=USER, admin_token="s3cret-token")
     assert h.client.get("/api/v1/admin/stats").status_code == 401  # khách

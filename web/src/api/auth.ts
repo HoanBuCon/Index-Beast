@@ -155,6 +155,18 @@ export async function deleteAccount(): Promise<boolean> {
   }
 }
 
+// Xóa một hội thoại của tài khoản trên server (DELETE /me/conversations/{id}, cookie phiên + cùng Origin).
+// 404 = đã không còn (xóa từ thiết bị khác): coi như xong để bỏ khỏi danh sách.
+export async function deleteMyConversation(conversationId: string): Promise<boolean> {
+  if (!isUuid(conversationId)) return false;
+  try {
+    const response = await fetch(`${BASE}/me/conversations/${conversationId}`, { ...SAME_ORIGIN, method: "DELETE" });
+    return response.status === 204 || response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 // Nhận mọi hội thoại khách đang lưu ở trình duyệt (cần serverId + serverToken hợp lệ); trả về các id đã nhận.
 export async function claimGuestConversations(conversations: Conversation[]): Promise<string[]> {
   const claimable = conversations.filter(
