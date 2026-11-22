@@ -213,7 +213,7 @@ export default function ChatPage({ children }: { children?: ReactNode }) {
         onSearchChange={setSearchMode}
       />
       {/* TV4: ghi chú đặt dưới ô chat, dùng chung cả màn chào và hội thoại. */}
-      <p className="chat-ai-note">AI có thể mắc sai sót.</p>
+      <p className="chat-ai-note">INDEX-BEAST có thể mắc sai sót.</p>
     </>
   );
   return (
