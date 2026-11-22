@@ -18,7 +18,7 @@ from langchain_core.retrievers import BaseRetriever
 from langgraph.graph import END, START, StateGraph
 from langsmith import tracing_context
 
-from app.adapters.tavily import WebHit
+from app.adapters.tavily import WebHit, web_hit_allowed
 from app.api.schemas.chat import ChatRequest
 from app.rag.evidence import evidence_units
 from app.rag.generator import LLM, Generator, Prepared
@@ -351,7 +351,8 @@ class ChatPipeline:
         p = state["prepared"]
         if p.static_answer is None:
             # Chỉ evidence Agent đã chọn (22/11: server không còn dự phòng bằng mọi thứ tìm được).
-            by_id = {h.id: h for h in [document_to_hit(d) for d in state["documents"]] + state.get("web_hits", [])}
+            web_hits = [h for h in state.get("web_hits", []) if web_hit_allowed(h, self.settings)]
+            by_id = {h.id: h for h in [document_to_hit(d) for d in state["documents"]] + web_hits}
             p.trace.setdefault("evidence_selection", {"method": "model", "ids": []})
             candidates = [by_id[i] for i in p.trace["evidence_selection"]["ids"] if i in by_id]
             p.hits = select_context(

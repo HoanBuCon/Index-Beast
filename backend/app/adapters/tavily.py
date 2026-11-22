@@ -9,7 +9,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 
-from app.rag.web_content import clean_markdown, select_excerpts
+from core.text.web_content import clean_markdown, select_excerpts
 from core.types import Hit
 
 
@@ -43,6 +43,13 @@ def allowed_url(url, domains):
         return urlunsplit(("https", host, parts.path or "/", parts.query, ""))
     except ValueError:
         return None
+
+
+def web_hit_allowed(hit, settings):
+    """Chính sách domain chung cho kết quả mới và evidence lấy lại từ state: `restrict` chỉ nhận domain allowlist."""
+    if settings.web_search_domains_mode != "restrict":
+        return True
+    return allowed_url(hit.payload.get("url"), settings.web_search_domains) is not None
 
 
 class TavilySearch:

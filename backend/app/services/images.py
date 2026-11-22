@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import logging
+import os
 import re
 import threading
 import warnings
@@ -23,16 +24,11 @@ from urllib.parse import unquote, urlsplit
 from PIL import Image, UnidentifiedImageError
 
 from app.api.schemas.chat import ChatImage
+from app.services.image_cache import CACHE, FORMATS
 from core.config import BACKEND_ROOT
 from core.corpus import CorpusPolicy
 
 IDENTIFIER = re.compile(r"^[0-9a-f]{64}$")
-FORMATS = {
-    "PNG": (".png", "image/png"),
-    "JPEG": (".jpg", "image/jpeg"),
-    "WEBP": (".webp", "image/webp"),
-    "GIF": (".gif", "image/gif"),
-}
 
 
 def ui_image(row):
@@ -104,6 +100,19 @@ class ImageCatalog:
         self._blobs = {}
         self.counts = Counter()
         self._metadata = lru_cache(maxsize=64)(self._read_metadata)
+
+    def preflight(self) -> bool:
+        """Kiểm file catalog khi khởi động: thiếu/không đọc được thì cảnh báo một lần (ảnh tắt, chat text vẫn chạy)."""
+        if not self.enabled:
+            return True
+        missing = [
+            str(p) for p in (self.catalog_path, self.documents_path) if not (p.is_file() and os.access(p, os.R_OK))
+        ]
+        if missing:
+            logging.getLogger(__name__).warning(
+                "Image catalog unreadable, images stay off (text chat continues): %s", ", ".join(missing)
+            )
+        return not missing
 
     def _load(self):
         if self._loaded or not self.enabled:
@@ -203,8 +212,6 @@ class ImageCatalog:
         path = self._blobs.get(image_id)
         serving_root = self.root
         if path is None:
-            from app.services.answer_media import CACHE
-
             for extension, _ in FORMATS.values():
                 candidate = CACHE / image_id[:2] / (image_id + extension)
                 if candidate.is_file():

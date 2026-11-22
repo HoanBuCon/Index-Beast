@@ -23,27 +23,40 @@ class MemoryVectors:
         if collection == corpus_collection:
             raise ValueError("Memory and corpus collections must differ")
         self.client, self.collection = client, collection
+        self._validated = False  # Kiểm schema một lần mỗi lifecycle; lỗi truy cập thì kiểm lại ở lần sau.
 
     async def validate(self):
+        if self._validated:
+            return
         config = (await self.client.get_collection(self.collection)).config.params
         vectors = config.vectors
         if not isinstance(vectors, dict) or set(vectors) != {"dense"}:
             raise ValueError("Memory requires a separate named dense vector")
         if vectors["dense"].size != 384 or vectors["dense"].distance != qm.Distance.COSINE or config.sparse_vectors:
             raise ValueError("Memory schema must be 384 cosine, without sparse vectors")
+        self._validated = True
 
     async def setup(self):
         if not await self.client.collection_exists(self.collection):
             await self.client.create_collection(
                 self.collection, vectors_config={"dense": qm.VectorParams(size=384, distance=qm.Distance.COSINE)}
             )
+        self._validated = False
         await self.validate()
         for key in ("conversation_id", "owner", "status", "embedding_version", "embedding_model"):
             await self.client.create_payload_index(self.collection, key, qm.PayloadSchemaType.KEYWORD, wait=True)
 
     async def search(self, scope, vector, limit):
         await self.validate()
-        result = await self.client.query_points(
+        try:
+            result = await self._query(scope, vector, limit)
+        except Exception:
+            self._validated = False
+            raise
+        return result.points
+
+    async def _query(self, scope, vector, limit):
+        return await self.client.query_points(
             self.collection,
             query=vector,
             using="dense",
@@ -62,7 +75,6 @@ class MemoryVectors:
             ),
             with_payload=True,
         )
-        return result.points
 
     async def upsert(self, scope, row, vector):
         await self.client.upsert(

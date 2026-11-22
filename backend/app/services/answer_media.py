@@ -21,10 +21,9 @@ from app.api.schemas.chat import ChatImage
 from app.rag.budget import spend
 from app.rag.output import decode_output
 from app.rag.prompts import prompt, rewrite_prompt
-from app.services.images import FORMATS, plain, ui_image
-from core.config import REPO_ROOT
+from app.services.image_cache import CACHE, FORMATS
+from app.services.images import plain, ui_image
 
-CACHE = REPO_ROOT / "backend" / ".cache" / "web-images"
 IMAGE_HOSTS = {
     "eldenring.wiki.gg",
     "eldenring.wiki.fextralife.com",

@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     rag_batch_size: int = Field(default=32, ge=1, le=128)
     rag_encoder_threads: int = Field(default=2, ge=1, le=32)
     rag_images_enabled: bool = True
-    rag_images_catalog: str = "data/clean_runs/s2-full-v2/images.csv"
+    rag_images_catalog: str = "data/delivery/final/clean/images.csv"
     rag_images_documents: str = "data/chunk_runs/s2-full-v1/documents.jsonl"
     rag_images_root: str = "data/media/blobs"
     rag_images_manifests: str = "data/crawl_runs/s2-full-20261028/media"

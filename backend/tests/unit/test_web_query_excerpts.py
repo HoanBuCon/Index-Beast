@@ -9,8 +9,8 @@ from app.adapters.tavily import TavilySearch
 from app.api.deps import get_chat_service
 from app.api.schemas.chat import ChatRequest
 from app.rag.generator import RAGValidationError
-from app.rag.web_content import clean_markdown, select_excerpts
 from core.errors import UpstreamError
+from core.text.web_content import clean_markdown, select_excerpts
 from tests.unit.test_live_chat import BODY, FakeLLM, FakeRetriever, SequenceLLM, service
 from tests.unit.test_web_search import settings
 
