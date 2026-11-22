@@ -113,6 +113,7 @@ async def test_delete_account_is_idempotent(sessionmaker):
 
 async def test_a_failed_vector_purge_deletes_nothing_and_a_retry_completes(sessionmaker):
     user = await auth.upsert_user(sessionmaker, SETTINGS, "9200", "Retry")
+    token = await auth.create_session(sessionmaker, user.id, 7)
     conv, _ = await make_conversation(sessionmaker, user_id=user.id)
 
     class Down(RecordingQdrant):
@@ -123,6 +124,9 @@ async def test_a_failed_vector_purge_deletes_nothing_and_a_retry_completes(sessi
         await privacy.delete_account(sessionmaker, Down(), COLLECTION, user.id)
     assert await count(sessionmaker, User, User.id == user.id) == 1
     assert await count(sessionmaker, Conversation, Conversation.id == conv) == 1
+    assert (
+        await auth.user_for_token(sessionmaker, SETTINGS, token)
+    ).id == user.id  # phiên còn: DELETE /me thử lại được
     await privacy.delete_account(sessionmaker, RecordingQdrant(), COLLECTION, user.id)
     assert await count(sessionmaker, User, User.id == user.id) == 0
 
@@ -191,13 +195,13 @@ async def test_retention_removes_expired_sessions_in_batches_and_keeps_live_ones
 
 async def test_delete_account_removes_a_conversation_created_after_the_batch_loop(sessionmaker):
     """Đua: hội thoại xuất hiện sau khi vòng lặp thấy "hết" vẫn bị xóa cùng người dùng (không thành hội thoại khách
-    mồ côi), điểm Qdrant của nó cũng bị xóa, và phiên đã mất từ đầu."""
+    mồ côi), điểm Qdrant của nó cũng bị xóa, và phiên mất cùng transaction cuối."""
     user = await auth.upsert_user(sessionmaker, SETTINGS, "9400", "Racer")
     token = await auth.create_session(sessionmaker, user.id, 7)
     late: list = []
     real, opens = sessionmaker, []
 
-    # Lần mở thứ 3 là giao dịch cuối (sau xóa phiên và lần quét rỗng): chèn một hội thoại mới ngay trước nó.
+    # Lần mở thứ 3 là giao dịch cuối (sau lần quét rỗng và lần chọn "còn sót"): chèn một hội thoại mới ngay trước nó.
     class Gate:
         def __call__(self):
             opens.append(1)
