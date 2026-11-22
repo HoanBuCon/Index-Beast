@@ -374,7 +374,7 @@ Nhóm chuẩn bị kịch bản demo năm câu, mỗi câu thể hiện một n�
     \item Câu build có tính toán: ``Build Samurai dùng Uchigatana ở level 60'' -- bảng tám chỉ số tính bằng \code{run\_python}, nêu rõ giả định.
     \item Câu cần hỏi lại -- Agent hỏi thông tin còn thiếu, người chơi trả lời, hệ thống tiếp tục.
 \end{enumerate}
-Cùng các câu được thử trên Discord bằng \code{/ask} và bằng cách nhắc tên bot, và trang quản trị được dùng để mở trace của từng câu.
+Cùng các câu được thử trên Discord bằng \code{/ask} và bằng cách nhắc tên bot, và trang quản trị được dùng để mở trace của từng câu. Ảnh chụp các bước demo trên web và Discord được trình bày ở Mục~\ref{sec:impl_web_ui} và Mục~\ref{sec:impl_bot}.
 
 \subsection{Hướng dẫn cài đặt và sử dụng}
 \label{sec:guide}
@@ -393,6 +393,7 @@ Hướng dẫn cài đặt môi trường phát triển và tái lập đánh gi
     \item Độ trễ p95 (15,1 giây) chưa đạt mục tiêu 10 giây; token đầu vào của Agent lớn (khoảng 22.000 token mỗi câu) do mỗi lượt gửi lại toàn bộ lịch sử công cụ.
     \item Kiểm tra trích dẫn chỉ ở mức hình thức; máy chủ không kiểm lại phép tính build do Agent thực hiện mà dựa vào các câu \code{assert} Agent tự viết.
     \item Kho tri thức còn thiếu một số bảng số liệu có cấu trúc (chỉ số vũ khí theo cấp nâng), giới hạn khả năng trả lời câu so sánh chi tiết.
+    \item Trên Discord, bảng Markdown trong câu trả lời (ví dụ bảng chỉ số build) hiển thị ở dạng ký tự vì embed không hỗ trợ bảng.
     \item Hệ thống phụ thuộc API bên ngoài (DeepSeek, Tavily); chưa có kiểm thử tải thật.
 \end{itemize}
 

@@ -41,6 +41,19 @@ Việc do trợ lý AI (Claude Code) thực hiện theo yêu cầu của TV2; n�
 ## Hạn chế, việc còn lại
 
 - Bản DOCX: mục lục là trường Word, cần mở bằng Word và nhấn F9; bảng và hình chuyển tự động nên nên rà lại bố cục.
-- Chưa có ảnh chụp giao diện web/Discord trong báo cáo (không chạy app khi viết); nhóm có thể bổ sung ở Mục 3.7.
+- Ảnh giao diện web/Discord đã bổ sung ở Mục 3.7 (xem mục Bổ sung bên dưới).
 - Lượt rà soát cuối của golden set có trợ lý AI hỗ trợ; báo cáo đã ghi rõ.
 - Máy viết báo cáo cài thêm MiKTeX và Pandoc (winget, phạm vi người dùng).
+
+## Bổ sung: sơ đồ draw.io và ảnh demo (23/11/2026)
+
+- 11 sơ đồ vẽ bằng draw.io thay cho hình TikZ: nghiệp vụ dạng làn bơi, các workflow, sơ đồ tuần tự, kiến trúc,
+  triển khai, ERD, use case, LangGraph, RAG, ReAct. Nguồn XML: `docs/bao-cao-nlp/figures/drawio/*.drawio`
+  (sinh bằng `tools/drawio_diagrams.py`); PNG xuất bằng draw.io desktop CLI vào `figures/`.
+  Lệnh xuất: `draw.io.exe -x -f png -s 2 -b 12 -o figures/<tên>.png figures/drawio/<tên>.drawio`.
+- 10 ảnh demo trong `figures/screens/`, chụp từ hệ thống production ngày 23/11/2026 bằng Edge điều khiển qua Playwright:
+  trang chủ, chat trống, câu trả lời có trích dẫn (câu không dấu, gõ sai), popover nguồn, câu build (bảng 8 chỉ số,
+  tổng 139), trang trace quản trị (chỉ cắt khung trace), mobile, và 2 câu `/ask` thật của bot trên Discord
+  (đã cắt chỉ giữ khung tin nhắn). Câu trả lời là thật, không dàn dựng; 2 lệnh `/ask` gửi vào kênh bot với sự đồng ý của TV2.
+- Thêm vào Mục 3.7; ghi thêm hạn chế: embed Discord không hiển thị bảng Markdown.
+- PDF 117 trang; DOCX có đủ 24 hình.

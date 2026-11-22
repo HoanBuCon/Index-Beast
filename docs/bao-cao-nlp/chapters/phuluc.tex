@@ -195,6 +195,9 @@ python -m eval.summarize_ablation --manifest <manifest> --runs data/research_run
 Trên VPS đã cài Docker, sao chép \code{.env.prod.example} thành \code{.env} (quyền 600), điền tên miền và các secret, nạp dữ liệu, rồi chạy \nolinkurl{scripts/deploy.sh}. Script kiểm tra cấu hình, sao lưu PostgreSQL nếu đang chạy, build và khởi động các container với overlay \code{docker-compose.prod.yml}, rồi chờ API báo khỏe. Rollback bằng \code{scripts/deploy.sh <tag-cũ>}.
 
 \section{Biên dịch báo cáo}
+
+Các sơ đồ nghiệp vụ, quy trình và kiến trúc trong báo cáo được vẽ bằng draw.io; tệp nguồn XML nằm trong \nolinkurl{figures/drawio/}, sinh bằng \nolinkurl{tools/drawio_diagrams.py} và mở, chỉnh sửa được trên draw.io hoặc app.diagrams.net. Ảnh giao diện nằm trong \nolinkurl{figures/screens/}.
+
 \label{app:build}
 
 Báo cáo được soạn bằng LaTeX với lớp tài liệu \code{ictureport}, biên dịch bằng XeLaTeX và Biber: \code{xelatex main}, \code{biber main}, rồi \code{xelatex main} hai lần (hoặc \code{latexmk -xelatex main}). Mã nguồn báo cáo nằm trong thư mục \nolinkurl{docs/bao-cao-nlp} của kho mã.

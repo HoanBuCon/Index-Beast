@@ -90,20 +90,7 @@ Cạnh từ nút \code{agent} có điều kiện: nếu Agent kết thúc bằng
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=7mm and 8mm, font=\small]
-  \node[blk, fill=white] (s) {START};
-  \node[blk, right=of s] (scope) {scope};
-  \node[blk, right=of scope] (mem) {memory};
-  \node[blk, right=of mem, fill=AccentBlue!25] (ag) {agent};
-  \node[blk, below=10mm of ag] (ctx) {context};
-  \node[blk, left=of ctx] (pr) {prompt};
-  \node[blk, left=of pr, fill=white] (e) {END};
-  \draw[arr] (s) -- (scope); \draw[arr] (scope) -- (mem); \draw[arr] (mem) -- (ag);
-  \draw[arr] (ag) -- node[right, font=\footnotesize]{finish} (ctx);
-  \draw[arr] (ag.south west) -- node[sloped, above, font=\footnotesize]{ask\_user / reply} (pr.north east);
-  \draw[arr] (ctx) -- (pr); \draw[arr] (pr) -- (e);
-  \draw[arr, dashed] (ag.north) to[out=60, in=120, looseness=4] node[above, font=\footnotesize]{vòng lặp gọi công cụ} (ag.north east);
-\end{tikzpicture}
+\includegraphics[width=0.9\textwidth,height=0.62\textheight,keepaspectratio]{figures/langgraph.png}
 \caption{Đồ thị LangGraph của bước chuẩn bị}
 \label{fig:langgraph}
 \end{figure}
@@ -313,22 +300,7 @@ Hình~\ref{fig:full_sequence} tổng hợp các bước của một lượt có 
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small, every node/.style={align=center}]
-  \node at (0,0) {\textbf{API}}; \node at (3.4,0) {\textbf{Agent}}; \node at (6.8,0) {\textbf{Công cụ}};
-  \node at (10.2,0) {\textbf{Bộ sinh}}; \node at (13.4,0) {\textbf{Bộ kiểm tra}};
-  \foreach \x in {0,3.4,6.8,10.2,13.4} \draw[dashed, AccentGray] (\x,-0.35) -- (\x,-9.6);
-  \draw[arr] (0,-0.9) -- node[above, font=\footnotesize]{câu hỏi + ngữ cảnh} (3.4,-0.9);
-  \draw[arr] (3.4,-1.7) -- node[above, font=\footnotesize]{check\_name, search\_corpus} (6.8,-1.7);
-  \draw[arr] (6.8,-2.4) -- node[above, font=\footnotesize]{bản xem trước} (3.4,-2.4);
-  \draw[arr] (3.4,-3.2) -- node[above, font=\footnotesize]{open\_evidence} (6.8,-3.2);
-  \draw[arr] (6.8,-3.9) -- node[above, font=\footnotesize]{toàn văn + mã trích} (3.4,-3.9);
-  \draw[arr] (3.4,-4.7) -- node[above, font=\footnotesize]{run\_python (nếu cần)} (6.8,-4.7);
-  \draw[arr] (6.8,-5.4) -- node[above, font=\footnotesize]{kết quả tính} (3.4,-5.4);
-  \draw[arr] (3.4,-6.2) -- node[above, font=\footnotesize]{finish: bằng chứng, ý định} (10.2,-6.2);
-  \draw[arr] (10.2,-7.0) -- node[above, font=\footnotesize]{JSON có trích dẫn} (13.4,-7.0);
-  \draw[arr] (13.4,-7.8) -- node[above, font=\footnotesize]{sai giao thức: sinh lại 1 lần} (10.2,-7.8);
-  \draw[arr] (13.4,-8.8) -- node[above, font=\footnotesize]{câu trả lời đã kiểm, nguồn, ảnh} (0,-8.8);
-\end{tikzpicture}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/turn_sequence.png}
 \caption{Sơ đồ tuần tự của một lượt hỏi đáp có bằng chứng}
 \label{fig:full_sequence}
 \end{figure}
@@ -422,6 +394,64 @@ Giao diện web được viết bằng React 19 và TypeScript, đóng gói bằ
 \end{itemize}
 Giao diện được kiểm tra hiển thị ở chiều rộng 360 px cho thiết bị di động.
 
+Các hình dưới đây được chụp từ hệ thống đang chạy thật tại tên miền triển khai của nhóm vào ngày 23/11/2026, với câu trả lời thật do hệ thống sinh ra. Hình~\ref{fig:ui_home} là trang chủ và Hình~\ref{fig:ui_empty} là khung chat trống với ô nhập, nút chế độ web và các câu hỏi gợi ý. Hình~\ref{fig:ui_answer} là câu trả lời cho câu hỏi tiếng Việt không dấu và gõ sai tên vật phẩm (``chia stoneswrod dung voi tuong nao''): Agent đã nhận ra đúng Stonesword Key, câu trả lời dạng danh sách có số trích dẫn ở từng ý. Bấm vào một số trích dẫn sẽ mở popover hiển thị đoạn nguồn nguyên văn và liên kết tới trang wiki (Hình~\ref{fig:ui_popover}). Hình~\ref{fig:ui_build} là câu hỏi build: bảng tám chỉ số có tổng 139, đúng bằng level 60 cộng 79; Hình~\ref{fig:ui_sources} là phần giải thích và danh sách nguồn (trang lớp Samurai, trang Uchigatana) bên dưới. Hình~\ref{fig:ui_trace} là trang quản trị tra cứu trace của một câu trả lời, cho thấy câu hỏi độc lập Agent đã viết lại, độ trễ, số token và từng bước công cụ. Hình~\ref{fig:ui_mobile} là giao diện trên màn hình điện thoại.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/01_trang_chu.png}
+\caption{Trang chủ của Index Beast}
+\label{fig:ui_home}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/02_chat_trong.png}
+\caption{Khung chat trống với ô nhập, nút chế độ web và câu hỏi gợi ý}
+\label{fig:ui_empty}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/03a_cau_tra_loi_dau.png}
+\caption{Câu trả lời có trích dẫn cho câu hỏi không dấu, gõ sai tên vật phẩm}
+\label{fig:ui_answer}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/04_popover_nguon.png}
+\caption{Popover hiển thị đoạn nguồn nguyên văn khi bấm số trích dẫn}
+\label{fig:ui_popover}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/05a_build_dau.png}
+\caption{Câu trả lời build với bảng phân bổ tám chỉ số tính bằng run\_python}
+\label{fig:ui_build}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/05_build_run_python.png}
+\caption{Phần giải thích và danh sách nguồn của câu trả lời build}
+\label{fig:ui_sources}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/07_trace_quan_tri.png}
+\caption{Trang quản trị tra cứu trace của một câu trả lời}
+\label{fig:ui_trace}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.38\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/06_mobile.png}
+\caption{Giao diện khung chat trên điện thoại}
+\label{fig:ui_mobile}
+\end{figure}
+
 \subsection{Discord bot}
 \label{sec:impl_bot}
 
@@ -434,6 +464,22 @@ Discord bot viết bằng discord.js 14 và TypeScript, chạy trực tiếp tr�
     \item \code{/help}, \code{/about}, \code{/ping}: hướng dẫn, giới thiệu nguồn và giấy phép, kiểm tra hoạt động.
 \end{itemize}
 Mỗi kênh, thread hoặc người dùng có mã tham chiếu ngoài (\code{external\_ref}) riêng để hội thoại không lẫn vào nhau. Bot gọi API bằng token dịch vụ và gửi chế độ tìm web tự động.
+
+Hình~\ref{fig:dc_lore} và Hình~\ref{fig:dc_build} là hai câu trả lời thật của bot cho lệnh \code{/ask} trong kênh Discord của nhóm (ảnh đã cắt chỉ giữ khung tin nhắn). Mỗi câu trả lời là một embed gồm tiêu đề là câu hỏi, nội dung có số trích dẫn, danh sách nguồn có liên kết, nút ``Hỏi tiếp'' để hỏi nối tiếp trong cùng hội thoại và nút ``Xem đầy đủ trên web'' mở bản chia sẻ có hạn 24 giờ. Với câu build, bot trả bảng tám chỉ số có tổng 139 và trích dẫn quy tắc tính level; do embed của Discord không hiển thị bảng Markdown, bảng hiện ở dạng ký tự.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/09_discord_lore.png}
+\caption{Discord bot trả lời câu hỏi lore bằng lệnh /ask}
+\label{fig:dc_lore}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.75\textwidth,height=0.6\textheight,keepaspectratio]{figures/screens/10_discord_build.png}
+\caption{Discord bot trả lời câu hỏi build bằng lệnh /ask}
+\label{fig:dc_build}
+\end{figure}
 
 % ==============================================================================
 \section{Tóm tắt chương}

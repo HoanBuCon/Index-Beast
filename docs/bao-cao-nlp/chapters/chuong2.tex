@@ -203,32 +203,12 @@ Từ đặc tả yêu cầu phần mềm của dự án, Bảng~\ref{tab:fr} và
 \subsection{Quy trình hỏi đáp trực tuyến}
 \label{sec:workflow_online}
 
-Hình~\ref{fig:workflow_online} mô tả một lượt hỏi đáp. Người chơi gửi câu hỏi từ web hoặc Discord. API kiểm tra quyền, giới hạn tần suất và hạn mức. Hệ thống nạp các ký ức liên quan và các lượt gần đây của hội thoại, rồi chuyển cho Agent. Agent phân tích ý định và lặp lại việc gọi công cụ: tìm trong kho, kiểm tên, mở bằng chứng, tìm web, ghi điều kiện, tính toán. Khi đủ thông tin, Agent kết thúc theo một trong ba cách: chọn bằng chứng để viết câu trả lời, hỏi lại người chơi, hoặc trả lời ngắn không cần dữ kiện game (chào hỏi, từ chối). Với nhánh có bằng chứng, bước sinh viết câu trả lời JSON có trích dẫn, máy chủ kiểm tra rồi mới gửi về giao diện kèm nguồn và ảnh.
+Hình~\ref{fig:workflow_online} mô tả quy trình nghiệp vụ của một lượt hỏi đáp dưới dạng sơ đồ làn bơi, mỗi làn là một bên tham gia: người chơi, giao diện và API, Agent, bộ sinh và kiểm tra. Người chơi gửi câu hỏi từ web hoặc Discord. API kiểm tra quyền, giới hạn tần suất và hạn mức. Hệ thống nạp các ký ức liên quan và các lượt gần đây của hội thoại, rồi chuyển cho Agent. Agent phân tích ý định và lặp lại việc gọi công cụ: tìm trong kho, kiểm tên, mở bằng chứng, tìm web, ghi điều kiện, tính toán. Khi đủ thông tin, Agent kết thúc theo một trong ba cách: chọn bằng chứng để viết câu trả lời, hỏi lại người chơi, hoặc trả lời ngắn không cần dữ kiện game (chào hỏi, từ chối). Với nhánh có bằng chứng, bước sinh viết câu trả lời JSON có trích dẫn, máy chủ kiểm tra rồi mới gửi về giao diện kèm nguồn và ảnh.
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small]
-  \node[blk, text width=4.2cm] (u) at (0,0) {Người chơi hỏi (Web / Discord)};
-  \node[blk, text width=4.2cm] (api) at (0,-1.3) {API: xác thực, giới hạn tần suất, hạn mức};
-  \node[blk, text width=4.2cm] (mem) at (0,-2.6) {Nạp ký ức và các lượt gần đây};
-  \node[blk, text width=4.2cm, fill=AccentBlue!20] (ag) at (0,-3.9) {Agent phân tích ý định và gọi công cụ};
-  \node[blk, text width=4.0cm] (tools) at (5.6,-3.9) {Công cụ: tìm kho, kiểm tên, mở bằng chứng, tìm web, ghi điều kiện, tính toán};
-  \node[dec] (end) at (0,-5.6) {Agent kết thúc?};
-  \node[blk, text width=2.6cm] (ask) at (-4.6,-7.3) {Hỏi lại người chơi};
-  \node[blk, text width=4.2cm] (gen) at (0,-7.3) {Sinh câu trả lời JSON từ bằng chứng đã chọn};
-  \node[blk, text width=2.6cm] (rep) at (4.6,-7.3) {Trả lời ngắn (chào, từ chối)};
-  \node[blk, text width=4.2cm] (chk) at (0,-8.6) {Kiểm trích dẫn, Answer Guard, chọn ảnh};
-  \node[blk, text width=4.2cm] (out) at (0,-9.9) {Trả lời kèm nguồn và ảnh};
-  \draw[arr] (u) -- (api); \draw[arr] (api) -- (mem); \draw[arr] (mem) -- (ag);
-  \draw[arr] ([yshift=2mm]ag.east) -- node[above, font=\footnotesize]{gọi công cụ} ([yshift=2mm]tools.west);
-  \draw[arr] ([yshift=-2mm]tools.west) -- node[below, font=\footnotesize]{kết quả} ([yshift=-2mm]ag.east);
-  \draw[arr] (ag) -- (end);
-  \draw[arr] (end.west) -| node[above, font=\footnotesize, pos=0.25]{ask\_user} (ask.north);
-  \draw[arr] (end) -- node[right, font=\footnotesize]{finish} (gen);
-  \draw[arr] (end.east) -| node[above, font=\footnotesize, pos=0.25]{reply} (rep.north);
-  \draw[arr] (gen) -- (chk); \draw[arr] (chk) -- (out);
-\end{tikzpicture}
-\caption{Quy trình một lượt hỏi đáp trực tuyến}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/workflow_online.png}
+\caption{Quy trình nghiệp vụ một lượt hỏi đáp trực tuyến (sơ đồ làn bơi)}
 \label{fig:workflow_online}
 \end{figure}
 
@@ -239,22 +219,7 @@ Khi Agent gọi \code{ask\_user}, hệ thống lưu một yêu cầu bổ sung �
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small, every node/.style={align=center}]
-  \node (P) at (0,0) {\textbf{Người chơi}};
-  \node (S) at (5,0) {\textbf{Máy chủ}};
-  \node (A) at (10,0) {\textbf{Agent}};
-  \foreach \x in {0,5,10} \draw[dashed, AccentGray] (\x,-0.35) -- (\x,-8.2);
-  \draw[arr] (0,-0.9) -- node[above, font=\footnotesize]{``Build cho nhân vật của tôi''} (5,-0.9);
-  \draw[arr] (5,-1.6) -- node[above, font=\footnotesize]{câu hỏi + ký ức + lượt gần đây} (10,-1.6);
-  \draw[arr] (10,-2.4) -- node[above, font=\footnotesize]{ask\_user(level, lớp nhân vật)} (5,-2.4);
-  \node[draw, fill=AccentLightBlue!50, font=\footnotesize, anchor=west] at (5.15,-3.1) {lưu yêu cầu chờ, hạn 30 phút};
-  \draw[arr] (5,-3.8) -- node[above, font=\footnotesize]{câu hỏi lại} (0,-3.8);
-  \draw[arr] (0,-4.6) -- node[above, font=\footnotesize]{``level 80, Samurai'' + mã yêu cầu} (5,-4.6);
-  \draw[arr] (5,-5.4) -- node[above, font=\footnotesize]{câu gốc + câu hỏi lại + câu trả lời} (10,-5.4);
-  \node[draw, fill=AccentLightBlue!50, font=\footnotesize, anchor=east] at (9.85,-6.15) {set\_conditions, tìm kiếm, run\_python, finish};
-  \draw[arr] (10,-6.9) -- node[above, font=\footnotesize]{bằng chứng + kết quả tính} (5,-6.9);
-  \draw[arr] (5,-7.7) -- node[above, font=\footnotesize]{câu trả lời có trích dẫn} (0,-7.7);
-\end{tikzpicture}
+\includegraphics[width=0.92\textwidth,height=0.62\textheight,keepaspectratio]{figures/clarify_sequence.png}
 \caption{Sơ đồ tuần tự của một lượt hỏi lại}
 \label{fig:workflow_clarify}
 \end{figure}
@@ -268,20 +233,7 @@ Kho tri thức được xây dựng bằng một pipeline ngoại tuyến gồm 
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=5mm and 4mm, font=\small]
-  \node[blk] (c) {1. Thu thập\\(crawl)};
-  \node[blk, right=of c] (f) {2. Lọc\\(filter)};
-  \node[blk, right=of f] (t) {3. Biến đổi\\(transform)};
-  \node[blk, right=of t] (k) {4. Chia đoạn\\(chunk)};
-  \node[blk, right=of k] (i) {5. Lập chỉ mục\\(index)};
-  \node[dat, below=10mm of i, xshift=-14mm] (qd) {Qdrant\\dense + BM25};
-  \node[dat, below=10mm of i, xshift=14mm] (pg) {PostgreSQL\\tài liệu, đoạn};
-  \node[dat, below=10mm of c] (raw) {Bản thô\\HTML, revision};
-  \draw[arr] (c) -- (f); \draw[arr] (f) -- (t); \draw[arr] (t) -- (k); \draw[arr] (k) -- (i);
-  \draw[arr] (c) -- (raw); \draw[arr] (i) -- (qd); \draw[arr] (i) -- (pg);
-  \node[blk, above=9mm of t, fill=white] (u) {Cập nhật tăng dần: chỉ xử lý lại trang có revision mới};
-  \draw[arr, dashed] (u.west) -| (c.north);
-\end{tikzpicture}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/offline_pipeline.png}
 \caption{Quy trình xây dựng kho tri thức ngoại tuyến}
 \label{fig:workflow_offline}
 \end{figure}
@@ -293,28 +245,7 @@ Hệ thống có ba tác nhân chính (Hình~\ref{fig:usecase}): người chơi 
 
 \begin{figure}[H]
 \centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[font=\small,
-  uc/.style={draw, ellipse, fill=AccentLightBlue!45, minimum width=4.4cm, minimum height=7mm, inner sep=1pt, align=center},
-  actor/.style={align=center}]
-  \node[actor] (web) at (0,0) {\Large\ding{110}\\Người chơi web};
-  \node[actor] (dc) at (0,-4.6) {\Large\ding{110}\\Người chơi Discord};
-  \node[actor] (ad) at (13,-2.3) {\Large\ding{110}\\Quản trị viên};
-  \node[uc] (u1) at (6.2,1.2) {Đặt câu hỏi, xem câu trả lời};
-  \node[uc] (u2) at (6.2,0.2) {Xem đoạn nguồn trích dẫn};
-  \node[uc] (u3) at (6.2,-0.8) {Chọn chế độ tìm web};
-  \node[uc] (u4) at (6.2,-1.8) {Đăng nhập, xem và xóa lịch sử};
-  \node[uc] (u5) at (6.2,-2.8) {Trả lời câu hỏi lại};
-  \node[uc] (u6) at (6.2,-3.8) {/ask, nhắc tên bot};
-  \node[uc] (u7) at (6.2,-4.8) {/setup (admin), /clear};
-  \node[uc] (u8) at (6.2,-5.8) {Xem trace và thống kê};
-  \draw (2.6,1.9) rectangle (9.8,-6.5);
-  \node[font=\footnotesize\itshape] at (8.6,1.65) {Hệ thống \IB{}};
-  \foreach \u in {u1,u2,u3,u4,u5} \draw (web) -- (\u.west);
-  \foreach \u in {u1,u5,u6,u7} \draw (dc) -- (\u.west);
-  \draw (ad) -- (u8.east); \draw (ad) -- (u4.east);
-\end{tikzpicture}%
-}
+\includegraphics[width=0.85\textwidth,height=0.62\textheight,keepaspectratio]{figures/usecase.png}
 \caption{Biểu đồ ca sử dụng của hệ thống}
 \label{fig:usecase}
 \end{figure}
@@ -392,33 +323,7 @@ Hình~\ref{fig:architecture} trình bày kiến trúc tổng thể. Hai giao di�
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small]
-  % cột giữa: luồng chính
-  \node[blk, text width=2.4cm] (web) at (-1.6,0) {Web React (SSE)};
-  \node[blk, text width=2.4cm] (bot) at (1.6,0) {Discord bot};
-  \node[blk, text width=5.6cm] (caddy) at (0,-1.4) {Caddy: HTTPS, web tĩnh, proxy /api};
-  \node[blk, text width=5.6cm] (api) at (0,-2.7) {FastAPI: xác thực, giới hạn tần suất, hạn mức};
-  \node[blk, text width=5.6cm] (svc) at (0,-4.0) {Dịch vụ hỏi đáp: hội thoại, thời hạn, trace};
-  \node[blk, text width=5.6cm, fill=AccentBlue!20] (graph) at (0,-5.5) {LangGraph ChatPipeline\\scope $\to$ memory $\to$ \textbf{agent} $\to$ context $\to$ prompt};
-  \node[blk, text width=5.6cm] (gen) at (0,-7.1) {Bộ sinh JSON $\to$ kiểm trích dẫn $\to$ Answer Guard (song song: chọn ảnh)};
-  % cột phải: lưu trữ và LLM
-  \node[dat, text width=2.6cm] (rd) at (5.3,-2.7) {Redis};
-  \node[dat, text width=2.6cm] (pg) at (5.3,-4.0) {PostgreSQL};
-  \node[blk, text width=2.6cm] (llm) at (5.3,-6.3) {DeepSeek (deepseek-flash)};
-  % cột trái: công cụ
-  \node[blk, text width=2.6cm] (tools) at (-5.3,-5.5) {9 công cụ của Agent};
-  \node[dat, text width=2.6cm] (qd) at (-5.3,-7.4) {Qdrant: corpus, ký ức};
-  \node[blk, text width=2.6cm] (tav) at (-5.3,-3.9) {Tavily (web)};
-  \node[blk, text width=2.6cm] (py) at (-5.3,-2.6) {Sandbox Python};
-  \draw[arr] (web) -- (caddy); \draw[arr] (bot) -- (caddy);
-  \draw[arr] (caddy) -- (api); \draw[arr] (api) -- (svc); \draw[arr] (svc) -- (graph); \draw[arr] (graph) -- (gen);
-  \draw[arr, <->] (api) -- (rd); \draw[arr, <->] (svc) -- (pg);
-  \draw[arr, <->] (graph.east) -- ++(0.6,0) |- (llm.west);
-  \draw[arr, <->] (gen.east) -- ++(0.6,0) |- (llm.west);
-  \draw[arr, <->] (graph) -- (tools);
-  \draw[arr] (tools) -- (qd); \draw[arr] (tools) -- (tav);
-  \draw[arr] (tools.west) -- ++(-0.4,0) |- (py.west);
-\end{tikzpicture}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/architecture.png}
 \caption{Kiến trúc tổng thể của hệ thống \IB{}}
 \label{fig:architecture}
 \end{figure}
@@ -458,20 +363,7 @@ Hệ thống được triển khai trên một VPS bằng Docker Compose (Hình~
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small, node distance=5mm and 6mm]
-  \node[blk] (net) {Internet\\(trình duyệt, Discord)};
-  \node[blk, below=8mm of net] (caddy) {caddy\\:80, :443};
-  \node[blk, below=of caddy] (api) {api (FastAPI)\\E5 + MiniLM ONNX};
-  \node[blk, left=14mm of api] (bot) {bot\\(discord.js)};
-  \node[dat, below left=8mm and 2mm of api] (pg) {postgres};
-  \node[dat, below=8mm of api] (qd) {qdrant};
-  \node[dat, below right=8mm and 2mm of api] (rd) {redis};
-  \node[blk, right=14mm of api] (ext) {Dịch vụ ngoài:\\DeepSeek, Tavily};
-  \draw[arr] (net) -- (caddy); \draw[arr] (caddy) -- (api); \draw[arr] (bot) -- node[above, font=\footnotesize]{token} (api);
-  \draw[arr] (api) -- (pg); \draw[arr] (api) -- (qd); \draw[arr] (api) -- (rd); \draw[arr] (api) -- (ext);
-  \draw[arr, dashed] (bot.north) |- node[above, font=\footnotesize, pos=0.75]{gateway Discord} (net.west);
-  \node[grp, fit=(caddy)(api)(bot)(pg)(qd)(rd), label={[font=\footnotesize\itshape]below:Mạng nội bộ Docker Compose trên VPS}] {};
-\end{tikzpicture}
+\includegraphics[width=0.9\textwidth,height=0.62\textheight,keepaspectratio]{figures/deployment.png}
 \caption{Kiến trúc triển khai bằng Docker Compose}
 \label{fig:deployment}
 \end{figure}
@@ -646,28 +538,7 @@ PostgreSQL lưu tài liệu và đoạn (nguồn sự thật song song với Qdr
 
 \begin{figure}[H]
 \centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[font=\footnotesize,
-  tbl/.style={draw, fill=AccentLightBlue!40, align=left, inner sep=3pt, rounded corners=1pt}]
-  \node[tbl] (doc) at (0,0) {\textbf{documents}\\id, source, title, url\\revision\_id, game\_scope};
-  \node[tbl] (chk) at (0,-2.6) {\textbf{chunks}\\id, document\_id\\section, text, lang};
-  \node[tbl] (usr) at (5,1.0) {\textbf{users}\\id, provider\\provider\_user\_hash};
-  \node[tbl] (ses) at (10,1.0) {\textbf{auth\_sessions}\\id, user\_id\\token\_hash, expires\_at};
-  \node[tbl] (cnv) at (5,-1.6) {\textbf{conversations}\\id, channel, external\_ref\\client\_user\_ref, user\_id};
-  \node[tbl] (msg) at (10,-1.6) {\textbf{messages}\\id, conversation\_id, role\\content, sources, grounded\\rag\_trace, latency\_ms\\tokens\_in, tokens\_out};
-  \node[tbl] (rt) at (5,-4.4) {\textbf{conversation\_runtime}\\conversation\_id\\state, revision};
-  \node[tbl] (mem) at (10,-4.4) {\textbf{conversation\_memories}\\id, conversation\_id\\kind (topic/fact), key\\content, revision};
-  \node[tbl] (fb) at (14,-1.6) {\textbf{feedback}\\message\_id\\rating, reason};
-  \node[tbl] (job) at (0,-5.2) {\textbf{ingestion\_jobs}, \textbf{eval\_runs}\\\textbf{discord\_guild\_channels}};
-  \draw[arr] (chk) -- node[left]{n:1} (doc);
-  \draw[arr] (ses) -- node[above]{n:1} (usr);
-  \draw[arr] (cnv) -- node[left]{n:1} (usr);
-  \draw[arr] (msg) -- node[above]{n:1} (cnv);
-  \draw[arr] (rt) -- node[left]{1:1} (cnv);
-  \draw[arr] (mem) -- node[above, pos=0.3]{n:1} (cnv);
-  \draw[arr] (fb) -- node[above]{n:1} (msg);
-\end{tikzpicture}%
-}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/erd.png}
 \caption{Lược đồ quan hệ các bảng chính trong PostgreSQL}
 \label{fig:erd}
 \end{figure}

@@ -173,21 +173,7 @@ Pipeline RAG chuẩn gồm hai giai đoạn (Hình~\ref{fig:rag_pipeline}). Giai
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=5mm and 6mm]
-  \node[blk] (doc) {Tài liệu\\nguồn};
-  \node[blk, right=of doc] (clean) {Làm sạch\\và chia đoạn};
-  \node[blk, right=of clean] (enc) {Mã hóa\\(embedding)};
-  \node[dat, right=of enc] (idx) {Chỉ mục\\vector};
-  \node[blk, below=14mm of doc] (q) {Câu hỏi};
-  \node[blk, right=of q] (ret) {Truy xuất\\top-$k$};
-  \node[blk, right=of ret] (aug) {Ghép đoạn\\vào prompt};
-  \node[blk, right=of aug] (gen) {LLM sinh\\câu trả lời};
-  \draw[arr] (doc) -- (clean); \draw[arr] (clean) -- (enc); \draw[arr] (enc) -- (idx);
-  \draw[arr] (q) -- (ret); \draw[arr] (ret) -- (aug); \draw[arr] (aug) -- (gen);
-  \draw[arr] (idx.south) |- ($(ret.north)+(0,4mm)$) -- (ret.north);
-  \node[font=\small\itshape, above=1mm of clean] {Giai đoạn ngoại tuyến};
-  \node[font=\small\itshape, below=1mm of aug] {Giai đoạn trực tuyến};
-\end{tikzpicture}
+\includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{figures/rag_pipeline.png}
 \caption{Pipeline RAG truyền thống gồm giai đoạn lập chỉ mục và giai đoạn hỏi đáp}
 \label{fig:rag_pipeline}
 \end{figure}
@@ -241,18 +227,7 @@ ReAct (Reasoning and Acting)~\cite{yao2023react} là mô hình để LLM xen k�
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=8mm and 12mm]
-  \node[blk] (in) {Câu hỏi};
-  \node[blk, right=of in] (th) {Suy nghĩ\\(Thought)};
-  \node[blk, right=of th] (ac) {Hành động\\(Action: gọi công cụ)};
-  \node[blk, below=12mm of ac] (ob) {Quan sát\\(Observation)};
-  \node[blk, below left=14mm and 6mm of th] (fin) {Câu trả lời cuối};
-  \draw[arr] (in) -- (th);
-  \draw[arr] (th) -- (ac);
-  \draw[arr] (ac) -- node[right, font=\footnotesize]{công cụ trả kết quả} (ob);
-  \draw[arr] (ob.west) -| node[below, font=\footnotesize, pos=0.3]{chưa đủ, lặp lại} (th.south);
-  \draw[arr] (th.west) -| node[above left, font=\footnotesize, pos=0.2]{đủ thông tin} (fin.north);
-\end{tikzpicture}
+\includegraphics[width=0.85\textwidth,height=0.62\textheight,keepaspectratio]{figures/react_loop.png}
 \caption{Vòng lặp suy nghĩ -- hành động -- quan sát của mô hình ReAct}
 \label{fig:react}
 \end{figure}

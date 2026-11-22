@@ -379,7 +379,7 @@ def main():
     (BUILD / "front.tex").write_text(front, encoding="utf-8")
     ref = make_reference_docx(a.pandoc)
     out = Path(a.output)
-    subprocess.run([a.pandoc, str(BUILD / "flat.tex"), "-f", "latex", "-o", str(out), f"--reference-doc={ref}",
+    subprocess.run([a.pandoc, str(BUILD / "flat.tex"), "-f", "latex", "-o", str(out), f"--reference-doc={ref}", f"--resource-path={ROOT}",
                     "--number-sections", "--top-level-division=chapter"], check=True)
     number_chapters(out)
     subprocess.run([a.pandoc, str(BUILD / "front.tex"), "-f", "latex", "-o", str(BUILD / "front.docx"),
