@@ -15,6 +15,7 @@ from app.adapters.tavily import WebHit
 from app.api.schemas.chat import ChatImage, ChatRequest, Source
 from app.rag.generator import Generated, Prepared
 from app.services import answer_media as module
+from app.services import images
 from tests.unit.test_images import media as media
 
 
@@ -173,7 +174,7 @@ def test_public_pinned_fetch_cache_and_serving(media, tmp_path, monkeypatch, fau
         digest = module.download("https://eldenring.wiki.gg/a.png", tmp_path)
         assert connected == [("8.8.8.8", 443)]
         assert digest == hashlib.sha256(raw).hexdigest()
-        monkeypatch.setattr(module, "CACHE", tmp_path)
+        monkeypatch.setattr(images, "CACHE", tmp_path)
         # Catalog ID khác để chạy đường cache web thay vì blob local gốc.
         buffer = io.BytesIO()
         Image.new("RGB", (5, 6), "blue").save(buffer, "PNG")

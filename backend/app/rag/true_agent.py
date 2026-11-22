@@ -20,7 +20,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.adapters.llm import LLMError
-from app.adapters.tavily import WebHit, WebSearchError
+from app.adapters.tavily import WebHit, WebSearchError, web_hit_allowed
 from app.api.schemas.chat import Clarification, ClarificationField
 from app.rag.gameplay_knowledge import level_rule
 from app.rag.generator import leaked_fields, plain_field_names
@@ -300,7 +300,7 @@ async def run_agent(pipe, state: dict) -> dict:
         new = []
         for h in found:
             ok = (
-                state["search_mode"] != "off"
+                state["search_mode"] != "off" and web_hit_allowed(h, pipe.settings)
                 if isinstance(h, WebHit)
                 else pipe.policy.exclusion_reason(h.payload) is None
             )

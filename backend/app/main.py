@@ -36,6 +36,7 @@ def create_app(settings: Settings | None = None, context: AppContext | None = No
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        app.state.image_catalog.preflight()
         ctx = context or build_context(settings)
         app.state.ctx = ctx
         if settings.chat_mode != "mock":
