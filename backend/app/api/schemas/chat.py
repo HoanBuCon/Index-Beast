@@ -47,6 +47,17 @@ class ChatRequest(BaseModel):
         self._user_id = user_id
         return self
 
+    # Khóa hạn mức ngày (app.services.quota) do guard gắn; None = không tính token (admin, chế độ mock)
+    _quota_key: str | None = PrivateAttr(default=None)
+
+    @property
+    def quota_key(self) -> str | None:
+        return self._quota_key
+
+    def attach_quota(self, key: str | None) -> "ChatRequest":
+        self._quota_key = key
+        return self
+
 
 class ClarificationField(BaseModel):
     key: str

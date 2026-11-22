@@ -16,6 +16,8 @@ import time
 from fastapi import Request
 
 from app.api.schemas.chat import ChatRequest
+from app.services.auth import AuthUser
+from app.services.quota import ChatQuota
 from core.config import PLACEHOLDER
 from core.errors import RateLimitedError, UnauthorizedError, UnavailableError
 
@@ -100,7 +102,7 @@ async def enforce_login_limit(request: Request) -> None:
         raise RateLimitedError(retry_after=retry_after())
 
 
-async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
+async def enforce_chat_limits(request: Request, body: ChatRequest, user: AuthUser | None = None) -> None:
     ctx = request.app.state.ctx
     settings = ctx.settings
     if settings.chat_mode == "mock":
@@ -111,6 +113,8 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
         raise UnauthorizedError("Kênh discord cần X-Service-Token hợp lệ.")
     if not trusted:
         body.guild_id = None  # không có service token thì không tin guild_id: không dùng để giới hạn hay lưu
+    if user is not None and user.is_admin:
+        return  # admin không bị giới hạn mỗi phút lẫn hạn mức ngày
     who = f"ref:{body.external_ref or '-'}" if trusted else f"ip:{_client_ip(request)}"
     window = int(time.time()) // WINDOW_SECONDS
     if await _count(ctx, f"ratelimit:chat:{who}:{window}") > settings.rate_limit_per_minute:
@@ -119,3 +123,12 @@ async def enforce_chat_limits(request: Request, body: ChatRequest) -> None:
     guild_key = f"ratelimit:chat:guild:{body.guild_id}:{window}"
     if trusted and body.guild_id and await _count(ctx, guild_key) > settings.rate_limit_guild_per_minute:
         raise RateLimitedError(retry_after=retry_after())
+    # Hạn mức ngày: bot theo thread/kênh (chỉ tính trần token chung), tài khoản theo id, khách theo IP
+    if trusted:
+        key, kind = f"bot:{body.external_ref or '-'}", "bot"
+    elif user is not None:
+        key, kind = f"user:{user.id}", "user"
+    else:
+        key, kind = f"guest:{_client_ip(request)}", "guest"
+    await ChatQuota(ctx.redis, settings).reserve(key, kind)
+    body.attach_quota(key)

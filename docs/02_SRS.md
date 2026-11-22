@@ -172,6 +172,7 @@ Phạm vi base game + Shadow of the Erdtree áp dụng xuyên suốt ingestion, 
 | FR-CHAT-04 | Rate-limit theo IP / user / guild (cấu hình được). | S | Volatile | S4 | Done — Redis, theo IP hoặc `external_ref`; thêm trần theo server Discord khi bot gửi `guild_id` (`RATE_LIMIT_GUILD_PER_MINUTE`); bot (TV4) chưa gửi `guild_id` |
 | FR-CHAT-05 | Cache câu trả lời cho câu hỏi chuẩn hoá trùng lặp (không có lịch sử). | C | Volatile | S5 | Proposed |
 | FR-CHAT-06 | Xác thực client nội bộ (bot, web) bằng API key / service token. | M | Stable | S4 | Done — `X-Service-Token` cho bot, `X-Admin-Token` cho admin (PR #79) |
+| FR-CHAT-07 | Hạn mức hỏi đáp mỗi ngày (giờ VN): khách 5 câu/IP, tài khoản đăng nhập 30 câu, kèm ngân sách token từng nhóm và trần token chung (bot tính, admin miễn); hết hạn mức trả 429 `quota_exceeded` + `Retry-After`. | M | Volatile | S5 | Done — Redis, `CHAT_*_DAILY_*` (`app/services/quota.py`); bot chưa có hạn mức riêng từng người |
 
 ### 3.5 FR-WEB — Website
 

@@ -106,6 +106,8 @@ class LiveChatService:
         # dùng lại một hội thoại
         self._by_ref: dict[tuple[str, str], UUID] = {}
         self.traces: OrderedDict[UUID, dict] = OrderedDict()
+        # Ghi token đã dùng vào hạn mức ngày (app.services.quota); main.py gắn khi khởi động, None = không tính
+        self.usage_sink: Callable[[str, int], Awaitable[None]] | None = None
 
     async def trace(self, message_id: UUID) -> dict:
         """Trace của một câu trả lời: ưu tiên bản đã lưu trong PostgreSQL, không có DB thì lấy bản trong RAM."""
@@ -411,6 +413,7 @@ class LiveChatService:
             player = working
         # Một giá trị cho DB, trace và phản hồi; đồng bộ bộ nhớ ngữ nghĩa bên dưới nằm ngoài độ trễ này
         latency_ms = round((time.perf_counter() - started) * 1000, 2)
+        tokens_in, tokens_out = token_usage(prepared.trace)
         if self.repository is not None:
             working = working or {}
             snapshot = Snapshot(
@@ -422,7 +425,6 @@ class LiveChatService:
                 user_id=req.user_id,
                 guild_id=req.guild_id,
             )
-            tokens_in, tokens_out = token_usage(prepared.trace)
             record = {
                 "trace": public_trace(prepared.trace, latency_ms=latency_ms),
                 "rewritten_query": prepared.trace.get("rewritten_query"),
@@ -455,6 +457,7 @@ class LiveChatService:
         self.traces[message_id] = trace
         if len(self.traces) > 1000:
             self.traces.popitem(last=False)
+        await self._charge(req, (tokens_in or 0) + (tokens_out or 0))
         return ChatResponse(
             conversation_id=state.conversation.id,
             message_id=message_id,
@@ -466,6 +469,15 @@ class LiveChatService:
             clarification=prepared.clarification,
             conversation_token=state.token if req.channel == "web" else None,
         )
+
+    async def _charge(self, req, tokens: int) -> None:
+        """Cộng token của lượt vừa lưu vào hạn mức ngày; lỗi chỉ ghi log, không làm hỏng câu trả lời."""
+        if not req.quota_key or self.usage_sink is None:
+            return
+        try:
+            await self.usage_sink(req.quota_key, tokens)
+        except Exception:
+            logging.getLogger(__name__).warning("quota charge failed", exc_info=True)
 
     async def answer(self, req: ChatRequest) -> ChatResponse:
         started = time.perf_counter()

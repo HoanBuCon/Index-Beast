@@ -44,7 +44,7 @@ async def chat(
     service: ChatService = Depends(get_chat_service),
     user: AuthUser | None = Depends(optional_user),
 ) -> ChatResponse:
-    await enforce_chat_limits(request, body)
+    await enforce_chat_limits(request, body, user)
     return await service.answer(body.attach_user(user.id if user else None))
 
 
@@ -67,7 +67,7 @@ async def chat_stream(
     service: ChatService = Depends(get_chat_service),
     user: AuthUser | None = Depends(optional_user),
 ) -> StreamingResponse:
-    await enforce_chat_limits(request, body)
+    await enforce_chat_limits(request, body, user)
     # Lỗi trước khi bắt đầu stream (hội thoại không tồn tại, quá tốc độ…) vẫn trả JSON + mã HTTP đúng
     stream = await service.open_stream(body.attach_user(user.id if user else None))
 

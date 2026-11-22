@@ -18,11 +18,34 @@ import { loadApiConfig } from "../config.ts";
 export class ApiError extends Error {
   status: number;
   retryAfter?: string;
-  constructor(message: string, status = 0, retryAfter?: string) {
+  code?: string;
+  constructor(message: string, status = 0, retryAfter?: string, code?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.retryAfter = retryAfter;
+    this.code = code;
+  }
+}
+
+// Thông điệp hạn mức ngày dài bất thường là dấu hiệu thân không đáng tin; Discord giới hạn 2000 ký tự.
+const MAX_QUOTA_MESSAGE_CHARS = 500;
+
+// Đọc thân JSON của 429 an toàn: lỗi parse/đọc -> bỏ qua. Chỉ trả quotaMessage cho code quota_exceeded.
+async function readRateLimitBody(response: Response): Promise<{ code?: string; quotaMessage?: string }> {
+  try {
+    const data: unknown = JSON.parse(await response.text());
+    if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+    const { code, message } = data as Record<string, unknown>;
+    if (code !== "quota_exceeded" && code !== "rate_limited") return {};
+    const text = typeof message === "string" ? message.trim() : "";
+    return {
+      code,
+      quotaMessage: code === "quota_exceeded" && text && [...text].length <= MAX_QUOTA_MESSAGE_CHARS ? text : undefined,
+    };
+  } catch {
+    await response.body?.cancel().catch(() => {});
+    return {};
   }
 }
 
@@ -86,9 +109,15 @@ export function createApiClient(
       },
     });
     if (!response.ok && !acceptStatuses.includes(response.status)) {
+      // 429: chỉ tin `message` khi backend báo hết hạn mức ngày (quota_exceeded); còn lại giữ câu cũ.
+      let code: string | undefined;
+      let quotaMessage: string | undefined;
+      if (response.status === 429) {
+        ({ code, quotaMessage } = await readRateLimitBody(response));
+      }
       const message =
         response.status === 429
-          ? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại."
+          ? (quotaMessage ?? "Bạn đang gửi quá nhanh. Vui lòng đợi trước khi thử lại.")
           : response.status === 409
             ? "Server đã bật tối đa số kênh cho phép (50). Hãy tắt bớt kênh trước."
             : response.status === 404
@@ -98,8 +127,9 @@ export function createApiClient(
                 : response.status === 401 || response.status === 403
                   ? "Không có quyền truy cập. Kiểm tra cấu hình dịch vụ của bot."
                   : "Không kết nối được dịch vụ. Vui lòng thử lại sau.";
+      // Thân 429 đã đọc xong (stream đóng); các mã khác hủy stream, không đọc nội dung backend.
       await response.body?.cancel().catch(() => {});
-      throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined);
+      throw new ApiError(message, response.status, response.headers.get("Retry-After") ?? undefined, code);
     }
     return response;
   }
