@@ -2,7 +2,9 @@
 
 Chạy IndexBeast thật tại **https://tarnished.liemdai.io.vn** trên **1 VPS Ubuntu 24.04, 4 vCPU, 8 GB RAM** (thẻ Sprint 5: 5.1, 5.2, 5.3). Dùng lại phần lớn công việc staging ([`staging.md`](staging.md)): cùng compose gốc, cùng script cài VPS, cùng ngân sách tài nguyên.
 
-> Trạng thái: toàn bộ file bên dưới đã kiểm cú pháp (`bash -n`, `docker compose config`) nhưng **chưa chạy trên VPS thật** và **Caddyfile.prod chưa qua `caddy validate`** (máy soạn không có Docker daemon). Lần deploy đầu tiên phải đi theo từng bước ở mục 3 và 4, và điền kết quả vào handover.
+> Trạng thái: **đã deploy lần đầu ngày 22/11/2026** (VPS Viettel IDC 4 vCPU / 8 GB, Ubuntu 24.04.3, `main` 825437f): `caddy validate` đạt, chứng chỉ Let's Encrypt, header và chặn đường dẫn đạt, corpus nạp đủ. Kết quả và các bước thật đã làm: [handover deploy](handover/2026-11-22_s5-tv1_deploy-production.md). Chưa chạy trên VPS thật: `restore.sh`, cron backup.
+>
+> Production dùng reranker **API Jina** (`RAG_RERANKER_PROVIDER=jina`, cần `JINA_API_KEY`) thay model L12 cục bộ, nên không cần chép model L12. `RAG_COLLECTION=indexbeast_s4_wiki_ca98c06b`.
 
 ## 1. Kiến trúc và file
 

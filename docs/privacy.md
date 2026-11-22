@@ -16,7 +16,7 @@ IndexBeast là chatbot hỏi đáp về Elden Ring, làm ra cho mục đích h�
 
 Chúng tôi **không** lưu Discord ID thô, email, mật khẩu, số điện thoại, vị trí hay dữ liệu thanh toán, và không bán hay chia sẻ dữ liệu để quảng cáo.
 
-Để trả lời, câu hỏi của bạn (cùng đoạn wiki liên quan) được gửi tới dịch vụ mô hình ngôn ngữ (DeepSeek) và, khi bạn bật tìm web, tới dịch vụ tìm kiếm (Tavily). Đừng nhập thông tin cá nhân vào câu hỏi.
+Để trả lời, câu hỏi của bạn (cùng đoạn wiki liên quan) được gửi tới dịch vụ mô hình ngôn ngữ (DeepSeek), tới dịch vụ xếp hạng lại kết quả tìm (Jina, khi máy chủ đặt `RAG_RERANKER_PROVIDER=jina`; production đang dùng) và, khi bạn bật tìm web, tới dịch vụ tìm kiếm (Tavily). Đừng nhập thông tin cá nhân vào câu hỏi.
 
 ## Lưu trong bao lâu
 
