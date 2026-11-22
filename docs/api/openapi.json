@@ -3026,6 +3026,83 @@
           "auth"
         ]
       }
+    },
+    "/api/v1/me/conversations/{conversation_id}": {
+      "delete": {
+        "description": "Trước đây web chỉ xóa bản lưu trong trình duyệt, bản trên server hiện lại ở mục \"Của tài khoản\" mà không xóa\nđược. Hội thoại của người khác hoặc không tồn tại đều 404.",
+        "operationId": "delete_my_conversation_api_v1_me_conversations__conversation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Xóa một hội thoại của tôi kèm tin nhắn, feedback và ký ức (không hoàn tác)",
+        "tags": [
+          "auth"
+        ]
+      }
     }
   }
 }
