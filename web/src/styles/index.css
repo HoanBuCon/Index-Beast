@@ -969,6 +969,32 @@ input {
   display: block;
   color: #adb49d;
 }
+.admin-scroll {
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid #394030;
+  background: #0f130c;
+}
+.admin-scroll:focus-visible,
+.trace-json:focus-visible {
+  outline: 2px solid #d6c884;
+  outline-offset: 2px;
+}
+.admin-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.admin-row button {
+  flex-shrink: 0;
+}
+.trace-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 8px;
+}
 .trace-form {
   display: flex;
   gap: 10px;

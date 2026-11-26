@@ -117,6 +117,10 @@ class LiveChatService:
                 return stored
         if (live := self.traces.get(message_id)) is not None:
             return {"message_id": message_id, "trace": public_trace(live), "source": "memory"}
+        if (state := self._conversations.get(message_id)) is not None:  # id hội thoại: lấy câu trả lời cuối
+            for message in reversed(state.conversation.messages):
+                if message.role == "assistant" and (live := self.traces.get(message.id)) is not None:
+                    return {"message_id": message.id, "trace": public_trace(live), "source": "memory"}
         raise NotFoundError("Không tìm thấy trace của câu trả lời này.")
 
     def forget(self, conversation_ids) -> None:

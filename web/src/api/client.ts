@@ -244,7 +244,11 @@ export async function getAdminStats(token: string | null, signal?: AbortSignal):
     !Array.isArray(data.eval_runs) ||
     !data.conversations.every(
       (c: AdminStats["conversations"][number]) =>
-        c && typeof c.id === "string" && typeof c.title === "string" && typeof c.created_at === "string",
+        c &&
+        typeof c.id === "string" &&
+        typeof c.title === "string" &&
+        typeof c.created_at === "string" &&
+        (c.last_message_id === undefined || typeof c.last_message_id === "string"),
     ) ||
     !data.feedback.every(
       (f: AdminStats["feedback"][number]) =>

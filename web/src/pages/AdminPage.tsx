@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router";
 import type { AdminStats } from "../api/types";
 import { getAdminStats, getTrace } from "../api/client";
 import { useAuthContext } from "../hooks/AuthContext";
+import { ConversationList, FeedbackList, TraceViewer } from "../components/admin/AdminLists";
 export default function AdminPage() {
   // Liên kết "Xem trace" ở câu trả lời mang theo message_id; token không đi theo URL, phải nhập tại đây.
   const [params] = useSearchParams();
@@ -27,7 +28,7 @@ export default function AdminPage() {
   const hasAccess = Boolean(token.trim()) || sessionAdmin !== null;
   // Token nhập tay (nếu có) được ưu tiên; không thì dựa vào cookie phiên.
   const credential = () => token.trim() || null;
-  async function load(kinds: ("stats" | "trace")[]) {
+  async function load(kinds: ("stats" | "trace")[], traceId = messageId) {
     controller.current?.abort();
     const next = new AbortController();
     controller.current = next;
@@ -37,7 +38,7 @@ export default function AdminPage() {
     for (const kind of kinds) {
       try {
         if (kind === "stats") setStats(await getAdminStats(credential(), next.signal));
-        else setTrace(await getTrace(credential(), messageId.trim(), next.signal));
+        else setTrace(await getTrace(credential(), traceId.trim(), next.signal));
       } catch (cause) {
         if (next.signal.aborted) return;
         errors.add(cause instanceof Error ? cause.message : "Không tải được dữ liệu.");
@@ -45,6 +46,12 @@ export default function AdminPage() {
     }
     setError([...errors].join(" "));
     setBusy(false);
+  }
+  // Nút "Xem trace" ở từng dòng: điền ô tra cứu rồi tải luôn (state chưa kịp cập nhật nên truyền id trực tiếp).
+  function viewTrace(id: string) {
+    setMessageId(id);
+    setTrace(null);
+    void load(["trace"], id);
   }
   function logout() {
     controller.current?.abort();
@@ -103,16 +110,11 @@ export default function AdminPage() {
       <section>
         <h2>{"Hội thoại gần đây"}</h2>
         {stats ? (
-          <ul className="admin-list">
-            {stats.conversations?.map((c) => (
-              <li key={c.id}>
-                <strong>{c.title}</strong>
-                <small>
-                  {new Date(c.created_at).toLocaleString("vi-VN")} · {c.id}
-                </small>
-              </li>
-            ))}
-          </ul>
+          <ConversationList
+            conversations={stats.conversations ?? []}
+            canView={hasAccess && !busy}
+            onViewTrace={viewTrace}
+          />
         ) : (
           <p className="muted">{"Kết nối để xem hội thoại."}</p>
         )}
@@ -131,7 +133,7 @@ export default function AdminPage() {
           </label>
           <input
             id="message-id"
-            placeholder="Message ID"
+            placeholder="Message ID (hoặc ID hội thoại)"
             value={messageId}
             onChange={(e) => setMessageId(e.target.value)}
             required
@@ -143,21 +145,12 @@ export default function AdminPage() {
             {"Đăng nhập quản trị hoặc nhập token rồi bấm Kết nối (hoặc Xem trace) để xem trace của mã này."}
           </p>
         )}
-        {trace !== null && <pre>{JSON.stringify(trace, null, 2)}</pre>}
+        {trace !== null && <TraceViewer value={trace} />}
       </section>
       <section>
         <h2>{"Phản hồi chưa hữu ích"}</h2>
         {stats ? (
-          <ul className="admin-list">
-            {stats.feedback
-              ?.filter((f) => f.rating < 0)
-              .map((f, i) => (
-                <li key={`${f.message_id}-${i}`}>
-                  <strong>{f.reason || "Không ghi lý do"}</strong>
-                  <small>{f.message_id}</small>
-                </li>
-              ))}
-          </ul>
+          <FeedbackList feedback={stats.feedback ?? []} canView={hasAccess && !busy} onViewTrace={viewTrace} />
         ) : (
           <p className="muted">{"Chưa tải phản hồi."}</p>
         )}

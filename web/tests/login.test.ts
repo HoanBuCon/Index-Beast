@@ -16,7 +16,7 @@ test("login preview offers clickable providers without pretending to authenticat
     assert.equal((html.match(/<button\b/g) ?? []).length, 2);
     assert.match(html, /<button\b[^>]*disabled/);
     assert.match(html, /Đăng nhập bằng Google/);
-    assert.match(html, /chưa khả dụng/);
+    assert.match(html, /Đăng nhập bằng Google[\s\S]*?\(sắp có\)/);
     assert.match(html, /Đăng nhập bằng Discord/);
     assert.match(html, /Đăng nhập hiện chưa khả dụng/);
     assert.match(html, /href="\/chat"[^>]*>[\s\S]*?<span>Dùng thử/);
@@ -31,6 +31,35 @@ test("login preview offers clickable providers without pretending to authenticat
     assert.match(chat, /conversation-sidebar/);
     assert.match(chat, /class="composer"/);
     assert.doesNotMatch(chat, /aria-label="ĐĂNG NHẬP"/);
+  } finally {
+    await server.close();
+  }
+});
+
+test("login enables the Google row only when capabilities announce it", async () => {
+  const server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: "custom" });
+  try {
+    const { default: LoginPage } = await server.ssrLoadModule("/src/pages/LoginPage.tsx");
+    const { AuthContext, guestAuth } = await server.ssrLoadModule("/src/hooks/AuthContext.ts");
+    const render = (auth: object) =>
+      renderToStaticMarkup(
+        createElement(
+          AuthContext.Provider,
+          { value: { ...guestAuth, ...auth } },
+          createElement(MemoryRouter, null, createElement(LoginPage)),
+        ),
+      );
+    const buttons = (html: string) => html.match(/<button[^>]*>[\s\S]*?<\/button>/g) ?? [];
+    const google = (html: string) => buttons(html).find((b) => b.includes("Google")) ?? "";
+    const on = render({ googleAuthAvailable: true });
+    assert.doesNotMatch(google(on), /disabled/);
+    assert.doesNotMatch(google(on), /sắp có/);
+    assert.match(buttons(on).find((b) => b.includes("Discord")) ?? "", /disabled/);
+    assert.match(on, /Đăng nhập để giữ lịch sử/);
+    const off = render({ googleAuthAvailable: false, authAvailable: true });
+    assert.match(google(off), /disabled/);
+    assert.match(google(off), /sắp có/);
+    assert.doesNotMatch(buttons(off).find((b) => b.includes("Discord")) ?? "", /disabled/);
   } finally {
     await server.close();
   }

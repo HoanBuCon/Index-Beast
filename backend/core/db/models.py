@@ -253,7 +253,7 @@ class EvalRun(Base):
 
 
 class User(Base):
-    """Người dùng đăng nhập (ADR-005). Chỉ lưu băm HMAC của Discord ID (NFR-PRIV-01), không lưu ID thô.
+    """Người dùng đăng nhập (ADR-005). Chỉ lưu băm HMAC của Discord ID hoặc Google `sub` (NFR-PRIV-01).
 
     Quyền admin không lưu ở đây: suy ra từ AUTH_ADMIN_DISCORD_IDS mỗi request, nên thu hồi có hiệu lực ngay.
     """
@@ -261,7 +261,7 @@ class User(Base):
     __tablename__ = "users"
     __table_args__ = (
         UniqueConstraint("provider", "provider_user_hash"),
-        CheckConstraint(_in("provider", ("discord",)), name="provider"),
+        CheckConstraint(_in("provider", ("discord", "google")), name="provider"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

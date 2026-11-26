@@ -106,11 +106,18 @@ class MemoryRepository:
             raise UnavailableError("Không lưu được đánh giá.") from None
 
     async def trace(self, message_id: UUID) -> dict | None:
-        """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu."""
+        """Số đo và trace RAG của một câu trả lời; None nếu không phải tin nhắn assistant đã lưu.
+
+        Id là id hội thoại (admin dán từ "Hội thoại gần đây") thì dùng câu trả lời cuối của hội thoại đó.
+        """
         try:
             async with self.sessions() as session:
-                stmt = select(Message).options(undefer(Message.rag_trace)).where(Message.id == message_id)
-                row = (await session.scalars(stmt)).first()
+                base = select(Message).options(undefer(Message.rag_trace))
+                row = (await session.scalars(base.where(Message.id == message_id))).first()
+                if row is None:
+                    last = base.where(Message.conversation_id == message_id, Message.role == "assistant")
+                    last = last.order_by(Message.created_at.desc(), Message.id.desc()).limit(1)
+                    row = (await session.scalars(last)).first()
         except SQLAlchemyError:
             raise UnavailableError("Không đọc được trace đã lưu.") from None
         if row is None or row.role != "assistant":

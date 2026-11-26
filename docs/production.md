@@ -79,6 +79,18 @@ https://tarnished.liemdai.io.vn/api/v1/auth/discord/callback
 
 Lấy `Client ID` và `Client Secret` điền vào `.env`. URL phải **khớp từng ký tự** với `AUTH_REDIRECT_URI` (overlay suy ra từ `DOMAIN`); khác một ký tự là đăng nhập báo `invalid redirect_uri`. Bot muốn có trên server cộng đồng thì thêm `DISCORD_TOKEN`, `DISCORD_GUILD_ID` (để trống `DISCORD_TOKEN` thì deploy bỏ qua bot).
 
+### 3.3b Google OAuth (tùy chọn)
+
+Ở [Google Cloud Console](https://console.cloud.google.com/) → chọn (hoặc tạo) project → **APIs & Services → OAuth consent screen**: loại External, điền tên ứng dụng, email hỗ trợ, domain `tarnished.liemdai.io.vn`; scope chỉ cần `openid` và `profile` (không thêm `email`). Khi còn ở chế độ Testing, thêm tài khoản thử vào **Test users**; muốn mọi người dùng được thì Publish app (scope cơ bản không cần xác minh).
+
+Rồi **Credentials → Create credentials → OAuth client ID**, loại **Web application**, thêm vào **Authorized redirect URIs** đúng một URL:
+
+```text
+https://tarnished.liemdai.io.vn/api/v1/auth/google/callback
+```
+
+Điền `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` vào `.env` (dùng chung `AUTH_SECRET` với Discord; để trống cả hai thì ẩn nút Google). `GOOGLE_REDIRECT_URI` do overlay suy ra từ `DOMAIN`, phải **khớp từng ký tự** với URL trong Console (khác là Google báo `redirect_uri_mismatch`). Chỉ lưu băm của `sub` và tên hiển thị, không email. Người dùng Google **không bao giờ là admin**: quyền admin chỉ theo `AUTH_ADMIN_DISCORD_IDS` (hoặc `ADMIN_TOKEN`). Migration 0006 tự chạy cùng `alembic upgrade head` khi api khởi động.
+
 ### 3.4 Cấu hình `.env`
 
 Đăng nhập bằng `deploy`:
@@ -295,6 +307,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec redis redis
 | api không lên, log có `change-me` | `ENVIRONMENT=prod` từ chối giá trị mẫu | điền biến đã nêu trong log (chỉ in tên biến) |
 | api restart liên tục, log alembic lỗi | migration lỗi hoặc PostgreSQL chưa sẵn sàng | đọc log; mã cũ chạy tiếp được: `deploy.sh <tag-cũ>` |
 | api bị OOM (`docker inspect` → `OOMKilled`) | encoder + model vượt 3 GB | `API_WORKERS=1` trong `.env`, deploy lại |
+| Đăng nhập Google báo `redirect_uri_mismatch` | URL trong Cloud Console khác `GOOGLE_REDIRECT_URI` | sửa Console theo mục 3.3b |
 | Đăng nhập Discord báo `invalid redirect_uri` | URL trong Portal khác `AUTH_REDIRECT_URI` | sửa Portal theo mục 3.3 |
 | Đăng nhập xong vẫn như chưa đăng nhập | cookie không `Secure`, hoặc truy cập qua `http://` | luôn dùng https; xem `AUTH_COOKIE_SECURE` (overlay đặt true) |
 | Chữ trả lời hiện một lần thay vì chạy dần | Cloudflare/proxy trung gian đệm SSE | tắt proxy (đám mây xám) hoặc tắt buffering cho `/api/*` |

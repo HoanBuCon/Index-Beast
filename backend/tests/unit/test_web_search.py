@@ -225,12 +225,14 @@ def test_capability_endpoint_only_exposes_availability(client):
         "web_search_available": True,
         "trace_available": False,  # chưa đặt ADMIN_TOKEN
         "auth_available": False,  # chưa cấu hình Discord OAuth
+        "google_auth_available": False,  # chưa cấu hình Google OAuth
     }
     client.app.state.ctx.settings = settings(web_search_enabled=False)
     assert client.get("/api/v1/chat/capabilities").json() == {
         "web_search_available": False,
         "trace_available": False,
         "auth_available": False,
+        "google_auth_available": False,
     }
 
 

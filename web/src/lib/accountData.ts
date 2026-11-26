@@ -39,6 +39,51 @@ export function accountConversationIds(
     .map((c) => c.id);
 }
 
+// Một dòng trong mục "Của tài khoản": bản cục bộ (nếu có) và/hoặc dòng từ server, gộp theo serverId.
+export interface AccountItem {
+  key: string;
+  title: string;
+  serverId: string | null;
+  local?: Conversation;
+  time: number;
+}
+
+export interface SidebarGroups {
+  account: AccountItem[];
+  browser: Conversation[];
+}
+
+// Nhóm sidebar theo chủ sở hữu, không theo nơi lưu: mở một mục (tải bản cục bộ) không làm nó đổi mục.
+// - account: mọi hội thoại của tài khoản = bản cục bộ của userId (hoặc có serverId thuộc tài khoản) + dòng chỉ có trên
+//   server; gộp theo serverId, mới nhất trước (bản cục bộ dùng updatedAt, dòng server dùng created_at).
+// - browser: hội thoại cục bộ không có chủ (khách). Bản của chủ khác không bao giờ được liệt kê.
+export function groupSidebarConversations(
+  local: Conversation[],
+  myConversations: { id: string; title: string; created_at: string }[],
+  userId: string | null,
+): SidebarGroups {
+  const time = (value: string) => Date.parse(value) || 0;
+  if (!userId) return { account: [], browser: local.filter((c) => !c.ownerUserId) };
+  const mine = new Map(myConversations.map((c) => [c.id, c]));
+  const items = new Map<string, AccountItem>();
+  const browser: Conversation[] = [];
+  for (const c of local) {
+    const owned = c.ownerUserId === userId || (!c.ownerUserId && c.serverId !== null && mine.has(c.serverId));
+    if (!owned) {
+      if (!c.ownerUserId) browser.push(c);
+      continue;
+    }
+    const key = c.serverId ?? `local:${c.id}`;
+    const item: AccountItem = { key, title: c.title, serverId: c.serverId, local: c, time: time(c.updatedAt) };
+    const existing = items.get(key);
+    if (!existing || item.time > existing.time) items.set(key, item);
+  }
+  for (const r of myConversations) {
+    if (!items.has(r.id)) items.set(r.id, { key: r.id, title: r.title, serverId: r.id, time: time(r.created_at) });
+  }
+  return { account: [...items.values()].sort((a, b) => b.time - a.time), browser };
+}
+
 // Hội thoại khách có thể chuyển vào tài khoản: có serverId + token hợp lệ và chưa thuộc ai.
 export function claimableGuestConversations(conversations: Conversation[]): Conversation[] {
   return conversations.filter(

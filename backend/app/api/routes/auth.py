@@ -1,9 +1,9 @@
-"""Đăng nhập Discord OAuth2 (ADR-005): /auth/discord/login, /auth/discord/callback, /auth/logout, /auth/me,
+"""Đăng nhập Discord và Google OAuth2 (ADR-005): /auth/{discord,google}/login và /callback, /auth/logout, /auth/me,
 và hội thoại của người dùng: /me/conversations, /me/conversations/claim.
 
 Phiên là cookie httpOnly; DB chỉ giữ SHA-256 của token. Chưa cấu hình đăng nhập thì login/callback trả 404.
 
-Phụ trách: TV1 · [S4] Auth service
+Phụ trách: TV1 · [S4] Auth service · [S5] Đăng nhập Google
 """
 
 import json
@@ -14,10 +14,12 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from app.adapters.discord_oauth import DiscordOAuth
+from app.adapters.google_oauth import GoogleOAuth
 from app.api.deps import (
     get_chat_service,
     get_ctx,
     get_discord_oauth,
+    get_google_oauth,
     optional_user,
     require_same_origin,
     require_user,
@@ -52,8 +54,9 @@ def _state_key(state: str) -> str:
     return f"oauth:state:{auth.hash_token(state)}"
 
 
-def _require_enabled(ctx: AppContext) -> None:
-    if not ctx.settings.auth_enabled:
+def _require_enabled(ctx: AppContext, provider: str = "discord") -> None:
+    enabled = ctx.settings.google_auth_enabled if provider == "google" else ctx.settings.auth_enabled
+    if not enabled:
         raise NotFoundError("Không tìm thấy tài nguyên.")
 
 
@@ -69,6 +72,74 @@ def _me(user: AuthUser | None) -> AuthMe:
     )
 
 
+async def _start_login(request: Request, ctx: AppContext, next: str, provider: str, authorize_url) -> RedirectResponse:
+    """Dùng chung cho mọi nhà cung cấp: state + PKCE verifier vào Redis, state gắn với trình duyệt bằng cookie."""
+    await enforce_login_limit(request)
+    state, verifier = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
+    payload = {"verifier": verifier, "next": auth.safe_next(next)}
+    if provider != "discord":  # state của Discord không có khóa này (giữ nguyên định dạng cũ)
+        payload["provider"] = provider
+    try:
+        await ctx.redis.set(_state_key(state), json.dumps(payload), ex=OAUTH_STATE_TTL_SECONDS)
+    except Exception:
+        raise UnavailableError("Không bắt đầu được đăng nhập.") from None
+    response = _private(RedirectResponse(authorize_url(state, auth.pkce_challenge(verifier)), status.HTTP_302_FOUND))
+    response.set_cookie(
+        OAUTH_COOKIE,
+        state,
+        max_age=OAUTH_STATE_TTL_SECONDS,
+        httponly=True,
+        secure=ctx.settings.auth_cookie_is_secure,
+        samesite="lax",
+        path=OAUTH_COOKIE_PATH,
+    )
+    return response
+
+
+async def _finish_login(
+    request: Request, ctx: AppContext, provider: str, code: str | None, state: str | None, error: str | None, oauth
+) -> RedirectResponse:
+    """Callback dùng chung: kiểm state/cookie, dùng state một lần, đổi mã, upsert người dùng, đặt cookie phiên."""
+    cookie_state = request.cookies.get(OAUTH_COOKIE)
+    if error:  # người dùng từ chối trên nhà cung cấp
+        response = _private(RedirectResponse(_web_url(ctx, "/?login=denied"), status.HTTP_302_FOUND))
+        response.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
+        return response
+    auth.require_state(cookie_state, state)
+    if not code or len(code) > 512:
+        raise BadRequestError("Thiếu mã đăng nhập.")
+    try:
+        stored = await ctx.redis.getdel(_state_key(state))  # dùng một lần: gọi lại cùng state sẽ bị từ chối
+    except Exception:
+        raise UnavailableError("Không hoàn tất được đăng nhập.") from None
+    if not stored:
+        raise BadRequestError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.")
+    saved = json.loads(stored)
+    if saved.get("provider", "discord") != provider:  # state bắt đầu ở nhà cung cấp khác
+        raise BadRequestError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.")
+
+    access_token = await oauth.exchange(code, saved["verifier"])
+    raw_id, display_name = await oauth.fetch_user(access_token)
+    if provider == "discord":
+        user = await auth.upsert_user(ctx.sessionmaker, ctx.settings, raw_id, display_name)
+    else:
+        user = await auth.upsert_user(ctx.sessionmaker, ctx.settings, raw_id, display_name, provider=provider)
+    session_token = await auth.create_session(ctx.sessionmaker, user.id, ctx.settings.auth_session_days)
+
+    response = _private(RedirectResponse(_web_url(ctx, auth.safe_next(saved.get("next"))), status.HTTP_302_FOUND))
+    response.set_cookie(
+        SESSION_COOKIE,
+        session_token,
+        max_age=ctx.settings.auth_session_days * 86400,
+        httponly=True,
+        secure=ctx.settings.auth_cookie_is_secure,
+        samesite="lax",
+        path="/",
+    )
+    response.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
+    return response
+
+
 @router.get(
     "/auth/discord/login",
     status_code=status.HTTP_302_FOUND,
@@ -82,26 +153,7 @@ async def discord_login(
     oauth: DiscordOAuth = Depends(get_discord_oauth),
 ) -> RedirectResponse:
     _require_enabled(ctx)
-    await enforce_login_limit(request)
-    state, verifier = secrets.token_urlsafe(32), secrets.token_urlsafe(48)
-    payload = json.dumps({"verifier": verifier, "next": auth.safe_next(next)})
-    try:
-        await ctx.redis.set(_state_key(state), payload, ex=OAUTH_STATE_TTL_SECONDS)
-    except Exception:
-        raise UnavailableError("Không bắt đầu được đăng nhập.") from None
-    response = _private(
-        RedirectResponse(oauth.authorize_url(state, auth.pkce_challenge(verifier)), status.HTTP_302_FOUND)
-    )
-    response.set_cookie(
-        OAUTH_COOKIE,
-        state,
-        max_age=OAUTH_STATE_TTL_SECONDS,
-        httponly=True,
-        secure=ctx.settings.auth_cookie_is_secure,
-        samesite="lax",
-        path=OAUTH_COOKIE_PATH,
-    )
-    return response
+    return await _start_login(request, ctx, next, "discord", oauth.authorize_url)
 
 
 @router.get(
@@ -119,39 +171,41 @@ async def discord_callback(
     oauth: DiscordOAuth = Depends(get_discord_oauth),
 ) -> RedirectResponse:
     _require_enabled(ctx)
-    cookie_state = request.cookies.get(OAUTH_COOKIE)
-    if error:  # người dùng từ chối trên Discord
-        response = _private(RedirectResponse(_web_url(ctx, "/?login=denied"), status.HTTP_302_FOUND))
-        response.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
-        return response
-    auth.require_state(cookie_state, state)
-    if not code or len(code) > 512:
-        raise BadRequestError("Thiếu mã đăng nhập.")
-    try:
-        stored = await ctx.redis.getdel(_state_key(state))  # dùng một lần: gọi lại cùng state sẽ bị từ chối
-    except Exception:
-        raise UnavailableError("Không hoàn tất được đăng nhập.") from None
-    if not stored:
-        raise BadRequestError("Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.")
-    saved = json.loads(stored)
+    return await _finish_login(request, ctx, "discord", code, state, error, oauth)
 
-    access_token = await oauth.exchange(code, saved["verifier"])
-    discord_id, display_name = await oauth.fetch_user(access_token)
-    user = await auth.upsert_user(ctx.sessionmaker, ctx.settings, discord_id, display_name)
-    session_token = await auth.create_session(ctx.sessionmaker, user.id, ctx.settings.auth_session_days)
 
-    response = _private(RedirectResponse(_web_url(ctx, auth.safe_next(saved.get("next"))), status.HTTP_302_FOUND))
-    response.set_cookie(
-        SESSION_COOKIE,
-        session_token,
-        max_age=ctx.settings.auth_session_days * 86400,
-        httponly=True,
-        secure=ctx.settings.auth_cookie_is_secure,
-        samesite="lax",
-        path="/",
-    )
-    response.delete_cookie(OAUTH_COOKIE, path=OAUTH_COOKIE_PATH)
-    return response
+@router.get(
+    "/auth/google/login",
+    status_code=status.HTTP_302_FOUND,
+    responses={302: {"description": "Chuyển sang Google để cấp quyền."}, **_ERRORS},
+    summary="Bắt đầu đăng nhập bằng Google",
+)
+async def google_login(
+    request: Request,
+    next: str = "/",
+    ctx: AppContext = Depends(get_ctx),
+    oauth: GoogleOAuth = Depends(get_google_oauth),
+) -> RedirectResponse:
+    _require_enabled(ctx, "google")
+    return await _start_login(request, ctx, next, "google", oauth.authorize_url)
+
+
+@router.get(
+    "/auth/google/callback",
+    status_code=status.HTTP_302_FOUND,
+    responses={302: {"description": "Về trang web sau khi đăng nhập."}, 400: {"model": ErrorBody}, **_ERRORS},
+    summary="Google gọi lại sau khi người dùng cấp quyền",
+)
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    ctx: AppContext = Depends(get_ctx),
+    oauth: GoogleOAuth = Depends(get_google_oauth),
+) -> RedirectResponse:
+    _require_enabled(ctx, "google")
+    return await _finish_login(request, ctx, "google", code, state, error, oauth)
 
 
 @router.post(

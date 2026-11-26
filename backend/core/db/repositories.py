@@ -130,8 +130,13 @@ async def list_jobs(session: AsyncSession, limit: int = 20) -> Sequence[Ingestio
     return (await session.execute(query)).scalars().all()
 
 
-async def recent_conversations(session: AsyncSession, limit: int = 20) -> list[tuple[uuid.UUID, str | None, datetime]]:
-    """(id, câu hỏi đầu tiên, giờ tạo) của các hội thoại mới nhất, cho trang admin."""
+async def recent_conversations(
+    session: AsyncSession, limit: int = 20
+) -> list[tuple[uuid.UUID, str | None, datetime, uuid.UUID | None]]:
+    """(id, câu hỏi đầu tiên, giờ tạo, id câu trả lời cuối) của các hội thoại mới nhất, cho trang admin.
+
+    Id câu trả lời cuối (None nếu chưa có) là thứ ô tra cứu trace cần; lấy bằng subquery nên không phát sinh N+1.
+    """
     first_question = (
         select(Message.content)
         .where(Message.conversation_id == Conversation.id, Message.role == "user")
@@ -139,8 +144,15 @@ async def recent_conversations(session: AsyncSession, limit: int = 20) -> list[t
         .limit(1)
         .scalar_subquery()
     )
+    last_answer = (
+        select(Message.id)
+        .where(Message.conversation_id == Conversation.id, Message.role == "assistant")
+        .order_by(Message.created_at.desc(), Message.id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
     query = (
-        select(Conversation.id, first_question, Conversation.created_at)
+        select(Conversation.id, first_question, Conversation.created_at, last_answer)
         .order_by(Conversation.created_at.desc())
         .limit(limit)
     )
